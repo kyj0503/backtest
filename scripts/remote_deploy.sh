@@ -8,14 +8,9 @@ DEPLOY_PATH="${3:-/opt/backtest}"
 # ensure deploy path exists
 mkdir -p "${DEPLOY_PATH}"
 
-# Create override file directly in deploy path
-cat > "${DEPLOY_PATH}/override-images.yml" <<YAML
-services:
-  backend:
-    image: ${BACKEND_IMAGE}
-  frontend:
-    image: ${FRONTEND_IMAGE}
-YAML
+# Update the docker-compose.yml file directly with the new image tags
+sed -i "s|image: backtest-backend:latest|image: ${BACKEND_IMAGE}|g" "${DEPLOY_PATH}/docker-compose.yml"
+sed -i "s|image: backtest-frontend:latest|image: ${FRONTEND_IMAGE}|g" "${DEPLOY_PATH}/docker-compose.yml"
 
 # Pull images (best-effort)
 docker pull "${BACKEND_IMAGE}" || true
@@ -26,29 +21,30 @@ LOGFILE="${DEPLOY_PATH}/deploy.log"
 
 echo "[${TIMESTAMP}] Starting deploy: backend=${BACKEND_IMAGE} frontend=${FRONTEND_IMAGE}" | tee -a "${LOGFILE}"
 
-# Show merged config for verification using absolute paths
-docker compose -f "${DEPLOY_PATH}/docker-compose.yml" -f "${DEPLOY_PATH}/override-images.yml" config || true
+# Show current config for verification
+echo "Current docker-compose.yml configuration:" | tee -a "${LOGFILE}"
+cat "${DEPLOY_PATH}/docker-compose.yml" | tee -a "${LOGFILE}"
 
 # Attempt deployment with rollback on failure
-PREV_OVERRIDE="${DEPLOY_PATH}/override-images.yml.bak"
-if [ -f "${DEPLOY_PATH}/override-images.yml" ]; then
-  cp "${DEPLOY_PATH}/override-images.yml" "${PREV_OVERRIDE}.$(date +%s)" || true
+BACKUP_COMPOSE="${DEPLOY_PATH}/docker-compose.yml.bak.$(date +%s)"
+if [ -f "${DEPLOY_PATH}/docker-compose.yml" ]; then
+  cp "${DEPLOY_PATH}/docker-compose.yml" "${BACKUP_COMPOSE}" || true
 fi
 
-if docker compose -f "${DEPLOY_PATH}/docker-compose.yml" -f "${DEPLOY_PATH}/override-images.yml" up -d --remove-orphans --no-build; then
+if docker compose -f "${DEPLOY_PATH}/docker-compose.yml" up -d --remove-orphans --no-build; then
   echo "[${TIMESTAMP}] Deploy succeeded" | tee -a "${LOGFILE}"
   STATUS=success
 else
   echo "[${TIMESTAMP}] Deploy failed — attempting rollback" | tee -a "${LOGFILE}"
   STATUS=failure
-  # Find latest backup (if any) and restore
-  LATEST_BACKUP=$(ls -1t ${DEPLOY_PATH}/override-images.yml.bak.* 2>/dev/null | head -n1 || true)
+  # Find latest backup and restore
+  LATEST_BACKUP=$(ls -1t ${DEPLOY_PATH}/docker-compose.yml.bak.* 2>/dev/null | head -n1 || true)
   if [ -n "${LATEST_BACKUP}" ]; then
-    echo "Restoring backup override: ${LATEST_BACKUP}" | tee -a "${LOGFILE}"
-    cp "${LATEST_BACKUP}" "${DEPLOY_PATH}/override-images.yml"
-    docker compose -f "${DEPLOY_PATH}/docker-compose.yml" -f "${DEPLOY_PATH}/override-images.yml" up -d --remove-orphans --no-build || true
+    echo "Restoring backup compose: ${LATEST_BACKUP}" | tee -a "${LOGFILE}"
+    cp "${LATEST_BACKUP}" "${DEPLOY_PATH}/docker-compose.yml"
+    docker compose -f "${DEPLOY_PATH}/docker-compose.yml" up -d --remove-orphans --no-build || true
   else
-    echo "No backup override found; manual intervention required" | tee -a "${LOGFILE}"
+    echo "No backup compose found; manual intervention required" | tee -a "${LOGFILE}"
   fi
 fi
 
