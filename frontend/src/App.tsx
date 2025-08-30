@@ -17,6 +17,23 @@ function App() {
     setResults(null);
     setIsPortfolio(request.portfolio.length > 1);
 
+    // 환경에 따른 API Base URL 설정
+    const getApiBaseUrl = () => {
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        
+        // 프로덕션 환경 (도메인 사용)
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+          return `${protocol}//backtest-be.yeonjae.kr`;
+        }
+      }
+      // 개발 환경
+      return 'http://localhost:8001';
+    };
+
+    const apiBaseUrl = getApiBaseUrl();
+
     try {
       let response;
       
@@ -31,7 +48,7 @@ function App() {
           strategy_params: request.strategy_params || {}
         };
 
-        response = await fetch('http://localhost:8001/api/v1/backtest/chart-data', {
+        response = await fetch(`${apiBaseUrl}/api/v1/backtest/chart-data`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -50,7 +67,7 @@ function App() {
           strategy_params: request.strategy_params || {}
         };
         
-        response = await fetch('http://localhost:8001/api/v1/backtest/portfolio', {
+        response = await fetch(`${apiBaseUrl}/api/v1/backtest/portfolio`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
