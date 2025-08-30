@@ -54,7 +54,6 @@ backtest/
 │   │   └── types/           # TypeScript 타입 정의
 │   └── doc/                 # 프론트엔드 문서
 ├── database/                # 데이터베이스 DDL 파일
-├── nginx/                   # Nginx 설정 파일
 ├── docker-compose*.yml      # Docker 설정 파일
 └── README.md                # 프로젝트 메인 문서
 ```
