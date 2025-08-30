@@ -5,6 +5,8 @@ pipeline {
         GHCR_OWNER = 'kyj05030'
         BACKEND_PROD_IMAGE = 'backtest-backend'
         FRONTEND_PROD_IMAGE = 'backtest-frontend'
+        DEPLOY_HOST = 'localhost'
+        DEPLOY_USER = 'jenkins'
         DEPLOY_PATH_PROD = '/opt/backtest'
         DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/docker-compose.prod.yml'
     }
@@ -67,39 +69,27 @@ pipeline {
             }
             steps {
                 script {
-                        // Use credential username as owner for image names
-                        withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                    // This deploy uses SSH to run a server-side deploy script.
+                    // Assumptions: Jenkins has an SSH credential with id 'deploy-ssh' and
+                    // environment variables DEPLOY_HOST and DEPLOY_USER are set in Jenkins (or globally).
+                    withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                        sshagent(['home-ubuntu-ssh']) {
+                            def remote = "${env.DEPLOY_USER}@${env.DEPLOY_HOST}"
                             def backendImage = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                             def frontendImage = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
 
-                            echo "Deploying to ${env.DEPLOY_PATH_PROD} using override file"
-                            sh """
-                                set -e
-                                mkdir -p ${env.DEPLOY_PATH_PROD}
-                                cp ${env.DOCKER_COMPOSE_PROD_FILE} ${env.DEPLOY_PATH_PROD}/docker-compose.yml
+                            echo "Deploying to ${env.DEPLOY_PATH_PROD} on ${env.DEPLOY_HOST} as ${env.DEPLOY_USER}"
 
-                                cat > ${env.DEPLOY_PATH_PROD}/override-images.yml <<'YAML'
-                                services:
-                                    backend:
-                                        image: ${backendImage}
-                                    frontend:
-                                        image: ${frontendImage}
-                                YAML
+                            // Ensure remote directory exists
+                            sh "ssh -o StrictHostKeyChecking=no ${remote} 'mkdir -p ${env.DEPLOY_PATH_PROD}'"
 
-                                cd ${env.DEPLOY_PATH_PROD}
-                                # Try pulling images first (no-op if not available locally)
-                                docker pull ${backendImage} || true
-                                docker pull ${frontendImage} || true
+                            // Copy prod compose to remote
+                            sh "scp -o StrictHostKeyChecking=no ${env.DOCKER_COMPOSE_PROD_FILE} ${remote}:${env.DEPLOY_PATH_PROD}/docker-compose.yml"
 
-                                echo 'Final merged docker-compose config:'
-                                docker compose -f docker-compose.yml -f override-images.yml config || true
-
-                                # Use --no-build to ensure compose will not try to build locally
-                                docker compose -f docker-compose.yml -f override-images.yml up -d --remove-orphans --no-build
-                                sleep 30
-                                curl -f http://localhost:8000/health || echo "Backend health check failed"
-                                curl -f http://localhost:8080 || echo "Frontend health check failed"
-                            """
+                            // Execute remote deploy script by piping local script over SSH
+                            // pass args after -- so remote bash receives them reliably
+                            sh "ssh -o StrictHostKeyChecking=no ${remote} 'bash -s' -- ${backendImage} ${frontendImage} ${env.DEPLOY_PATH_PROD} < ./scripts/remote_deploy.sh"
+                        }
                     }
                 }
             }
@@ -109,19 +99,22 @@ pipeline {
             steps {
                 script {
                     echo 'Running tests...'
-                    // build full image names in Groovy to avoid leaving ${...} in the shell script
-                    def backendImage = "ghcr.io/${env.GHCR_OWNER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                    def frontendImage = "ghcr.io/${env.GHCR_OWNER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                    // Prefer GH_USER obtained from github-token credential; fall back to GHCR_OWNER
+                    withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                        def owner = env.GH_USER ?: env.GHCR_OWNER
+                        def backendImage = "ghcr.io/${owner}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                        def frontendImage = "ghcr.io/${owner}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
 
-                    // Try to pull images (no-op if not present) then run tests. Use returnStatus to avoid pipeline hard-fail
-                    def rcBackend = sh(script: "docker pull ${backendImage} || true && docker run --rm ${backendImage} python -m pytest", returnStatus: true)
-                    if (rcBackend != 0) {
-                        echo "Backend tests skipped or failed (image may not exist or tests failed): ${backendImage}"
-                    }
+                        // Try to pull images (no-op if not present) then run tests. Use returnStatus to avoid pipeline hard-fail
+                        def rcBackend = sh(script: "docker pull ${backendImage} || true && docker run --rm ${backendImage} python -m pytest", returnStatus: true)
+                        if (rcBackend != 0) {
+                            echo "Backend tests skipped or failed (image may not exist or tests failed): ${backendImage}"
+                        }
 
-                    def rcFrontend = sh(script: "docker pull ${frontendImage} || true && docker run --rm ${frontendImage} npm test -- --watchAll=false", returnStatus: true)
-                    if (rcFrontend != 0) {
-                        echo "Frontend tests skipped or failed (image may not exist or tests failed): ${frontendImage}"
+                        def rcFrontend = sh(script: "docker pull ${frontendImage} || true && docker run --rm ${frontendImage} npm test -- --watchAll=false", returnStatus: true)
+                        if (rcFrontend != 0) {
+                            echo "Frontend tests skipped or failed (image may not exist or tests failed): ${frontendImage}"
+                        }
                     }
                 }
             }
