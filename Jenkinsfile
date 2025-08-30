@@ -69,27 +69,28 @@ pipeline {
             }
             steps {
                 script {
-                    // This deploy uses SSH to run a server-side deploy script.
-                    // Assumptions: Jenkins has an SSH credential with id 'deploy-ssh' and
-                    // environment variables DEPLOY_HOST and DEPLOY_USER are set in Jenkins (or globally).
-                    withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
-                        sshagent(['home-ubuntu-ssh']) {
-                            def remote = "${env.DEPLOY_USER}@${env.DEPLOY_HOST}"
-                            def backendImage = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                            def frontendImage = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                    // This deploy uses an SSH private-key credential to run a server-side deploy script.
+                    // Use the 'github-token' for image owner and 'home-ubuntu-ssh' (SSH key) for remote actions.
+                    withCredentials([
+                        usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN'),
+                        sshUserPrivateKey(credentialsId: 'home-ubuntu-ssh', keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')
+                    ]) {
+                        // prefer the username provided by the SSH credential
+                        def remoteUser = SSH_USER ?: env.DEPLOY_USER
+                        def remote = "${remoteUser}@${env.DEPLOY_HOST}"
+                        def backendImage = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                        def frontendImage = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
 
-                            echo "Deploying to ${env.DEPLOY_PATH_PROD} on ${env.DEPLOY_HOST} as ${env.DEPLOY_USER}"
+                        echo "Deploying to ${env.DEPLOY_PATH_PROD} on ${env.DEPLOY_HOST} as ${remoteUser}"
 
-                            // Ensure remote directory exists
-                            sh "ssh -o StrictHostKeyChecking=no ${remote} 'mkdir -p ${env.DEPLOY_PATH_PROD}'"
+                        // Ensure remote directory exists (use -i to supply private key file)
+                        sh "ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${remote} 'mkdir -p ${env.DEPLOY_PATH_PROD}'"
 
-                            // Copy prod compose to remote
-                            sh "scp -o StrictHostKeyChecking=no ${env.DOCKER_COMPOSE_PROD_FILE} ${remote}:${env.DEPLOY_PATH_PROD}/docker-compose.yml"
+                        // Copy prod compose to remote
+                        sh "scp -i ${SSH_KEY} -o StrictHostKeyChecking=no ${env.DOCKER_COMPOSE_PROD_FILE} ${remote}:${env.DEPLOY_PATH_PROD}/docker-compose.yml"
 
-                            // Execute remote deploy script by piping local script over SSH
-                            // pass args after -- so remote bash receives them reliably
-                            sh "ssh -o StrictHostKeyChecking=no ${remote} 'bash -s' -- ${backendImage} ${frontendImage} ${env.DEPLOY_PATH_PROD} < ./scripts/remote_deploy.sh"
-                        }
+                        // Execute remote deploy script by piping local script over SSH using the same key
+                        sh "ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${remote} 'bash -s' -- ${backendImage} ${frontendImage} ${env.DEPLOY_PATH_PROD} < ./scripts/remote_deploy.sh"
                     }
                 }
             }
