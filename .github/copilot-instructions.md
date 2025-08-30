@@ -2,7 +2,7 @@
 이 저장소에서 AI 코딩 에이전트가 빠르게 생산적으로 작업하기 위한 간단·구체적 가이드. 핵심 아키텍처, 실행/디버그 명령, 프로젝트 고유 패턴, 그리고 코드 예시를 포함.
 
 ## 빠른 개요 (한 줄)
-백엔드는 FastAPI(포트 8000, `backend/`), 프론트엔드는 Vite 기반 React(개발: 5173, 프로덕션: 8080), 전략은 `backend/app/services/strategy_service.py`에 등록된 Strategy 클래스들을 사용해 `backtesting` 라이브러리로 실행.
+백엔드는 FastAPI(포트 8001, `backend/`), 프론트엔드는 Vite 기반 React(개발: 5174, 프로덕션: 8081), 전략은 `backend/app/services/strategy_service.py`에 등록된 Strategy 클래스들을 사용해 `backtesting` 라이브러리로 실행.
 
 ## 주요 위치
   - `backend/app/utils/data_fetcher.py`는 yfinance를 사용합니다. yfinance 관련 API 및 DB 캐시 동작의 상세 설명은 `backend/doc/api.md`를 참조. 캐시 경로·유효기간 변경은 `app/core/config.py`를 참조.

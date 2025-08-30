@@ -10,7 +10,7 @@ import sys
 from datetime import datetime, timedelta
 
 # API 기본 설정
-BASE_URL = "http://localhost:8000/api/v1"
+BASE_URL = "http://localhost:8001/api/v1"
 HEADERS = {"Content-Type": "application/json"}
 
 def test_chart_data_api():
@@ -75,7 +75,7 @@ def test_chart_data_api():
         return False
     except requests.exceptions.ConnectionError:
         print("❌ API 서버 연결 실패")
-        print("   서버가 실행 중인지 확인하세요: http://localhost:8000")
+        print("   서버가 실행 중인지 확인하세요: http://localhost:8001")
         return False
     except Exception as e:
         print(f"❌ 예상치 못한 오류: {str(e)}")

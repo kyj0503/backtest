@@ -46,6 +46,8 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+**주의**: Docker 환경에서는 호스트 포트 8001로 매핑됩니다.
+
 ## 주요 기능
 
 ### 1. 포트폴리오 백테스트

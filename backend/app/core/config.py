@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # CORS 설정: read raw env as string and expose a parsed property to avoid
     # pydantic attempting to json-decode complex env values.
     backend_cors_origins_str: str = Field(
-        default="http://localhost:3000,http://localhost:5173,http://localhost:8000,http://localhost:8080",
+        default="http://localhost:3000,http://localhost:5174,http://localhost:8001,http://localhost:8081",
         env="BACKEND_CORS_ORIGINS",
     )
 

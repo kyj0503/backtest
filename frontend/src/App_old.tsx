@@ -21,7 +21,7 @@ const fetchChartData = async (params: {
   strategy: string;
   strategy_params?: any;
 }): Promise<ChartDataResponse> => {
-  const response = await fetch('http://localhost:8000/api/v1/backtest/chart-data', {
+  const response = await fetch('http://localhost:8001/api/v1/backtest/chart-data', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ function App() {
     setPortfolioResults(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/backtest/portfolio', {
+      const response = await fetch('http://localhost:8001/api/v1/backtest/portfolio', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

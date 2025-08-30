@@ -7,7 +7,7 @@
  ## API
 
 ### 백엔드 서버 정보
-- **기본 URL**: `http://localhost:8000`
+- **기본 URL**: `http://localhost:8001`
 - **API 버전**: `v1`
 - **프로토콜**: HTTP (개발), HTTPS (프로덕션)
 - **데이터 형식**: JSON
@@ -421,7 +421,7 @@ fetch('/api/v2/backtest/chart-data', {
 
 ```bash
 # 직접 API 서버 테스트
-curl -X POST http://localhost:8000/api/v2/backtest/chart-data \
+curl -X POST http://localhost:8001/api/v2/backtest/chart-data \
   -H "Content-Type: application/json" \
   -d '{
     "ticker": "AAPL",
@@ -433,7 +433,7 @@ curl -X POST http://localhost:8000/api/v2/backtest/chart-data \
   }'
 
 # 서버 상태 확인
-curl http://localhost:8000/health
+curl http://localhost:8001/health
 ```
 
 ### Mock 서버 (향후 계획)
@@ -503,7 +503,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
         changeOrigin: true,
         secure: false,
         configure: (proxy, options) => {
