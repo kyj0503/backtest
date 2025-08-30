@@ -1,117 +1,128 @@
 pipeline {
     agent any
-    
+
     environment {
         GHCR_OWNER = 'kyj05030'
         BACKEND_PROD_IMAGE = 'backtest-backend'
         FRONTEND_PROD_IMAGE = 'backtest-frontend'
         DEPLOY_PATH_PROD = '/opt/backtest'
-        DOCKER_COMPOSE_FILE = '${WORKSPACE}/docker-compose.yml'  // 프로젝트 루트의 docker-compose.yml 사용
-        DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/docker-compose.prod.yml'  // 프로덕션용 파일
+        DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/docker-compose.prod.yml'
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out source code...'
                 checkout scm
             }
         }
-        
-        // --- Main 브랜치 전용 스테이지 ---
+
         stage('Build and Push Backend PROD') {
-            when { branch 'main' }
+            when {
+                expression {
+                    // multibranch이면 BRANCH_NAME, 일반 pipeline이면 GIT_BRANCH 확인
+                    return (env.BRANCH_NAME == 'main') || (env.GIT_BRANCH != null && env.GIT_BRANCH.endsWith('/main'))
+                }
+            }
             steps {
                 script {
                     def fullImageName = "ghcr.io/${env.GHCR_OWNER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                    echo "Building PROD backend image for main branch: ${fullImageName}"
-                    
+                    echo "Building PROD backend image: ${fullImageName}"
                     docker.build(fullImageName, './backend')
                     docker.withRegistry("https://ghcr.io", 'github-token') {
-                        echo "Pushing PROD backend image to GHCR..."
                         docker.image(fullImageName).push()
                     }
                 }
             }
         }
-        
+
         stage('Build and Push Frontend PROD') {
-            when { branch 'main' }
+            when {
+                expression {
+                    return (env.BRANCH_NAME == 'main') || (env.GIT_BRANCH != null && env.GIT_BRANCH.endsWith('/main'))
+                }
+            }
             steps {
                 script {
                     def fullImageName = "ghcr.io/${env.GHCR_OWNER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                    echo "Building PROD frontend image for main branch: ${fullImageName}"
-                    
+                    echo "Building PROD frontend image: ${fullImageName}"
                     docker.build(fullImageName, './frontend')
                     docker.withRegistry("https://ghcr.io", 'github-token') {
-                        echo "Pushing PROD frontend image to GHCR..."
                         docker.image(fullImageName).push()
                     }
                 }
             }
         }
-        
+
         stage('Deploy to Production (Local)') {
-            when { branch 'main' }
+            when {
+                expression {
+                    return (env.BRANCH_NAME == 'main') || (env.GIT_BRANCH != null && env.GIT_BRANCH.endsWith('/main'))
+                }
+            }
+            steps {
+                                script {
+                                        def backendImage = "ghcr.io/${env.GHCR_OWNER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                                        def frontendImage = "ghcr.io/${env.GHCR_OWNER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+
+                                        echo "Deploying to ${env.DEPLOY_PATH_PROD} using override file"
+                                        sh """
+                                                set -e
+                                                mkdir -p ${env.DEPLOY_PATH_PROD}
+                                                cp ${env.DOCKER_COMPOSE_PROD_FILE} ${env.DEPLOY_PATH_PROD}/docker-compose.yml
+
+                                                cat > ${env.DEPLOY_PATH_PROD}/override-images.yml <<'YAML'
+services:
+    backend:
+        image: ${backendImage}
+    frontend:
+        image: ${frontendImage}
+YAML
+
+                                                cd ${env.DEPLOY_PATH_PROD}
+                                                # Try pulling images first (no-op if not available locally)
+                                                docker pull ${backendImage} || true
+                                                docker pull ${frontendImage} || true
+
+                                                echo 'Final merged docker-compose config:'
+                                                docker compose -f docker-compose.yml -f override-images.yml config || true
+
+                                                # Use --no-build to ensure compose will not try to build locally
+                                                docker compose -f docker-compose.yml -f override-images.yml up -d --remove-orphans --no-build
+                                                sleep 30
+                                                curl -f http://localhost:8000/health || echo "Backend health check failed"
+                                                curl -f http://localhost:8080 || echo "Frontend health check failed"
+                                        """
+                                }
+            }
+        }
+
+        stage('Test') {
             steps {
                 script {
+                    echo 'Running tests...'
+                    // build full image names in Groovy to avoid leaving ${...} in the shell script
                     def backendImage = "ghcr.io/${env.GHCR_OWNER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                     def frontendImage = "ghcr.io/${env.GHCR_OWNER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                    
-                    echo "Deploying to local production: ${env.DEPLOY_PATH_PROD}"
-                    
-                    // docker-compose.prod.yml 파일을 복사하고 이미지 이름 추가
-                    sh """
-                        # 프로덕션 파일을 작업 디렉터리로 복사
-                        cp ${env.DOCKER_COMPOSE_PROD_FILE} ${env.DEPLOY_PATH_PROD}/docker-compose.yml
-                        
-                        # 백엔드 서비스에 image 필드 추가
-                        sed -i '/backend:/a\\    image: ${backendImage}' ${env.DEPLOY_PATH_PROD}/docker-compose.yml
-                        
-                        # 프론트엔드 서비스에 image 필드 추가
-                        sed -i '/frontend:/a\\    image: ${frontendImage}' ${env.DEPLOY_PATH_PROD}/docker-compose.yml
-                        
-                        # 기존 컨테이너 중지 및 제거
-                        cd ${env.DEPLOY_PATH_PROD}
-                        docker compose down
-                        
-                        # 새 컨테이너 시작
-                        docker compose up -d
-                        
-                        # 헬스체크
-                        sleep 30
-                        curl -f http://localhost:8000/health || echo "Backend health check failed"
-                        curl -f http://localhost:8080 || echo "Frontend health check failed"
-                        
-                        echo "Deployment completed!"
-                    """
+
+                    // Try to pull images (no-op if not present) then run tests. Use returnStatus to avoid pipeline hard-fail
+                    def rcBackend = sh(script: "docker pull ${backendImage} || true && docker run --rm ${backendImage} python -m pytest", returnStatus: true)
+                    if (rcBackend != 0) {
+                        echo "Backend tests skipped or failed (image may not exist or tests failed): ${backendImage}"
+                    }
+
+                    def rcFrontend = sh(script: "docker pull ${frontendImage} || true && docker run --rm ${frontendImage} npm test -- --watchAll=false", returnStatus: true)
+                    if (rcFrontend != 0) {
+                        echo "Frontend tests skipped or failed (image may not exist or tests failed): ${frontendImage}"
+                    }
                 }
             }
         }
-        
-        // 공통 테스트 단계
-        stage('Test') {
-            steps {
-                echo 'Running tests...'
-                // 백엔드 테스트 (pytest가 설치된 경우)
-                sh 'docker run --rm ghcr.io/${GHCR_OWNER}/${BACKEND_PROD_IMAGE}:${BUILD_NUMBER} python -m pytest || echo "No tests found"'
-                // 프론트엔드 테스트 (있는 경우)
-                sh 'docker run --rm ghcr.io/${env.GHCR_OWNER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER} npm test -- --watchAll=false || echo "No tests found"'
-            }
-        }
     }
-    
+
     post {
-        success {
-            echo 'Pipeline succeeded! 🎉'
-            // 성공 시 알림 (Slack, Email 등) 추가 가능
-        }
-        failure {
-            echo 'Pipeline failed! ❌'
-            // 실패 시 알림 추가 가능
-        }
+        success { echo 'Pipeline succeeded! 🎉' }
+        failure { echo 'Pipeline failed! ❌' }
         always {
-            echo 'Cleaning up...'
             sh 'docker system prune -f'
             cleanWs()
         }
