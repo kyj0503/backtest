@@ -51,7 +51,7 @@ fi
 # health checks (best-effort)
 sleep 5
 curl -f http://localhost:8001/health || echo "Backend health check failed" | tee -a "${LOGFILE}"
-curl -f http://localhost:8081 || echo "Frontend health check failed" | tee -a "${LOGFILE}"
+curl -f http://localhost:8082 || echo "Frontend health check failed" | tee -a "${LOGFILE}"
 
 # Optional webhook notification if DEPLOY_NOTIFY_WEBHOOK is set
 if [ -n "${DEPLOY_NOTIFY_WEBHOOK:-}" ]; then

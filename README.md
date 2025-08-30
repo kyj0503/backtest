@@ -82,7 +82,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 ### 접속
 
 - **개발 환경**: http://localhost:5174 (프론트엔드), http://localhost:8001 (백엔드)
-- **프로덕션 환경**: http://localhost:8081 (프론트엔드), http://localhost:8001 (백엔드)
+- **프로덕션 환경**: http://localhost:8082 (프론트엔드), http://localhost:8001 (백엔드)
 
 ## 문서
 
