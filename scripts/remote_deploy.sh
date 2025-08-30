@@ -21,15 +21,51 @@ YAML
 docker pull "${BACKEND_IMAGE}" || true
 docker pull "${FRONTEND_IMAGE}" || true
 
+TIMESTAMP=$(date --iso-8601=seconds)
+LOGFILE="${DEPLOY_PATH}/deploy.log"
+
+echo "[${TIMESTAMP}] Starting deploy: backend=${BACKEND_IMAGE} frontend=${FRONTEND_IMAGE}" | tee -a "${LOGFILE}"
+
 # Show merged config for verification using absolute paths
 docker compose -f "${DEPLOY_PATH}/docker-compose.yml" -f "${DEPLOY_PATH}/override-images.yml" config || true
 
-# Deploy without building locally
-docker compose -f "${DEPLOY_PATH}/docker-compose.yml" -f "${DEPLOY_PATH}/override-images.yml" up -d --remove-orphans --no-build
+# Attempt deployment with rollback on failure
+PREV_OVERRIDE="${DEPLOY_PATH}/override-images.yml.bak"
+if [ -f "${DEPLOY_PATH}/override-images.yml" ]; then
+  cp "${DEPLOY_PATH}/override-images.yml" "${PREV_OVERRIDE}.$(date +%s)" || true
+fi
 
-# health checks
+if docker compose -f "${DEPLOY_PATH}/docker-compose.yml" -f "${DEPLOY_PATH}/override-images.yml" up -d --remove-orphans --no-build; then
+  echo "[${TIMESTAMP}] Deploy succeeded" | tee -a "${LOGFILE}"
+  STATUS=success
+else
+  echo "[${TIMESTAMP}] Deploy failed — attempting rollback" | tee -a "${LOGFILE}"
+  STATUS=failure
+  # Find latest backup (if any) and restore
+  LATEST_BACKUP=$(ls -1t ${DEPLOY_PATH}/override-images.yml.bak.* 2>/dev/null | head -n1 || true)
+  if [ -n "${LATEST_BACKUP}" ]; then
+    echo "Restoring backup override: ${LATEST_BACKUP}" | tee -a "${LOGFILE}"
+    cp "${LATEST_BACKUP}" "${DEPLOY_PATH}/override-images.yml"
+    docker compose -f "${DEPLOY_PATH}/docker-compose.yml" -f "${DEPLOY_PATH}/override-images.yml" up -d --remove-orphans --no-build || true
+  else
+    echo "No backup override found; manual intervention required" | tee -a "${LOGFILE}"
+  fi
+fi
+
+# health checks (best-effort)
 sleep 5
-curl -f http://localhost:8000/health || echo "Backend health check failed"
-curl -f http://localhost:8080 || echo "Frontend health check failed"
+curl -f http://localhost:8000/health || echo "Backend health check failed" | tee -a "${LOGFILE}"
+curl -f http://localhost:8080 || echo "Frontend health check failed" | tee -a "${LOGFILE}"
 
-echo "Deployment finished"
+# Optional webhook notification if DEPLOY_NOTIFY_WEBHOOK is set
+if [ -n "${DEPLOY_NOTIFY_WEBHOOK:-}" ]; then
+  PAYLOAD="{\"status\":\"${STATUS}\",\"backend\":\"${BACKEND_IMAGE}\",\"frontend\":\"${FRONTEND_IMAGE}\",\"time\":\"${TIMESTAMP}\"}"
+  curl -s -X POST -H 'Content-Type: application/json' -d "${PAYLOAD}" "${DEPLOY_NOTIFY_WEBHOOK}" || true
+fi
+
+echo "[${TIMESTAMP}] Deployment finished with status=${STATUS}" | tee -a "${LOGFILE}"
+
+# Exit non-zero if deployment failed
+if [ "${STATUS}" = "failure" ]; then
+  exit 1
+fi
