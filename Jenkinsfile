@@ -25,11 +25,14 @@ pipeline {
             }
             steps {
                 script {
-                    def fullImageName = "ghcr.io/${env.GHCR_OWNER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                    echo "Building PROD backend image: ${fullImageName}"
-                    docker.build(fullImageName, './backend')
-                    docker.withRegistry("https://ghcr.io", 'github-token') {
-                        docker.image(fullImageName).push()
+                    // Use the username from the 'github-token' credential as the GHCR owner
+                    withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                        def fullImageName = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                        echo "Building PROD backend image: ${fullImageName}"
+                        docker.build(fullImageName, './backend')
+                        docker.withRegistry("https://ghcr.io", 'github-token') {
+                            docker.image(fullImageName).push()
+                        }
                     }
                 }
             }
@@ -43,11 +46,14 @@ pipeline {
             }
             steps {
                 script {
-                    def fullImageName = "ghcr.io/${env.GHCR_OWNER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                    echo "Building PROD frontend image: ${fullImageName}"
-                    docker.build(fullImageName, './frontend')
-                    docker.withRegistry("https://ghcr.io", 'github-token') {
-                        docker.image(fullImageName).push()
+                    // Use credential username as owner to ensure push permission
+                    withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                        def fullImageName = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                        echo "Building PROD frontend image: ${fullImageName}"
+                        docker.build(fullImageName, './frontend')
+                        docker.withRegistry("https://ghcr.io", 'github-token') {
+                            docker.image(fullImageName).push()
+                        }
                     }
                 }
             }
@@ -60,39 +66,42 @@ pipeline {
                 }
             }
             steps {
-                                script {
-                                        def backendImage = "ghcr.io/${env.GHCR_OWNER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                                        def frontendImage = "ghcr.io/${env.GHCR_OWNER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                script {
+                        // Use credential username as owner for image names
+                        withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                            def backendImage = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                            def frontendImage = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
 
-                                        echo "Deploying to ${env.DEPLOY_PATH_PROD} using override file"
-                                        sh """
-                                                set -e
-                                                mkdir -p ${env.DEPLOY_PATH_PROD}
-                                                cp ${env.DOCKER_COMPOSE_PROD_FILE} ${env.DEPLOY_PATH_PROD}/docker-compose.yml
+                            echo "Deploying to ${env.DEPLOY_PATH_PROD} using override file"
+                            sh """
+                                set -e
+                                mkdir -p ${env.DEPLOY_PATH_PROD}
+                                cp ${env.DOCKER_COMPOSE_PROD_FILE} ${env.DEPLOY_PATH_PROD}/docker-compose.yml
 
-                                                cat > ${env.DEPLOY_PATH_PROD}/override-images.yml <<'YAML'
-services:
-    backend:
-        image: ${backendImage}
-    frontend:
-        image: ${frontendImage}
-YAML
+                                cat > ${env.DEPLOY_PATH_PROD}/override-images.yml <<'YAML'
+                                services:
+                                    backend:
+                                        image: ${backendImage}
+                                    frontend:
+                                        image: ${frontendImage}
+                                YAML
 
-                                                cd ${env.DEPLOY_PATH_PROD}
-                                                # Try pulling images first (no-op if not available locally)
-                                                docker pull ${backendImage} || true
-                                                docker pull ${frontendImage} || true
+                                cd ${env.DEPLOY_PATH_PROD}
+                                # Try pulling images first (no-op if not available locally)
+                                docker pull ${backendImage} || true
+                                docker pull ${frontendImage} || true
 
-                                                echo 'Final merged docker-compose config:'
-                                                docker compose -f docker-compose.yml -f override-images.yml config || true
+                                echo 'Final merged docker-compose config:'
+                                docker compose -f docker-compose.yml -f override-images.yml config || true
 
-                                                # Use --no-build to ensure compose will not try to build locally
-                                                docker compose -f docker-compose.yml -f override-images.yml up -d --remove-orphans --no-build
-                                                sleep 30
-                                                curl -f http://localhost:8000/health || echo "Backend health check failed"
-                                                curl -f http://localhost:8080 || echo "Frontend health check failed"
-                                        """
-                                }
+                                # Use --no-build to ensure compose will not try to build locally
+                                docker compose -f docker-compose.yml -f override-images.yml up -d --remove-orphans --no-build
+                                sleep 30
+                                curl -f http://localhost:8000/health || echo "Backend health check failed"
+                                curl -f http://localhost:8080 || echo "Frontend health check failed"
+                            """
+                    }
+                }
             }
         }
 
