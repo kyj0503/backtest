@@ -81,16 +81,27 @@ pipeline {
                         def backendImage = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         def frontendImage = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
 
+                        // Set environment variables for shell scripts
+                        env.REMOTE = remote
+                        env.BACKEND_IMAGE = backendImage
+                        env.FRONTEND_IMAGE = frontendImage
+
                         echo "Deploying to ${env.DEPLOY_PATH_PROD} on ${env.DEPLOY_HOST} as ${remoteUser}"
 
                         // Ensure remote directory exists (use -i to supply private key file)
-                        sh "ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${remote} 'mkdir -p ${env.DEPLOY_PATH_PROD}'"
+                        sh '''
+                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$REMOTE" "mkdir -p $DEPLOY_PATH_PROD"
+                        '''
 
                         // Copy prod compose to remote
-                        sh "scp -i ${SSH_KEY} -o StrictHostKeyChecking=no ${env.DOCKER_COMPOSE_PROD_FILE} ${remote}:${env.DEPLOY_PATH_PROD}/docker-compose.yml"
+                        sh '''
+                            scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "$DOCKER_COMPOSE_PROD_FILE" "$REMOTE:$DEPLOY_PATH_PROD/docker-compose.yml"
+                        '''
 
                         // Execute remote deploy script by piping local script over SSH using the same key
-                        sh "ssh -i ${SSH_KEY} -o StrictHostKeyChecking=no ${remote} 'bash -s' -- ${backendImage} ${frontendImage} ${env.DEPLOY_PATH_PROD} < ./scripts/remote_deploy.sh"
+                        sh '''
+                            ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$REMOTE" bash -s -- "$BACKEND_IMAGE" "$FRONTEND_IMAGE" "$DEPLOY_PATH_PROD" < ./scripts/remote_deploy.sh
+                        '''
                     }
                 }
             }
