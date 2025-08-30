@@ -132,4 +132,4 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 
 ## 라이선스
 
-이 프로젝트는 GNU General Public License v3.0 (GPL-3.0) 하에 배포됩니다.
+이 프로젝트는 GNU Affero General Public License v3.0 하에 배포됩니다.
