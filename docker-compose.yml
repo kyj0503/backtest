@@ -7,8 +7,6 @@ services:
       - PYTHONPATH=/app
     env_file:
       - ./backend/.env
-    extra_hosts:
-      - "host.docker.internal:172.17.0.1"
 
   frontend:
     build: ./frontend

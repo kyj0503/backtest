@@ -17,7 +17,7 @@ services:
       dockerfile: Dockerfile.dev
     working_dir: /app
     ports:
-      - "5174:5173"
+      - "5174:5174"
     volumes:
       - ./frontend:/app
       - /app/node_modules
