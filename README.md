@@ -25,6 +25,8 @@
 | Buy & Hold | 매수 후 보유 | 없음 |
 | SMA Crossover | 단순이동평균 교차 | 단기/장기 기간 |
 | RSI Strategy | RSI 기반 매매 | RSI 기간, 과매수/과매도 기준 |
+| Bollinger Bands | 볼린저 밴드 기반 매매 | 기간, 표준편차 배수 |
+| MACD Strategy | MACD 교차 기반 매매 | 빠른/느린/시그널 기간 |
 
 ## 기술 스택
 

@@ -11,7 +11,7 @@ FastAPI 기반의 백테스팅 API 서버입니다. 포트폴리오 백테스트
 - **데이터 처리**: pandas, numpy
 - **주식 데이터**: yfinance
 - **백테스팅**: backtesting.py
-- **데이터베이스**: SQLite (개발), PostgreSQL (프로덕션)
+- **데이터베이스**: MySQL
 
 ## 프로젝트 구조
 

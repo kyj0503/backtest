@@ -40,7 +40,7 @@ frontend/
 ### 1. 통합 백테스트 폼 (UnifiedBacktestForm)
 - **투자 금액 기반 포트폴리오**: 각 종목에 투자할 금액 직접 입력
 - **자동 비중 계산**: 입력한 금액을 바탕으로 포트폴리오 비중 자동 계산
-- **전략 선택**: Buy & Hold, SMA Crossover, RSI 전략 지원
+- **투자 전략**: Buy & Hold, SMA Crossover, RSI, Bollinger Bands, MACD 전략 지원
 - **동적 파라미터**: 선택한 전략에 따른 파라미터 입력 폼 동적 생성
 
 ### 2. 결과 시각화 (UnifiedBacktestResults)
@@ -78,6 +78,8 @@ npm run dev
 | Buy & Hold | 매수 후 보유 | 없음 |
 | SMA Crossover | 단순이동평균 교차 | 단기/장기 기간 |
 | RSI Strategy | RSI 기반 매매 | RSI 기간, 과매수/과매도 기준 |
+| Bollinger Bands | 볼린저 밴드 기반 매매 | 기간, 표준편차 배수 |
+| MACD Strategy | MACD 교차 기반 매매 | 빠른/느린/시그널 기간 |
 
 ## API 연동
 
