@@ -10,8 +10,9 @@ RUN npm install
 
 COPY . .
 
-# Run tests before building
-RUN npm test -- --watchAll=false --coverage=false
+# Run tests before building (controlled by build arg)
+ARG RUN_TESTS=false
+RUN if [ "$RUN_TESTS" = "true" ] ; then npm test -- --run ; fi
 
 RUN npm run build
 

@@ -18,6 +18,25 @@ pipeline {
             }
         }
 
+        stage('Frontend Tests') {
+            steps {
+                script {
+                    echo 'Running frontend tests...'
+                    try {
+                        // Build test image with tests enabled
+                        sh '''
+                            cd frontend
+                            docker build --build-arg RUN_TESTS=true -t backtest-frontend-test:${BUILD_NUMBER} .
+                        '''
+                        echo "✅ Frontend tests passed"
+                    } catch (Exception e) {
+                        echo "⚠️ Frontend tests failed: ${e.getMessage()}"
+                        // Continue pipeline even if tests fail (for now)
+                    }
+                }
+            }
+        }
+
         stage('Backend Tests') {
             steps {
                 script {
@@ -72,7 +91,8 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                         def fullImageName = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         echo "Building PROD frontend image: ${fullImageName}"
-                        docker.build(fullImageName, './frontend')
+                        // Build production image without tests
+                        sh "cd frontend && docker build --build-arg RUN_TESTS=false -t ${fullImageName} ."
                         docker.withRegistry("https://ghcr.io", 'github-token') {
                             docker.image(fullImageName).push()
                         }

@@ -22,6 +22,7 @@
 
 ## 실행, 빌드, 테스트 — 핵심 명령
   - 개발 환경은 윈도우, powershell, 도커 데스크탑을 사용한다.
+  - 항상 작업할때 개발환경(윈도우 + powershell + 도커 컴포즈 + 도커 데스크탑 환경)에서도 작동하게 해야하고, 운영환경(우분투 서버, 호스트에 설치된 젠킨스와 MySQL 서버, 도커 컴포즈 활용)
   - `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build`로 프로젝트를 실행한다.
   - 백그라운드 실행: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d`
   - 컨테이너 중지: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml down`
