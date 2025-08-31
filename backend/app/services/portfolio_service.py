@@ -26,6 +26,17 @@ MAX_PORTFOLIO_ITEMS = 10
 DEFAULT_COMMISSION = 0.002
 
 
+# 역호환성을 위한 별칭 (기존 코드와의 호환성 유지)
+class PortfolioService:
+    """포트폴리오 서비스 (PortfolioBacktestService의 별칭)"""
+    
+    @staticmethod
+    async def run_portfolio_backtest(request: PortfolioBacktestRequest) -> Dict[str, Any]:
+        """포트폴리오 백테스트 실행 (PortfolioBacktestService로 위임)"""
+        service = PortfolioBacktestService()
+        return await service.run_portfolio_backtest(request)
+
+
 class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
     
@@ -219,170 +230,6 @@ class PortfolioBacktestService:
             'Portfolio_Value': portfolio_values,
             'Daily_Return': daily_returns,
             'Cumulative_Return': [(v - 1) * 100 for v in portfolio_values]
-        })
-        result.set_index('Date', inplace=True)
-        
-        return result
-
-    @staticmethod
-    def calculate_portfolio_returns(
-        portfolio_data: Dict[str, pd.DataFrame],
-        amounts: Dict[str, float],
-        rebalance_frequency: str = "monthly"
-    ) -> pd.DataFrame:
-        """
-        포트폴리오 수익률을 계산합니다.
-        
-        Args:
-            portfolio_data: 각 종목의 가격 데이터 {symbol: DataFrame}
-            amounts: 각 종목의 투자 금액 {symbol: amount}
-            rebalance_frequency: 리밸런싱 주기
-            
-        Returns:
-            포트폴리오 가치와 수익률이 포함된 DataFrame
-        """
-        # 현금 처리: CASH 심볼은 수익률 0%로 처리
-        cash_amount = amounts.get('CASH', 0)
-        stock_amounts = {k: v for k, v in amounts.items() if k != 'CASH'}
-        
-        # 모든 주식 종목의 날짜 범위를 통합
-        all_dates = set()
-        for symbol, df in portfolio_data.items():
-            if symbol != 'CASH':  # 현금 제외
-                all_dates.update(df.index)
-        
-        if not all_dates and cash_amount == 0:
-            raise ValueError("유효한 데이터가 없습니다.")
-        
-        # 현금만 있는 경우 처리
-        if not all_dates and cash_amount > 0:
-            # 기본 날짜 범위 생성 (1일)
-            from datetime import datetime
-            today = datetime.now().date()
-            date_range = pd.DatetimeIndex([today])
-        else:
-            date_range = pd.DatetimeIndex(sorted(all_dates))
-        
-        # 총 투자 금액 계산
-        total_amount = sum(amounts.values())
-        
-        # 각 종목의 수익률 계산
-        returns_data = {}
-        for symbol, df in portfolio_data.items():
-            if symbol == 'CASH':
-                continue  # 현금은 별도 처리
-            if len(df) == 0:
-                continue
-            # 종목별 일일 수익률 계산
-            daily_returns = df['Close'].pct_change().fillna(0)
-            returns_data[symbol] = daily_returns.reindex(date_range, fill_value=0)
-        
-        # 현금 수익률 추가 (항상 0%)
-        if cash_amount > 0:
-            returns_data['CASH'] = pd.Series(0.0, index=date_range)
-        
-        if not returns_data:
-            raise ValueError("유효한 데이터가 없습니다.")
-        
-        # 포트폴리오 수익률 계산 (투자 금액 기준 가중 평균)
-        portfolio_returns = pd.Series(0.0, index=date_range)
-        
-        for symbol, amount in amounts.items():
-            if symbol in returns_data:
-                weight = amount / total_amount  # 투자 금액 비율로 가중치 계산
-                portfolio_returns += returns_data[symbol] * weight
-        
-        # 누적 가치 계산 (1부터 시작)
-        portfolio_value = (1 + portfolio_returns).cumprod()
-        
-        # 결과 DataFrame 생성
-        result = pd.DataFrame({
-            'Date': date_range,
-            'Portfolio_Value': portfolio_value,
-            'Daily_Return': portfolio_returns,
-            'Cumulative_Return': (portfolio_value - 1) * 100
-        })
-        result.set_index('Date', inplace=True)
-        
-        return result
-
-    @staticmethod
-    def calculate_portfolio_returns(
-        portfolio_data: Dict[str, pd.DataFrame],
-        amounts: Dict[str, float],
-        rebalance_frequency: str = "monthly"
-    ) -> pd.DataFrame:
-        """
-        포트폴리오 수익률을 계산합니다.
-        
-        Args:
-            portfolio_data: 각 종목의 가격 데이터 {symbol: DataFrame}
-            amounts: 각 종목의 투자 금액 {symbol: amount}
-            rebalance_frequency: 리밸런싱 주기
-            
-        Returns:
-            포트폴리오 가치와 수익률이 포함된 DataFrame
-        """
-        # 현금 처리: CASH 심볼은 수익률 0%로 처리
-        cash_amount = amounts.get('CASH', 0)
-        stock_amounts = {k: v for k, v in amounts.items() if k != 'CASH'}
-        
-        # 모든 주식 종목의 날짜 범위를 통합
-        all_dates = set()
-        for symbol, df in portfolio_data.items():
-            if symbol != 'CASH':  # 현금 제외
-                all_dates.update(df.index)
-        
-        if not all_dates and cash_amount == 0:
-            raise ValueError("유효한 데이터가 없습니다.")
-        
-        # 현금만 있는 경우 처리
-        if not all_dates and cash_amount > 0:
-            # 기본 날짜 범위 생성 (1일)
-            from datetime import datetime
-            today = datetime.now().date()
-            date_range = pd.DatetimeIndex([today])
-        else:
-            date_range = pd.DatetimeIndex(sorted(all_dates))
-        
-        # 총 투자 금액 계산
-        total_amount = sum(amounts.values())
-        
-        # 각 종목의 수익률 계산
-        returns_data = {}
-        for symbol, df in portfolio_data.items():
-            if symbol == 'CASH':
-                continue  # 현금은 별도 처리
-            if len(df) == 0:
-                continue
-            # 종목별 일일 수익률 계산
-            daily_returns = df['Close'].pct_change().fillna(0)
-            returns_data[symbol] = daily_returns.reindex(date_range, fill_value=0)
-        
-        # 현금 수익률 추가 (항상 0%)
-        if cash_amount > 0:
-            returns_data['CASH'] = pd.Series(0.0, index=date_range)
-        
-        if not returns_data:
-            raise ValueError("유효한 데이터가 없습니다.")
-        
-        # 포트폴리오 수익률 계산 (투자 금액 기준 가중 평균)
-        portfolio_returns = pd.Series(0.0, index=date_range)
-        
-        for symbol, amount in amounts.items():
-            if symbol in returns_data:
-                weight = amount / total_amount  # 투자 금액 비율로 가중치 계산
-                portfolio_returns += returns_data[symbol] * weight
-        
-        # 누적 가치 계산 (1부터 시작)
-        portfolio_value = (1 + portfolio_returns).cumprod()
-        
-        # 결과 DataFrame 생성
-        result = pd.DataFrame({
-            'Date': date_range,
-            'Portfolio_Value': portfolio_value,
-            'Daily_Return': portfolio_returns,
-            'Cumulative_Return': (portfolio_value - 1) * 100
         })
         result.set_index('Date', inplace=True)
         
