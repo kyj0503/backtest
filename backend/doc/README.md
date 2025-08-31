@@ -18,15 +18,21 @@ FastAPI 기반의 백테스팅 API 서버입니다. 포트폴리오 백테스트
 ```
 backend/
 ├── app/
-│   ├── api/v1/           # API 엔드포인트
-│   │   └── endpoints/    # 개별 엔드포인트 파일
-│   ├── core/            # 핵심 설정
-│   ├── models/          # Pydantic 모델
-│   ├── services/        # 비즈니스 로직
-│   └── utils/           # 유틸리티 함수
-├── strategies/          # 투자 전략 구현
-├── data_cache/         # 주식 데이터 캐시
-└── doc/                # 백엔드 문서
+│   ├── api/             # API 라우터 계층
+│   │   ├── v1/          # v1 API 엔드포인트
+│   │   │   └── endpoints/  # 개별 엔드포인트 (backtest, system, stock)
+│   │   ├── v2/          # v2 API (확장 예정)
+│   │   └── api.py       # 기본 API 라우터
+│   ├── core/            # 핵심 설정 및 예외 처리
+│   ├── models/          # Pydantic 모델 (요청/응답 스키마)
+│   ├── services/        # 비즈니스 로직 (백테스트, 포트폴리오, 전략)
+│   ├── utils/           # 유틸리티 (데이터 수집, 직렬화, 포트폴리오)
+│   └── main.py          # FastAPI 애플리케이션 엔트리포인트
+├── strategies/          # 투자 전략 구현체 (RSI, SMA 등)
+├── tests/              # 백엔드 테스트 코드
+├── doc/                # 백엔드 개발 문서
+├── Dockerfile          # 백엔드 도커 이미지 설정
+└── requirements.txt    # Python 의존성 패키지
 ```
 
 ## 개발 환경 설정
@@ -92,8 +98,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### 주요 엔드포인트
 
 - `POST /api/v1/backtest/portfolio` - 포트폴리오 백테스트
-- `POST /api/v1/backtest/run` - 단일 종목 백테스트
 - `POST /api/v1/backtest/chart-data` - 차트 데이터 조회
+- `GET /api/v1/system/info` - 시스템 정보 (버전, 업타임, Git 정보)
 
 ## 새로운 전략 추가
 

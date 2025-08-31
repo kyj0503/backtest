@@ -26,13 +26,21 @@ frontend/
 │   │   ├── EquityChart.tsx            # 자산 곡선 차트
 │   │   ├── TradesChart.tsx            # 거래 차트
 │   │   ├── StatsSummary.tsx           # 성과 요약
-│   │   └── PortfolioResults.tsx       # 포트폴리오 결과
-│   └── types/
-│       └── api.ts          # TypeScript 타입 정의
+│   │   ├── PortfolioResults.tsx       # 포트폴리오 결과
+│   │   ├── CustomTooltip.tsx          # 차트 툴팁
+│   │   └── BacktestForm.tsx           # 기본 백테스트 폼
+│   ├── constants/          # 상수 정의
+│   ├── hooks/              # 커스텀 훅
+│   ├── services/           # API 서비스 계층
+│   ├── test/               # 프론트엔드 테스트
+│   ├── types/
+│   │   └── api.ts          # TypeScript 타입 정의
+│   └── utils/              # 유틸리티 함수
 ├── doc/                    # 프론트엔드 문서
 ├── package.json           # 의존성 관리
 ├── vite.config.ts        # Vite 설정
-└── Dockerfile           # Docker 설정
+├── Dockerfile           # 프로덕션 Docker 설정
+└── Dockerfile.dev       # 개발용 Docker 설정
 ```
 
 ## 주요 기능

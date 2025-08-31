@@ -30,33 +30,51 @@
 
 ## 기술 스택
 
-- **백엔드**: FastAPI, Python 3.11+, pandas, yfinance
-- **프론트엔드**: React 18, TypeScript, Vite, Bootstrap
-- **데이터베이스**: MySQL
+- **백엔드**: FastAPI, Python 3.11+, pandas, yfinance, backtesting.py
+- **프론트엔드**: React 18, TypeScript, Vite, React Bootstrap, Recharts
+- **데이터베이스**: MySQL (주식 데이터 캐싱)
 - **컨테이너**: Docker, Docker Compose
+- **CI/CD**: Jenkins, GitHub Container Registry
+- **모니터링**: 시스템 정보 API, Git 커밋 추적
 
 ## 프로젝트 구조
 
 ```
 backtest/
-├── .github/                 # GitHub 설정 및 Copilot 지침, 개발 계획 및 할일
+├── .github/                 # GitHub 설정 및 Copilot 지침
+│   └── copilot-instructions.md
 ├── backend/                 # FastAPI 백엔드 API 서버
 │   ├── app/                 # 애플리케이션 코드
-│   │   ├── api/v1/          # API 엔드포인트
-│   │   ├── core/            # 핵심 설정
-│   │   ├── models/          # Pydantic 모델
-│   │   ├── services/        # 비즈니스 로직
-│   │   └── utils/           # 유틸리티 함수
-│   ├── strategies/          # 투자 전략 구현
-│   ├── data_cache/          # 주식 데이터 캐시
-│   └── doc/                 # 백엔드 문서
+│   │   ├── api/             # API 라우터
+│   │   ├── core/            # 설정 및 예외 처리
+│   │   ├── models/          # Pydantic 모델 (요청/응답)
+│   │   ├── services/        # 비즈니스 로직 (백테스트, 포트폴리오, 전략)
+│   │   ├── utils/           # 유틸리티 (데이터 수집, 직렬화)
+│   │   └── main.py          # FastAPI 애플리케이션 엔트리포인트
+│   ├── strategies/          # 투자 전략 구현체
+│   ├── tests/               # 백엔드 테스트 코드
+│   ├── doc/                 # 백엔드 개발 문서
+│   ├── Dockerfile           # 백엔드 도커 이미지 설정
+│   └── requirements.txt     # Python 의존성 패키지
 ├── frontend/                # React 프론트엔드
 │   ├── src/                 # 소스 코드
 │   │   ├── components/      # React 컴포넌트
-│   │   └── types/           # TypeScript 타입 정의
-│   └── doc/                 # 프론트엔드 문서
-├── database/                # 데이터베이스 DDL 파일
-├── docker-compose*.yml      # Docker 설정 파일
+│   │   ├── constants/       # 상수 정의
+│   │   ├── hooks/           # 커스텀 훅
+│   │   ├── services/        # API 서비스 계층
+│   │   ├── test/            # 프론트엔드 테스트
+│   │   ├── types/           # TypeScript 타입 정의
+│   │   └── utils/           # 유틸리티 함수
+│   ├── doc/                 # 프론트엔드 개발 문서
+│   ├── Dockerfile           # 프로덕션 도커 이미지
+│   ├── Dockerfile.dev       # 개발용 도커 이미지
+│   └── package.json         # Node.js 의존성 및 스크립트
+├── database/                # 데이터베이스 스키마 DDL
+├── doc/                     # 프로젝트 전체 문서
+├── nginx/                   # nginx 설정 (프로덕션)
+├── scripts/                 # 배포 및 유틸리티 스크립트
+├── docker-compose*.yml      # Docker Compose 설정
+├── Jenkinsfile              # CI/CD 파이프라인
 └── README.md                # 프로젝트 메인 문서
 ```
 
@@ -90,6 +108,12 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 
 ```bash
 # 백엔드 테스트
+cd backend
+pytest backend/tests/
+
+# 프론트엔드 테스트  
+cd frontend
+npm test
 cd backend
 pytest tests/ -v
 

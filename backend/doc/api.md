@@ -18,10 +18,10 @@
 
 ### 1. 백테스트 API
 
-#### 단일 종목 백테스트 실행
+#### 차트 데이터 조회
 
 ```http
-POST /api/v1/backtest/run
+POST /api/v1/backtest/chart-data
 ```
 
 **요청 본문:**
@@ -38,30 +38,6 @@ POST /api/v1/backtest/run
   }
 }
 ```
-
-**응답:**
-```json
-{
-  "ticker": "AAPL",
-  "strategy": "sma_crossover",
-  "start_date": "2023-01-01",
-  "end_date": "2024-12-31",
-  "final_equity": 12345.67,
-  "total_return_pct": 23.46,
-  "total_trades": 15,
-  "win_rate_pct": 66.67,
-  "max_drawdown_pct": -8.23,
-  "sharpe_ratio": 1.45
-}
-```
-
-#### 차트 데이터 조회
-
-```http
-POST /api/v1/backtest/chart-data
-```
-
-**요청 본문:** (위와 동일)
 
 **응답:**
 ```json
@@ -240,24 +216,43 @@ POST /api/v1/backtest/portfolio
 }
 ```
 
-### 2. 헬스체크 API
+### 2. 시스템 API
 
-#### 서비스 상태 확인
+#### 시스템 정보 조회
 
 ```http
-GET /api/v1/backtest/health
+GET /api/v1/system/info
 ```
 
 **응답:**
 ```json
 {
-  "status": "healthy",
-  "version": "1.0.0",
-  "timestamp": "2024-01-15T10:30:00Z"
+  "backend": {
+    "version": "1.0.0",
+    "uptime": "2024-01-15T10:30:00Z",
+    "status": "healthy",
+    "git_commit": "fd358f3e",
+    "git_branch": "main",
+    "build_number": "123",
+    "environment": "development"
+  },
+  "frontend": {
+    "version": "1.0.0", 
+    "git_commit": "fd358f3e",
+    "build_number": "123"
+  },
+  "docker": {
+    "backend_image": "ghcr.io/redyeji/backtest-backend:latest",
+    "frontend_image": "ghcr.io/redyeji/backtest-frontend:latest"
+  }
 }
 ```
 
-### 3. 최적화 API (v1)
+### 3. 최적화 API (v2, 미구현)
+
+#### 전략 파라미터 최적화 실행
+
+*주의: 이 기능은 아직 구현되지 않았습니다. v2 API에서 지원 예정입니다.*
 
 #### 전략 파라미터 최적화 실행
 

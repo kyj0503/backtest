@@ -28,7 +28,8 @@
   - 컨테이너 중지: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml down`
   - 개발 서버 접근: 프론트엔드 http://localhost:5174, 백엔드 http://localhost:8001
   - **CI/CD**: 젠킨스 파이프라인은 main 브랜치 푸시 시 자동 실행됨
-  - **테스트**: 백엔드 `pytest tests/`, 프론트엔드 `npm test` (Docker 빌드 과정에 포함)
+  - **테스트**: 백엔드 `pytest backend/tests/`, 프론트엔드 `npm test` (Docker 빌드 과정에 포함)
+  - **CI/CD 테스트**: 젠킨스에서 각각 별도 스테이지로 테스트 실행, 빌드 인수와 분리
 
 ## 빈번한 코드 변경 포인트(PR 시 체크리스트)
   - `backend/app/services/strategy_service.py`에 Strategy 클래스와 `_strategies` 엔트리 추가
@@ -39,6 +40,7 @@
   - 프론트엔드 아키텍처: Services 계층(`frontend/src/services/`), 유틸리티 함수(`frontend/src/utils/`), 커스텀 훅(`frontend/src/hooks/`), 상수 모듈(`frontend/src/constants/`) 구조로 구성됨
   - 프론트엔드 개선 시 우선순위: 폼 상태 관리 → 에러 바운더리 → 성능 최적화 → 테스트 코드
   - **시스템 정보**: 새로운 환경 변수나 버전 정보는 `backend/app/api/v1/endpoints/system.py`와 `frontend/src/components/ServerStatus.tsx`에 반영
+  - **버전 추적**: Git 커밋과 빌드 번호는 Docker 빌드 시 환경 변수로 주입되어 시스템 정보에 표시됨
 
 ## 예시 스니펫(에이전트가 자주 사용할 것)
   - 5개 전략 지원: buy_and_hold, sma_crossover, rsi_strategy, bollinger_bands, macd_strategy
@@ -59,6 +61,8 @@
   - **yfinance 제한**: 시장 휴일/주말 데이터 없음, 일일 API 제한 존재 가능
   - **캐시 의존성**: MySQL 연결 실패 시 전체 백테스트 기능 중단
   - **전략 확장**: 새 전략 추가 시 프론트엔드 상수 파일도 동기화 필요
+  - **테스트 환경**: pytest(백엔드), Vitest(프론트엔드) 사용, Docker 빌드 시 테스트 실행
+  - **버전 추적**: Git 정보와 빌드 번호는 빌드 시점에 환경 변수로 주입되어 배포 상태 추적 가능
 
 ## To-Do
 
