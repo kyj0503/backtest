@@ -23,10 +23,14 @@ pipeline {
                 script {
                     echo 'Running frontend tests...'
                     try {
-                        // Build test image with tests enabled
+                        // Build test image with tests enabled and build info
                         sh '''
                             cd frontend
-                            docker build --build-arg RUN_TESTS=true -t backtest-frontend-test:${BUILD_NUMBER} .
+                            docker build --build-arg RUN_TESTS=true \
+                                --build-arg GIT_COMMIT=${GIT_COMMIT} \
+                                --build-arg GIT_BRANCH=${GIT_BRANCH} \
+                                --build-arg BUILD_NUMBER=${BUILD_NUMBER} \
+                                -t backtest-frontend-test:${BUILD_NUMBER} .
                         '''
                         echo "✅ Frontend tests passed"
                     } catch (Exception e) {
@@ -42,10 +46,14 @@ pipeline {
                 script {
                     echo 'Running backend tests with controlled environment...'
                     try {
-                        // Build test image with specific test configuration
+                        // Build test image with specific test configuration and build info
                         sh '''
                             cd backend
-                            docker build --build-arg RUN_TESTS=true -t backtest-backend-test:${BUILD_NUMBER} .
+                            docker build --build-arg RUN_TESTS=true \
+                                --build-arg GIT_COMMIT=${GIT_COMMIT} \
+                                --build-arg GIT_BRANCH=${GIT_BRANCH} \
+                                --build-arg BUILD_NUMBER=${BUILD_NUMBER} \
+                                -t backtest-backend-test:${BUILD_NUMBER} .
                         '''
                         echo "✅ Backend tests passed"
                     } catch (Exception e) {
@@ -69,8 +77,8 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                         def fullImageName = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         echo "Building PROD backend image: ${fullImageName}"
-                        // Build production image without tests
-                        sh "cd backend && docker build --build-arg RUN_TESTS=false -t ${fullImageName} ."
+                        // Build production image without tests but with build info
+                        sh "cd backend && docker build --build-arg RUN_TESTS=false --build-arg GIT_COMMIT=${GIT_COMMIT} --build-arg GIT_BRANCH=${GIT_BRANCH} --build-arg BUILD_NUMBER=${BUILD_NUMBER} --build-arg IMAGE_TAG=${BUILD_NUMBER} -t ${fullImageName} ."
                         docker.withRegistry("https://ghcr.io", 'github-token') {
                             docker.image(fullImageName).push()
                         }
@@ -91,8 +99,8 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                         def fullImageName = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         echo "Building PROD frontend image: ${fullImageName}"
-                        // Build production image without tests
-                        sh "cd frontend && docker build --build-arg RUN_TESTS=false -t ${fullImageName} ."
+                        // Build production image without tests but with build info
+                        sh "cd frontend && docker build --build-arg RUN_TESTS=false --build-arg GIT_COMMIT=${GIT_COMMIT} --build-arg GIT_BRANCH=${GIT_BRANCH} --build-arg BUILD_NUMBER=${BUILD_NUMBER} -t ${fullImageName} ."
                         docker.withRegistry("https://ghcr.io", 'github-token') {
                             docker.image(fullImageName).push()
                         }

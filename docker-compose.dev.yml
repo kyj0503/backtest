@@ -11,7 +11,9 @@ services:
       - APP_VERSION=1.0.0-dev
       - ENVIRONMENT=development
       - GIT_BRANCH=main
-      - GIT_COMMIT=dev-local
+      - GIT_COMMIT=fd358f3ed76fcbf7856e18cf9970b811b22ee1ad
+      - BUILD_NUMBER=dev-local
+      - IMAGE_TAG=dev-local
     env_file:
       - ./backend/.env
 
@@ -28,6 +30,9 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - API_PROXY_TARGET=http://backend:8000
+      - VITE_GIT_COMMIT=fd358f3ed76fcbf7856e18cf9970b811b22ee1ad
+      - VITE_GIT_BRANCH=main
+      - VITE_BUILD_NUMBER=dev-local
     depends_on:
       - backend
   

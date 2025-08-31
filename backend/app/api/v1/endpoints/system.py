@@ -29,12 +29,34 @@ def get_git_info():
         git_branch = os.getenv("GIT_BRANCH", "unknown")
         return {
             "commit": git_commit[:8] if git_commit != "unknown" else "unknown",  # 짧은 커밋 해시
-            "branch": git_branch
+            "branch": git_branch,
+            "commit_full": git_commit  # 전체 커밋 해시도 포함
         }
     except Exception:
         return {
             "commit": "unknown",
-            "branch": "unknown"
+            "branch": "unknown",
+            "commit_full": "unknown"
+        }
+
+def get_docker_info():
+    """도커 이미지 정보 가져오기"""
+    try:
+        # Jenkins 빌드 번호나 도커 이미지 태그 정보
+        build_number = os.getenv("BUILD_NUMBER", "unknown")
+        image_tag = os.getenv("IMAGE_TAG", os.getenv("BUILD_NUMBER", "latest"))
+        image_name = os.getenv("IMAGE_NAME", "backtest-backend")
+        
+        return {
+            "build_number": build_number,
+            "image_tag": image_tag,
+            "image_name": image_name
+        }
+    except Exception:
+        return {
+            "build_number": "unknown",
+            "image_tag": "unknown", 
+            "image_name": "unknown"
         }
 
 @router.get("/info", summary="서버 정보")
@@ -48,6 +70,7 @@ async def get_server_info():
     current_time_utc = datetime.now(timezone.utc)
     uptime = current_time_utc - SERVER_START_TIME
     git_info = get_git_info()
+    docker_info = get_docker_info()
     
     # KST 시간대 설정
     kst = pytz.timezone('Asia/Seoul')
@@ -57,6 +80,7 @@ async def get_server_info():
     return {
         "version": get_version(),
         "git": git_info,
+        "docker": docker_info,
         "start_time": SERVER_START_TIME.isoformat(),  # UTC 원본
         "start_time_kst": server_start_kst.isoformat(),  # KST 변환
         "current_time": current_time_utc.isoformat(),  # UTC 원본

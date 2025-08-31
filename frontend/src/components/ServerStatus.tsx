@@ -7,6 +7,12 @@ interface ServerInfo {
   git: {
     commit: string;
     branch: string;
+    commit_full: string;
+  };
+  docker: {
+    build_number: string;
+    image_tag: string;
+    image_name: string;
   };
   start_time: string;
   start_time_kst: string;
@@ -26,12 +32,15 @@ interface ServerInfo {
 
 const ServerStatusFooter = () => {
   const [backendInfo, setBackendInfo] = useState<ServerInfo | null>(null);
-  const [frontendStartTime] = useState<Date>(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 프론트엔드 버전 정보
-  const frontendVersion = "1.0.0";
+  // 프론트엔드 버전 정보 - 빌드 시점에 주입됨 또는 환경변수에서 가져옴
+  const frontendVersion = __APP_VERSION__ || "1.0.0-dev";
+  const buildTime = __BUILD_TIME__;
+  const gitCommit = __GIT_COMMIT__ || import.meta.env.VITE_GIT_COMMIT || "unknown";
+  const gitBranch = __GIT_BRANCH__ || import.meta.env.VITE_GIT_BRANCH || "unknown";
+  const buildNumber = __BUILD_NUMBER__ || import.meta.env.VITE_BUILD_NUMBER || "unknown";
 
   const fetchServerInfo = async () => {
     try {
@@ -85,26 +94,6 @@ const ServerStatusFooter = () => {
     }
   };
 
-  const getFrontendUptime = (): string => {
-    const now = new Date();
-    const uptimeMs = now.getTime() - frontendStartTime.getTime();
-    const uptimeSeconds = Math.floor(uptimeMs / 1000);
-    return formatUptime(uptimeSeconds);
-  };
-
-  const getEnvironmentColor = (env: string): string => {
-    switch (env.toLowerCase()) {
-      case 'production':
-        return 'success';
-      case 'development':
-        return 'warning';
-      case 'staging':
-        return 'info';
-      default:
-        return 'secondary';
-    }
-  };
-
   return (
     <footer className="bg-light border-top mt-5 py-4">
       <Container>
@@ -139,12 +128,22 @@ const ServerStatusFooter = () => {
               <div className="flex-grow-1">
                 <div className="d-flex align-items-center mb-1">
                   <h6 className="mb-0 me-2">Frontend</h6>
-                  <Badge bg="primary" className="me-2">v{frontendVersion}</Badge>
-                  <Badge bg="info">React + Vite</Badge>
+                  <Badge bg="primary">v{frontendVersion}</Badge>
                 </div>
                 <div className="text-muted small">
-                  <div>업타임: {getFrontendUptime()}</div>
-                  <div>시작: {formatKSTTime(frontendStartTime)} (KST)</div>
+                  {buildNumber !== 'unknown' && buildNumber !== 'dev-local' && (
+                    <div>
+                      <i className="bi bi-box me-1"></i>
+                      Build #{buildNumber}
+                    </div>
+                  )}
+                  {gitCommit !== 'unknown' && gitCommit !== 'dev-local' && gitCommit.length > 4 && (
+                    <div>
+                      <i className="bi bi-git me-1"></i>
+                      {gitBranch}@{gitCommit.substring(0, 8)}
+                    </div>
+                  )}
+                  <div>현재: {formatKSTTime(new Date())} (KST)</div>
                 </div>
               </div>
             </div>
@@ -166,16 +165,19 @@ const ServerStatusFooter = () => {
                   <>
                     <div className="d-flex align-items-center mb-1">
                       <h6 className="mb-0 me-2">Backend</h6>
-                      <Badge bg="success" className="me-2">v{backendInfo.version}</Badge>
-                      <Badge bg={getEnvironmentColor(backendInfo.environment)}>
-                        {backendInfo.environment}
-                      </Badge>
+                      <Badge bg="success">v{backendInfo.version}</Badge>
                     </div>
                     <div className="text-muted small">
                       <div>업타임: {formatUptime(backendInfo.uptime_seconds)}</div>
                       <div>시작: {formatKSTTime(backendInfo.start_time_kst)} (KST)</div>
                       <div>Python: {backendInfo.python_version}</div>
-                      {backendInfo.git.commit !== 'unknown' && (
+                      {backendInfo.docker.build_number !== 'unknown' && (
+                        <div>
+                          <i className="bi bi-box me-1"></i>
+                          Build #{backendInfo.docker.build_number}
+                        </div>
+                      )}
+                      {backendInfo.git.commit !== 'unknown' && backendInfo.git.commit !== 'dev-loca' && backendInfo.git.commit.length > 4 && (
                         <div>
                           <i className="bi bi-git me-1"></i>
                           {backendInfo.git.branch}@{backendInfo.git.commit}

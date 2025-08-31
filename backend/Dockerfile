@@ -24,8 +24,21 @@ COPY app ./app
 COPY tests ./tests
 COPY run_server.py .
 
-# 테스트 실행 (빌드 인자로 제어 가능)
+# 빌드 인자들
 ARG RUN_TESTS=false
+ARG GIT_COMMIT=unknown
+ARG GIT_BRANCH=unknown  
+ARG BUILD_NUMBER=unknown
+ARG IMAGE_TAG=latest
+
+# 환경변수로 설정
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV GIT_BRANCH=${GIT_BRANCH}
+ENV BUILD_NUMBER=${BUILD_NUMBER}
+ENV IMAGE_TAG=${IMAGE_TAG}
+ENV IMAGE_NAME=backtest-backend
+
+# 테스트 실행 (빌드 인자로 제어 가능)
 RUN if [ "$RUN_TESTS" = "true" ] ; then python -m pytest tests/ -v --tb=short ; fi
 
 # 포트 노출
