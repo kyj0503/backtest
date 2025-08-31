@@ -26,3 +26,28 @@ services:
       - API_PROXY_TARGET=http://backend:8000
     depends_on:
       - backend
+  
+  # 프론트엔드 테스트 실행을 위한 별도 서비스
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run test:run
+    profiles:
+      - test
+
+  # 백엔드 테스트 실행을 위한 별도 서비스
+  backend-test:
+    build: ./backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    command: python -m pytest tests/ -v
+    environment:
+      - PYTHONPATH=/app
+    profiles:
+      - test

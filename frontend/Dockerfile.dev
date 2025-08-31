@@ -1,6 +1,9 @@
 # Development Dockerfile for frontend
 FROM node:18-alpine
 
+# Install git for testing dependencies
+RUN apk add --no-cache git
+
 WORKDIR /app
 
 # Install dependencies (cached at image build time)
@@ -12,6 +15,7 @@ COPY . .
 
 ENV NODE_ENV=development
 
-EXPOSE 5173
+EXPOSE 5174
 
+# Default command for development
 CMD ["npm", "run", "dev"]

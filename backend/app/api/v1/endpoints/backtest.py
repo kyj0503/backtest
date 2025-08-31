@@ -13,11 +13,12 @@ from ....core.custom_exceptions import (
     DataNotFoundError, 
     InvalidSymbolError, 
     YFinanceRateLimitError,
-    ValidationError
+    ValidationError,
+    handle_yfinance_error
 )
 from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
-import traceback
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -186,16 +187,39 @@ async def get_chart_data(request: BacktestRequest):
             return chart_data
         
     except ValueError as e:
-        logger.error(f"차트 데이터 요청 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+        from app.core.custom_exceptions import ValidationError
+        from app.utils.user_messages import get_user_friendly_message, log_error_for_debugging
+        
+        error_id = log_error_for_debugging(e, "차트 데이터 요청", {"ticker": request.ticker})
+        logger.error(f"[{error_id}] 차트 데이터 요청 오류: {str(e)}")
+        
+        raise ValidationError(
+            get_user_friendly_message("ValidationError", str(e))
         )
+    
+    except (DataNotFoundError, InvalidSymbolError, YFinanceRateLimitError) as e:
+        # 이미 적절한 HTTP 상태코드와 메시지를 가진 커스텀 예외들은 그대로 전파
+        raise e
+        
     except Exception as e:
-        logger.error(f"차트 데이터 생성 오류: {str(e)}")
+        from app.utils.user_messages import get_user_friendly_message, log_error_for_debugging
+        from app.core.custom_exceptions import handle_yfinance_error
+        
+        error_id = log_error_for_debugging(e, "차트 데이터 생성", {
+            "ticker": request.ticker,
+            "start_date": str(request.start_date),
+            "end_date": str(request.end_date)
+        })
+        
+        # yfinance 관련 에러인지 확인
+        error_str = str(e).lower()
+        if any(keyword in error_str for keyword in ["yfinance", "yahoo", "ticker", "symbol", "no data"]):
+            raise handle_yfinance_error(e, request.ticker, str(request.start_date), str(request.end_date))
+        
+        logger.error(f"[{error_id}] 차트 데이터 생성 예상치 못한 오류: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="차트 데이터 생성 중 오류가 발생했습니다."
+            detail=f"차트 데이터 생성 중 예상치 못한 오류가 발생했습니다. (오류 ID: {error_id})"
         )
 
 

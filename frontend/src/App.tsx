@@ -2,33 +2,35 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import UnifiedBacktestForm from './components/UnifiedBacktestForm';
 import UnifiedBacktestResults from './components/UnifiedBacktestResults';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useBacktest } from './hooks/useBacktest';
 
 function App() {
-  const { results, loading, error, isPortfolio, runBacktest, clearError } = useBacktest();
+  const { results, loading, error, errorType, errorId, isPortfolio, runBacktest, clearError } = useBacktest();
 
   return (
-    <div className="App">
-      <Container fluid className="py-4">
-        <Row className="justify-content-center">
-          <Col xl={10}>
-            {/* 헤더 */}
-            <div className="text-center mb-5">
-              <h1 className="display-4 fw-bold text-primary mb-3">
-                📈 백테스팅 플랫폼
-              </h1>
-              <p className="lead text-muted">
-                단일 종목부터 포트폴리오까지, 다양한 투자 전략을 검증해보세요
-              </p>
-            </div>
+    <ErrorBoundary>
+      <div className="App">
+        <Container fluid className="py-4">
+          <Row className="justify-content-center">
+            <Col xl={10}>
+              {/* 헤더 */}
+              <div className="text-center mb-5">
+                <h1 className="display-4 fw-bold text-primary mb-3">
+                  📈 백테스팅 플랫폼
+                </h1>
+                <p className="lead text-muted">
+                  단일 종목부터 포트폴리오까지, 다양한 투자 전략을 검증해보세요
+                </p>
+              </div>
 
-            {/* 백테스트 폼 */}
-            <Row className="mb-5">
-              <Col>
-                <UnifiedBacktestForm 
-                  onSubmit={runBacktest} 
-                  loading={loading} 
-                />
+              {/* 백테스트 폼 */}
+              <Row className="mb-5">
+                <Col>
+                  <UnifiedBacktestForm 
+                    onSubmit={runBacktest} 
+                    loading={loading} 
+                  />
               </Col>
             </Row>
 
@@ -44,7 +46,22 @@ function App() {
             {/* 에러 메시지 */}
             {error && (
               <Alert variant="danger" dismissible onClose={clearError}>
-                <strong>오류:</strong> {error}
+                <div className="d-flex align-items-start">
+                  <div className="flex-grow-1">
+                    <Alert.Heading className="h6 mb-2">
+                      <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                      {errorType === 'network' ? '네트워크 오류' :
+                       errorType === 'data_not_found' ? '데이터 없음' :
+                       errorType === 'validation' ? '입력값 오류' :
+                       errorType === 'rate_limit' ? '요청 제한 초과' :
+                       '오류가 발생했습니다'}
+                    </Alert.Heading>
+                    <p className="mb-1">{error}</p>
+                    {errorId && (
+                      <small className="text-muted">오류 ID: {errorId}</small>
+                    )}
+                  </div>
+                </div>
               </Alert>
             )}
 
@@ -74,6 +91,7 @@ function App() {
         </Row>
       </Container>
     </div>
+    </ErrorBoundary>
   );
 }
 

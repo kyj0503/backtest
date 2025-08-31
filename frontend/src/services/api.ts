@@ -1,6 +1,13 @@
 // API 호출을 담당하는 서비스 클래스
 import { UnifiedBacktestRequest } from '../types/api';
 
+export interface ApiError {
+  message: string;
+  status: number;
+  errorId?: string;
+  type?: 'network' | 'validation' | 'server' | 'data_not_found' | 'rate_limit';
+}
+
 export class BacktestApiService {
   private getApiBaseUrl(): string {
     if (typeof window !== 'undefined') {
@@ -16,6 +23,69 @@ export class BacktestApiService {
     return 'http://localhost:8001';
   }
 
+  private async handleApiError(response: Response): Promise<ApiError> {
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    let errorType: ApiError['type'] = 'server';
+    let errorId: string | undefined;
+
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.detail || errorMessage;
+      
+      // 에러 ID 추출 (백엔드에서 제공하는 경우)
+      if (typeof errorData.detail === 'string' && errorData.detail.includes('오류 ID:')) {
+        const idMatch = errorData.detail.match(/오류 ID:\s*([a-zA-Z0-9]+)/);
+        if (idMatch) {
+          errorId = idMatch[1];
+        }
+      }
+
+      // HTTP 상태 코드에 따른 에러 타입 분류
+      switch (response.status) {
+        case 404:
+          errorType = 'data_not_found';
+          break;
+        case 422:
+          errorType = 'validation';
+          break;
+        case 429:
+          errorType = 'rate_limit';
+          break;
+        case 400:
+          errorType = 'validation';
+          break;
+        default:
+          errorType = 'server';
+      }
+    } catch (parseError) {
+      // JSON 파싱 실패 시 기본 메시지 사용
+      console.warn('Error parsing API error response:', parseError);
+    }
+
+    return {
+      message: errorMessage,
+      status: response.status,
+      errorId,
+      type: errorType
+    };
+  }
+
+  private createApiError(error: Error | any): ApiError {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      return {
+        message: '네트워크 연결에 문제가 발생했습니다. 인터넷 연결을 확인해주세요.',
+        status: 0,
+        type: 'network'
+      };
+    }
+
+    return {
+      message: error.message || '알 수 없는 오류가 발생했습니다.',
+      status: 500,
+      type: 'server'
+    };
+  }
+
   async runSingleStockBacktest(request: {
     ticker: string;
     start_date: string;
@@ -24,20 +94,27 @@ export class BacktestApiService {
     strategy: string;
     strategy_params: Record<string, any>;
   }) {
-    const response = await fetch(`${this.getApiBaseUrl()}/api/v1/backtest/chart-data`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/backtest/chart-data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
     }
-
-    return response.json();
   }
 
   async runPortfolioBacktest(request: {
@@ -49,20 +126,27 @@ export class BacktestApiService {
     strategy: string;
     strategy_params: Record<string, any>;
   }) {
-    const response = await fetch(`${this.getApiBaseUrl()}/api/v1/backtest/portfolio`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/backtest/portfolio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
     }
-
-    return response.json();
   }
 
   async runBacktest(request: UnifiedBacktestRequest) {
