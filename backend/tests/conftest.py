@@ -3,12 +3,32 @@
 """
 import pytest
 import asyncio
+import os
 from typing import Generator, AsyncGenerator
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import Mock, AsyncMock, patch
 
 from app.main import app
 from app.core.custom_exceptions import DataNotFoundError, InvalidSymbolError, YFinanceRateLimitError
+
+
+# 테스트 환경에서 데이터베이스 연결 비활성화
+@pytest.fixture(scope="session", autouse=True)
+def mock_database():
+    """테스트 환경에서 데이터베이스 연결을 모킹"""
+    with patch('app.services.yfinance_db._get_engine') as mock_engine, \
+         patch('app.services.yfinance_db.save_ticker_data') as mock_save, \
+         patch('app.services.yfinance_db.load_ticker_data') as mock_load:
+        
+        # 데이터베이스 연결 없이 None 반환
+        mock_engine.return_value = None
+        mock_save.return_value = 0  # 저장된 행 수
+        mock_load.return_value = None  # 캐시된 데이터 없음
+        yield {
+            'engine': mock_engine,
+            'save': mock_save,
+            'load': mock_load
+        }
 
 
 @pytest.fixture(scope="session")

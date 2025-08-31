@@ -184,11 +184,19 @@ docker logs backtest-backend-1
 
 ```bash
 # 단위 테스트 실행
-python -m pytest tests/
+python -m pytest backend/tests/ -v
 
-# API 테스트
-python test_api.py
+# 특정 테스트 파일 실행
+python -m pytest backend/tests/test_api_endpoints.py -v
+
+# 커버리지와 함께 실행
+python -m pytest backend/tests/ --cov=app --cov-report=html
 ```
+
+**주의사항:**
+- 테스트 환경에서는 MySQL 연결이 모킹됩니다
+- 우분투 CI/CD 환경에서는 `127.0.0.1` MySQL 접근이 제한될 수 있음
+- yfinance API 호출도 테스트에서 모킹되어 실제 네트워크 요청 없이 실행
 
 ### 배포
 

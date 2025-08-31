@@ -22,7 +22,7 @@
 
 ## 실행, 빌드, 테스트 — 핵심 명령
   - 개발 환경은 윈도우, powershell, 도커 데스크탑을 사용한다.
-  - 항상 작업할때 개발환경(윈도우 + powershell + 도커 컴포즈 + 도커 데스크탑 환경)에서도 작동하게 해야하고, 운영환경(우분투 서버, 호스트에 설치된 젠킨스와 MySQL 서버, 도커 컴포즈 활용)
+  - 프로젝트 코드는 항상 개발환경(윈도우 + powershell + 도커 컴포즈 + 도커 데스크탑 환경)과 운영환경(우분투 서버, 호스트에 설치된 젠킨스와 MySQL 서버, 도커 컴포즈 활용) 모두에서 문제없이 작동해야 해.
   - `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build`로 프로젝트를 실행한다.
   - 백그라운드 실행: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d`
   - 컨테이너 중지: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml down`
@@ -57,12 +57,14 @@
 
 ## 제한 사항 / 주의점 (현 코드에서 관찰된 것)
   - **MySQL 연결**: 윈도우 도커 환경에서 `host.docker.internal` 사용 필수
+  - **우분투 CI/CD**: 젠킨스 빌드 환경에서 MySQL `127.0.0.1` 접근 불가, 테스트에서 DB 모킹 필요
   - **포트 매핑**: 개발 환경에서 프론트엔드 5174:5174, 백엔드 8001:8000
   - **yfinance 제한**: 시장 휴일/주말 데이터 없음, 일일 API 제한 존재 가능
   - **캐시 의존성**: MySQL 연결 실패 시 전체 백테스트 기능 중단
   - **전략 확장**: 새 전략 추가 시 프론트엔드 상수 파일도 동기화 필요
   - **테스트 환경**: pytest(백엔드), Vitest(프론트엔드) 사용, Docker 빌드 시 테스트 실행
   - **버전 추적**: Git 정보와 빌드 번호는 빌드 시점에 환경 변수로 주입되어 배포 상태 추적 가능
+  - **타입스크립트 빌드**: 프론트엔드에서 사용하지 않는 변수 선언 시 빌드 실패 (strict 모드)
 
 ## To-Do
 

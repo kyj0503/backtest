@@ -37,7 +37,6 @@ const ServerStatusFooter = () => {
 
   // 프론트엔드 버전 정보 - 빌드 시점에 주입됨 또는 환경변수에서 가져옴
   const frontendVersion = __APP_VERSION__ || "1.0.0-dev";
-  const buildTime = __BUILD_TIME__;
   const gitCommit = __GIT_COMMIT__ || import.meta.env.VITE_GIT_COMMIT || "unknown";
   const gitBranch = __GIT_BRANCH__ || import.meta.env.VITE_GIT_BRANCH || "unknown";
   const buildNumber = __BUILD_NUMBER__ || import.meta.env.VITE_BUILD_NUMBER || "unknown";

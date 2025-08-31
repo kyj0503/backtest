@@ -134,6 +134,28 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 3. **이미지 빌드** → Docker 이미지 생성 및 GHCR 푸시
 4. **자동 배포** → 우분투 서버에 자동 배포
 
+## 문제 해결
+
+### 자주 발생하는 문제
+
+1. **프론트엔드 빌드 실패**
+   - TypeScript 컴파일 오류: 사용하지 않는 변수 제거
+   - 예: `error TS6133: 'variable' is declared but its value is never read`
+
+2. **백엔드 테스트 실패**
+   - MySQL 연결 오류: 테스트 환경에서는 DB가 모킹됨
+   - CI/CD 환경에서 `127.0.0.1` 접근 제한
+
+3. **Docker 빌드 문제**
+   - 포트 충돌: 기존 컨테이너 종료 후 재시작
+   - 캐시 문제: `docker system prune` 실행
+
+### 개발 환경별 주의사항
+
+- **Windows**: `host.docker.internal`로 MySQL 접근
+- **Ubuntu/CI**: MySQL 연결 모킹 필요, 테스트에서 실제 DB 사용 불가
+- **네트워크**: yfinance API 제한으로 실제 데이터 수집 제한 가능
+
 ## 문서
 
 - **백엔드 개발**: [backend/doc/README.md](backend/doc/README.md)
