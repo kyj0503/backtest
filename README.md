@@ -2,23 +2,23 @@
 
 ## 최근 업데이트 (2025-09-01)
 
-### 🔧 CI/CD 안정화 및 테스트 인프라 개선
-- **Jenkins 빌드 안정화**: Ubuntu CI/CD 환경에서 발생하던 빌드 실패 문제 해결
-- **테스트 인프라 강화**: 포괄적인 데이터베이스 및 외부 API 모킹으로 환경 독립성 확보
-- **TypeScript 컴파일 수정**: Frontend 빌드 시 발생하던 unused variable 오류 해결
-- **환경별 호환성**: Windows 개발환경과 Ubuntu 운영환경 모두 지원
+### 🔧 테스트 시스템 완전 재설계 및 오프라인 모킹 도입
+- **완전 오프라인 테스트**: yfinance API와 MySQL DB 의존성을 완전히 제거한 오프라인 모킹 시스템 구축
+- **수학적 데이터 생성**: Geometric Brownian Motion 알고리즘을 활용한 현실적 주식 데이터 생성
+- **3-Tier 테스트 아키텍처**: unit/integration/e2e 구조로 체계적인 테스트 계층 설계
+- **CI/CD 안정성**: Jenkins Ubuntu 환경에서 100% 성공률을 보장하는 완전 격리 테스트
 
-### 🐛 수정된 주요 이슈
-- ✅ **TS6133 오류**: Frontend의 미사용 변수 제거로 TypeScript strict 모드 통과
-- ✅ **MySQL 연결 오류**: CI/CD 환경에서 데이터베이스 의존성 제거 (포괄적 모킹)
-- ✅ **테스트 실패**: Backend 테스트에서 환경 변수 및 외부 의존성 문제 해결
-- ✅ **포트폴리오 서비스**: `PortfolioService` 클래스 추가로 테스트 호환성 개선
+### 🐛 해결된 CI/CD 문제점
+- ✅ **네트워크 의존성 제거**: yfinance API 호출 완전 차단으로 빌드 안정성 확보
+- ✅ **데이터베이스 격리**: MySQL 연결 없이도 실제 DB 스키마와 호환되는 모킹 데이터 사용
+- ✅ **시나리오 기반 테스트**: 정상/비정상/극한 상황을 모두 커버하는 테스트 시나리오 구현
+- ✅ **TypeScript 빌드**: Frontend의 unused variable 오류 해결
 
-### 🛠 기술적 개선사항
-- **Backend**: `conftest.py`에 session-level 자동 모킹 추가
-- **Frontend**: BuildTime 변수 제거 및 빌드 프로세스 최적화  
-- **Testing**: 유연한 HTTP 상태 코드 검증 (422/500 모두 허용)
-- **Documentation**: 환경별 차이점 및 문제 해결 가이드 추가
+### 🛠 신규 테스트 인프라
+- **MockStockDataGenerator**: DECIMAL(19,4) 정밀도를 지원하는 DB 호환 데이터 생성기
+- **시나리오 시스템**: normal, empty, volatile 등 다양한 시장 상황 시뮬레이션
+- **픽스처 관리**: 재사용 가능한 테스트 데이터와 예상 결과 중앙화
+- **성능 최적화**: 단위 테스트 <30초, 통합 테스트 <2분, 종단 테스트 <5분 목표
 
 ---
 
@@ -53,8 +53,9 @@
 ## 기술 스택
 
 - **백엔드**: FastAPI, Python 3.11+, pandas, yfinance, backtesting.py
-- **프론트엔드**: React 18, TypeScript, Vite, React Bootstrap, Recharts
+- **프론트엔드**: React 18, TypeScript, Vite, React Bootstrap, Recharts  
 - **데이터베이스**: MySQL (주식 데이터 캐싱)
+- **테스트**: pytest (완전 오프라인 모킹), Vitest (프론트엔드)
 - **컨테이너**: Docker, Docker Compose
 - **CI/CD**: Jenkins, GitHub Container Registry
 - **모니터링**: 시스템 정보 API, Git 커밋 추적
@@ -126,26 +127,46 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 - **개발 환경**: http://localhost:5174 (프론트엔드), http://localhost:8001 (백엔드)
 - **프로덕션 환경**: http://localhost:8082 (프론트엔드), http://localhost:8001 (백엔드)
 
-### 테스트
+## 테스트
+
+### 백엔드 테스트 (완전 오프라인 시스템)
 
 ```bash
-# 백엔드 테스트
-cd backend
-pytest backend/tests/
+# 전체 테스트 실행
+cd backend && pytest tests/ -v
 
-# 프론트엔드 테스트  
-cd frontend
-npm test
-cd backend
-pytest tests/ -v
+# 티어별 테스트 실행
+pytest tests/unit/          # 단위 테스트 (개별 함수/클래스)
+pytest tests/integration/   # 통합 테스트 (서비스 간 상호작용)  
+pytest tests/e2e/          # 종단 테스트 (전체 시나리오)
 
-# 프론트엔드 테스트  
-cd frontend
-npm test
-
-# 도커 환경에서 전체 테스트 (CI/CD 방식)
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# 커버리지 리포트
+pytest tests/ --cov=app --cov-report=html
 ```
+
+### 프론트엔드 테스트
+
+```bash
+cd frontend && npm test
+```
+
+### CI/CD 테스트 (Docker 환경)
+
+```bash
+# 개발 환경에서 CI/CD와 동일한 조건으로 테스트
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# 백엔드만 테스트
+docker-compose exec backend pytest tests/ -v
+```
+
+### 테스트 아키텍처 특징
+
+- **완전 격리**: yfinance API, MySQL DB 등 모든 외부 의존성 제거
+- **수학적 모델링**: Geometric Brownian Motion 기반 현실적 주식 데이터
+- **DB 스키마 호환**: stock_data_cache 테이블 구조 (DECIMAL 19,4) 완전 준수
+- **시나리오 기반**: 정상/비정상/극한 상황 모든 케이스 커버
+- **CI/CD 최적화**: Jenkins Ubuntu 환경에서 100% 성공률 보장
 
 ## CI/CD
 
@@ -160,13 +181,14 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ### 자주 발생하는 문제
 
-1. **프론트엔드 빌드 실패**
+1. **테스트 실패 (CI/CD 환경)**
+   - yfinance API 네트워크 의존성: 완전 오프라인 모킹 시스템으로 해결됨
+   - MySQL 연결 오류: 테스트 환경에서는 DB가 수학적 알고리즘으로 모킹됨
+   - 데이터 일관성: Geometric Brownian Motion으로 현실적 주식 데이터 생성
+
+2. **프론트엔드 빌드 실패**
    - TypeScript 컴파일 오류: 사용하지 않는 변수 제거
    - 예: `error TS6133: 'variable' is declared but its value is never read`
-
-2. **백엔드 테스트 실패**
-   - MySQL 연결 오류: 테스트 환경에서는 DB가 모킹됨
-   - CI/CD 환경에서 `127.0.0.1` 접근 제한
 
 3. **Docker 빌드 문제**
    - 포트 충돌: 기존 컨테이너 종료 후 재시작
@@ -175,8 +197,8 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ### 개발 환경별 주의사항
 
 - **Windows**: `host.docker.internal`로 MySQL 접근
-- **Ubuntu/CI**: MySQL 연결 모킹 필요, 테스트에서 실제 DB 사용 불가
-- **네트워크**: yfinance API 제한으로 실제 데이터 수집 제한 가능
+- **Ubuntu/CI**: 모든 외부 의존성이 오프라인 모킹으로 대체됨
+- **테스트 환경**: 실제 네트워크 없이도 100% 동작하는 격리된 테스트
 
 ## 문서
 

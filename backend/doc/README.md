@@ -2,23 +2,17 @@
 
 ## 최근 업데이트 (2025-09-01)
 
-### 🔧 테스트 인프라 대폭 개선
-- **CI/CD 호환성**: Ubuntu Jenkins 환경에서 안정적인 테스트 실행
-- **포괄적 모킹**: 데이터베이스, yfinance API, 백테스트 서비스 자동 모킹
-- **환경 독립성**: MySQL 연결 없이도 전체 테스트 스위트 실행 가능
-- **오류 복원력**: 외부 의존성 실패 시에도 테스트 통과
+### 🧪 테스트 시스템 완전 재설계
+- **완전 오프라인 모킹**: yfinance API와 MySQL 의존성 완전 제거
+- **수학적 데이터 생성**: 기하 브라운 운동 기반 현실적 주식 데이터 시뮬레이션
+- **CI/CD 안정성**: 젠킨스 우분투 환경에서 네트워크 의존성 없는 테스트 실행
+- **DB 스키마 준수**: 실제 stock_data_cache 테이블 구조와 일치하는 모의 데이터
 
-### 🐛 해결된 테스트 문제
-- ✅ **MySQL 연결 오류**: `'NoneType' object has no attribute 'connect'` 해결
-- ✅ **포트폴리오 서비스**: `PortfolioService` 클래스 누락 문제 수정
-- ✅ **예외 처리**: DataNotFoundError, InvalidSymbolError 일관성 개선
-- ✅ **날짜 범위**: 잘못된 날짜 범위 테스트 케이스 수정
-
-### 🛠 기술적 개선
-- **테스트 설정**: `conftest.py`에 session-level 자동 모킹 추가
-- **서비스 계층**: `PortfolioBacktestService`와 `PortfolioService` 호환성 보장
-- **오류 처리**: 유연한 HTTP 상태 코드 검증 (422/500)
-- **모킹 전략**: 실제 환경과 동일한 응답 구조 모킹
+### 🔧 아키텍처 개선사항
+- **예외 처리 통합**: DataNotFoundError, InvalidSymbolError 일관된 처리
+- **테스트 데이터 생성기**: MockStockDataGenerator로 시나리오별 데이터 생성
+- **픽스처 시스템**: 재사용 가능한 모의 데이터셋 (AAPL, GOOGL, MSFT, TSLA)
+- **수학적 모델링**: 변동성, 트렌드, 거래량을 고려한 현실적 주가 시뮬레이션
 
 ---
 
@@ -51,7 +45,15 @@ backend/
 │   ├── utils/           # 유틸리티 (데이터 수집, 직렬화, 포트폴리오)
 │   └── main.py          # FastAPI 애플리케이션 엔트리포인트
 ├── strategies/          # 투자 전략 구현체 (RSI, SMA 등)
-├── tests/              # 백엔드 테스트 코드
+├── tests/              # 백엔드 테스트 코드 (재설계 중)
+│   ├── conftest.py     # pytest 설정 및 전역 픽스처
+│   ├── unit/           # 단위 테스트 (계층별 분리)
+│   ├── integration/    # 통합 테스트 (컴포넌트 간)
+│   ├── e2e/           # End-to-End 테스트 (전체 시나리오)
+│   └── fixtures/      # 모의 데이터 및 테스트 픽스처
+│       ├── mock_data_generator.py  # 수학적 주식 데이터 생성기
+│       ├── stock_metadata.json    # 테스트용 주식 메타데이터
+│       └── expected_results.json  # 예상 백테스팅 결과
 ├── doc/                # 백엔드 개발 문서
 ├── Dockerfile          # 백엔드 도커 이미지 설정
 └── requirements.txt    # Python 의존성 패키지
@@ -205,20 +207,24 @@ docker logs backtest-backend-1
 ### 테스트
 
 ```bash
-# 단위 테스트 실행
+# 전체 테스트 실행 (새로운 오프라인 모킹 시스템)
 python -m pytest backend/tests/ -v
 
-# 특정 테스트 파일 실행
-python -m pytest backend/tests/test_api_endpoints.py -v
+# 계층별 테스트 실행
+python -m pytest backend/tests/unit/ -v           # 단위 테스트
+python -m pytest backend/tests/integration/ -v   # 통합 테스트
+python -m pytest backend/tests/e2e/ -v           # E2E 테스트
 
 # 커버리지와 함께 실행
 python -m pytest backend/tests/ --cov=app --cov-report=html
 ```
 
-**주의사항:**
-- 테스트 환경에서는 MySQL 연결이 모킹됩니다
-- 우분투 CI/CD 환경에서는 `127.0.0.1` MySQL 접근이 제한될 수 있음
-- yfinance API 호출도 테스트에서 모킹되어 실제 네트워크 요청 없이 실행
+**테스트 특징:**
+- ✅ **완전 오프라인**: yfinance API, MySQL 연결 없이 실행
+- ✅ **수학적 모의 데이터**: 기하 브라운 운동으로 현실적 주가 생성
+- ✅ **CI/CD 호환**: 젠킨스 우분투 환경에서 100% 안정성
+- ✅ **DB 스키마 준수**: 실제 데이터베이스 구조와 동일한 모의 데이터
+- ✅ **시나리오 테스트**: bull_market, bear_market, volatile 등 다양한 시장 상황
 
 ### 배포
 

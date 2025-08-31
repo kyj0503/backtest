@@ -4,6 +4,19 @@
 
 백테스팅 플랫폼의 REST API 엔드포인트를 설명합니다. 모든 API는 JSON 형식으로 데이터를 주고받습니다.
 
+## 최근 업데이트 (2025-09-01)
+
+### 🔧 시스템 안정성 개선
+- **오프라인 모킹**: yfinance API 의존성 제거로 테스트 환경 안정성 확보
+- **데이터 생성기**: 수학적 알고리즘 기반 현실적 주식 데이터 생성
+- **예외 처리**: DataNotFoundError, InvalidSymbolError 일관된 응답
+- **CI/CD 호환**: 젠킨스 환경에서 네트워크 의존성 없는 테스트
+
+### 📊 데이터 품질 향상
+- **OHLCV 정확성**: DB 스키마(DECIMAL 19,4)에 맞는 정밀도
+- **시장 시뮬레이션**: 기하 브라운 운동으로 실제 주가 패턴 모사
+- **다양한 시나리오**: bull_market, bear_market, volatile 등 테스트 케이스
+
 ## 기본 정보
 
 - **Base URL**: `http://localhost:8001` (개발), `https://backtest-be.yeonjae.kr` (프로덕션)
