@@ -24,6 +24,7 @@
   - 만약 외부 의존 라이브러리가 필요하면 `backend/requirements.txt`에 추가
   - `backend/app/utils/data_fetcher.py`는 yfinance를 사용. 외부 API 키 불필요. 캐시 경로·유효기간 변경은 `app/core/config.py` 참조
   - 새 API는 `backend/app/api/v1/endpoints/`에 추가. Response/Request 모델은 `backend/app/models/`에 추가/확장
+  - 프론트엔드 개선 시 우선순위: Services 계층 분리 → 유틸리티 함수 모듈화 → 커스텀 훅 도입 → 상수 모듈화 → 레거시 정리
 
 ## 예시 스니펫(에이전트가 자주 사용할 것)
   - key: 'sma_crossover'
@@ -53,8 +54,17 @@
    - [ ] yfinance 재시도 정책 개선: 휴일/주말/딜리스트 등 경계 케이스를 더 잘 처리하도록 달력/마켓 휴일 인식 로직 추가.
    - [ ] 커뮤니티 기능 추가. 수익률 비틱할 수 있게.
    - [ ] 로그인해야 백테스팅 결과를 이미지나 PDF로 저장할 수 있는 기능을 추가.
+   - [ ] **프론트엔드 구조 개선(우선순위 높음)**: API 계층 분리 (`frontend/src/services/api.ts`), 유틸리티 함수 모듈화 (`frontend/src/utils/formatters.ts`), 커스텀 훅 도입 (`frontend/src/hooks/useBacktest.ts`), 전략 설정 상수화 (`frontend/src/constants/strategies.ts`)
+   - [ ] **프론트엔드 레거시 정리**: `App_old.tsx`, `BacktestForm.tsx`, `PortfolioForm.tsx`, `PortfolioResults.tsx` 등 사용되지 않는 컴포넌트 제거
+   - [ ] **폼 상태 관리 개선**: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer 또는 상태 라이브러리로 리팩토링
+   - [ ] **에러 바운더리 추가**: React Error Boundary로 예상치 못한 컴포넌트 에러 처리
 
 3. 장기(Low)
    - [ ] Alembic 도입 또는 문서에서 완전 제거: DB 스키마 변경이 빈번하다면 Alembic 마이그레이션을 추가합니다.
    - [ ] 로깅/모니터링: 데이터 백필/백테스트 실패 추적을 위한 Sentry/Prometheus 연동.
    - [ ] 추천하는 유튜브 컨텐츠 보여주기. 슈카월드나 오선, 미과장 같은거.
+   - [ ] **전역 상태 관리 도입**: Zustand 또는 Redux로 앱 전체 상태 관리 체계 구축
+   - [ ] **성능 최적화**: React.memo, useMemo, useCallback을 활용한 불필요한 리렌더링 방지
+   - [ ] **프론트엔드 테스트 코드 추가**: Jest + React Testing Library로 컴포넌트 및 훅 테스트 구현
+   - [ ] **로딩 상태 통합 관리**: 전역 로딩 상태 관리 및 스켈레톤 UI 도입
+   - [ ] **다국어 지원(i18n)**: react-i18next를 활용한 한국어/영어 지원
