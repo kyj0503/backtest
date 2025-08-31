@@ -3,7 +3,6 @@ import { ScatterChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Scatter
 
 const TradesChart: React.FC<{ trades: any[] }> = ({ trades }) => {
   const exitTrades = (trades || []).filter(t => t.type === 'exit' && t.pnl_pct !== undefined);
-  const getTradeColor = (pnl: number) => pnl >= 0 ? '#198754' : '#dc3545';
 
   return (
     <div>
@@ -14,7 +13,7 @@ const TradesChart: React.FC<{ trades: any[] }> = ({ trades }) => {
           <YAxis dataKey="pnl_pct" />
           <Scatter dataKey="pnl_pct" fill="#0d6efd">
             {exitTrades.map((trade, index) => (
-              <Cell key={index} fill={getTradeColor(trade.pnl_pct || 0)} />
+              <Cell key={index} fill={trade.pnl_pct >= 0 ? '#198754' : '#dc3545'} />
             ))}
           </Scatter>
           <ReferenceLine y={0} stroke="#6c757d" strokeDasharray="2 2" />

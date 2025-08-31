@@ -5,6 +5,7 @@ import OHLCChart from './OHLCChart';
 import EquityChart from './EquityChart';
 import TradesChart from './TradesChart';
 import StatsSummary from './StatsSummary';
+import { formatPercent } from '../utils/formatters';
 
 interface Stock {
   symbol: string;
@@ -70,13 +71,6 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
-  };
-
-  const formatPercent = (value: number | undefined | null) => {
-    if (value === undefined || value === null || isNaN(value)) {
-      return 'N/A';
-    }
-    return `${value.toFixed(2)}%`;
   };
 
   if (!data) {

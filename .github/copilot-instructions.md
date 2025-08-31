@@ -47,6 +47,8 @@
    - [ ] 급등 또는 급락 시 뉴스 모달 띄우기
    - [ ] 사용자가 설정한 기간 동안의 다른 자산의 변동폭 보여주기(슨피나 금, 비트코인 등)
    - [ ] 단위/통합 테스트 구현
+   - [ ] **전략 확장**: Bollinger Bands와 MACD 전략 구현 및 프론트엔드 파라미터 설정 지원
+   - [ ] **백테스트 결과 개선**: 월별/연도별 수익률 분석, 베타 계수, 최대 연속 손실 기간 등 추가 통계 제공
 
 2. 개선(Medium)
    - [ ] 동시성 보호: `load_ticker_data`/`save_ticker_data`에 간단한 프로세스 내 락 또는 DB 기반 세마포어를 도입해 중복 fetch를 방지합니다.
@@ -54,10 +56,9 @@
    - [ ] yfinance 재시도 정책 개선: 휴일/주말/딜리스트 등 경계 케이스를 더 잘 처리하도록 달력/마켓 휴일 인식 로직 추가.
    - [ ] 커뮤니티 기능 추가. 수익률 비틱할 수 있게.
    - [ ] 로그인해야 백테스팅 결과를 이미지나 PDF로 저장할 수 있는 기능을 추가.
-   - [ ] **프론트엔드 구조 개선(우선순위 높음)**: API 계층 분리 (`frontend/src/services/api.ts`), 유틸리티 함수 모듈화 (`frontend/src/utils/formatters.ts`), 커스텀 훅 도입 (`frontend/src/hooks/useBacktest.ts`), 전략 설정 상수화 (`frontend/src/constants/strategies.ts`)
-   - [ ] **프론트엔드 레거시 정리**: `App_old.tsx`, `BacktestForm.tsx`, `PortfolioForm.tsx`, `PortfolioResults.tsx` 등 사용되지 않는 컴포넌트 제거
    - [ ] **폼 상태 관리 개선**: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer 또는 상태 라이브러리로 리팩토링
    - [ ] **에러 바운더리 추가**: React Error Boundary로 예상치 못한 컴포넌트 에러 처리
+   - [ ] **차트 성능 최적화**: 큰 데이터셋에 대한 가상화 및 차트 렌더링 최적화
 
 3. 장기(Low)
    - [ ] Alembic 도입 또는 문서에서 완전 제거: DB 스키마 변경이 빈번하다면 Alembic 마이그레이션을 추가합니다.

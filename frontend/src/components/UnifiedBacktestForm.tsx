@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Row, Col, Button, Table, Card, Container, Alert } from 'react-bootstrap';
 import { UnifiedBacktestRequest } from '../types/api';
+import { PREDEFINED_STOCKS, STRATEGY_CONFIGS } from '../constants/strategies';
 
 interface Stock {
   symbol: string;
@@ -30,44 +31,9 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
   const [errors, setErrors] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 미리 정의된 종목 옵션
-  const predefinedStocks = [
-    { value: 'CUSTOM', label: '직접 입력' },
-    { value: 'AAPL', label: 'AAPL - Apple Inc.' },
-    { value: 'GOOGL', label: 'GOOGL - Alphabet Inc.' },
-    { value: 'MSFT', label: 'MSFT - Microsoft Corp.' },
-    { value: 'TSLA', label: 'TSLA - Tesla Inc.' },
-    { value: 'AMZN', label: 'AMZN - Amazon.com Inc.' },
-    { value: 'NVDA', label: 'NVDA - NVIDIA Corp.' },
-    { value: 'META', label: 'META - Meta Platforms Inc.' },
-    { value: 'NFLX', label: 'NFLX - Netflix Inc.' },
-    { value: 'SPY', label: 'SPY - SPDR S&P 500 ETF' },
-    { value: 'QQQ', label: 'QQQ - Invesco QQQ Trust' },
-    { value: 'VTI', label: 'VTI - Vanguard Total Stock Market ETF' },
-    { value: 'CASH', label: 'CASH - 현금 (무위험 자산)' }
-  ];
-
-  // 전략별 파라미터 정의
-  const strategyConfigs = {
-    buy_and_hold: { parameters: {} },
-    sma_crossover: {
-      parameters: {
-        short_window: { type: 'int', default: 10, min: 5, max: 50 },
-        long_window: { type: 'int', default: 20, min: 10, max: 100 }
-      }
-    },
-    rsi_strategy: {
-      parameters: {
-        rsi_period: { type: 'int', default: 14, min: 5, max: 30 },
-        rsi_oversold: { type: 'int', default: 30, min: 10, max: 40 },
-        rsi_overbought: { type: 'int', default: 70, min: 60, max: 90 }
-      }
-    }
-  };
-
   // 전략 변경 시 기본값 설정
   useEffect(() => {
-    const config = strategyConfigs[selectedStrategy as keyof typeof strategyConfigs];
+    const config = STRATEGY_CONFIGS[selectedStrategy as keyof typeof STRATEGY_CONFIGS];
     if (config && config.parameters) {
       const defaultParams: Record<string, any> = {};
       Object.entries(config.parameters).forEach(([key, param]) => {
@@ -148,7 +114,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
   };
 
   const generateStrategyParams = () => {
-    const config = strategyConfigs[selectedStrategy as keyof typeof strategyConfigs];
+    const config = STRATEGY_CONFIGS[selectedStrategy as keyof typeof STRATEGY_CONFIGS];
     if (!config || !config.parameters) return {};
 
     const params: Record<string, any> = {};
@@ -205,7 +171,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
   };
 
   const renderStrategyParams = () => {
-    const config = strategyConfigs[selectedStrategy as keyof typeof strategyConfigs];
+    const config = STRATEGY_CONFIGS[selectedStrategy as keyof typeof STRATEGY_CONFIGS];
     if (!config || !config.parameters) return null;
 
     return (
@@ -302,13 +268,13 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                               }}
                               className="mb-2"
                             >
-                              {predefinedStocks.map(option => (
+                              {PREDEFINED_STOCKS.map(option => (
                                 <option key={option.value} value={option.value}>
                                   {option.label}
                                 </option>
                               ))}
                             </Form.Select>
-                            {(stock.symbol === '' || !predefinedStocks.find(opt => opt.value === stock.symbol)) && (
+                            {(stock.symbol === '' || !PREDEFINED_STOCKS.find(opt => opt.value === stock.symbol)) && (
                               <Form.Control
                                 type="text"
                                 value={stock.symbol}

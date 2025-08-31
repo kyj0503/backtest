@@ -1,16 +1,52 @@
 import React from 'react';
 import { Row, Col, Card, Badge, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import { formatPercent, getStatVariant } from '../utils/formatters';
 
 const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
   if (!stats) return null;
 
-  const statItems = [
-    { label: '총 수익률', value: `${stats.total_return_pct.toFixed(2)}%`, variant: stats.total_return_pct >= 0 ? 'success' : 'danger', description: '투자 원금 대비 총 수익률' },
-    { label: '총 거래수', value: stats.total_trades.toString(), variant: 'primary', description: '전체 기간 동안 체결된 거래수' },
-    { label: '승률', value: `${stats.win_rate_pct.toFixed(1)}%`, variant: 'info', description: '전체 거래 중 이익 비율' },
-    { label: '최대 손실', value: `${stats.max_drawdown_pct.toFixed(2)}%`, variant: 'danger', description: '최대 Drawdown' },
-    { label: '샤프', value: stats.sharpe_ratio.toFixed(3), variant: 'secondary', description: '리스크 대비 성과 지표' },
-    { label: 'Profit Factor', value: stats.profit_factor.toFixed(2), variant: 'warning', description: '이익/손실 비율' }
+  const statItems: Array<{
+    label: string;
+    value: string;
+    variant: 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'light' | 'dark';
+    description: string;
+  }> = [
+    { 
+      label: '총 수익률', 
+      value: formatPercent(stats.total_return_pct), 
+      variant: getStatVariant(stats.total_return_pct, 'return') as any, 
+      description: '투자 원금 대비 총 수익률' 
+    },
+    { 
+      label: '총 거래수', 
+      value: stats.total_trades.toString(), 
+      variant: 'primary', 
+      description: '전체 기간 동안 체결된 거래수' 
+    },
+    { 
+      label: '승률', 
+      value: formatPercent(stats.win_rate_pct), 
+      variant: getStatVariant(stats.win_rate_pct, 'winRate') as any, 
+      description: '전체 거래 중 이익 비율' 
+    },
+    { 
+      label: '최대 손실', 
+      value: formatPercent(stats.max_drawdown_pct), 
+      variant: getStatVariant(stats.max_drawdown_pct, 'drawdown') as any, 
+      description: '최대 Drawdown' 
+    },
+    { 
+      label: '샤프', 
+      value: stats.sharpe_ratio.toFixed(3), 
+      variant: getStatVariant(stats.sharpe_ratio, 'sharpe') as any, 
+      description: '리스크 대비 성과 지표' 
+    },
+    { 
+      label: 'Profit Factor', 
+      value: stats.profit_factor.toFixed(2), 
+      variant: (stats.profit_factor >= 1.5 ? 'success' : stats.profit_factor >= 1 ? 'warning' : 'danger') as any, 
+      description: '이익/손실 비율' 
+    }
   ];
 
   return (
