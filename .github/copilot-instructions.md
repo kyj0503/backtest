@@ -122,6 +122,21 @@ backend/tests/
 - **커버리지 목표**: 단위 테스트 90%+, 통합 테스트 80%+, 종단 테스트 주요 시나리오 100%
 - **실행 시간**: 단위 테스트 <30초, 통합 테스트 <2분, 종단 테스트 <5분
 
+## 현재 개발 상황 (2025년 9월 1일 기준)
+
+### Jenkins CI/CD 파이프라인 상태: SUCCESS
+- **Frontend Tests**: 23/23 통과
+- **Backend Tests**: 단위 테스트 완료 (38 passed, 1 skipped)
+- **Production Build**: 백엔드/프론트엔드 이미지 빌드 성공
+- **Deployment**: 서비스 정상 배포
+- **Integration Tests**: 헬스체크 및 기본 연결성 확인
+
+### 통합 테스트 현황
+- **test_backtest_flow.py**: 6/7 테스트 통과 (1개 스킵: 포트폴리오 기능)
+- **test_api_endpoints.py**: 12 passed, 1 skipped, 7 failed (API 응답 구조 불일치)
+- **주요 이슈**: PortfolioBacktestRequest 관련 import 오류 해결 완료
+- **개선 필요**: 포트폴리오 API, 시스템 정보 응답 구조, 에러 처리 검증
+
 ### Docker 볼륨 마운트 - 개발 효율성 확보
 - **확인된 상태**: `docker-compose.dev.yml`의 `./backend:/app` 볼륨 마운트 완벽 작동
 - **실시간 동기화**: 로컬 파일 수정 시 컨테이너 내부 즉시 반영

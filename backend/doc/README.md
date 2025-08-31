@@ -8,7 +8,7 @@
 - **CI/CD 안정성**: 젠킨스 우분투 환경에서 네트워크 의존성 없는 테스트 실행
 - **DB 스키마 준수**: 실제 stock_data_cache 테이블 구조와 일치하는 모의 데이터
 
-### 🔧 아키텍처 개선사항
+### 아키텍처 개선사항
 - **예외 처리 통합**: DataNotFoundError, InvalidSymbolError 일관된 처리
 - **테스트 데이터 생성기**: MockStockDataGenerator로 시나리오별 데이터 생성
 - **픽스처 시스템**: 재사용 가능한 모의 데이터셋 (AAPL, GOOGL, MSFT, TSLA)
@@ -222,17 +222,17 @@ python -m pytest backend/tests/ --cov=app --cov-report=html
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pytest tests/ -v
 ```
 
-**⚠️ 개발 환경 주의사항:**
+**개발 환경 주의사항:**
 - 개발 환경에서는 볼륨 마운트(`./backend:/app`)로 인해 로컬 파일 변경 시 즉시 반영됨
 - 새로운 테스트 파일 추가 후에는 컨테이너 재빌드 필요: `docker-compose up --build`
 - 테스트 파일 수정은 로컬에서 하고, 실행은 Docker 컨테이너에서 하는 것을 권장
 
 **테스트 특징:**
-- ✅ **완전 오프라인**: yfinance API, MySQL 연결 없이 실행
-- ✅ **수학적 모의 데이터**: 기하 브라운 운동으로 현실적 주가 생성
-- ✅ **CI/CD 호환**: 젠킨스 우분투 환경에서 100% 안정성
-- ✅ **DB 스키마 준수**: 실제 데이터베이스 구조와 동일한 모의 데이터
-- ✅ **시나리오 테스트**: bull_market, bear_market, volatile 등 다양한 시장 상황
+- **완전 오프라인**: yfinance API, MySQL 연결 없이 실행
+- **수학적 모의 데이터**: 기하 브라운 운동으로 현실적 주가 생성
+- **CI/CD 호환**: 젠킨스 우분투 환경에서 100% 안정성
+- **DB 스키마 준수**: 실제 데이터베이스 구조와 동일한 모의 데이터
+- **시나리오 테스트**: bull_market, bear_market, volatile 등 다양한 시장 상황
 
 ### 배포
 
