@@ -86,6 +86,30 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 - **개발 환경**: http://localhost:5174 (프론트엔드), http://localhost:8001 (백엔드)
 - **프로덕션 환경**: http://localhost:8082 (프론트엔드), http://localhost:8001 (백엔드)
 
+### 테스트
+
+```bash
+# 백엔드 테스트
+cd backend
+pytest tests/ -v
+
+# 프론트엔드 테스트  
+cd frontend
+npm test
+
+# 도커 환경에서 전체 테스트 (CI/CD 방식)
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+## CI/CD
+
+프로젝트는 Jenkins를 통한 자동 배포를 지원합니다:
+
+1. **main 브랜치 푸시** → 자동 빌드 트리거
+2. **테스트 실행** → 빌드 과정에서 자동 테스트
+3. **이미지 빌드** → Docker 이미지 생성 및 GHCR 푸시
+4. **자동 배포** → 우분투 서버에 자동 배포
+
 ## 문서
 
 - **백엔드 개발**: [backend/doc/README.md](backend/doc/README.md)

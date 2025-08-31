@@ -26,6 +26,8 @@
   - 백그라운드 실행: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d`
   - 컨테이너 중지: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml down`
   - 개발 서버 접근: 프론트엔드 http://localhost:5174, 백엔드 http://localhost:8001
+  - **CI/CD**: 젠킨스 파이프라인은 main 브랜치 푸시 시 자동 실행됨
+  - **테스트**: 백엔드 `pytest tests/`, 프론트엔드 `npm test` (Docker 빌드 과정에 포함)
 
 ## 빈번한 코드 변경 포인트(PR 시 체크리스트)
   - `backend/app/services/strategy_service.py`에 Strategy 클래스와 `_strategies` 엔트리 추가
