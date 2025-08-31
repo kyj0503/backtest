@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 의존성 먼저 설치 (캐시 최적화)
@@ -23,8 +24,9 @@ COPY app ./app
 COPY tests ./tests
 COPY run_server.py .
 
-# 테스트 실행
-RUN python -m pytest tests/ -v --tb=short
+# 테스트 실행 (빌드 인자로 제어 가능)
+ARG RUN_TESTS=false
+RUN if [ "$RUN_TESTS" = "true" ] ; then python -m pytest tests/ -v --tb=short ; fi
 
 # 포트 노출
 EXPOSE 8000

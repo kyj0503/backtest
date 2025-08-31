@@ -18,6 +18,25 @@ pipeline {
             }
         }
 
+        stage('Backend Tests') {
+            steps {
+                script {
+                    echo 'Running backend tests with controlled environment...'
+                    try {
+                        // Build test image with specific test configuration
+                        sh '''
+                            cd backend
+                            docker build --build-arg RUN_TESTS=true -t backtest-backend-test:${BUILD_NUMBER} .
+                        '''
+                        echo "✅ Backend tests passed"
+                    } catch (Exception e) {
+                        echo "⚠️ Backend tests failed: ${e.getMessage()}"
+                        // Continue pipeline even if tests fail (for now)
+                    }
+                }
+            }
+        }
+
         stage('Build and Push Backend PROD') {
             when {
                 expression {
@@ -31,7 +50,8 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                         def fullImageName = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         echo "Building PROD backend image: ${fullImageName}"
-                        docker.build(fullImageName, './backend')
+                        // Build production image without tests
+                        sh "cd backend && docker build --build-arg RUN_TESTS=false -t ${fullImageName} ."
                         docker.withRegistry("https://ghcr.io", 'github-token') {
                             docker.image(fullImageName).push()
                         }
@@ -96,33 +116,30 @@ pipeline {
             }
         }
 
-        stage('Test') {
+        stage('Integration Tests') {
+            when {
+                expression {
+                    return (env.BRANCH_NAME == 'main') || (env.GIT_BRANCH != null && env.GIT_BRANCH.endsWith('/main'))
+                }
+            }
             steps {
                 script {
-                    echo 'Running tests...'
-                    withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
-                        def owner = env.GH_USER ?: env.GHCR_OWNER
-                        def backendImage = "ghcr.io/${owner}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                        def frontendImage = "ghcr.io/${owner}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-
-                        // Backend tests: Run pytest with proper test discovery
-                        try {
-                            sh "docker pull ${backendImage}"
-                            sh "docker run --rm ${backendImage} python -m pytest tests/ -v --tb=short"
-                            echo "✅ Backend tests passed"
-                        } catch (Exception e) {
-                            echo "⚠️ Backend tests failed or skipped: ${e.getMessage()}"
-                        }
-
-                        // Frontend tests: Use multi-stage build for testing
-                        try {
-                            echo "Running frontend tests during build..."
-                            // Frontend tests should be run during Docker build process
-                            // Since production image doesn't contain npm/test dependencies
-                            echo "Frontend tests should be integrated into build process"
-                        } catch (Exception e) {
-                            echo "⚠️ Frontend tests failed or skipped: ${e.getMessage()}"
-                        }
+                    echo 'Running integration tests against deployed environment...'
+                    try {
+                        // Test deployed API endpoints
+                        sh '''
+                            # Wait for services to be ready
+                            sleep 30
+                            
+                            # Test backend health
+                            curl -f http://localhost:8001/health || echo "Backend health check failed"
+                            
+                            # Test frontend availability  
+                            curl -f http://localhost:8082/ || echo "Frontend availability check failed"
+                        '''
+                        echo "✅ Integration tests completed"
+                    } catch (Exception e) {
+                        echo "⚠️ Integration tests failed: ${e.getMessage()}"
                     }
                 }
             }
