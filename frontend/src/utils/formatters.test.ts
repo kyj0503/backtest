@@ -3,7 +3,6 @@ import {
   formatCurrency, 
   formatPercent, 
   formatNumber,
-  formatDate,
   getStatVariant,
   getTradeColor,
   calculateTotalAmount,

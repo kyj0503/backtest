@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import ErrorBoundary from '../ErrorBoundary'
+import ErrorBoundary from './ErrorBoundary'
 
 // 에러를 발생시키는 테스트 컴포넌트
 const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
