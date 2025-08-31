@@ -203,9 +203,9 @@ class ExpectedResults:
             },
             'rsi_strategy': {
                 'rsi_period': {'min': 2, 'max': 50, 'default': 14},
-                'oversold': {'min': 10, 'max': 40, 'default': 30},
-                'overbought': {'min': 60, 'max': 90, 'default': 70},
-                'constraints': ['oversold < overbought']
+                'rsi_oversold': {'min': 10, 'max': 40, 'default': 30},
+                'rsi_overbought': {'min': 60, 'max': 90, 'default': 70},
+                'constraints': ['rsi_oversold < rsi_overbought']
             },
             'bollinger_bands': {
                 'period': {'min': 5, 'max': 100, 'default': 20},

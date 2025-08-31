@@ -85,13 +85,14 @@ def sample_backtest_request():
 @pytest.fixture
 def sample_portfolio_request():
     """샘플 포트폴리오 요청 픽스처"""
-    from app.models.requests import PortfolioBacktestRequest
+    # 포트폴리오 백테스트는 현재 지원되지 않으므로 일반 백테스트 요청으로 대체
+    from app.models.requests import BacktestRequest
     
-    return PortfolioBacktestRequest(
-        tickers=["AAPL", "GOOGL"],
-        amounts=[5000, 5000],
+    return BacktestRequest(
+        symbol="AAPL",
         start_date=date(2023, 1, 1),
         end_date=date(2023, 6, 30),
+        initial_cash=10000.0,
         strategy="buy_and_hold",
         strategy_params={}
     )

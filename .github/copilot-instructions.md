@@ -27,6 +27,8 @@
   - 백그라운드 실행: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d`
   - 컨테이너 중지: `docker-compose -f docker-compose.yml -f docker-compose.dev.yml down`
   - 개발 서버 접근: 프론트엔드 http://localhost:5174, 백엔드 http://localhost:8001
+  - **실시간 개발**: 볼륨 마운트(`./backend:/app`)로 로컬 파일 수정 시 컨테이너에 즉시 반영
+  - **테스트 실행**: `docker-compose exec backend pytest tests/ -v` (docker cp 불필요)
   - **CI/CD**: 젠킨스 파이프라인은 main 브랜치 푸시 시 자동 실행됨
   - **테스트**: 백엔드 `pytest backend/tests/`, 프론트엔드 `npm test` (Docker 빌드 과정에 포함)
   - **CI/CD 테스트**: 젠킨스에서 각각 별도 스테이지로 테스트 실행, 빌드 인수와 분리
@@ -65,6 +67,9 @@
   - **테스트 환경**: pytest(백엔드), Vitest(프론트엔드) 사용, 완전 오프라인 모킹 시스템으로 CI/CD 안정성 확보
   - **버전 추적**: Git 정보와 빌드 번호는 빌드 시점에 환경 변수로 주입되어 배포 상태 추적 가능
   - **타입스크립트 빌드**: 프론트엔드에서 사용하지 않는 변수 선언 시 빌드 실패 (strict 모드)
+  - **실제 모델/예외**: BacktestRequest, OptimizationRequest, PlotRequest 모델 사용; ValidationError, BacktestValidationError 예외 처리
+  - **전략 파라미터**: RSI는 rsi_oversold/rsi_overbought, SMA는 short_window/long_window 등 실제 파라미터명 사용
+  - **개발 효율성**: Docker 볼륨 마운트 실시간 동기화로 docker cp 불필요
   - 내가 별다른 첨언 없이 로그만 입력하면, 로그를 바탕으로 문제점이나 개선점을 찾아 알려줘.
 
 ## 백엔드 테스트 아키텍처 가이드라인
@@ -117,11 +122,12 @@ backend/tests/
 - **커버리지 목표**: 단위 테스트 90%+, 통합 테스트 80%+, 종단 테스트 주요 시나리오 100%
 - **실행 시간**: 단위 테스트 <30초, 통합 테스트 <2분, 종단 테스트 <5분
 
-### Docker 볼륨 마운트 주의사항
-- **개발 환경**: `docker-compose.dev.yml`의 볼륨 마운트로 인해 로컬 변경사항 즉시 반영
-- **테스트 파일 추가/수정 시**: 컨테이너 재빌드 필요 (`docker-compose up --build`)
-- **볼륨 덮어쓰기 문제**: Dockerfile의 COPY가 런타임 볼륨 마운트로 덮어씌워질 수 있음
-- **해결책**: 테스트 관련 변경 후 항상 `--build` 플래그로 재빌드
+### Docker 볼륨 마운트 - 개발 효율성 확보
+- **확인된 상태**: `docker-compose.dev.yml`의 `./backend:/app` 볼륨 마운트 완벽 작동
+- **실시간 동기화**: 로컬 파일 수정 시 컨테이너 내부 즉시 반영
+- **워크플로우 개선**: docker cp 명령어 불필요, 실시간 개발 및 테스트 가능
+- **테스트 실행**: `docker-compose exec backend pytest tests/ -v`로 즉시 실행
+- **재빌드 조건**: 새로운 패키지 의존성 추가 시에만 `--build` 플래그 필요
 
 ## To-Do
 
