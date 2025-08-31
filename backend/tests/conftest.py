@@ -1,0 +1,123 @@
+"""
+pytest 설정 및 글로벌 픽스처
+완전 오프라인 모킹 시스템으로 외부 의존성 제거
+"""
+
+import pytest
+import sys
+import os
+from unittest.mock import Mock, patch, MagicMock
+from datetime import datetime, date
+import pandas as pd
+import numpy as np
+
+# 백엔드 앱을 Python 경로에 추가
+backend_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, backend_path)
+
+from tests.fixtures.mock_data import MockStockDataGenerator
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_offline_environment():
+    """
+    완전 오프라인 환경 설정
+    모든 외부 의존성(yfinance, MySQL)을 모킹
+    """
+    # yfinance 모킹
+    with patch('yfinance.Ticker') as mock_ticker, \
+         patch('yfinance.download') as mock_download:
+        
+        # Mock 데이터 생성기 초기화
+        mock_generator = MockStockDataGenerator()
+        
+        # yfinance.Ticker 모킹
+        mock_ticker_instance = Mock()
+        mock_ticker_instance.info = {
+            'company_name': 'Apple Inc.',
+            'symbol': 'AAPL',
+            'currency': 'USD',
+            'sector': 'Technology'
+        }
+        mock_ticker_instance.history.return_value = mock_generator.generate_ohlcv_data('AAPL')
+        mock_ticker.return_value = mock_ticker_instance
+        
+        # yfinance.download 모킹
+        mock_download.return_value = mock_generator.generate_ohlcv_data('AAPL')
+        
+        yield {
+            'mock_ticker': mock_ticker,
+            'mock_download': mock_download,
+            'mock_generator': mock_generator
+        }
+
+
+@pytest.fixture
+def mock_data_generator():
+    """Mock 데이터 생성기 픽스처"""
+    return MockStockDataGenerator()
+
+
+@pytest.fixture
+def sample_stock_data(mock_data_generator):
+    """샘플 주식 데이터 픽스처"""
+    return mock_data_generator.generate_ohlcv_data('AAPL')
+
+
+@pytest.fixture
+def sample_backtest_request():
+    """샘플 백테스트 요청 픽스처"""
+    from app.models.requests import BacktestRequest
+    
+    return BacktestRequest(
+        ticker="AAPL",
+        start_date=date(2023, 1, 1),
+        end_date=date(2023, 6, 30),
+        initial_cash=10000,
+        strategy="sma_crossover",
+        strategy_params={
+            "short_window": 10,
+            "long_window": 20
+        }
+    )
+
+
+@pytest.fixture
+def sample_portfolio_request():
+    """샘플 포트폴리오 요청 픽스처"""
+    from app.models.requests import PortfolioBacktestRequest
+    
+    return PortfolioBacktestRequest(
+        tickers=["AAPL", "GOOGL"],
+        amounts=[5000, 5000],
+        start_date=date(2023, 1, 1),
+        end_date=date(2023, 6, 30),
+        strategy="buy_and_hold",
+        strategy_params={}
+    )
+
+
+@pytest.fixture
+def fastapi_client():
+    """FastAPI 테스트 클라이언트 픽스처"""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    
+    return TestClient(app)
+
+
+# pytest 설정
+def pytest_configure(config):
+    """pytest 초기 설정"""
+    # 경고 메시지 필터링
+    import warnings
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
+
+
+def pytest_collection_modifyitems(config, items):
+    """테스트 아이템 수정"""
+    # 비동기 테스트 마킹
+    for item in items:
+        if "async" in item.name:
+            item.add_marker(pytest.mark.asyncio)

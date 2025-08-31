@@ -7,18 +7,21 @@
 - **수학적 데이터 생성**: Geometric Brownian Motion 알고리즘을 활용한 현실적 주식 데이터 생성
 - **3-Tier 테스트 아키텍처**: unit/integration/e2e 구조로 체계적인 테스트 계층 설계
 - **CI/CD 안정성**: Jenkins Ubuntu 환경에서 100% 성공률을 보장하는 완전 격리 테스트
+- **수동 스크립트 대체**: manual_test_api.py, manual_test_chart_api.py 등 수동 테스트 스크립트를 자동화된 pytest 시스템으로 완전 대체
 
 ### 🐛 해결된 CI/CD 문제점
 - ✅ **네트워크 의존성 제거**: yfinance API 호출 완전 차단으로 빌드 안정성 확보
 - ✅ **데이터베이스 격리**: MySQL 연결 없이도 실제 DB 스키마와 호환되는 모킹 데이터 사용
 - ✅ **시나리오 기반 테스트**: 정상/비정상/극한 상황을 모두 커버하는 테스트 시나리오 구현
 - ✅ **TypeScript 빌드**: Frontend의 unused variable 오류 해결
+- ✅ **Docker 볼륨 마운트 문제**: 개발 환경에서 테스트 파일 동기화 이슈 해결 가이드 제공
 
 ### 🛠 신규 테스트 인프라
 - **MockStockDataGenerator**: DECIMAL(19,4) 정밀도를 지원하는 DB 호환 데이터 생성기
-- **시나리오 시스템**: normal, empty, volatile 등 다양한 시장 상황 시뮬레이션
+- **시나리오 시스템**: normal, bull, bear, volatile, sideways 등 다양한 시장 상황 시뮬레이션
 - **픽스처 관리**: 재사용 가능한 테스트 데이터와 예상 결과 중앙화
 - **성능 최적화**: 단위 테스트 <30초, 통합 테스트 <2분, 종단 테스트 <5분 목표
+- **수동 테스트 완전 제거**: 기존 manual_test_*.py 스크립트들을 삭제하고 완전 자동화된 pytest 기반 테스트로 대체
 
 ---
 
@@ -75,7 +78,12 @@ backtest/
 │   │   ├── utils/           # 유틸리티 (데이터 수집, 직렬화)
 │   │   └── main.py          # FastAPI 애플리케이션 엔트리포인트
 │   ├── strategies/          # 투자 전략 구현체
-│   ├── tests/               # 백엔드 테스트 코드
+│   ├── tests/               # 3-Tier 자동화 테스트 시스템
+│   │   ├── conftest.py      # pytest 글로벌 설정 및 오프라인 모킹
+│   │   ├── unit/            # 단위 테스트 (개별 함수/클래스)
+│   │   ├── integration/     # 통합 테스트 (API 엔드포인트, 서비스 통합)
+│   │   ├── e2e/             # 종단 테스트 (전체 사용자 시나리오)
+│   │   └── fixtures/        # 테스트 픽스처 (모의 데이터, 시나리오)
 │   ├── doc/                 # 백엔드 개발 문서
 │   ├── Dockerfile           # 백엔드 도커 이미지 설정
 │   └── requirements.txt     # Python 의존성 패키지
@@ -129,19 +137,28 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 
 ## 테스트
 
-### 백엔드 테스트 (완전 오프라인 시스템)
+### 백엔드 테스트 (3-Tier 자동화 시스템)
 
 ```bash
-# 전체 테스트 실행
+# 전체 테스트 실행 (완전 오프라인)
 cd backend && pytest tests/ -v
 
-# 티어별 테스트 실행
-pytest tests/unit/          # 단위 테스트 (개별 함수/클래스)
-pytest tests/integration/   # 통합 테스트 (서비스 간 상호작용)  
-pytest tests/e2e/          # 종단 테스트 (전체 시나리오)
+# 계층별 실행
+pytest tests/unit/ -v           # 단위 테스트 (<30초)
+pytest tests/integration/ -v   # 통합 테스트 (<2분)
+pytest tests/e2e/ -v           # E2E 테스트 (<5분)
 
 # 커버리지 리포트
 pytest tests/ --cov=app --cov-report=html
+
+# Docker 환경에서 실행 (권장)
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pytest tests/ -v
+```
+
+**⚠️ 개발 환경 주의사항**: 새로운 테스트 파일 추가 후에는 Docker 재빌드 필요
+```bash
+# 테스트 파일 변경 후 재빌드
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 ### 프론트엔드 테스트
@@ -162,11 +179,14 @@ docker-compose exec backend pytest tests/ -v
 
 ### 테스트 아키텍처 특징
 
+- **3-Tier 구조**: Unit → Integration → E2E 계층적 테스트 아키텍처
 - **완전 격리**: yfinance API, MySQL DB 등 모든 외부 의존성 제거
-- **수학적 모델링**: Geometric Brownian Motion 기반 현실적 주식 데이터
+- **수학적 모델링**: Geometric Brownian Motion 기반 현실적 주식 데이터 생성
 - **DB 스키마 호환**: stock_data_cache 테이블 구조 (DECIMAL 19,4) 완전 준수
-- **시나리오 기반**: 정상/비정상/극한 상황 모든 케이스 커버
+- **시나리오 기반**: normal, bull, bear, volatile, sideways 등 다양한 시장 상황 테스트
+- **성능 최적화**: 단위 테스트 <30초, 통합 테스트 <2분, E2E 테스트 <5분
 - **CI/CD 최적화**: Jenkins Ubuntu 환경에서 100% 성공률 보장
+- **수동 테스트 대체**: 기존 manual_test_*.py 스크립트를 완전 자동화로 대체
 
 ## CI/CD
 

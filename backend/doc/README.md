@@ -217,7 +217,15 @@ python -m pytest backend/tests/e2e/ -v           # E2E 테스트
 
 # 커버리지와 함께 실행
 python -m pytest backend/tests/ --cov=app --cov-report=html
+
+# Docker 환경에서 테스트 실행
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pytest tests/ -v
 ```
+
+**⚠️ 개발 환경 주의사항:**
+- 개발 환경에서는 볼륨 마운트(`./backend:/app`)로 인해 로컬 파일 변경 시 즉시 반영됨
+- 새로운 테스트 파일 추가 후에는 컨테이너 재빌드 필요: `docker-compose up --build`
+- 테스트 파일 수정은 로컬에서 하고, 실행은 Docker 컨테이너에서 하는 것을 권장
 
 **테스트 특징:**
 - ✅ **완전 오프라인**: yfinance API, MySQL 연결 없이 실행

@@ -75,17 +75,19 @@ backend/tests/
 ├── unit/                   # 단위 테스트 (개별 함수/클래스)
 │   ├── test_data_fetcher.py
 │   ├── test_strategy_service.py
-│   └── test_portfolio_service.py
+│   └── test_backtest_service.py
 ├── integration/            # 통합 테스트 (서비스 간 상호작용)
-│   ├── test_backtest_flow.py
-│   └── test_api_endpoints.py
+│   ├── test_api_endpoints.py
+│   └── test_backtest_flow.py
 ├── e2e/                   # 종단 테스트 (전체 시나리오)
 │   └── test_complete_backtest.py
 ├── fixtures/              # 테스트 픽스처 및 모킹 데이터
 │   ├── mock_data.py
 │   ├── expected_results.py
 │   └── test_scenarios.json
-└── conftest.py           # pytest 설정 및 글로벌 픽스처
+├── conftest.py           # pytest 설정 및 글로벌 픽스처
+├── pytest.ini           # pytest 설정 파일
+└── requirements-test.txt # 테스트 전용 의존성
 ```
 
 ### 오프라인 모킹 시스템 원칙
@@ -110,9 +112,16 @@ backend/tests/
 
 ### 테스트 실행 및 CI/CD 통합
 - **로컬 개발**: `pytest backend/tests/` (전체), `pytest backend/tests/unit/` (단위만)
+- **Docker 환경**: `docker-compose exec backend pytest tests/ -v` (권장)
 - **Jenkins CI**: 각 티어별 독립 실행으로 실패 지점 명확 식별
 - **커버리지 목표**: 단위 테스트 90%+, 통합 테스트 80%+, 종단 테스트 주요 시나리오 100%
 - **실행 시간**: 단위 테스트 <30초, 통합 테스트 <2분, 종단 테스트 <5분
+
+### Docker 볼륨 마운트 주의사항
+- **개발 환경**: `docker-compose.dev.yml`의 볼륨 마운트로 인해 로컬 변경사항 즉시 반영
+- **테스트 파일 추가/수정 시**: 컨테이너 재빌드 필요 (`docker-compose up --build`)
+- **볼륨 덮어쓰기 문제**: Dockerfile의 COPY가 런타임 볼륨 마운트로 덮어씌워질 수 있음
+- **해결책**: 테스트 관련 변경 후 항상 `--build` 플래그로 재빌드
 
 ## To-Do
 

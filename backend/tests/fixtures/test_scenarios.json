@@ -1,0 +1,305 @@
+{
+  "unit_tests": {
+    "data_fetcher": {
+      "test_successful_data_fetch": {
+        "description": "정상적인 데이터 수집 테스트",
+        "input": {
+          "ticker": "AAPL",
+          "start_date": "2023-01-01",
+          "end_date": "2023-06-30"
+        },
+        "expected": {
+          "data_points_min": 100,
+          "columns": ["Open", "High", "Low", "Close", "Volume"],
+          "no_null_values": true
+        }
+      },
+      "test_invalid_ticker": {
+        "description": "잘못된 티커 처리 테스트",
+        "input": {
+          "ticker": "INVALID123",
+          "start_date": "2023-01-01",
+          "end_date": "2023-06-30"
+        },
+        "expected": {
+          "exception_type": "DataNotFoundError",
+          "error_message_contains": ["ticker", "not found"]
+        }
+      },
+      "test_empty_date_range": {
+        "description": "빈 날짜 범위 처리 테스트",
+        "input": {
+          "ticker": "AAPL",
+          "start_date": "2023-06-30",
+          "end_date": "2023-06-30"
+        },
+        "expected": {
+          "data_points": 1,
+          "warning_logged": true
+        }
+      }
+    },
+    "strategy_service": {
+      "test_get_all_strategies": {
+        "description": "전체 전략 목록 조회 테스트",
+        "expected": {
+          "strategy_count_min": 5,
+          "required_strategies": [
+            "buy_and_hold",
+            "sma_crossover", 
+            "rsi_strategy",
+            "bollinger_bands",
+            "macd_strategy"
+          ],
+          "strategy_fields": ["description", "parameters"]
+        }
+      },
+      "test_strategy_parameter_validation": {
+        "description": "전략 파라미터 검증 테스트",
+        "test_cases": [
+          {
+            "strategy": "sma_crossover",
+            "params": {"short_window": 10, "long_window": 20},
+            "expected": "valid"
+          },
+          {
+            "strategy": "sma_crossover", 
+            "params": {"short_window": 50, "long_window": 10},
+            "expected": "invalid",
+            "error_type": "ParameterValidationError"
+          },
+          {
+            "strategy": "rsi_strategy",
+            "params": {"rsi_period": 14, "oversold": 30, "overbought": 70},
+            "expected": "valid"
+          }
+        ]
+      }
+    },
+    "backtest_service": {
+      "test_buy_and_hold_backtest": {
+        "description": "Buy & Hold 전략 백테스트",
+        "input": {
+          "ticker": "AAPL",
+          "strategy": "buy_and_hold",
+          "initial_cash": 10000,
+          "start_date": "2023-01-01",
+          "end_date": "2023-06-30"
+        },
+        "expected": {
+          "result_fields": [
+            "final_equity", "total_return_pct", "sharpe_ratio",
+            "max_drawdown_pct", "total_trades"
+          ],
+          "performance_ranges": {
+            "total_return_pct": {"min": -50, "max": 100},
+            "total_trades": {"min": 0, "max": 5}
+          }
+        }
+      },
+      "test_sma_crossover_backtest": {
+        "description": "SMA Crossover 전략 백테스트",
+        "input": {
+          "ticker": "AAPL",
+          "strategy": "sma_crossover",
+          "strategy_params": {"short_window": 10, "long_window": 20},
+          "initial_cash": 10000,
+          "start_date": "2023-01-01",
+          "end_date": "2023-06-30"
+        },
+        "expected": {
+          "performance_ranges": {
+            "total_trades": {"min": 0, "max": 50},
+            "sharpe_ratio": {"min": -5, "max": 8}
+          }
+        }
+      }
+    }
+  },
+  "integration_tests": {
+    "api_endpoints": {
+      "test_chart_data_endpoint": {
+        "description": "차트 데이터 API 엔드포인트 테스트",
+        "endpoint": "/api/v1/backtest/chart-data",
+        "method": "POST",
+        "test_cases": [
+          {
+            "name": "successful_request",
+            "payload": {
+              "ticker": "AAPL",
+              "start_date": "2023-01-01",
+              "end_date": "2023-06-30",
+              "initial_cash": 10000,
+              "strategy": "sma_crossover",
+              "strategy_params": {"short_window": 10, "long_window": 20}
+            },
+            "expected": {
+              "status_code": 200,
+              "response_fields": [
+                "ticker", "strategy", "ohlc_data", "equity_data",
+                "trade_markers", "indicators", "summary_stats"
+              ],
+              "data_validation": {
+                "ohlc_data_min_length": 50,
+                "equity_data_min_length": 50,
+                "summary_stats_numeric": true
+              }
+            }
+          },
+          {
+            "name": "invalid_ticker",
+            "payload": {
+              "ticker": "INVALID",
+              "start_date": "2023-01-01",
+              "end_date": "2023-06-30",
+              "initial_cash": 10000,
+              "strategy": "buy_and_hold"
+            },
+            "expected": {
+              "status_code": [404, 422],
+              "error_response": true,
+              "error_fields": ["detail", "error_id"]
+            }
+          }
+        ]
+      },
+      "test_portfolio_endpoint": {
+        "description": "포트폴리오 백테스트 API 테스트",
+        "endpoint": "/api/v1/backtest/portfolio",
+        "method": "POST",
+        "test_cases": [
+          {
+            "name": "balanced_portfolio",
+            "payload": {
+              "tickers": ["AAPL", "GOOGL"],
+              "amounts": [5000, 5000],
+              "start_date": "2023-01-01",
+              "end_date": "2023-06-30",
+              "strategy": "buy_and_hold"
+            },
+            "expected": {
+              "status_code": 200,
+              "response_structure": {
+                "individual_results": 2,
+                "portfolio_result": 1,
+                "performance_comparison": true
+              }
+            }
+          }
+        ]
+      }
+    },
+    "data_flow": {
+      "test_end_to_end_backtest_flow": {
+        "description": "전체 백테스트 플로우 테스트",
+        "steps": [
+          {
+            "step": "data_fetching",
+            "action": "fetch_stock_data",
+            "params": {"ticker": "AAPL", "period": "6months"}
+          },
+          {
+            "step": "strategy_setup",
+            "action": "setup_sma_crossover",
+            "params": {"short_window": 10, "long_window": 20}
+          },
+          {
+            "step": "backtest_execution",
+            "action": "run_backtest",
+            "params": {"initial_cash": 10000}
+          },
+          {
+            "step": "result_processing",
+            "action": "process_results",
+            "expected": "chart_data_format"
+          }
+        ],
+        "performance_expectations": {
+          "total_execution_time_max": 15.0,
+          "memory_usage_max_mb": 500
+        }
+      }
+    }
+  },
+  "e2e_tests": {
+    "complete_backtest_scenarios": {
+      "test_single_ticker_analysis": {
+        "description": "단일 종목 완전 분석 시나리오",
+        "scenario": {
+          "user_input": {
+            "ticker": "AAPL",
+            "investment_amount": 10000,
+            "strategy": "sma_crossover",
+            "date_range": "2023-01-01 to 2023-12-31"
+          },
+          "expected_workflow": [
+            "input_validation",
+            "data_fetching",
+            "strategy_execution",
+            "result_calculation",
+            "chart_data_preparation",
+            "response_formatting"
+          ],
+          "success_criteria": {
+            "response_time_max": 20.0,
+            "data_completeness": "100%",
+            "chart_data_validity": true,
+            "performance_metrics_present": true
+          }
+        }
+      },
+      "test_portfolio_optimization": {
+        "description": "포트폴리오 최적화 시나리오",
+        "scenario": {
+          "user_input": {
+            "tickers": ["AAPL", "GOOGL", "MSFT"],
+            "total_amount": 30000,
+            "strategy": "buy_and_hold",
+            "optimization_metric": "sharpe_ratio"
+          },
+          "expected_results": {
+            "portfolio_weights": "optimized",
+            "individual_performance": "calculated",
+            "portfolio_performance": "calculated",
+            "risk_metrics": "provided"
+          }
+        }
+      }
+    },
+    "stress_tests": {
+      "test_large_portfolio": {
+        "description": "대용량 포트폴리오 처리 테스트",
+        "input": {
+          "ticker_count": 20,
+          "date_range_years": 2,
+          "strategy_complexity": "high"
+        },
+        "performance_limits": {
+          "max_execution_time": 120.0,
+          "max_memory_usage_mb": 2048,
+          "max_cpu_usage_percent": 80
+        }
+      },
+      "test_extreme_market_conditions": {
+        "description": "극한 시장 상황 테스트",
+        "scenarios": [
+          {
+            "name": "market_crash",
+            "data_scenario": "crash",
+            "expected": "graceful_handling"
+          },
+          {
+            "name": "high_volatility",
+            "data_scenario": "volatile", 
+            "expected": "stable_results"
+          },
+          {
+            "name": "no_data_period",
+            "data_scenario": "empty",
+            "expected": "appropriate_error"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,1 @@
+class MockStockDataGenerator: pass
