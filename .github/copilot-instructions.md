@@ -11,8 +11,9 @@
   - **백엔드**: FastAPI + uvicorn, MySQL (캐시), yfinance (데이터 소스)
   - **프론트엔드**: React 18 + TypeScript + Vite, React Bootstrap, Recharts
   - **데이터베이스**: MySQL (`stock_data_cache`) - `host.docker.internal:3306`
-  - **API 구조**: `/api/v1/backtest/chart-data` (단일 종목), `/api/v1/backtest/portfolio` (포트폴리오)
+  - **API 구조**: `/api/v1/backtest/chart-data` (단일 종목), `/api/v1/backtest/portfolio` (포트폴리오), `/api/v1/system/info` (시스템 정보)
   - **전략 시스템**: `backtesting` 라이브러리 기반, Strategy 클래스 상속 구조
+  - **시스템 모니터링**: 프론트엔드와 백엔드 버전, 업타임, 환경 정보 표시 (푸터)
 
 ## 프로젝트-특화 규칙 / 패턴 (에이전트가 알아야 할 것)
   - 코드를 수정하면 항상 마크다운 문서에 최신화를 해야 한다.
@@ -34,6 +35,7 @@
   - 새 API는 `backend/app/api/v1/endpoints/`에 추가. Response/Request 모델은 `backend/app/models/`에 추가/확장
   - 프론트엔드 아키텍처: Services 계층(`frontend/src/services/`), 유틸리티 함수(`frontend/src/utils/`), 커스텀 훅(`frontend/src/hooks/`), 상수 모듈(`frontend/src/constants/`) 구조로 구성됨
   - 프론트엔드 개선 시 우선순위: 폼 상태 관리 → 에러 바운더리 → 성능 최적화 → 테스트 코드
+  - **시스템 정보**: 새로운 환경 변수나 버전 정보는 `backend/app/api/v1/endpoints/system.py`와 `frontend/src/components/ServerStatus.tsx`에 반영
 
 ## 예시 스니펫(에이전트가 자주 사용할 것)
   - 5개 전략 지원: buy_and_hold, sma_crossover, rsi_strategy, bollinger_bands, macd_strategy

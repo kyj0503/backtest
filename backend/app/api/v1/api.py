@@ -2,7 +2,7 @@
 API v1 라우터 통합
 """
 from fastapi import APIRouter
-from .endpoints import backtest, strategies, optimize
+from .endpoints import backtest, strategies, optimize, system
 from .endpoints import yfinance_cache
 
 api_router = APIRouter()
@@ -30,4 +30,10 @@ api_router.include_router(
     yfinance_cache.router,
     prefix="/yfinance",
     tags=["yfinance 캐시"]
+)
+
+api_router.include_router(
+    system.router,
+    prefix="/system",
+    tags=["시스템 정보"]
 )

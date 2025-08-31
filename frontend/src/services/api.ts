@@ -183,6 +183,24 @@ export class BacktestApiService {
       return result;
     }
   }
+
+  async getServerInfo() {
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/system/info`);
+      
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
+    }
+  }
 }
 
 // 싱글톤 인스턴스 export
