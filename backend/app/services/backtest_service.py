@@ -2,6 +2,7 @@
 백테스팅 실행 서비스
 """
 import time
+import signal
 from datetime import datetime, date
 from typing import Dict, Any, Optional, List
 import pandas as pd
@@ -291,15 +292,54 @@ class BacktestService:
             # 4. 최적화 파라미터 범위 변환
             param_ranges = self._convert_param_ranges(request.param_ranges)
             
-            # 5. 최적화 실행
+            # 5. 최적화 실행 (타임아웃 적용)
             try:
+                # 타임아웃 설정
+                def timeout_handler(signum, frame):
+                    raise TimeoutError(f"최적화가 {settings.optimization_timeout_seconds}초 내에 완료되지 않았습니다.")
+                
+                # Windows에서는 signal.SIGALRM이 지원되지 않으므로 조건부 적용
+                timeout_applied = False
+                try:
+                    if hasattr(signal, 'SIGALRM'):
+                        signal.signal(signal.SIGALRM, timeout_handler)
+                        signal.alarm(settings.optimization_timeout_seconds)
+                        timeout_applied = True
+                except (AttributeError, OSError):
+                    logger.warning("타임아웃 설정을 적용할 수 없습니다 (Windows 환경)")
+                
+                # 최적화 실행
                 stats = bt.optimize(
                     **param_ranges,
                     maximize=request.maximize,
                     method=request.method.value,
-                    max_tries=request.max_tries,
+                    max_tries=request.max_tries or settings.max_optimization_iterations,
                     random_state=42
                 )
+                
+                # 타임아웃 해제
+                if timeout_applied:
+                    signal.alarm(0)
+                    
+            except TimeoutError as e:
+                logger.warning(f"최적화 타임아웃: {str(e)}")
+                # 타임아웃 시 기본 파라미터로 백테스트 실행
+                default_params = self.strategy_service.validate_strategy_params(
+                    request.strategy, {}
+                )
+                try:
+                    safe_params = {k: v for k, v in default_params.items() if k != 'optimize'}
+                    stats = bt.run(**safe_params)
+                except Exception as e2:
+                    logger.warning(f"기본 파라미터 실행도 실패: {str(e2)}")
+                    try:
+                        stats = bt.run()
+                    except Exception as e3:
+                        logger.error(f"기본 실행마저 실패: {str(e3)}")
+                        stats = self._create_fallback_stats(data, request.initial_cash)
+                
+                # 타임아웃이 발생했으므로 기본 파라미터를 최적 파라미터로 설정
+                best_params = {k: v for k, v in default_params.items() if k != 'optimize'}
             except (TypeError, ValueError, AttributeError) as e:
                 logger.warning(f"최적화 오류 발생, 단순 백테스트로 대체: {str(e)}")
                 # 최적화 실패 시 기본 파라미터로 백테스트 실행

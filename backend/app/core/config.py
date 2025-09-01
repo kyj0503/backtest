@@ -54,8 +54,8 @@ class Settings(BaseSettings):
     default_commission: float = 0.002  # 0.2%
     
     # 최적화 설정
-    max_optimization_iterations: int = 1000
-    optimization_timeout_seconds: int = 300  # 5분
+    max_optimization_iterations: int = Field(default=1000, env="MAX_OPTIMIZATION_ITERATIONS")
+    optimization_timeout_seconds: int = Field(default=300, env="OPTIMIZATION_TIMEOUT_SECONDS")  # 5분
     
     # 로깅 설정
     log_level: str = Field(default="INFO", env="LOG_LEVEL")

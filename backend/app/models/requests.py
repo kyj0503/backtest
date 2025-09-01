@@ -5,6 +5,7 @@ from datetime import date, datetime
 from typing import Dict, Any, Optional, List, Union
 from pydantic import BaseModel, Field, validator
 from enum import Enum
+from ..core.config import settings
 
 
 class StrategyType(str, Enum):
@@ -75,7 +76,7 @@ class OptimizationRequest(BaseModel):
     param_ranges: Dict[str, List[Union[int, float]]] = Field(..., description="파라미터 범위")
     method: OptimizationMethod = Field(default=OptimizationMethod.GRID, description="최적화 방법")
     maximize: str = Field(default="SQN", description="최적화할 지표")
-    max_tries: Optional[int] = Field(default=100, description="최대 시도 횟수")
+    max_tries: Optional[int] = Field(default=settings.max_optimization_iterations, description="최대 시도 횟수")
     commission: float = Field(default=0.002, ge=0, le=0.1, description="거래 수수료")
     
     @validator('start_date', 'end_date', pre=True)
