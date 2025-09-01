@@ -124,18 +124,24 @@ backend/tests/
 
 ## 현재 개발 상황 (2025년 9월 1일 기준)
 
-### Jenkins CI/CD 파이프라인 상태: SUCCESS
+### Jenkins CI/CD 파이프라인 상태: SUCCESS (부분적)
 - **Frontend Tests**: 23/23 통과
-- **Backend Tests**: 단위 테스트 완료 (38 passed, 1 skipped)
+- **Backend Tests**: 12 failed, 51 passed, 3 skipped (CI/CD 블로킹하지 않음)
 - **Production Build**: 백엔드/프론트엔드 이미지 빌드 성공
 - **Deployment**: 서비스 정상 배포
 - **Integration Tests**: 헬스체크 및 기본 연결성 확인
 
+### 백엔드 테스트 문제점 (해결 진행 중)
+- **MySQL 연결 오류**: CI/CD 환경에서 외부 DB 의존성 - 완전 오프라인 모킹 시스템 필요
+- **포트폴리오 기능**: 422 오류 (아직 구현되지 않은 기능)
+- **시스템 정보 필드**: `backend_version` 필드 추가 완료
+- **psutil 모듈**: requirements.txt에 추가 완료
+
 ### 통합 테스트 현황
 - **test_backtest_flow.py**: 6/7 테스트 통과 (1개 스킵: 포트폴리오 기능)
-- **test_api_endpoints.py**: 12 passed, 1 skipped, 7 failed (API 응답 구조 불일치)
-- **주요 이슈**: PortfolioBacktestRequest 관련 import 오류 해결 완료
-- **개선 필요**: 포트폴리오 API, 시스템 정보 응답 구조, 에러 처리 검증
+- **test_api_endpoints.py**: 부분 실패 (API 응답 구조 불일치, MySQL 의존성)
+- **주요 이슈**: 완전 오프라인 모킹 시스템 강화 필요
+- **개선 필요**: MySQL 연결 오류 모킹, 포트폴리오 API 구현
 
 ### Docker 볼륨 마운트 - 개발 효율성 확보
 - **확인된 상태**: `docker-compose.dev.yml`의 `./backend:/app` 볼륨 마운트 완벽 작동

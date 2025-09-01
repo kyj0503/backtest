@@ -79,6 +79,7 @@ async def get_server_info():
     
     return {
         "version": get_version(),
+        "backend_version": get_version(),  # 테스트에서 요구하는 필드명
         "git": git_info,
         "docker": docker_info,
         "start_time": SERVER_START_TIME.isoformat(),  # UTC 원본
@@ -104,5 +105,6 @@ async def health_check():
     """
     return {
         "status": "healthy",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "version": get_version()
     }
