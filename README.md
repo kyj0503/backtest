@@ -32,7 +32,7 @@ docker-compose exec frontend npm test
 
 ## 주요 기능
 
-### 지원하는 투자 전략
+### 백테스팅 시스템
 | 전략 | 설명 | 파라미터 |
 |------|------|----------|
 | Buy & Hold | 매수 후 보유 | 없음 |
@@ -40,6 +40,13 @@ docker-compose exec frontend npm test
 | RSI Strategy | RSI 기반 매매 | RSI 기간, 과매수/과매도 기준 |
 | Bollinger Bands | 볼린저 밴드 기반 매매 | 기간, 표준편차 배수 |
 | MACD Strategy | MACD 교차 기반 매매 | 빠른/느린/시그널 기간 |
+
+### 뉴스 검색 시스템
+- **종목별 뉴스**: 70+ 한국/미국 주요 종목의 실시간 뉴스 검색
+- **날짜별 필터링**: 특정 날짜 범위의 뉴스만 조회 가능
+- **스마트 매핑**: 종목 코드를 회사명으로 자동 변환하여 정확한 검색
+- **콘텐츠 정제**: 불필요한 역사/부고/날씨 뉴스 자동 제거
+- **네트워크 안정성**: 재시도 로직으로 안정적인 뉴스 데이터 제공
 
 ### 백테스트 결과
 - **성과 지표**: 총 수익률, 연간 수익률, 샤프 비율, 최대 손실폭 등
@@ -52,6 +59,7 @@ docker-compose exec frontend npm test
 - **FastAPI**: 고성능 API 서버
 - **uvicorn**: ASGI 서버
 - **yfinance**: 주식 데이터 수집
+- **네이버 검색 API**: 뉴스 데이터 제공
 - **backtesting**: 백테스트 엔진
 - **MySQL**: 데이터 캐시
 
@@ -101,6 +109,10 @@ MYSQL_PORT=3306
 MYSQL_DATABASE=stock_data_cache
 MYSQL_USER=your_user
 MYSQL_PASSWORD=your_password
+
+# 네이버 검색 API (선택사항)
+NAVER_CLIENT_ID=your_client_id
+NAVER_CLIENT_SECRET=your_client_secret
 ```
 
 ## 문서

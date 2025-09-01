@@ -261,7 +261,167 @@ GET /api/v1/system/info
 }
 ```
 
-### 3. 최적화 API (v2, 미구현)
+### 3. 네이버 뉴스 API
+
+#### 뉴스 검색
+
+```http
+GET /api/v1/naver-news/search?query={검색어}&display={결과수}
+```
+
+**파라미터:**
+- `query` (string, 필수): 검색할 키워드
+- `display` (int, 선택): 검색 결과 수 (1-100, 기본값: 10)
+
+**응답:**
+```json
+{
+  "status": "success",
+  "message": "검색어 관련 뉴스 10건을 조회했습니다.",
+  "data": {
+    "query": "검색어",
+    "total_count": 10,
+    "news_list": [
+      {
+        "title": "뉴스 제목",
+        "link": "https://n.news.naver.com/mnews/article/...",
+        "description": "뉴스 내용 요약...",
+        "pubDate": "Mon, 01 Sep 2025 21:01:00 +0900"
+      }
+    ]
+  }
+}
+```
+
+#### 종목별 뉴스 검색
+
+```http
+GET /api/v1/naver-news/ticker/{ticker}?display={결과수}
+```
+
+**파라미터:**
+- `ticker` (string, 필수): 종목 코드 (예: 005930.KS, AAPL)
+- `display` (int, 선택): 검색 결과 수 (1-100, 기본값: 10)
+
+**응답:**
+```json
+{
+  "status": "success",
+  "message": "005930.KS(삼성전자 주가) 관련 뉴스 10건을 조회했습니다.",
+  "data": {
+    "ticker": "005930.KS",
+    "query": "삼성전자 주가",
+    "total_count": 10,
+    "news_list": [
+      {
+        "title": "삼성전자 관련 뉴스 제목",
+        "link": "https://n.news.naver.com/mnews/article/...",
+        "description": "삼성전자 관련 뉴스 내용...",
+        "pubDate": "Mon, 01 Sep 2025 21:01:00 +0900"
+      }
+    ]
+  }
+}
+```
+
+#### 날짜별 뉴스 검색
+
+```http
+GET /api/v1/naver-news/search-by-date?query={검색어}&start_date={시작일}&end_date={종료일}&display={결과수}
+```
+
+**파라미터:**
+- `query` (string, 필수): 검색할 키워드
+- `start_date` (string, 필수): 검색 시작일 (YYYY-MM-DD 형식)
+- `end_date` (string, 선택): 검색 종료일 (YYYY-MM-DD 형식, 없으면 시작일과 동일)
+- `display` (int, 선택): 검색 결과 수 (10-100, 기본값: 50)
+
+**응답:**
+```json
+{
+  "status": "success",
+  "message": "검색어 관련 뉴스를 2025-09-01~2025-09-01 기간에서 48건 조회했습니다.",
+  "data": {
+    "query": "검색어",
+    "start_date": "2025-09-01",
+    "end_date": "2025-09-01",
+    "total_count": 48,
+    "news_list": [
+      {
+        "title": "특정 날짜 뉴스 제목",
+        "link": "https://n.news.naver.com/mnews/article/...",
+        "description": "특정 날짜 뉴스 내용...",
+        "pubDate": "Mon, 01 Sep 2025 21:01:00 +0900"
+      }
+    ]
+  }
+}
+```
+
+#### 종목별 날짜 뉴스 검색
+
+```http
+GET /api/v1/naver-news/ticker/{ticker}/date?start_date={시작일}&end_date={종료일}&display={결과수}
+```
+
+**파라미터:**
+- `ticker` (string, 필수): 종목 코드 (예: 005930.KS, AAPL)
+- `start_date` (string, 필수): 검색 시작일 (YYYY-MM-DD 형식)
+- `end_date` (string, 선택): 검색 종료일 (YYYY-MM-DD 형식, 없으면 시작일과 동일)
+- `display` (int, 선택): 검색 결과 수 (10-100, 기본값: 50)
+
+**응답:**
+```json
+{
+  "status": "success",
+  "message": "005930.KS(삼성전자 주가) 관련 뉴스를 2025-09-01~2025-09-01 기간에서 48건 조회했습니다.",
+  "data": {
+    "ticker": "005930.KS",
+    "query": "삼성전자 주가",
+    "start_date": "2025-09-01",
+    "end_date": "2025-09-01",
+    "total_count": 48,
+    "news_list": [
+      {
+        "title": "삼성전자 특정 날짜 뉴스 제목",
+        "link": "https://n.news.naver.com/mnews/article/...",
+        "description": "삼성전자 특정 날짜 뉴스 내용...",
+        "pubDate": "Mon, 01 Sep 2025 21:01:00 +0900"
+      }
+    ]
+  }
+}
+```
+
+#### 네이버 뉴스 API 테스트
+
+```http
+GET /api/v1/naver-news/test
+```
+
+API 연결 상태를 확인하는 테스트 엔드포인트입니다.
+
+**응답:**
+```json
+{
+  "status": "success",
+  "message": "네이버 뉴스 API가 정상적으로 작동하고 있습니다.",
+  "data": {
+    "test_query": "테스트",
+    "total_count": 5,
+    "news_list": [
+      {
+        "title": "테스트 뉴스 제목",
+        "link": "https://example.com",
+        "description": "테스트 뉴스 내용",
+        "pubDate": "Mon, 01 Sep 2025 21:01:00 +0900"
+      }
+    ]
+  }
+}
+```
+
+### 4. 최적화 API (v2, 미구현)
 
 #### 전략 파라미터 최적화 실행
 
@@ -322,6 +482,33 @@ POST /api/v1/optimize/run
   - `signal_period` (int): 시그널 라인 기간 (5-15, 기본값: 9)
 - **설명**: MACD 교차 기반 전략
 
+## 네이버 뉴스 API 지원 종목
+
+### 한국 주요 종목 (총 40+개)
+- **삼성 계열**: 005930.KS (삼성전자), 006400.KS (삼성SDI), 207940.KS (삼성바이오로직스), 028260.KS (삼성물산), 009150.KS (삼성전기), 018260.KS (삼성에스디에스), 032830.KS (삼성생명)
+- **SK 계열**: 000660.KS (SK하이닉스), 096770.KS (SK이노베이션), 017670.KS (SK텔레콤), 034730.KS (SK)
+- **LG 계열**: 051910.KS (LG화학), 373220.KS (LG에너지솔루션), 066570.KS (LG전자), 003550.KS (LG)
+- **금융**: 055550.KS (신한지주), 105560.KS (KB금융), 086790.KS (하나금융지주), 316140.KS (우리금융지주)
+- **자동차**: 005380.KS (현대차), 000270.KS (기아), 012330.KS (현대모비스)
+- **IT/게임**: 035420.KS (NAVER), 035720.KS (카카오), 323410.KS (카카오뱅크), 036570.KS (엔씨소프트), 251270.KS (넷마블)
+- **기타**: 030200.KS (KT), 015760.KS (한국전력), 068270.KS (셀트리온), 003670.KS (포스코퓨처엠), 009540.KS (HD한국조선해양), 033780.KS (KT&G), 090430.KS (아모레퍼시픽), 180640.KS (한진칼), 128940.KS (한미약품), 047050.KS (포스코인터내셔널), 010950.KS (S-Oil)
+
+### 미국 주요 종목 (총 30+개)
+- **빅테크**: AAPL (애플), MSFT (마이크로소프트), GOOGL (구글), AMZN (아마존), META (메타), NFLX (넷플릭스)
+- **반도체**: NVDA (엔비디아), AMD (AMD), INTC (인텔)
+- **테슬라/EV**: TSLA (테슬라), RIVN (리비안), LCID (루시드)
+- **소프트웨어**: CRM (세일즈포스), ORCL (오라클), ADBE (어도비), OKTA (옥타), DDOG (데이터독), SNOW (스노우플레이크), PLTR (팔란티어)
+- **핀테크**: PYPL (페이팔), SQ (스퀘어), COIN (코인베이스)
+- **소셜/엔터**: SNAP (스냅챗), SPOT (스포티파이), PINS (핀터레스트), RBLX (로블록스)
+- **기타**: UBER (우버), ZOOM (줌), SHOP (쇼피파이), ROKU (로쿠), DOCU (도큐사인), U (유니티)
+
+### 네이버 뉴스 API 특징
+- **회사명 매핑**: 종목 코드를 한국어 회사명으로 자동 변환하여 정확한 뉴스 검색
+- **콘텐츠 필터링**: `[역사속 오늘]`, 부고, 날씨, 운세 등 불필요한 콘텐츠 자동 제거
+- **네트워크 안정성**: 최대 3회 재시도 + 지수 백오프로 간헐적 연결 오류 해결
+- **날짜 정확성**: RFC 2822 형식 날짜 파싱으로 정확한 날짜별 필터링
+- **HTML 정리**: 뉴스 제목과 내용에서 HTML 태그 자동 제거
+
 ## 투자 방식 (Portfolio API)
 
 ### 1. 일시 투자 (`lump_sum`)
@@ -365,3 +552,8 @@ POST /api/v1/optimize/run
 - **v1.1**: 포트폴리오 백테스트 기능 추가
 - **v1.2**: 최적화 API 추가 (베타)
 - **v1.3**: 분할 매수(DCA) 기능 추가
+- **v1.4**: 네이버 뉴스 검색 API 추가 (2025-09-01)
+  - 종목별 뉴스 검색 (70+개 종목 지원)
+  - 날짜별 뉴스 필터링
+  - 네트워크 재시도 로직 및 안정성 개선
+  - 불필요한 콘텐츠 자동 필터링

@@ -2,7 +2,7 @@
 API v1 라우터 통합
 """
 from fastapi import APIRouter
-from .endpoints import backtest, strategies, optimize, system, news
+from .endpoints import backtest, strategies, optimize, system, naver_news
 from .endpoints import yfinance_cache
 
 api_router = APIRouter()
@@ -39,7 +39,7 @@ api_router.include_router(
 )
 
 api_router.include_router(
-    news.router,
-    prefix="/news",
-    tags=["뉴스 조회"]
+    naver_news.router,
+    prefix="/naver-news",
+    tags=["네이버 뉴스 검색"]
 )

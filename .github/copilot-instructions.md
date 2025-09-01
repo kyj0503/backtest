@@ -8,11 +8,12 @@
   - `backend/app/utils/data_fetcher.py`는 yfinance를 사용합니다. yfinance 관련 API 및 DB 캐시 동작의 상세 설명은 `backend/doc/api.md`를 참조. 캐시 경로·유효기간 변경은 `app/core/config.py`를 참조.
 
 ## 아키텍처·데이터 흐름 (요지)
-  - **백엔드**: FastAPI + uvicorn, MySQL (캐시), yfinance (데이터 소스)
+  - **백엔드**: FastAPI + uvicorn, MySQL (캐시), yfinance (데이터 소스), 네이버 검색 API (뉴스)
   - **프론트엔드**: React 18 + TypeScript + Vite, React Bootstrap, Recharts
   - **데이터베이스**: MySQL (`stock_data_cache`) - `host.docker.internal:3306`
-  - **API 구조**: `/api/v1/backtest/chart-data` (단일 종목), `/api/v1/backtest/portfolio` (포트폴리오), `/api/v1/system/info` (시스템 정보)
+  - **API 구조**: `/api/v1/backtest/chart-data` (단일 종목), `/api/v1/backtest/portfolio` (포트폴리오), `/api/v1/system/info` (시스템 정보), `/api/v1/naver-news/*` (뉴스 검색)
   - **전략 시스템**: `backtesting` 라이브러리 기반, Strategy 클래스 상속 구조
+  - **뉴스 시스템**: 네이버 검색 API 기반, 70+개 종목 지원, 날짜별 필터링, 자동 콘텐츠 정제
   - **시스템 모니터링**: 프론트엔드와 백엔드 버전, 업타임, 환경 정보 표시 (푸터)
 
 ## 프로젝트-특화 규칙 / 패턴 (에이전트가 알아야 할 것)
@@ -39,6 +40,7 @@
   - 만약 외부 의존 라이브러리가 필요하면 `backend/requirements.txt`에 추가
   - `backend/app/utils/data_fetcher.py`는 yfinance를 사용. 외부 API 키 불필요. 캐시 경로·유효기간 변경은 `app/core/config.py` 참조
   - 새 API는 `backend/app/api/v1/endpoints/`에 추가. Response/Request 모델은 `backend/app/models/`에 추가/확장
+  - **네이버 뉴스 API**: `backend/app/api/v1/endpoints/naver_news.py`에서 종목 매핑 추가/수정. 새 종목 추가 시 `ticker_mapping` 딕셔너리 업데이트
   - 프론트엔드 아키텍처: Services 계층(`frontend/src/services/`), 유틸리티 함수(`frontend/src/utils/`), 커스텀 훅(`frontend/src/hooks/`), 상수 모듈(`frontend/src/constants/`) 구조로 구성됨
   - 프론트엔드 개선 시 우선순위: 폼 상태 관리 → 에러 바운더리 → 성능 최적화 → 테스트 코드
   - **시스템 정보**: 새로운 환경 변수나 버전 정보는 `backend/app/api/v1/endpoints/system.py`와 `frontend/src/components/ServerStatus.tsx`에 반영
@@ -52,6 +54,7 @@
 
 ## 외부 의존성 및 통합 포인트
   - **yfinance**: 주식 데이터 수집 (API 키 불필요)
+  - **네이버 검색 API**: 뉴스 데이터 수집 (NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 환경변수 필요)
   - **MySQL**: 데이터 캐시 저장소 (설정: `backend/.env`)
   - **backtesting**: 백테스트 엔진 라이브러리
   - **Docker**: 컨테이너화된 개발/배포 환경
@@ -124,6 +127,15 @@ backend/tests/
 
 ## 현재 개발 상황 (2025년 9월 1일 기준)
 
+### 최신 구현 완료 기능 ✅
+- **네이버 뉴스 API**: 종목별/날짜별 뉴스 검색 완전 구현
+  - 70+ 종목 지원 (한국 40+, 미국 30+)
+  - 종목코드 → 회사명 자동 매핑으로 정확한 검색
+  - 날짜별 필터링 (특정 날짜 범위 뉴스 조회)
+  - 불필요한 콘텐츠 자동 필터링 ([역사속 오늘], 부고, 날씨 등)
+  - 네트워크 재시도 로직으로 안정성 확보
+  - API 엔드포인트: `/api/v1/naver-news/*`
+
 ### Jenkins CI/CD 파이프라인 상태: SUCCESS (부분적)
 - **Frontend Tests**: 23/23 통과
 - **Backend Tests**: 12 failed, 51 passed, 3 skipped (CI/CD 블로킹하지 않음)
@@ -162,24 +174,6 @@ backend/tests/
    - [ ] **폼 상태 관리 개선**: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer로 리팩토링
 
 3. **Medium (사용자 경험 개선)**
-   - [ ] **급등/급락 시 뉴스 모달**: 실시간 뉴스 연동
-     * **✅ 백엔드 API 구현 완료**: `/api/v1/news/news/{ticker}/{date}` 엔드포인트 생성
-     * **✅ 다중 뉴스 소스 연동**: News API, Alpha Vantage, Finnhub 지원
-     * **✅ 테스트 코드 작성**: 단위 테스트 및 통합 테스트 완료
-     * **✅ 문서화**: NEWS_API.md 가이드 문서 생성
-     * **🔄 진행 중**: 프론트엔드 차트 연동 및 모달 구현 대기
-     * **🔄 진행 중**: 실제 주가 변동률 계산 로직 연동 대기
-     * **🔄 진행 중**: MySQL 캐싱 시스템 구현 대기 (사용자 검증 후)
-     * **프론트엔드 구현 계획**: 
-       - Recharts 차트 컴포넌트에 onMouseEnter/onMouseLeave 이벤트 핸들러 추가
-       - 급등/급락 감지 로직 (전일 대비 ±5% 이상 변동)
-       - 뉴스 모달 컴포넌트 (React Bootstrap Modal 활용)
-       - 로딩 상태 및 에러 처리 (뉴스 API 호출 중)
-     * **추가 개발 예정**:
-       - 뉴스 필터링 및 요약 개선
-       - 캐싱 전략 (Redis - 동일 날짜/티커 뉴스 1시간 캐시)
-       - UI/UX 최적화 (Debounced 호버 이벤트, 썸네일 lazy loading)
-       - 에러 처리 강화 (API 키 만료/한도 초과 시 폴백)
    - [ ] **yfinance 재시도 정책 개선**: 휴일/주말/딜리스트 등 경계 케이스 처리
    - [ ] **동시성 보호**: `load_ticker_data`/`save_ticker_data`에 프로세스 내 락 도입해 중복 fetch 방지
    - [ ] **차트 성능 최적화**: 큰 데이터셋에 대한 가상화 및 차트 렌더링 최적화
