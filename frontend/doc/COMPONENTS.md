@@ -46,7 +46,7 @@ UnifiedBacktestResults.tsx
 각 컴포넌트는 하나의 명확한 기능만 담당합니다.
 
 ```typescript
-// ✅ 좋은 예: 단일 책임
+// 좋은 예: 단일 책임
 function StatsSummary({ stats }: StatsSummaryProps) {
   return (
     <Card>
@@ -58,7 +58,7 @@ function StatsSummary({ stats }: StatsSummaryProps) {
   );
 }
 
-// ❌ 나쁜 예: 여러 책임
+// 나쁜 예: 여러 책임
 function StatsAndChartAndNews({ data }: ComplexProps) {
   // 통계 계산, 차트 렌더링, 뉴스 가져오기 모두 처리
 }
@@ -423,5 +423,3 @@ describe('BacktestForm Integration', () => {
   });
 });
 ```
-
-이러한 컴포넌트 아키텍처를 통해 유지보수 가능하고 테스트 가능한 React 애플리케이션을 구축했습니다.

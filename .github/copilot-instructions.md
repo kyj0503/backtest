@@ -20,9 +20,13 @@
 - **현금 자산**: 무위험 자산으로 0% 수익률, 변동성 없음 보장
 
 ### API 구조
-- `/api/v1/backtest/chart-data` - 단일 종목 백테스트
+- `/api/v1/backtest/run` - 단일 종목 백테스트
+- `/api/v1/backtest/chart-data` - 백테스트 차트 데이터
 - `/api/v1/backtest/portfolio` - 포트폴리오 백테스트
 - `/api/v1/naver-news/*` - 뉴스 검색
+- `/api/v1/strategies/*` - 전략 관리
+- `/api/v1/optimize/*` - 최적화
+- `/api/v1/yfinance/*` - yfinance 캐시
 
 ## 개발 환경
 
@@ -83,7 +87,7 @@ docker-compose exec backend pytest tests/ -v
 
 ### 문서화 규칙
 - 코드 수정 시 관련 마크다운 문서 최신화 필수
-- 백엔드 문서: `backend/doc/`, 프론트엔드 문서: `frontend/doc/`, 전체 문서: `doc/`
+- 백엔드 문서: `backend/doc/`, 프론트엔드 문서: `frontend/doc/`
 - 디렉터리 계층 구조에 맞는 문서 배치
 
 ## 주요 위치
@@ -95,10 +99,10 @@ docker-compose exec backend pytest tests/ -v
 - 설정 관리: `backend/app/core/config.py`
 
 ### 문서 위치
-- API 가이드: `backend/doc/api.md`
+- 백엔드 개발 가이드: `backend/doc/README.md`
 - 테스트 아키텍처: `backend/doc/TEST_ARCHITECTURE.md`
 - 현금 자산 처리: `backend/doc/CASH_ASSETS.md`
-- Jenkins 복구 과정: `doc/JENKINS_RECOVERY_ROADMAP.md`
+- 프론트엔드 개발 가이드: `frontend/doc/README.md`
 
 ## 외부 의존성
 

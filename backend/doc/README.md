@@ -28,8 +28,6 @@ FastAPI 기반 백테스팅 시스템의 백엔드 개발 가이드입니다.
 - **uvicorn** - ASGI 서버
 - **Docker** - 컨테이너 환경
 
-**상세한 기술 선택 이유**: [`TECH_STACK_BACKEND.md`](TECH_STACK_BACKEND.md) 참조
-
 ## 프로젝트 구조
 
 ```
@@ -670,5 +668,3 @@ docker-compose exec backend free -h
 2. 개발 및 테스트
 3. 문서 업데이트
 4. PR 생성 및 리뷰 요청
-
-이 백엔드 개발 가이드를 통해 FastAPI 기반의 백테스팅 시스템을 효율적으로 개발하고 유지보수할 수 있습니다.

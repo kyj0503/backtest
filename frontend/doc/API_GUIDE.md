@@ -599,7 +599,3 @@ const getStatVariant = (value: number, type: 'return' | 'sharpe' | 'drawdown') =
   }
 };
 ```
-
----
-
-이 API 가이드를 참고하여 백엔드와의 안정적인 데이터 연동을 구현하고, 사용자에게 최적의 경험을 제공해주세요.

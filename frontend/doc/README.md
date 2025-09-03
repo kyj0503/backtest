@@ -11,8 +11,6 @@ React 18 + TypeScript 기반의 백테스팅 웹 애플리케이션 개발 가�
 - **Testing**: Vitest + Testing Library
 - **Container**: Docker
 
-**상세한 기술 선택 이유**: [`TECH_STACK_FRONTEND.md`](TECH_STACK_FRONTEND.md) 참조
-
 ## 프로젝트 구조
 
 ```
@@ -23,6 +21,7 @@ frontend/
 │   │   ├── BacktestResult.tsx       # 백테스트 결과 표시
 │   │   ├── ErrorBoundary.tsx        # 에러 경계 컴포넌트
 │   │   └── ServerStatus.tsx         # 서버 상태 표시
+│   ├── pages/              # 페이지 컴포넌트
 │   ├── services/            # API 호출 서비스
 │   │   └── api.ts          # 백엔드 API 호출 함수
 │   ├── types/              # TypeScript 타입 정의
@@ -212,13 +211,3 @@ ls -la dist/
 - [API 통신 가이드](./API_GUIDE.md) - REST API 호출 및 에러 처리
 - [컴포넌트 아키텍처](./COMPONENTS.md) - React 컴포넌트 설계 및 재사용
 - [상태 관리 가이드](./STATE_MANAGEMENT.md) - useState, useReducer, Context API 패턴
-- [스타일링 가이드](./STYLING.md) - CSS-in-JS 및 Bootstrap 활용법
-- [프론트엔드 기술 스택](./TECH_STACK_FRONTEND.md) - React + TypeScript 기술 선택 이유
-
-## 참고 링크
-
-- **React 18 문서**: https://react.dev/
-- **TypeScript 문서**: https://www.typescriptlang.org/
-- **Vite 문서**: https://vitejs.dev/
-- **React Bootstrap**: https://react-bootstrap.github.io/
-- **Recharts**: https://recharts.org/

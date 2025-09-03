@@ -160,7 +160,7 @@ exception.detail → "백테스트 실행 실패: 'INVALID999'는 유효하지 �
 
 #### 5. 모킹 검증 체크리스트
 
-**✅ 완성 기준:**
+**완성 기준:**
 - [x] 모든 MySQL 연결 시도 차단 (engine.connect() 포함)
 - [x] yfinance API 호출 완전 차단
 - [x] 모든 테스트에서 동일한 시드(42) 사용
@@ -168,7 +168,7 @@ exception.detail → "백테스트 실행 실패: 'INVALID999'는 유효하지 �
 - [x] HTTPException 문자열 처리 정상화
 - [ ] Jenkins CI에서 64개 테스트 모두 통과 (현재 진행 중)
 
-**🔍 검증 방법:**
+**검증 방법:**
 ```bash
 # 1. 로컬 테스트 (완전 오프라인 확인)
 docker-compose exec backend pytest tests/ -v -s --tb=short
@@ -184,11 +184,11 @@ git push origin main
 #### 6. 현재 진행 상황 (2025년 9월 3일)
 
 **완료된 작업:**
-- ✅ SQLAlchemy 엔진 완전 모킹 (`_get_engine()` 함수 모킹)
-- ✅ 다중 경로 DB 호출 모킹 (portfolio_service, API endpoints)
-- ✅ InvalidSymbolError → 422 에러 처리 개선
-- ✅ HTTPException 문자열 처리 수정 (detail 속성 사용)
-- ✅ API 엔드포인트 테스트 8/9 개 통과
+- SQLAlchemy 엔진 완전 모킹 (`_get_engine()` 함수 모킹)
+- 다중 경로 DB 호출 모킹 (portfolio_service, API endpoints)
+- InvalidSymbolError → 422 에러 처리 개선
+- HTTPException 문자열 처리 수정 (detail 속성 사용)
+- API 엔드포인트 테스트 8/9 개 통과
 
 **테스트 결과 개선:**
 - Before: 10 failed, 51 passed, 3 skipped (84% 실패율)
@@ -198,20 +198,20 @@ git push origin main
 #### 7. 예상 성과
 
 **Before (현재):**
-- ❌ 10 failed, 51 passed, 3 skipped (84% 실패율)
-- ❌ MySQL 연결 에러로 인한 500 응답
-- ❌ Jenkins CI/CD 파이프라인 중단
+- 10 failed, 51 passed, 3 skipped (84% 실패율)
+- MySQL 연결 에러로 인한 500 응답
+- Jenkins CI/CD 파이프라인 중단
 
 **After (구현 후):**
-- ✅ 0 failed, 64 passed, 0 skipped (100% 성공률)  
-- ✅ 완전 오프라인 테스트 환경
-- ✅ Jenkins CI/CD 파이프라인 안정화
-- ✅ 프로덕션 자동 배포 재개
+- 0 failed, 64 passed, 0 skipped (100% 성공률)  
+- 완전 오프라인 테스트 환경
+- Jenkins CI/CD 파이프라인 안정화
+- 프로덕션 자동 배포 재개
 
 **Progress (현재 상태):**
-- 🟡 대부분 테스트 통과, 소수 비즈니스 로직 검증 필요
-- ✅ MySQL 모킹 시스템 완전 구축 완료
-- ✅ 에러 처리 개선 완료
+- 대부분 테스트 통과, 소수 비즈니스 로직 검증 필요
+- MySQL 모킹 시스템 완전 구축 완료
+- 에러 처리 개선 완료
 
 ### MockStockDataGenerator
 
@@ -329,7 +329,7 @@ volumes:
 # 2. 즉시 컨테이너에서 테스트 실행
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pytest tests/ -v
 
-# ❌ 더 이상 불필요: docker cp, docker-compose up --build
+# 더 이상 불필요: docker cp, docker-compose up --build
 ```
 
 **이전 문제점 해결됨:**
@@ -352,7 +352,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pyte
 - 외부 의존성 제거로 안정적 CI/CD
 3. 테스트 실행으로 검증
 
-## 📊 성능 벤치마크
+## 성능 벤치마크
 
 ### 목표 성능
 
@@ -369,7 +369,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pyte
 - **캐시 활용**: 픽스처 스코프 최적화
 - **선택적 실행**: 변경된 모듈만 테스트
 
-## 🔍 데이터 검증
+## 데이터 검증
 
 ### OHLCV 데이터 일관성
 

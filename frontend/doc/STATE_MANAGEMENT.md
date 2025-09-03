@@ -575,5 +575,3 @@ const handleChartInteraction = useCallback((event: ChartEvent) => {
   }
 }, []);
 ```
-
-이러한 상태 관리 패턴을 통해 예측 가능하고 유지보수 가능한 React 애플리케이션을 구축했습니다.

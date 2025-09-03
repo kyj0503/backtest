@@ -82,9 +82,6 @@ docker-compose exec frontend npm test
 - [`STATE_MANAGEMENT.md`](frontend/doc/STATE_MANAGEMENT.md) - React 상태 관리 패턴
 - [`COMPONENTS.md`](frontend/doc/COMPONENTS.md) - 컴포넌트 아키텍처
 
-### AI 개발 가이드
-- [`.github/copilot-instructions.md`](.github/copilot-instructions.md) - GitHub Copilot 개발 지침
-
 ## 라이선스
 
 이 프로젝트는 GNU AFFERO GENERAL PUBLIC LICENSE 하에 배포됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 확인하세요.
