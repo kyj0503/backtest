@@ -130,9 +130,16 @@ export const PREDEFINED_STOCKS = [
   { value: 'NFLX', label: 'NFLX - Netflix Inc.' },
   { value: 'SPY', label: 'SPY - SPDR S&P 500 ETF' },
   { value: 'QQQ', label: 'QQQ - Invesco QQQ Trust' },
-  { value: 'VTI', label: 'VTI - Vanguard Total Stock Market ETF' },
-  { value: 'CASH', label: 'CASH - 현금 (무위험 자산)' }
+  { value: 'VTI', label: 'VTI - Vanguard Total Stock Market ETF' }
 ];
+
+// 자산 타입 정의
+export const ASSET_TYPES = {
+  STOCK: 'stock',
+  CASH: 'cash'
+} as const;
+
+export type AssetType = typeof ASSET_TYPES[keyof typeof ASSET_TYPES];
 
 // 리밸런싱 옵션
 export const REBALANCE_OPTIONS = [

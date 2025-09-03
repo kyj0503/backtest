@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Row, Col, Button, Table, Card, Container, Alert } from 'react-bootstrap';
 import { UnifiedBacktestRequest } from '../types/api';
-import { PREDEFINED_STOCKS, STRATEGY_CONFIGS } from '../constants/strategies';
+import { PREDEFINED_STOCKS, STRATEGY_CONFIGS, ASSET_TYPES, AssetType } from '../constants/strategies';
 
 interface Stock {
   symbol: string;
   amount: number;
   investmentType: 'lump_sum' | 'dca';
   dcaPeriods?: number;
+  assetType?: AssetType; // 자산 타입 추가
 }
 
 interface UnifiedBacktestFormProps {
@@ -85,7 +86,18 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
       symbol: '', 
       amount: 10000, 
       investmentType: 'lump_sum',
-      dcaPeriods: 12 
+      dcaPeriods: 12,
+      assetType: ASSET_TYPES.STOCK
+    }]);
+  };
+
+  const addCash = () => {
+    setPortfolio([...portfolio, { 
+      symbol: 'CASH', 
+      amount: 10000, 
+      investmentType: 'lump_sum',
+      dcaPeriods: 12,
+      assetType: ASSET_TYPES.CASH
     }]);
   };
 
@@ -354,8 +366,9 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                   </Button>
                   <Button 
                     variant="outline-success" 
-                    onClick={() => addStock()}
-                    title="현금을 포트폴리오에 추가"
+                    onClick={addCash}
+                    disabled={portfolio.length >= 10}
+                    title="현금을 포트폴리오에 추가 (무위험 자산)"
                   >
                     💰 현금 추가
                   </Button>
