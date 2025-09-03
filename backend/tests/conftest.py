@@ -67,17 +67,39 @@ def setup_offline_environment():
         """save_ticker_data 모킹 (아무것도 하지 않음)"""
         pass
     
-    # yfinance와 데이터베이스 함수들 모킹
+    def mock_sqlalchemy_engine():
+        """SQLAlchemy 엔진 및 연결 객체 완전 모킹"""
+        mock_engine = Mock()
+        mock_connection = Mock()
+        
+        # 연결 성공 시뮬레이션
+        mock_engine.connect.return_value = mock_connection
+        mock_connection.execute.return_value = Mock(fetchone=Mock(return_value=None))
+        mock_connection.close.return_value = None
+        
+        return mock_engine
+    
+    def mock_get_engine():
+        """_get_engine 함수 모킹"""
+        return mock_sqlalchemy_engine()
+    
+    # yfinance, 데이터베이스, SQLAlchemy 엔진 모킹
     with patch('yfinance.Ticker', side_effect=mock_ticker_factory) as mock_ticker, \
          patch('yfinance.download', side_effect=mock_download_func) as mock_download, \
          patch('app.services.yfinance_db.load_ticker_data', side_effect=mock_load_ticker_data) as mock_load, \
-         patch('app.services.yfinance_db.save_ticker_data', side_effect=mock_save_ticker_data) as mock_save:
+         patch('app.services.yfinance_db.save_ticker_data', side_effect=mock_save_ticker_data) as mock_save, \
+         patch('app.services.yfinance_db._get_engine', side_effect=mock_get_engine) as mock_engine_func, \
+         patch('app.services.portfolio_service.load_ticker_data', side_effect=mock_load_ticker_data) as mock_portfolio_load, \
+         patch('app.api.v1.endpoints.backtest.load_ticker_data', side_effect=mock_load_ticker_data) as mock_api_load:
         
         yield {
             'mock_ticker': mock_ticker,
             'mock_download': mock_download,
             'mock_load': mock_load,
             'mock_save': mock_save,
+            'mock_engine': mock_engine_func,
+            'mock_portfolio_load': mock_portfolio_load,
+            'mock_api_load': mock_api_load,
             'mock_generator': mock_generator
         }
 

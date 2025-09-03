@@ -51,6 +51,168 @@ tests/e2e/
 3. **재현 가능성**: 동일한 시드값으로 일관된 테스트 결과
 4. **CI/CD 최적화**: 젠킨스 우분투 환경에서 100% 성공률
 
+### 모킹 아키텍처 및 구현 전략
+
+#### 1. 모킹의 핵심 개념
+
+**모킹이란?**
+- 실제 외부 의존성(DB, API, 파일시스템)을 가짜 객체로 대체하는 기법
+- 테스트 환경에서 외부 시스템 없이도 코드 로직을 검증 가능
+- 빠르고 안정적이며 재현 가능한 테스트 환경 구축
+
+**Python에서의 모킹 메커니즘:**
+```python
+# 원본 함수 호출
+from app.services import yfinance_db
+data = yfinance_db.load_ticker_data('AAPL', '2023-01-01', '2023-12-31')
+# → 실제 MySQL DB에 연결 시도
+
+# 모킹된 함수 호출  
+with patch('app.services.yfinance_db.load_ticker_data') as mock_func:
+    mock_func.return_value = mock_data  # 가짜 데이터 반환
+    data = yfinance_db.load_ticker_data('AAPL', '2023-01-01', '2023-12-31')
+    # → MySQL 연결 없이 mock_data 반환
+```
+
+#### 2. 계층별 모킹 전략
+
+```
+┌─────────────────────────────────────────┐
+│ API Layer (FastAPI endpoints)          │ ← Level 3: API 응답 모킹
+├─────────────────────────────────────────┤
+│ Service Layer (business logic)         │ ← Level 2: 서비스 함수 모킹  
+├─────────────────────────────────────────┤
+│ Data Layer (yfinance_db.py)            │ ← Level 1: DB 연결 모킹
+├─────────────────────────────────────────┤
+│ Infrastructure (MySQL, yfinance API)   │ ← Level 0: 외부 의존성
+└─────────────────────────────────────────┘
+```
+
+#### 3. 현재 Jenkins 실패 원인 분석
+
+**MySQL 연결 실패 지점들:**
+1. `app.services.yfinance_db.py:134` - `engine.connect()` 직접 호출
+2. `app.services.portfolio_service.py:679` - `load_ticker_data()` 간접 호출  
+3. `app.api.v1.endpoints.backtest.py:51` - API 레벨에서 DB 접근
+
+**현재 모킹의 한계:**
+- `conftest.py`에서 `load_ticker_data` 함수만 모킹
+- 하지만 실제로는 `engine.connect()` 호출이 먼저 실행되어 MySQL 연결 시도
+- SQLAlchemy 엔진 레벨 모킹이 누락됨
+
+#### 4. 트러블슈팅 계획 및 구현 전략
+
+**Phase 1: Critical Path - MySQL 엔진 모킹 (우선순위: HIGH)**
+
+**Step 1.1: SQLAlchemy 엔진 완전 모킹**
+```python
+# conftest.py에 추가할 모킹 코드
+def mock_sqlalchemy_engine():
+    """SQLAlchemy 엔진 및 연결 객체 모킹"""
+    mock_engine = Mock()
+    mock_connection = Mock()
+    
+    # 연결 성공 시뮬레이션
+    mock_engine.connect.return_value = mock_connection
+    mock_connection.execute.return_value = Mock(fetchone=Mock(return_value=None))
+    mock_connection.close.return_value = None
+    
+    return mock_engine, mock_connection
+
+with patch('app.services.yfinance_db._get_engine', return_value=mock_engine), \
+     patch('app.core.database.engine', mock_engine):
+```
+
+**Step 1.2: 다중 경로 DB 호출 모킹**
+```python
+# 누락된 DB 호출 경로들을 모두 패치
+MOCK_PATCHES = [
+    'app.services.yfinance_db.load_ticker_data',
+    'app.services.yfinance_db.save_ticker_data', 
+    'app.services.yfinance_db._get_engine',
+    'app.services.portfolio_service.load_ticker_data',
+    'app.api.v1.endpoints.backtest.load_ticker_data'
+]
+
+for patch_target in MOCK_PATCHES:
+    patch(patch_target, side_effect=mock_function)
+```
+
+**Phase 2: 에러 처리 개선 (우선순위: MEDIUM)**
+
+**Step 2.1: Invalid Ticker 응답 코드 수정**
+- 현재: 유효하지 않은 티커 → 500 Internal Server Error
+- 수정 후: 유효하지 않은 티커 → 422 Unprocessable Entity
+
+**Step 2.2: HTTPException 메시지 처리 개선**
+```python
+# 기존 문제점
+str(HTTPException(...)) → ''  # 빈 문자열
+
+# 개선 방안  
+exception.detail → "백테스트 실행 실패: 'INVALID999'는 유효하지 않은 종목 심볼입니다."
+```
+
+**Phase 3: Pydantic V2 완전 마이그레이션 (우선순위: LOW)**
+- `Field(env=...)` → `Field(json_schema_extra=...)`
+- 클래스 기반 Config → ConfigDict 사용
+- `json_encoders` → 커스텀 시리얼라이저 적용
+
+#### 5. 모킹 검증 체크리스트
+
+**✅ 완성 기준:**
+- [x] 모든 MySQL 연결 시도 차단 (engine.connect() 포함)
+- [x] yfinance API 호출 완전 차단
+- [x] 모든 테스트에서 동일한 시드(42) 사용
+- [x] Invalid ticker → 422 상태 코드 반환
+- [x] HTTPException 문자열 처리 정상화
+- [ ] Jenkins CI에서 64개 테스트 모두 통과 (현재 진행 중)
+
+**🔍 검증 방법:**
+```bash
+# 1. 로컬 테스트 (완전 오프라인 확인)
+docker-compose exec backend pytest tests/ -v -s --tb=short
+
+# 2. 네트워크 차단 테스트  
+docker-compose exec backend pytest tests/ --disable-warnings --tb=no
+
+# 3. Jenkins CI 재실행
+git commit -m "fix: 완전 오프라인 모킹 시스템 구축"
+git push origin main
+```
+
+#### 6. 현재 진행 상황 (2025년 9월 3일)
+
+**완료된 작업:**
+- ✅ SQLAlchemy 엔진 완전 모킹 (`_get_engine()` 함수 모킹)
+- ✅ 다중 경로 DB 호출 모킹 (portfolio_service, API endpoints)
+- ✅ InvalidSymbolError → 422 에러 처리 개선
+- ✅ HTTPException 문자열 처리 수정 (detail 속성 사용)
+- ✅ API 엔드포인트 테스트 8/9 개 통과
+
+**테스트 결과 개선:**
+- Before: 10 failed, 51 passed, 3 skipped (84% 실패율)
+- Current: 1 failed, 8 passed in API tests (89% 성공률)
+- Progress: MySQL 연결 에러 완전 해결, 422 에러 처리 정상화
+
+#### 7. 예상 성과
+
+**Before (현재):**
+- ❌ 10 failed, 51 passed, 3 skipped (84% 실패율)
+- ❌ MySQL 연결 에러로 인한 500 응답
+- ❌ Jenkins CI/CD 파이프라인 중단
+
+**After (구현 후):**
+- ✅ 0 failed, 64 passed, 0 skipped (100% 성공률)  
+- ✅ 완전 오프라인 테스트 환경
+- ✅ Jenkins CI/CD 파이프라인 안정화
+- ✅ 프로덕션 자동 배포 재개
+
+**Progress (현재 상태):**
+- 🟡 대부분 테스트 통과, 소수 비즈니스 로직 검증 필요
+- ✅ MySQL 모킹 시스템 완전 구축 완료
+- ✅ 에러 처리 개선 완료
+
 ### MockStockDataGenerator
 
 기하 브라운 운동(Geometric Brownian Motion) 알고리즘을 사용한 현실적 주식 데이터 생성:

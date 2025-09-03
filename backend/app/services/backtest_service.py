@@ -158,6 +158,13 @@ class BacktestService:
             
         except Exception as e:
             print(f"백테스트 전체 프로세스 오류: {e}")
+            
+            # InvalidSymbolError는 422 에러로 처리
+            from app.utils.data_fetcher import InvalidSymbolError
+            if isinstance(e, InvalidSymbolError):
+                raise HTTPException(status_code=422, detail=str(e))
+            
+            # 그 외 에러는 500으로 처리
             raise HTTPException(status_code=500, detail=f"백테스트 실행 실패: {str(e)}")
 
     def _create_fallback_result(self, data, request):
@@ -769,6 +776,13 @@ class BacktestService:
         except Exception as e:
             logger.error(f"차트 데이터 생성 실패: {str(e)}")
             logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            # InvalidSymbolError는 그대로 전파 (422 에러)
+            from app.utils.data_fetcher import InvalidSymbolError
+            if isinstance(e, InvalidSymbolError):
+                raise e
+            
+            # 그 외 에러는 일반적인 예외로 처리
             raise Exception(f"차트 데이터 생성 중 오류 발생: {str(e)}")
 
     def safe_float(self, value, default: float = 0.0) -> float:

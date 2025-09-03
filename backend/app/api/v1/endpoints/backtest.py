@@ -204,6 +204,14 @@ async def get_chart_data(request: BacktestRequest):
     except Exception as e:
         from app.utils.user_messages import get_user_friendly_message, log_error_for_debugging
         from app.core.custom_exceptions import handle_yfinance_error
+        from app.utils.data_fetcher import InvalidSymbolError as DataFetcherInvalidSymbolError
+        
+        # InvalidSymbolError인지 먼저 확인
+        if isinstance(e, DataFetcherInvalidSymbolError) or "InvalidSymbolError" in str(type(e)) or "'는 유효하지 않은 종목 심볼입니다" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(e)
+            )
         
         error_id = log_error_for_debugging(e, "차트 데이터 생성", {
             "ticker": request.ticker,

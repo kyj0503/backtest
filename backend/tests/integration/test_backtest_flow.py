@@ -136,7 +136,12 @@ class TestBacktestFlow:
             except Exception as e:
                 # 예외 발생은 예상된 동작
                 assert isinstance(e, (ValueError, Exception))
-                assert len(str(e)) > 0  # 의미있는 에러 메시지
+                
+                # HTTPException의 경우 detail 속성을 확인
+                if hasattr(e, 'detail'):
+                    assert len(str(e.detail)) > 0  # 의미있는 에러 메시지
+                else:
+                    assert len(str(e)) > 0  # 의미있는 에러 메시지
     
     @pytest.mark.asyncio
     async def test_strategy_comparison_flow(self, mock_data_generator):
