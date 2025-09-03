@@ -165,7 +165,13 @@ export class BacktestApiService {
     } else {
       // 포트폴리오
       const portfolioRequest = {
-        portfolio: request.portfolio,
+        portfolio: request.portfolio.map(stock => ({
+          symbol: stock.assetType === 'cash' ? 'CASH' : stock.symbol, // 백엔드에서는 여전히 CASH 심볼 사용
+          amount: stock.amount,
+          investment_type: stock.investmentType,
+          dca_periods: stock.dcaPeriods,
+          asset_type: stock.assetType || 'stock'  // 자산 타입 추가
+        })),
         start_date: request.start_date,
         end_date: request.end_date,
         commission: request.commission || 0.002,

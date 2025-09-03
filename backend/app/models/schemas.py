@@ -43,10 +43,17 @@ class PortfolioStock(BaseModel):
     amount: float = Field(..., gt=0, description="투자 금액 (> 0)")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
     dca_periods: Optional[int] = Field(12, ge=1, le=60, description="분할 매수 기간 (개월)")
+    asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
     
     @field_validator('symbol')
     @classmethod
-    def validate_symbol(cls, v):
+    def validate_symbol(cls, v, info):
+        # asset_type이 'cash'인 경우 더 유연한 검증
+        asset_type = info.data.get('asset_type', 'stock')
+        if asset_type == 'cash':
+            # 현금 자산은 심볼 제한 없음 (한글 "현금" 등 허용)
+            return v
+        
         # CASH는 특별한 심볼로 허용
         if v.upper() == 'CASH':
             return v.upper()
@@ -59,6 +66,13 @@ class PortfolioStock(BaseModel):
     def validate_investment_type(cls, v):
         if v not in ['lump_sum', 'dca']:
             raise ValueError('투자 방식은 lump_sum 또는 dca만 가능합니다.')
+        return v
+    
+    @field_validator('asset_type')
+    @classmethod
+    def validate_asset_type(cls, v):
+        if v not in ['stock', 'cash']:
+            raise ValueError('자산 타입은 stock 또는 cash만 가능합니다.')
         return v
 
 class PortfolioBacktestRequest(BaseModel):

@@ -93,7 +93,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
 
   const addCash = () => {
     setPortfolio([...portfolio, { 
-      symbol: 'CASH', 
+      symbol: '현금', 
       amount: 10000, 
       investmentType: 'lump_sum',
       dcaPeriods: 12,

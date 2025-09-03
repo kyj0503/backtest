@@ -98,14 +98,19 @@ class PortfolioBacktestService:
         Returns:
             포트폴리오 가치와 수익률이 포함된 DataFrame
         """
-        # 현금 처리: CASH 심볼은 수익률 0%로 처리
-        cash_amount = amounts.get('CASH', 0)
-        stock_amounts = {k: v for k, v in amounts.items() if k != 'CASH'}
+        # 현금 처리: asset_type이 'cash'인 항목들은 수익률 0%로 처리
+        cash_amount = 0
+        for unique_key, amount in amounts.items():
+            if dca_info[unique_key].get('asset_type') == 'cash':
+                cash_amount += amount
+        
+        stock_amounts = {k: v for k, v in amounts.items() if dca_info[k].get('asset_type') != 'cash'}
         
         # 모든 주식 종목의 날짜 범위를 통합
         all_dates = set()
-        for symbol, df in portfolio_data.items():
-            if symbol != 'CASH':  # 현금 제외
+        for unique_key, df in portfolio_data.items():
+            # 현금 자산 제외
+            if dca_info.get(unique_key, {}).get('asset_type') != 'cash':
                 all_dates.update(df.index)
         
         if not all_dates and cash_amount == 0:
@@ -141,7 +146,7 @@ class PortfolioBacktestService:
             
             # 각 포트폴리오 항목의 현재 가치 계산 (중복 종목 지원)
             for unique_key, amount in amounts.items():
-                if unique_key.endswith('_CASH') or unique_key.split('_')[0] == 'CASH':
+                if dca_info[unique_key].get('asset_type') == 'cash':
                     continue
                     
                 symbol = dca_info[unique_key]['symbol']
@@ -451,11 +456,11 @@ class PortfolioBacktestService:
                 unique_key = f"{symbol}_{idx}"
                 
                 # 현금 처리 (수익률 0%, 전략 적용 안함)
-                if symbol == 'CASH':
-                    logger.info(f"현금 {symbol} 처리 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
+                if item.asset_type == 'cash':
+                    logger.info(f"현금 자산 {symbol} 처리 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
                     
                     portfolio_results[unique_key] = {
-                        'symbol': symbol,
+                        'symbol': f"현금",  # 사용자에게 명확하게 현금임을 표시
                         'initial_value': amount,
                         'final_value': amount,  # 현금은 변동 없음
                         'return_pct': 0.0,  # 현금 수익률 0%
@@ -482,7 +487,7 @@ class PortfolioBacktestService:
                     }
                     
                     total_portfolio_value += amount
-                    logger.info(f"현금 {symbol} 완료: 0.00% 수익률")
+                    logger.info(f"현금 자산 완료: 0.00% 수익률")
                     continue
                 
                 logger.info(f"종목 {symbol} (#{idx+1}) 전략 백테스트 실행 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
@@ -669,6 +674,7 @@ class PortfolioBacktestService:
                 amount = item.amount
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_periods = getattr(item, 'dca_periods', 12)
+                asset_type = getattr(item, 'asset_type', 'stock')  # 자산 타입 확인
                 
                 # 중복 종목을 위한 고유 키 생성
                 unique_key = f"{symbol}_{idx}"
@@ -678,14 +684,16 @@ class PortfolioBacktestService:
                     'symbol': symbol,
                     'investment_type': investment_type,
                     'dca_periods': dca_periods,
-                    'monthly_amount': amount / dca_periods if investment_type == 'dca' else amount
+                    'monthly_amount': amount / dca_periods if investment_type == 'dca' else amount,
+                    'asset_type': asset_type
                 }
                 
-                if symbol == 'CASH':
+                # 진짜 현금 자산 처리 (asset_type이 'cash'인 경우)
+                if asset_type == 'cash':
                     # 현금 처리
                     cash_amount += amount  # 중복 현금은 합산
                     amounts[unique_key] = amount
-                    logger.info(f"현금 {symbol} (#{idx+1}) 추가 (금액: ${amount:,.2f})")
+                    logger.info(f"현금 자산 {symbol} (#{idx+1}) 추가 (금액: ${amount:,.2f})")
                     continue
                 
                 logger.info(f"종목 {symbol} (#{idx+1}) 데이터 로드 중 (투자금액: ${amount:,.2f}, 방식: {investment_type})")
@@ -745,7 +753,8 @@ class PortfolioBacktestService:
                         'return': 0.0,
                         'start_price': 1.0,
                         'end_price': 1.0,
-                        'investment_type': 'lump_sum'
+                        'investment_type': 'lump_sum',
+                        'asset_type': 'cash'  # 진짜 현금 자산임을 표시
                     }
                 }
                 
@@ -792,7 +801,7 @@ class PortfolioBacktestService:
             # 개별 종목 수익률 (참고용, 현금 포함)
             individual_returns = {}
             
-            # 현금 수익률 추가
+                # 현금 수익률 추가
             if cash_amount > 0:
                 individual_returns['CASH'] = {
                     'weight': cash_amount / total_amount,
@@ -800,12 +809,13 @@ class PortfolioBacktestService:
                     'return': 0.0,  # 현금 수익률은 0%
                     'start_price': 1.0,
                     'end_price': 1.0,
-                    'investment_type': 'lump_sum'
+                    'investment_type': 'lump_sum',
+                    'asset_type': 'cash'  # 진짜 현금 자산임을 표시
                 }
             
             # 주식 수익률 추가 (중복 종목 지원)
             for unique_key, amount in amounts.items():
-                if unique_key.endswith('_CASH') or unique_key.split('_')[0] == 'CASH':
+                if unique_key.endswith('_CASH') or dca_info[unique_key].get('asset_type') == 'cash':
                     continue
                     
                 symbol = dca_info[unique_key]['symbol']
