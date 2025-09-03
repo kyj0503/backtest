@@ -192,6 +192,98 @@ export class BacktestApiService {
       return result;
     }
   }
+
+  async getStockData(ticker: string, startDate: string, endDate: string) {
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/backtest/stock-data/${ticker}?start_date=${startDate}&end_date=${endDate}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
+    }
+  }
+
+  async getExchangeRate(startDate: string, endDate: string) {
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/backtest/exchange-rate?start_date=${startDate}&end_date=${endDate}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
+    }
+  }
+
+  async getStockVolatilityNews(ticker: string, startDate: string, endDate: string, threshold: number = 5.0) {
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/backtest/stock-volatility-news/${ticker}?start_date=${startDate}&end_date=${endDate}&threshold=${threshold}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
+    }
+  }
+
+  async getNaverNews(ticker: string, date: string, display: number = 10) {
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/naver-news/ticker/${ticker}/date?start_date=${date}&end_date=${date}&display=${display}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
+    }
+  }
 }
 
 // 싱글톤 인스턴스 export

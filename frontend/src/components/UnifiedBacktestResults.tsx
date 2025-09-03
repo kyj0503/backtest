@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Badge } from 'react-bootstrap';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import OHLCChart from './OHLCChart';
 import EquityChart from './EquityChart';
 import TradesChart from './TradesChart';
 import StatsSummary from './StatsSummary';
+import StockPriceChart from './StockPriceChart';
+import ExchangeRateChart from './ExchangeRateChart';
+import StockVolatilityNews from './StockVolatilityNews';
 import { formatPercent } from '../utils/formatters';
+import { backtestApiService } from '../services/api';
 
 interface Stock {
   symbol: string;
@@ -64,6 +68,57 @@ interface UnifiedBacktestResultsProps {
 }
 
 const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, isPortfolio }) => {
+  const [stocksData, setStocksData] = useState<Array<{
+    symbol: string;
+    data: Array<{
+      date: string;
+      price: number;
+      volume?: number;
+    }>;
+  }>>([]);
+  const [loadingStockData, setLoadingStockData] = useState(false);
+
+  // 주가 데이터 가져오기
+  const fetchStockData = async (symbols: string[], startDate: string, endDate: string) => {
+    setLoadingStockData(true);
+    const stockDataResults = [];
+
+    for (const symbol of symbols) {
+      // 현금 자산은 제외
+      if (symbol.toUpperCase() === 'CASH' || symbol === '현금') {
+        continue;
+      }
+
+      try {
+        const response = await backtestApiService.getStockData(symbol, startDate, endDate);
+        if (response.status === 'success' && response.data.price_data.length > 0) {
+          stockDataResults.push({
+            symbol: symbol,
+            data: response.data.price_data
+          });
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch stock data for ${symbol}:`, error);
+      }
+    }
+
+    setStocksData(stockDataResults);
+    setLoadingStockData(false);
+  };
+
+  // 포트폴리오 백테스트 결과가 있을 때 주가 데이터 가져오기
+  useEffect(() => {
+    if (isPortfolio && 'portfolio_composition' in data && 'portfolio_statistics' in data) {
+      const portfolioData = data as PortfolioData;
+      const symbols = portfolioData.portfolio_composition.map((item: any) => item.symbol);
+      const startDate = portfolioData.portfolio_statistics.Start;
+      const endDate = portfolioData.portfolio_statistics.End;
+      
+      if (symbols.length > 0 && startDate && endDate) {
+        fetchStockData(symbols, startDate, endDate);
+      }
+    }
+  }, [isPortfolio, data]);
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('ko-KR', {
       style: 'currency',
@@ -135,6 +190,48 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
           profit_factor: portfolio_statistics.Total_Return > 0 ? 
             (portfolio_statistics.Total_Return / Math.abs(portfolio_statistics.Max_Drawdown || 1)) : 1.0
         }} />
+
+        {/* 개별 종목 주가 차트 */}
+        {loadingStockData ? (
+          <Card className="mb-4">
+            <Card.Body className="text-center">
+              <div className="spinner-border" role="status">
+                <span className="visually-hidden">주가 데이터 로딩 중...</span>
+              </div>
+              <p className="mt-2">개별 종목 주가 데이터를 가져오는 중...</p>
+            </Card.Body>
+          </Card>
+        ) : stocksData.length > 0 && (
+          <Card className="mb-4">
+            <Card.Header>
+              <h5 className="mb-0">
+                개별 종목 주가 변동 ({stocksData.length}개 종목)
+              </h5>
+            </Card.Header>
+            <Card.Body>
+              <StockPriceChart stocksData={stocksData} />
+            </Card.Body>
+          </Card>
+        )}
+
+        {/* 원달러 환율 차트 */}
+        {'portfolio_statistics' in data && (
+          <ExchangeRateChart 
+            startDate={(data as PortfolioData).portfolio_statistics.Start}
+            endDate={(data as PortfolioData).portfolio_statistics.End}
+            className="mb-4"
+          />
+        )}
+
+        {/* 주가 급등/급락 뉴스 */}
+        {'portfolio_composition' in data && (
+          <StockVolatilityNews
+            symbols={(data as PortfolioData).portfolio_composition.map(item => item.symbol)}
+            startDate={(data as PortfolioData).portfolio_statistics.Start}
+            endDate={(data as PortfolioData).portfolio_statistics.End}
+            className="mb-4"
+          />
+        )}
 
         {/* 주요 성과 지표 */}
         <Row className="mb-4">
@@ -377,6 +474,46 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
       </Card>
 
       <StatsSummary stats={chartData.summary_stats || {}} />
+
+      {/* 개별 주가 차트 (단일 종목) */}
+      {chartData.ticker && (
+        <Card className="mb-4">
+          <Card.Header>
+            <h5 className="mb-0">개별 주가 변동</h5>
+          </Card.Header>
+          <Card.Body>
+            <StockPriceChart 
+              stocksData={[{
+                symbol: chartData.ticker,
+                data: chartData.ohlc_data?.map(item => ({
+                  date: item.date,
+                  price: item.close,
+                  volume: item.volume
+                })) || []
+              }]} 
+            />
+          </Card.Body>
+        </Card>
+      )}
+
+      {/* 원달러 환율 차트 (단일 종목) */}
+      {chartData.start_date && chartData.end_date && (
+        <ExchangeRateChart 
+          startDate={chartData.start_date}
+          endDate={chartData.end_date}
+          className="mb-4"
+        />
+      )}
+
+      {/* 주가 급등/급락 뉴스 (단일 종목) */}
+      {chartData.ticker && chartData.start_date && chartData.end_date && (
+        <StockVolatilityNews
+          symbols={[chartData.ticker]}
+          startDate={chartData.start_date}
+          endDate={chartData.end_date}
+          className="mb-4"
+        />
+      )}
 
       <Row>
         <Col lg={12}>
