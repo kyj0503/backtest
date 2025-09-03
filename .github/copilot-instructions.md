@@ -38,7 +38,8 @@
   - **API 구조**: `/api/v1/backtest/chart-data` (단일 종목), `/api/v1/backtest/portfolio` (포트폴리오), `/api/v1/naver-news/*` (뉴스 검색)
   - **전략 시스템**: `backtesting` 라이브러리 기반, Strategy 클래스 상속 구조
   - **뉴스 시스템**: 네이버 검색 API 기반, 70+개 종목 지원, 날짜별 필터링, 자동 콘텐츠 정제
-  - **자산 관리**: 주식(ticker 기반)과 현금(CASH, 무위험 자산) 구분 처리
+  - **자산 관리**: 주식(ticker 기반)과 현금(asset_type='cash') 구분 처리
+  - **현금 자산**: 무위험 자산으로 0% 수익률, 변동성 없음 보장
 
 ## 프로젝트-특화 규칙 / 패턴 (에이전트가 알아야 할 것)
   - 코드를 수정하면 항상 마크다운 문서에 최신화를 해야 한다.
@@ -64,6 +65,7 @@
   - 만약 외부 의존 라이브러리가 필요하면 `backend/requirements.txt`에 추가
   - `backend/app/utils/data_fetcher.py`는 yfinance를 사용. 외부 API 키 불필요. 캐시 경로·유효기간 변경은 `app/core/config.py` 참조
   - 새 API는 `backend/app/api/v1/endpoints/`에 추가. Response/Request 모델은 `backend/app/models/`에 추가/확장
+  - **현금 자산 처리**: asset_type='cash'인 경우 symbol은 임의값 가능, 데이터 수집 없이 일정한 가치 유지
   - **네이버 뉴스 API**: `backend/app/api/v1/endpoints/naver_news.py`에서 종목 매핑 추가/수정. 새 종목 추가 시 `ticker_mapping` 딕셔너리 업데이트
   - 프론트엔드 아키텍처: Services 계층(`frontend/src/services/`), 유틸리티 함수(`frontend/src/utils/`), 커스텀 훅(`frontend/src/hooks/`), 상수 모듈(`frontend/src/constants/`) 구조로 구성됨
   - 프론트엔드 개선 시 우선순위: 폼 상태 관리 → 에러 바운더리 → 성능 최적화 → 테스트 코드
@@ -99,6 +101,7 @@
   - **개발 효율성**: Docker 볼륨 마운트 실시간 동기화로 docker cp 불필요
   - **Pydantic V2**: @field_validator, json_schema_extra, lifespan 패턴 등 최신 문법 사용
   - **현금 처리**: 'CASH' 티커는 현금(무위험 자산)으로 별도 처리, 주식 데이터 수집 불필요
+  - **자산 타입**: asset_type 필드로 'stock'과 'cash' 구분, 현금은 일정한 가치 유지
   - 내가 별다른 첨언 없이 로그만 입력하면, 로그를 바탕으로 문제점이나 개선점을 찾아 알려줘.
 
 ## 백엔드 테스트 아키텍처 가이드라인
@@ -154,6 +157,11 @@ backend/tests/
 ## 현재 개발 상황 (2025년 9월 3일 기준)
 
 ### 최신 구현 완료 기능
+- **진짜 현금 자산 처리**: CASH 티커를 실제 무위험 자산으로 처리
+  - asset_type 필드로 현금('cash')과 주식('stock') 구분
+  - 현금 자산은 0% 수익률, 변동성 없음 보장
+  - 혼합 포트폴리오에서 현금이 리스크 완화 역할 수행
+  - 프론트엔드에서 현금 표시명 '현금'으로 통일
 - **Pydantic V2 완전 마이그레이션**: 모든 deprecated 경고 제거
   - `@validator` → `@field_validator` 변환 완료
   - `schema_extra` → `json_schema_extra` 변환 완료
@@ -222,6 +230,7 @@ backend/tests/
    - **🎉 달성**: Jenkins CI/CD 실질적 100% 성공률 + 배포 안정성 확보 + 완벽한 크로스 플랫폼 호환성
 
 2. **High (비즈니스 핵심 기능 - 우선순위 상승)**
+   - [x] **진짜 현금 자산 처리**: asset_type 필드로 현금과 주식 구분, 무위험 자산으로 0% 수익률 보장
    - [ ] **백테스트 결과 개선**: 월별/연도별 수익률 분석, 베타 계수, 최대 연속 손실 기간 등 추가 통계 제공
    - [ ] **회원 가입 기능**: 사용자 관리 시스템 구축
    - [ ] **내 포트폴리오 저장 기능**: 사용자별 포트폴리오 관리
