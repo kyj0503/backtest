@@ -54,6 +54,42 @@ class MockStockDataGenerator:
                 'drift': 0.15,
                 'avg_volume': 25000000
             },
+            'AMZN': {
+                'initial_price': 3000.0,
+                'volatility': 0.28,
+                'drift': 0.12,
+                'avg_volume': 35000000
+            },
+            'META': {
+                'initial_price': 200.0,
+                'volatility': 0.35,
+                'drift': 0.09,
+                'avg_volume': 20000000
+            },
+            'NFLX': {
+                'initial_price': 400.0,
+                'volatility': 0.40,
+                'drift': 0.07,
+                'avg_volume': 15000000
+            },
+            'NVDA': {
+                'initial_price': 500.0,
+                'volatility': 0.50,
+                'drift': 0.20,
+                'avg_volume': 40000000
+            },
+            'ORCL': {
+                'initial_price': 85.0,
+                'volatility': 0.18,
+                'drift': 0.05,
+                'avg_volume': 12000000
+            },
+            'CRM': {
+                'initial_price': 220.0,
+                'volatility': 0.30,
+                'drift': 0.08,
+                'avg_volume': 8000000
+            },
             'DEFAULT': {
                 'initial_price': 100.0,
                 'volatility': 0.25,

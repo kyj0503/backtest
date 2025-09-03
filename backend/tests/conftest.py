@@ -32,7 +32,7 @@ def setup_offline_environment():
         mock_ticker_instance = Mock()
         
         # 유효한 티커 목록
-        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX']
+        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX', 'ORCL', 'CRM']
         
         if ticker_symbol.upper() in valid_tickers:
             # 유효한 티커의 경우 - 동일한 시드로 재현성 보장
@@ -45,9 +45,9 @@ def setup_offline_environment():
         
         return mock_ticker_instance
     
-    def mock_download_func(ticker, start, end, **kwargs):
-        """yfinance.download 모킹"""
-        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX']
+    def mock_download_func(ticker, start, end, group_by='ticker'):
+        """yfinance.download 함수 모킹"""
+        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX', 'ORCL', 'CRM']
         
         if ticker.upper() in valid_tickers:
             return mock_generator.generate_ohlcv_data(ticker, seed=42)
@@ -56,7 +56,7 @@ def setup_offline_environment():
     
     def mock_load_ticker_data(ticker, start_date, end_date):
         """load_ticker_data 모킹"""
-        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX']
+        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX', 'ORCL', 'CRM']
         
         if ticker.upper() in valid_tickers:
             return mock_generator.generate_ohlcv_data(ticker, start_date, end_date, seed=42)
