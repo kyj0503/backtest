@@ -159,7 +159,8 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
         symbol: stock.symbol.toUpperCase(),
         amount: stock.amount,
         investment_type: stock.investmentType,
-        dca_periods: stock.dcaPeriods || 12
+        dca_periods: stock.dcaPeriods || 12,
+        asset_type: stock.assetType || ASSET_TYPES.STOCK
       }));
 
       const params = generateStrategyParams();

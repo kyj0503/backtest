@@ -125,6 +125,17 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
           </Card.Body>
         </Card>
 
+        {/* 백테스트 성과 통계 */}
+        <StatsSummary stats={{
+          total_return_pct: portfolio_statistics.Total_Return,
+          total_trades: portfolio_statistics.Total_Trading_Days,
+          win_rate_pct: portfolio_statistics.Win_Rate,
+          max_drawdown_pct: portfolio_statistics.Max_Drawdown,
+          sharpe_ratio: portfolio_statistics.Sharpe_Ratio,
+          profit_factor: portfolio_statistics.Total_Return > 0 ? 
+            (portfolio_statistics.Total_Return / Math.abs(portfolio_statistics.Max_Drawdown || 1)) : 1.0
+        }} />
+
         {/* 주요 성과 지표 */}
         <Row className="mb-4">
           <Col>

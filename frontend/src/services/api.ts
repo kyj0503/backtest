@@ -150,8 +150,11 @@ export class BacktestApiService {
   }
 
   async runBacktest(request: UnifiedBacktestRequest) {
-    if (request.portfolio.length === 1) {
-      // 단일 종목
+    // 현금 자산이 포함된 경우 항상 포트폴리오 API 사용
+    const hasCashAsset = request.portfolio.some(stock => stock.asset_type === 'cash');
+    
+    if (request.portfolio.length === 1 && !hasCashAsset) {
+      // 단일 종목 (현금 자산이 아닌 경우만)
       const singleStockRequest = {
         ticker: request.portfolio[0].symbol,
         start_date: request.start_date,
@@ -163,7 +166,7 @@ export class BacktestApiService {
       
       return this.runSingleStockBacktest(singleStockRequest);
     } else {
-      // 포트폴리오
+      // 포트폴리오 (현금 자산이 포함된 경우 포함)
       const portfolioRequest = {
         portfolio: request.portfolio.map(stock => ({
           symbol: stock.asset_type === 'cash' ? 'CASH' : stock.symbol, // 백엔드에서는 여전히 CASH 심볼 사용

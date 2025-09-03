@@ -13,38 +13,38 @@ const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
   }> = [
     { 
       label: '총 수익률', 
-      value: formatPercent(stats.total_return_pct), 
-      variant: getStatVariant(stats.total_return_pct, 'return') as any, 
+      value: formatPercent(stats.total_return_pct || stats.Total_Return || 0), 
+      variant: getStatVariant(stats.total_return_pct || stats.Total_Return || 0, 'return') as any, 
       description: '투자 원금 대비 총 수익률' 
     },
     { 
       label: '총 거래수', 
-      value: stats.total_trades.toString(), 
+      value: (stats.total_trades || stats.Total_Trading_Days || 0).toString(), 
       variant: 'primary', 
       description: '전체 기간 동안 체결된 거래수' 
     },
     { 
       label: '승률', 
-      value: formatPercent(stats.win_rate_pct), 
-      variant: getStatVariant(stats.win_rate_pct, 'winRate') as any, 
+      value: formatPercent(stats.win_rate_pct || stats.Win_Rate || 0), 
+      variant: getStatVariant(stats.win_rate_pct || stats.Win_Rate || 0, 'winRate') as any, 
       description: '전체 거래 중 이익 비율' 
     },
     { 
       label: '최대 손실', 
-      value: formatPercent(stats.max_drawdown_pct), 
-      variant: getStatVariant(stats.max_drawdown_pct, 'drawdown') as any, 
+      value: formatPercent(stats.max_drawdown_pct || stats.Max_Drawdown || 0), 
+      variant: getStatVariant(stats.max_drawdown_pct || stats.Max_Drawdown || 0, 'drawdown') as any, 
       description: '최대 Drawdown' 
     },
     { 
       label: '샤프', 
-      value: stats.sharpe_ratio.toFixed(3), 
-      variant: getStatVariant(stats.sharpe_ratio, 'sharpe') as any, 
+      value: (stats.sharpe_ratio || stats.Sharpe_Ratio || 0).toFixed(3), 
+      variant: getStatVariant(stats.sharpe_ratio || stats.Sharpe_Ratio || 0, 'sharpe') as any, 
       description: '리스크 대비 성과 지표' 
     },
     { 
       label: 'Profit Factor', 
-      value: stats.profit_factor.toFixed(2), 
-      variant: (stats.profit_factor >= 1.5 ? 'success' : stats.profit_factor >= 1 ? 'warning' : 'danger') as any, 
+      value: (stats.profit_factor || 1.0).toFixed(2), 
+      variant: ((stats.profit_factor || 1.0) >= 1.5 ? 'success' : (stats.profit_factor || 1.0) >= 1 ? 'warning' : 'danger') as any, 
       description: '이익/손실 비율' 
     }
   ];
