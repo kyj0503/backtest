@@ -25,6 +25,12 @@
 - **테스트**: 단위/통합/E2E 테스트 커버리지 80% 이상
 - **린팅**: ESLint + Prettier (프론트엔드), black + isort (백엔드)
 
+### 기술 문서 참조
+- **기술 스택 선택 이유**: [`TECH_STACK.md`](TECH_STACK.md)
+- **라이브러리 비교 분석**: [`LIBRARY_COMPARISON.md`](LIBRARY_COMPARISON.md)
+- **백엔드 기술 상세**: [`../backend/doc/TECH_STACK_BACKEND.md`](../backend/doc/TECH_STACK_BACKEND.md)
+- **프론트엔드 기술 상세**: [`../frontend/doc/TECH_STACK_FRONTEND.md`](../frontend/doc/TECH_STACK_FRONTEND.md)
+
 ### 파일 구조 규칙
 ```
 backend/

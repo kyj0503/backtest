@@ -11,6 +11,8 @@ React 18 + TypeScript 기반의 백테스팅 웹 애플리케이션 개발 가�
 - **Testing**: Vitest + Testing Library
 - **Container**: Docker
 
+**상세한 기술 선택 이유**: [`TECH_STACK_FRONTEND.md`](TECH_STACK_FRONTEND.md) 참조
+
 ## 프로젝트 구조
 
 ```
@@ -204,6 +206,14 @@ ls -la dist/
 - **상태 관리 라이브러리**: Redux Toolkit 도입 고려
 - **PWA**: 프로그레시브 웹앱 기능 추가
 - **국제화**: 다국어 지원
+
+## 문서 구조
+
+- [API 통신 가이드](./API_GUIDE.md) - REST API 호출 및 에러 처리
+- [컴포넌트 아키텍처](./COMPONENTS.md) - React 컴포넌트 설계 및 재사용
+- [상태 관리 가이드](./STATE_MANAGEMENT.md) - useState, useReducer, Context API 패턴
+- [스타일링 가이드](./STYLING.md) - CSS-in-JS 및 Bootstrap 활용법
+- [프론트엔드 기술 스택](./TECH_STACK_FRONTEND.md) - React + TypeScript 기술 선택 이유
 
 ## 참고 링크
 

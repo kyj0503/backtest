@@ -11,6 +11,8 @@ FastAPI 기반의 백테스팅 시스템 백엔드 개발 가이드입니다.
 - **Container**: Docker
 - **Validation**: Pydantic V2
 
+**상세한 기술 선택 이유**: [`TECH_STACK_BACKEND.md`](TECH_STACK_BACKEND.md) 참조
+
 ## 프로젝트 구조
 
 ```

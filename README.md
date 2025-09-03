@@ -71,21 +71,25 @@ docker-compose exec frontend npm test
 
 ### 루트 문서 (`/doc/`)
 전체 시스템 관점의 통합 문서
+- `TECH_STACK.md` - 기술 스택 선택 이유와 아키텍처 원칙
+- `LIBRARY_COMPARISON.md` - 주요 라이브러리 비교 분석 및 선택 근거
 - `API_GUIDE.md` - 전체 API 엔드포인트 및 스펙
 - `TEST_GUIDE.md` - 종합 테스트 전략 및 실행 방법
-- `ARCHITECTURE.md` - 시스템 아키텍처 및 기술 스택 상세
+- `ARCHITECTURE.md` - 시스템 아키텍처 및 설계 철학
 - `DEVELOPMENT_GUIDE.md` - 개발 규칙 및 전략 개발 방법
 - `ROADMAP.md` - 향후 개발 계획 및 로드맵
 - `JENKINS_RECOVERY_ROADMAP.md` - CI/CD 운영 가이드
 
 ### 백엔드 문서 (`/backend/doc/`)
 백엔드 개발자를 위한 전문 문서
+- `TECH_STACK_BACKEND.md` - FastAPI 기반 백엔드 기술 스택 상세 분석
 - `README.md` - FastAPI 기반 백엔드 개발 가이드
 - `CASH_ASSETS.md` - 현금 자산 처리 구현 상세
 - `TEST_ARCHITECTURE.md` - 백엔드 테스트 구조 및 모킹
 
 ### 프론트엔드 문서 (`/frontend/doc/`)
 프론트엔드 개발자를 위한 전문 문서
+- `TECH_STACK_FRONTEND.md` - React + TypeScript 프론트엔드 기술 스택 상세 분석
 - `README.md` - React + TypeScript 프론트엔드 개발 가이드
 - `API_GUIDE.md` - 백엔드 API 연동 및 타입 정의
 
