@@ -8,13 +8,13 @@
   - `backend/app/utils/data_fetcher.py`는 yfinance를 사용합니다. yfinance 관련 API 및 DB 캐시 동작의 상세 설명은 `backend/doc/api.md`를 참조. 캐시 경로·유효기간 변경은 `app/core/config.py`를 참조.
 
 ## 아키텍처·데이터 흐름 (요지)
-  - **백엔드**: FastAPI + uvicorn, MySQL (캐시), yfinance (데이터 소스), 네이버 검색 API (뉴스)
+  - **백엔드**: FastAPI + uvicorn (Pydantic V2), MySQL (캐시), yfinance (데이터 소스), 네이버 검색 API (뉴스)
   - **프론트엔드**: React 18 + TypeScript + Vite, React Bootstrap, Recharts
-  - **데이터베이스**: MySQL (`stock_data_cache`) - `host.docker.internal:3306`
-  - **API 구조**: `/api/v1/backtest/chart-data` (단일 종목), `/api/v1/backtest/portfolio` (포트폴리오), `/api/v1/system/info` (시스템 정보), `/api/v1/naver-news/*` (뉴스 검색)
+  - **데이터베이스**: MySQL (`stock_data_cache`) - `host.docker.internal:3306` (윈도우), `127.0.0.1:3306` (운영)
+  - **API 구조**: `/api/v1/backtest/chart-data` (단일 종목), `/api/v1/backtest/portfolio` (포트폴리오), `/api/v1/naver-news/*` (뉴스 검색)
   - **전략 시스템**: `backtesting` 라이브러리 기반, Strategy 클래스 상속 구조
   - **뉴스 시스템**: 네이버 검색 API 기반, 70+개 종목 지원, 날짜별 필터링, 자동 콘텐츠 정제
-  - **시스템 모니터링**: 프론트엔드와 백엔드 버전, 업타임, 환경 정보 표시 (푸터)
+  - **자산 관리**: 주식(ticker 기반)과 현금(CASH, 무위험 자산) 구분 처리
 
 ## 프로젝트-특화 규칙 / 패턴 (에이전트가 알아야 할 것)
   - 코드를 수정하면 항상 마크다운 문서에 최신화를 해야 한다.
@@ -73,6 +73,8 @@
   - **실제 모델/예외**: BacktestRequest, OptimizationRequest, PlotRequest 모델 사용; ValidationError, BacktestValidationError 예외 처리
   - **전략 파라미터**: RSI는 rsi_oversold/rsi_overbought, SMA는 short_window/long_window 등 실제 파라미터명 사용
   - **개발 효율성**: Docker 볼륨 마운트 실시간 동기화로 docker cp 불필요
+  - **Pydantic V2**: @field_validator, json_schema_extra, lifespan 패턴 등 최신 문법 사용
+  - **현금 처리**: 'CASH' 티커는 현금(무위험 자산)으로 별도 처리, 주식 데이터 수집 불필요
   - 내가 별다른 첨언 없이 로그만 입력하면, 로그를 바탕으로 문제점이나 개선점을 찾아 알려줘.
 
 ## 백엔드 테스트 아키텍처 가이드라인
@@ -125,9 +127,14 @@ backend/tests/
 - **커버리지 목표**: 단위 테스트 90%+, 통합 테스트 80%+, 종단 테스트 주요 시나리오 100%
 - **실행 시간**: 단위 테스트 <30초, 통합 테스트 <2분, 종단 테스트 <5분
 
-## 현재 개발 상황 (2025년 9월 1일 기준)
+## 현재 개발 상황 (2025년 9월 3일 기준)
 
 ### 최신 구현 완료 기능
+- **Pydantic V2 완전 마이그레이션**: 모든 deprecated 경고 제거
+  - `@validator` → `@field_validator` 변환 완료
+  - `schema_extra` → `json_schema_extra` 변환 완료
+  - FastAPI `on_event` → `lifespan` 패턴 적용
+  - Query `regex` → `pattern` 매개변수 수정
 - **네이버 뉴스 API**: 종목별/날짜별 뉴스 검색 완전 구현
   - 70+ 종목 지원 (한국 40+, 미국 30+)
   - 종목코드 → 회사명 자동 매핑으로 정확한 검색
@@ -138,22 +145,21 @@ backend/tests/
 
 ### Jenkins CI/CD 파이프라인 상태: SUCCESS (부분적)
 - **Frontend Tests**: 23/23 통과
-- **Backend Tests**: 12 failed, 51 passed, 3 skipped (CI/CD 블로킹하지 않음)
+- **Backend Tests**: 9 failed, 52 passed, 3 skipped (85% 성공률)
 - **Production Build**: 백엔드/프론트엔드 이미지 빌드 성공
 - **Deployment**: 서비스 정상 배포
 - **Integration Tests**: 헬스체크 및 기본 연결성 확인
 
-### 백엔드 테스트 문제점 (해결 진행 중)
-- **MySQL 연결 오류**: CI/CD 환경에서 외부 DB 의존성 - 완전 오프라인 모킹 시스템 필요
-- **포트폴리오 기능**: 422 오류 (아직 구현되지 않은 기능)
-- **시스템 정보 필드**: `backend_version` 필드 추가 완료
-- **psutil 모듈**: requirements.txt에 추가 완료
+### 현재 주요 이슈 (Critical 해결 필요)
+- **현금 자산 처리 버그**: CASH를 종목으로 처리하는 문제 (데이터 수집 시도함)
+- **테스트 재현성**: 모킹 데이터의 랜덤성으로 인한 일관되지 않은 결과
+- **에러 처리**: 유효하지 않은 종목에 대해 200 OK 반환 (모킹 데이터로 대체)
+- **포트폴리오 기능**: API 미구현 상태 (422 오류 발생)
 
 ### 통합 테스트 현황
-- **test_backtest_flow.py**: 6/7 테스트 통과 (1개 스킵: 포트폴리오 기능)
-- **test_api_endpoints.py**: 부분 실패 (API 응답 구조 불일치, MySQL 의존성)
-- **주요 이슈**: 완전 오프라인 모킹 시스템 강화 필요
-- **개선 필요**: MySQL 연결 오류 모킹, 포트폴리오 API 구현
+- **API 기능**: 차트 데이터, 백테스트 실행 등 핵심 기능 정상 작동
+- **데이터 일관성**: 모킹 시스템 개선으로 안정성 향상 필요
+- **오프라인 테스트**: yfinance 의존성 완전 제거된 모킹 시스템 운영
 
 ### Docker 볼륨 마운트 - 개발 효율성 확보
 - **확인된 상태**: `docker-compose.dev.yml`의 `./backend:/app` 볼륨 마운트 완벽 작동
@@ -164,20 +170,32 @@ backend/tests/
 
 ## To-Do
 
-1. **Critical (즉시 필요)**
+1. **Critical (즉시 필요 - 버그 수정)**
+   - [ ] **현금 자산 처리 버그 수정**: 현재 CASH 티커를 종목으로 처리하는 문제 해결
+     - 백엔드: data_fetcher에서 CASH 자산 타입 별도 처리 로직 추가
+     - 프론트엔드: assetType 필드 활용하여 현금과 주식 구분 처리
+   - [ ] **테스트 재현성 문제**: 모킹 데이터 랜덤 시드 고정으로 일관된 테스트 결과 확보
+   - [ ] **에러 처리 개선**: 유효하지 않은 종목 입력 시 적절한 400/422 에러 반환 대신 200 반환 문제
+   - [ ] **Pydantic V2 완전 마이그레이션**: 테스트 코드에서 `.copy()` → `.model_copy()` 변환
 
 2. **High (비즈니스 핵심 기능)**
+   - [ ] **포트폴리오 API 구현**: 현재 스킵된 포트폴리오 백테스트 기능 완성
    - [ ] **백테스트 결과 개선**: 월별/연도별 수익률 분석, 베타 계수, 최대 연속 손실 기간 등 추가 통계 제공
    - [ ] **회원 가입 기능**: 사용자 관리 시스템 구축
    - [ ] **내 포트폴리오 저장 기능**: 사용자별 포트폴리오 관리
    - [ ] **특정 기간 동안의 전체 자산 변동 폭, 투자 수익률 분석**: 성과 분석 고도화
-   - [ ] **폼 상태 관리 개선**: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer로 리팩토링
 
 3. **Medium (사용자 경험 개선)**
+   - [ ] **폼 상태 관리 개선**: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer로 리팩토링
+   - [ ] **TypeScript 타입 안정성**: 이벤트 핸들러 타입 명시로 any 타입 제거
+   - [ ] **테스트 커버리지 향상**: 
+     - 단위 테스트에서 에러 처리 테스트 강화
+     - 통합 테스트에서 완전 오프라인 모킹 시스템 보완
+     - E2E 테스트에서 실제 사용자 시나리오 추가
    - [ ] **yfinance 재시도 정책 개선**: 휴일/주말/딜리스트 등 경계 케이스 처리
    - [ ] **동시성 보호**: `load_ticker_data`/`save_ticker_data`에 프로세스 내 락 도입해 중복 fetch 방지
    - [ ] **차트 성능 최적화**: 큰 데이터셋에 대한 가상화 및 차트 렌더링 최적화
-   - [ ] **사용자가 설정한 기간 동안의 다른 자산 변동폭 비교**: 슨피500, 금, 비트코인 등 벤치마크 제공
+   - [ ] **사용자가 설정한 기간 동안의 다른 자산 변동폭 비교**: S&P500, 금, 비트코인 등 벤치마크 제공
 
 4. **Low (고급 기능 및 확장)**
    - [ ] **openai api 포트폴리오 적합성 분석**: AI 기반 투자 성향 분석
@@ -195,4 +213,10 @@ backend/tests/
    - [ ] **다국어 지원(i18n)**: react-i18next 한국어/영어 지원
    - [ ] **추천 유튜브 컨텐츠**: 투자 교육 컨텐츠 큐레이션
    - [ ] **Alembic 마이그레이션**: DB 스키마 변경 관리 체계화
+
+## 리팩터링 추천사항
+1. **백엔드 서비스 레이어 분리**: `backtest_service.py`가 너무 커짐, 기능별로 분리 필요
+2. **에러 처리 표준화**: 사용자 정의 예외 클래스 활용한 일관된 에러 응답
+3. **설정 관리 개선**: 환경별 설정을 더 체계적으로 관리
+4. **프론트엔드 컴포넌트 분해**: `UnifiedBacktestForm.tsx` 기능별 서브컴포넌트로 분리
   

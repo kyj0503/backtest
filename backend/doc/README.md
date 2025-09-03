@@ -1,6 +1,13 @@
 # 백엔드 개발 가이드
 
-## 최근 업데이트 (2025-09-01)
+## 최근 업데이트 (2025-09-03)
+
+### 🚀 Pydantic V2 완전 마이그레이션
+- **@validator → @field_validator**: 모든 검증 로직 최신 문법 적용
+- **schema_extra → json_schema_extra**: 스키마 문서 생성 현대화
+- **lifespan 패턴**: FastAPI on_event 대신 최신 lifespan 관리 적용
+- **Query 매개변수**: regex → pattern 매개변수 업데이트
+- **완전 호환성**: 모든 Pydantic deprecation 경고 제거
 
 ### 🧪 테스트 시스템 완전 재설계
 - **완전 오프라인 모킹**: yfinance API와 MySQL 의존성 완전 제거
@@ -8,11 +15,10 @@
 - **CI/CD 안정성**: 젠킨스 우분투 환경에서 네트워크 의존성 없는 테스트 실행
 - **DB 스키마 준수**: 실제 stock_data_cache 테이블 구조와 일치하는 모의 데이터
 
-### 아키텍처 개선사항
-- **예외 처리 통합**: DataNotFoundError, InvalidSymbolError 일관된 처리
-- **테스트 데이터 생성기**: MockStockDataGenerator로 시나리오별 데이터 생성
-- **픽스처 시스템**: 재사용 가능한 모의 데이터셋 (AAPL, GOOGL, MSFT, TSLA)
-- **수학적 모델링**: 변동성, 트렌드, 거래량을 고려한 현실적 주가 시뮬레이션
+### 🏗️ 현재 개발 이슈
+- **현금 자산 처리**: CASH 티커를 종목으로 잘못 처리하는 버그 발견
+- **테스트 재현성**: 모킹 데이터 랜덤성으로 인한 불일치 문제
+- **에러 처리**: 유효하지 않은 종목에 대한 부적절한 200 응답
 
 ---
 
