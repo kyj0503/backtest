@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import numpy as np
@@ -20,13 +20,15 @@ class StrategyParams(BaseModel):
     sma_long: int = Field(20, ge=5, le=500, description="장기 이동평균 기간")
     position_size: float = Field(0.5, ge=0.1, le=1.0, description="포지션 크기 (0.1 ~ 1.0)")
 
-    @validator('sma_long')
-    def validate_sma_long(cls, v, values):
-        if 'sma_short' in values and v <= values['sma_short']:
+    @field_validator('sma_long')
+    @classmethod
+    def validate_sma_long(cls, v, info):
+        if 'sma_short' in info.data and v <= info.data['sma_short']:
             raise ValueError('장기 이동평균 기간은 단기 이동평균 기간보다 커야 합니다.')
         return v
 
-    @validator('*', pre=True)
+    @field_validator('*', mode='before')
+    @classmethod
     def validate_float(cls, v):
         if isinstance(v, float):
             if np.isinf(v):
@@ -42,7 +44,8 @@ class PortfolioStock(BaseModel):
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
     dca_periods: Optional[int] = Field(12, ge=1, le=60, description="분할 매수 기간 (개월)")
     
-    @validator('symbol')
+    @field_validator('symbol')
+    @classmethod
     def validate_symbol(cls, v):
         # CASH는 특별한 심볼로 허용
         if v.upper() == 'CASH':
@@ -51,7 +54,8 @@ class PortfolioStock(BaseModel):
             raise ValueError('주식 심볼은 영문자만 포함해야 합니다.')
         return v.upper()
     
-    @validator('investment_type')
+    @field_validator('investment_type')
+    @classmethod
     def validate_investment_type(cls, v):
         if v not in ['lump_sum', 'dca']:
             raise ValueError('투자 방식은 lump_sum 또는 dca만 가능합니다.')
@@ -59,7 +63,7 @@ class PortfolioStock(BaseModel):
 
 class PortfolioBacktestRequest(BaseModel):
     """포트폴리오 백테스트 요청 모델"""
-    portfolio: List[PortfolioStock] = Field(..., min_items=1, max_items=10, description="포트폴리오 구성")
+    portfolio: List[PortfolioStock] = Field(..., min_length=1, max_length=10, description="포트폴리오 구성")
     start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
     end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
     commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
@@ -67,7 +71,8 @@ class PortfolioBacktestRequest(BaseModel):
     strategy: str = Field("buy_and_hold", description="전략명")
     strategy_params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="전략 파라미터")
     
-    @validator('portfolio')
+    @field_validator('portfolio')
+    @classmethod
     def validate_portfolio(cls, v):
         if not v:
             raise ValueError('포트폴리오는 최소 1개 종목을 포함해야 합니다.')
@@ -79,7 +84,8 @@ class PortfolioBacktestRequest(BaseModel):
         
         return v
     
-    @validator('start_date', 'end_date')
+    @field_validator('start_date', 'end_date')
+    @classmethod
     def validate_date_format(cls, v):
         try:
             datetime.strptime(v, '%Y-%m-%d')
@@ -87,10 +93,11 @@ class PortfolioBacktestRequest(BaseModel):
             raise ValueError('날짜는 YYYY-MM-DD 형식이어야 합니다.')
         return v
 
-    @validator('end_date')
-    def validate_date_range(cls, v, values):
-        if 'start_date' in values:
-            start = datetime.strptime(values['start_date'], '%Y-%m-%d')
+    @field_validator('end_date')
+    @classmethod
+    def validate_date_range(cls, v, info):
+        if 'start_date' in info.data:
+            start = datetime.strptime(info.data['start_date'], '%Y-%m-%d')
             end = datetime.strptime(v, '%Y-%m-%d')
             if end < start:
                 raise ValueError('종료 날짜는 시작 날짜보다 이후여야 합니다.')
@@ -107,13 +114,15 @@ class BacktestRequest(BaseModel):
     commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
     strategy: StrategyParams = Field(default_factory=StrategyParams, description="전략 파라미터")
 
-    @validator('symbol')
+    @field_validator('symbol')
+    @classmethod
     def validate_symbol(cls, v):
         if not v.isalpha():
             raise ValueError('주식 심볼은 영문자만 포함해야 합니다.')
         return v.upper()
 
-    @validator('start_date', 'end_date')
+    @field_validator('start_date', 'end_date')
+    @classmethod
     def validate_date_format(cls, v):
         try:
             datetime.strptime(v, '%Y-%m-%d')
@@ -121,10 +130,11 @@ class BacktestRequest(BaseModel):
             raise ValueError('날짜는 YYYY-MM-DD 형식이어야 합니다.')
         return v
 
-    @validator('end_date')
-    def validate_date_range(cls, v, values):
-        if 'start_date' in values:
-            start = datetime.strptime(values['start_date'], '%Y-%m-%d')
+    @field_validator('end_date')
+    @classmethod
+    def validate_date_range(cls, v, info):
+        if 'start_date' in info.data:
+            start = datetime.strptime(info.data['start_date'], '%Y-%m-%d')
             end = datetime.strptime(v, '%Y-%m-%d')
             if end < start:
                 raise ValueError('종료 날짜는 시작 날짜보다 이후여야 합니다.')
@@ -184,7 +194,8 @@ class BacktestData(BaseModel):
     trades: TradeSummary
     equity: Optional[EquityData] = None
 
-    @validator('*', pre=True)
+    @field_validator('*', mode='before')
+    @classmethod
     def replace_nan(cls, v):
         if isinstance(v, float) and np.isnan(v):
             return 0.0

@@ -229,39 +229,7 @@ POST /api/v1/backtest/portfolio
 }
 ```
 
-### 2. 시스템 API
-
-#### 시스템 정보 조회
-
-```http
-GET /api/v1/system/info
-```
-
-**응답:**
-```json
-{
-  "backend": {
-    "version": "1.0.0",
-    "uptime": "2024-01-15T10:30:00Z",
-    "status": "healthy",
-    "git_commit": "fd358f3e",
-    "git_branch": "main",
-    "build_number": "123",
-    "environment": "development"
-  },
-  "frontend": {
-    "version": "1.0.0", 
-    "git_commit": "fd358f3e",
-    "build_number": "123"
-  },
-  "docker": {
-    "backend_image": "ghcr.io/redyeji/backtest-backend:latest",
-    "frontend_image": "ghcr.io/redyeji/backtest-frontend:latest"
-  }
-}
-```
-
-### 3. 네이버 뉴스 API
+### 2. 네이버 뉴스 API
 
 #### 뉴스 검색
 
@@ -421,7 +389,7 @@ API 연결 상태를 확인하는 테스트 엔드포인트입니다.
 }
 ```
 
-### 4. 최적화 API (v2, 미구현)
+### 3. 최적화 API (v2, 미구현)
 
 #### 전략 파라미터 최적화 실행
 

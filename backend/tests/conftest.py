@@ -24,26 +24,39 @@ def setup_offline_environment():
     완전 오프라인 환경 설정
     모든 외부 의존성(yfinance, MySQL)을 모킹
     """
-    # yfinance 모킹
-    with patch('yfinance.Ticker') as mock_ticker, \
-         patch('yfinance.download') as mock_download:
-        
-        # Mock 데이터 생성기 초기화
-        mock_generator = MockStockDataGenerator()
-        
-        # yfinance.Ticker 모킹
+    # Mock 데이터 생성기 초기화
+    mock_generator = MockStockDataGenerator()
+    
+    def mock_ticker_factory(ticker_symbol):
+        """티커별 Mock 객체 생성"""
         mock_ticker_instance = Mock()
-        mock_ticker_instance.info = {
-            'company_name': 'Apple Inc.',
-            'symbol': 'AAPL',
-            'currency': 'USD',
-            'sector': 'Technology'
-        }
-        mock_ticker_instance.history.return_value = mock_generator.generate_ohlcv_data('AAPL')
-        mock_ticker.return_value = mock_ticker_instance
         
-        # yfinance.download 모킹
-        mock_download.return_value = mock_generator.generate_ohlcv_data('AAPL')
+        # 유효한 티커 목록
+        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX']
+        
+        if ticker_symbol.upper() in valid_tickers:
+            # 유효한 티커의 경우
+            mock_ticker_instance.info = mock_generator.generate_ticker_info(ticker_symbol)
+            mock_ticker_instance.history.return_value = mock_generator.generate_ohlcv_data(ticker_symbol)
+        else:
+            # 무효한 티커의 경우 빈 데이터 반환
+            mock_ticker_instance.info = {}
+            mock_ticker_instance.history.return_value = pd.DataFrame()
+        
+        return mock_ticker_instance
+    
+    def mock_download_func(ticker, start, end, **kwargs):
+        """yfinance.download 모킹"""
+        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX']
+        
+        if ticker.upper() in valid_tickers:
+            return mock_generator.generate_ohlcv_data(ticker)
+        else:
+            return pd.DataFrame()  # 무효한 티커는 빈 데이터
+    
+    # yfinance 모킹
+    with patch('yfinance.Ticker', side_effect=mock_ticker_factory) as mock_ticker, \
+         patch('yfinance.download', side_effect=mock_download_func) as mock_download:
         
         yield {
             'mock_ticker': mock_ticker,

@@ -143,8 +143,11 @@ class TestE2EScenarios:
         """
         # Given - 포트폴리오 구성
         portfolio_input = {
-            "tickers": ["AAPL", "GOOGL", "MSFT"],
-            "amounts": [5000, 5000, 5000],
+            "portfolio": [
+                {"symbol": "AAPL", "amount": 5000, "investment_type": "lump_sum"},
+                {"symbol": "GOOGL", "amount": 5000, "investment_type": "lump_sum"},
+                {"symbol": "MSFT", "amount": 5000, "investment_type": "lump_sum"}
+            ],
             "start_date": "2023-01-01",
             "end_date": "2023-06-30",
             "strategy": "buy_and_hold",
@@ -169,7 +172,7 @@ class TestE2EScenarios:
         
         total_individual_final = 0
         for i, individual in enumerate(individual_results):
-            assert individual['ticker'] == portfolio_input['tickers'][i]
+            assert individual['ticker'] == portfolio_input['portfolio'][i]['symbol']
             assert 'final_equity' in individual
             assert 'total_return_pct' in individual
             assert 'sharpe_ratio' in individual
@@ -265,40 +268,6 @@ class TestE2EScenarios:
         best_score = result['best_score']
         assert isinstance(best_score, (int, float))
         assert -10 <= best_score <= 10, "샤프 비율이 -10~10 범위를 벗어남"
-    
-    def test_system_health_monitoring_scenario(self, client):
-        """
-        시나리오: 시스템 상태 모니터링
-        사용자 스토리: "시스템이 정상 동작하는지 확인하고 싶어요"
-        """
-        # When - 시스템 정보 조회
-        response = client.get("/api/v1/system/info")
-        
-        # Then - 시스템 상태 정보 검증
-        assert response.status_code == 200
-        
-        system_info = response.json()
-        
-        # 필수 시스템 정보
-        required_fields = [
-            'backend_version', 'uptime_seconds', 'environment',
-            'python_version', 'git_commit', 'build_number'
-        ]
-        
-        for field in required_fields:
-            assert field in system_info, f"System info field {field} missing"
-        
-        # 시스템 상태 검증
-        assert system_info['uptime_seconds'] > 0, "서버 업타임이 0보다 커야 함"
-        assert isinstance(system_info['backend_version'], str), "백엔드 버전이 문자열이어야 함"
-        assert len(system_info['backend_version']) > 0, "백엔드 버전이 비어있으면 안됨"
-        
-        # 환경 정보
-        assert system_info['environment'] in ['development', 'testing', 'production'], "올바른 환경값이어야 함"
-        
-        # Python 버전 형식 (예: "3.11.0")
-        python_version = system_info['python_version']
-        assert '.' in python_version, "Python 버전 형식이 올바르지 않음"
     
     def test_error_handling_user_experience(self, client):
         """
@@ -400,8 +369,18 @@ class TestE2EScenarios:
         """
         # Given - 복잡한 포트폴리오 (10개 종목)
         large_portfolio = {
-            "tickers": ["AAPL", "GOOGL", "MSFT", "TSLA", "AMZN", "META", "NVDA", "NFLX", "ORCL", "CRM"],
-            "amounts": [1000] * 10,  # 각각 1천 달러씩
+            "portfolio": [
+                {"symbol": "AAPL", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "GOOGL", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "MSFT", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "TSLA", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "AMZN", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "META", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "NVDA", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "NFLX", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "ORCL", "amount": 1000, "investment_type": "lump_sum"},
+                {"symbol": "CRM", "amount": 1000, "investment_type": "lump_sum"}
+            ],
             "start_date": "2023-01-01",
             "end_date": "2023-12-31",  # 1년 전체
             "strategy": "buy_and_hold",

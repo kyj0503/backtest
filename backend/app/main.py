@@ -1,6 +1,7 @@
 """
 FastAPI 애플리케이션 메인 진입점
 """
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -18,6 +19,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """애플리케이션 라이프사이클 관리"""
+    # 시작 시 초기화
+    logger.info(f"{settings.project_name} v{settings.version} 시작됨")
+    logger.info(f"문서 URL: http://{settings.host}:{settings.port}{settings.api_v1_str}/docs")
+    
+    yield
+    
+    # 종료 시 정리
+    logger.info(f"{settings.project_name} 종료됨")
+
+
 # FastAPI 앱 생성
 app = FastAPI(
     title=settings.project_name,
@@ -25,7 +40,8 @@ app = FastAPI(
     version=settings.version,
     openapi_url=f"{settings.api_v1_str}/openapi.json",
     docs_url=f"{settings.api_v1_str}/docs",
-    redoc_url=f"{settings.api_v1_str}/redoc"
+    redoc_url=f"{settings.api_v1_str}/redoc",
+    lifespan=lifespan
 )
 
 # CORS 미들웨어 설정
@@ -71,21 +87,6 @@ async def health_check():
     except Exception as e:
         logger.error(f"헬스체크 실패: {str(e)}")
         raise HTTPException(status_code=503, detail="서비스 상태 불량")
-
-
-@app.on_event("startup")
-async def startup_event():
-    """애플리케이션 시작 시 초기화"""
-    logger.info(f"{settings.project_name} v{settings.version} 시작됨")
-    logger.info(f"문서 URL: http://{settings.host}:{settings.port}{settings.api_v1_str}/docs")
-    
-    # 로컬 파일 기반 캐시 기능을 제거했으므로 스타트업에서 디렉토리 생성 작업을 하지 않습니다.
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """애플리케이션 종료 시 정리"""
-    logger.info(f"{settings.project_name} 종료됨")
 
 
 # 전역 예외 핸들러

@@ -385,8 +385,8 @@ async def get_ticker_news(
 @router.get("/search-by-date", summary="날짜별 뉴스 검색")
 async def search_news_by_date(
     query: str = Query(..., description="검색어"),
-    start_date: str = Query(..., description="검색 시작일 (YYYY-MM-DD)", regex=r"^\d{4}-\d{2}-\d{2}$"),
-    end_date: str = Query(None, description="검색 종료일 (YYYY-MM-DD, 없으면 시작일과 동일)", regex=r"^\d{4}-\d{2}-\d{2}$"),
+    start_date: str = Query(..., description="검색 시작일 (YYYY-MM-DD)", pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    end_date: str = Query(None, description="검색 종료일 (YYYY-MM-DD, 없으면 시작일과 동일)", pattern=r"^\d{4}-\d{2}-\d{2}$"),
     display: int = Query(50, description="검색 결과 수 (필터링 전)", ge=10, le=100)
 ):
     """
@@ -426,8 +426,8 @@ async def search_news_by_date(
 @router.get("/ticker/{ticker}/date", summary="종목별 날짜 뉴스 검색")
 async def get_ticker_news_by_date(
     ticker: str,
-    start_date: str = Query(..., description="검색 시작일 (YYYY-MM-DD)", regex=r"^\d{4}-\d{2}-\d{2}$"),
-    end_date: str = Query(None, description="검색 종료일 (YYYY-MM-DD, 없으면 시작일과 동일)", regex=r"^\d{4}-\d{2}-\d{2}$"),
+    start_date: str = Query(..., description="검색 시작일 (YYYY-MM-DD)", pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    end_date: str = Query(None, description="검색 종료일 (YYYY-MM-DD, 없으면 시작일과 동일)", pattern=r"^\d{4}-\d{2}-\d{2}$"),
     display: int = Query(50, description="검색 결과 수 (필터링 전)", ge=10, le=100)
 ):
     """

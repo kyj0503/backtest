@@ -36,7 +36,7 @@ backend/
 ├── app/
 │   ├── api/             # API 라우터 계층
 │   │   ├── v1/          # v1 API 엔드포인트
-│   │   │   └── endpoints/  # 개별 엔드포인트 (backtest, system, stock)
+│   │   │   └── endpoints/  # 개별 엔드포인트 (backtest, stock, naver_news)
 │   │   ├── v2/          # v2 API (확장 예정)
 │   │   └── api.py       # 기본 API 라우터
 │   ├── core/            # 핵심 설정 및 예외 처리
@@ -123,7 +123,6 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 - `POST /api/v1/backtest/portfolio` - 포트폴리오 백테스트
 - `POST /api/v1/backtest/chart-data` - 차트 데이터 조회
-- `GET /api/v1/system/info` - 시스템 정보 (버전, 업타임, Git 정보)
 
 ## 새로운 전략 추가
 

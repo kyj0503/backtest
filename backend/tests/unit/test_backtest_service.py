@@ -166,7 +166,7 @@ class TestBacktestService:
         assert hasattr(result, 'portfolio_result')
         
         # 개별 결과 검증
-        assert len(result.individual_results) == len(request.tickers)
+        assert len(result.individual_results) == len(request.portfolio)
         for individual_result in result.individual_results:
             assert hasattr(individual_result, 'ticker')
             assert hasattr(individual_result, 'final_equity')

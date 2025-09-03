@@ -50,7 +50,7 @@ class BacktestResult(BaseModel):
     timestamp: datetime = Field(..., description="결과 생성 시간")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "ticker": "AAPL",
                 "strategy": "sma_crossover",
@@ -103,7 +103,7 @@ class OptimizationResult(BaseModel):
     timestamp: datetime = Field(..., description="최적화 완료 시간")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "ticker": "AAPL",
                 "strategy": "sma_crossover",
@@ -128,7 +128,7 @@ class StrategyInfo(BaseModel):
     parameters: Dict[str, Dict[str, Any]] = Field(..., description="전략 파라미터 정보")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "sma_crossover",
                 "description": "Simple Moving Average Crossover Strategy",
@@ -166,7 +166,7 @@ class ErrorResponse(BaseModel):
     timestamp: datetime = Field(..., description="에러 발생 시간")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "error": "ValidationError",
                 "message": "Invalid input parameters",
@@ -183,7 +183,7 @@ class HealthResponse(BaseModel):
     version: str = Field(..., description="API 버전")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "status": "healthy",
                 "timestamp": "2024-01-15T10:30:00",
@@ -249,7 +249,7 @@ class ChartDataResponse(BaseModel):
     summary_stats: Dict[str, Any] = Field(..., description="주요 통계")
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "ticker": "AAPL",
                 "strategy": "sma_crossover",

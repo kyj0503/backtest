@@ -3,7 +3,6 @@ import { Container, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import UnifiedBacktestForm from './components/UnifiedBacktestForm';
 import UnifiedBacktestResults from './components/UnifiedBacktestResults';
 import ErrorBoundary from './components/ErrorBoundary';
-import ServerStatus from './components/ServerStatus';
 import { useBacktest } from './hooks/useBacktest';
 
 function App() {
@@ -214,9 +213,6 @@ function App() {
           </Col>
         </Row>
       </Container>
-      
-      {/* 서버 상태 정보 - 푸터 */}
-      <ServerStatus />
     </div>
     </ErrorBoundary>
   );

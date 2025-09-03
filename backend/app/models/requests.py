@@ -3,7 +3,7 @@ API 요청 모델 정의
 """
 from datetime import date, datetime
 from typing import Dict, Any, Optional, List, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 from ..core.config import settings
 
@@ -34,7 +34,8 @@ class BacktestRequest(BaseModel):
     commission: float = Field(default=0.002, ge=0, le=0.1, description="거래 수수료 (소수점)")
     spread: float = Field(default=0.0, ge=0, description="스프레드")
     
-    @validator('start_date', 'end_date', pre=True)
+    @field_validator('start_date', 'end_date', mode='before')
+    @classmethod
     def parse_date(cls, v):
         if isinstance(v, str):
             try:
@@ -43,14 +44,15 @@ class BacktestRequest(BaseModel):
                 raise ValueError('날짜 형식은 YYYY-MM-DD여야 합니다')
         return v
     
-    @validator('end_date')
-    def end_date_after_start_date(cls, v, values):
-        if 'start_date' in values and v <= values['start_date']:
+    @field_validator('end_date')
+    @classmethod
+    def end_date_after_start_date(cls, v, info):
+        if 'start_date' in info.data and v <= info.data['start_date']:
             raise ValueError('종료 날짜는 시작 날짜보다 이후여야 합니다')
         return v
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "ticker": "AAPL",
                 "start_date": "2020-01-01",
@@ -79,7 +81,8 @@ class OptimizationRequest(BaseModel):
     max_tries: Optional[int] = Field(default=settings.max_optimization_iterations, description="최대 시도 횟수")
     commission: float = Field(default=0.002, ge=0, le=0.1, description="거래 수수료")
     
-    @validator('start_date', 'end_date', pre=True)
+    @field_validator('start_date', 'end_date', mode='before')
+    @classmethod
     def parse_date(cls, v):
         if isinstance(v, str):
             try:
@@ -89,7 +92,7 @@ class OptimizationRequest(BaseModel):
         return v
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "ticker": "AAPL",
                 "start_date": "2020-01-01",
@@ -117,7 +120,8 @@ class PlotRequest(BaseModel):
     plot_width: int = Field(default=1200, description="차트 너비")
     filename: Optional[str] = Field(default=None, description="저장할 파일명")
     
-    @validator('start_date', 'end_date', pre=True)
+    @field_validator('start_date', 'end_date', mode='before')
+    @classmethod
     def parse_date(cls, v):
         if isinstance(v, str):
             try:

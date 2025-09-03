@@ -137,6 +137,12 @@ class BacktestService:
                 print(f"수익률: {result.get('Return [%]', 0):.2f}%")
                 print(f"Buy & Hold: {result.get('Buy & Hold Return [%]', 0):.2f}%")
                 
+                # 디버깅: 실제 stats 키들 출력
+                print("=== 백테스트 결과 키들 ===")
+                for key in result.index:
+                    print(f"  '{key}': {result.get(key)}")
+                print("========================")
+                
                 # 결과가 유효한지 확인
                 if result is not None and '# Trades' in result:
                     return self._convert_result_to_response(result, request)
@@ -244,7 +250,7 @@ class BacktestService:
             total_trades=self.safe_int(stats.get('# Trades', 0)),
             win_rate_pct=self.safe_float(stats.get('Win Rate [%]', 0)),
             profit_factor=self.safe_float(stats.get('Profit Factor', 1)),
-            avg_trade_pct=self.safe_float(stats.get('Avg. Trade [%]', 0)),
+            avg_trade_pct=self.safe_float(stats.get('Avg. Trade [%]', 0)) if not pd.isna(stats.get('Avg. Trade [%]', 0)) else 0.0,
             best_trade_pct=self.safe_float(stats.get('Best Trade [%]', 0)),
             worst_trade_pct=self.safe_float(stats.get('Worst Trade [%]', 0)),
             alpha_pct=None,  # 선택적 필드
@@ -628,29 +634,99 @@ class BacktestService:
             
             print(f"거래 마커 생성 완료: {len(trade_markers)} 개")
             
-            # 4. 기술 지표 (간단한 SMA 20 추가)
-            # SMA_20: Simple Moving Average (단순 이동평균) 20일
-            # 최근 20일간의 종가 평균을 계산하여 주가의 트렌드를 파악하는 지표
-            # 예: 현재가가 SMA_20보다 높으면 상승 추세, 낮으면 하락 추세로 판단
+            # 4. 기술 지표 생성 (전략별 맞춤형)
             indicators = []
-            sma_20 = data['Close'].rolling(window=20).mean()  # 20일 이동평균 계산
+            strategy = request.strategy
+            strategy_params = request.strategy_params or {}
             
-            indicator_data = []
-            for idx, sma_value in sma_20.items():
-                if not pd.isna(sma_value):  # NaN 값 제외 (초기 20일은 계산 불가)
-                    indicator_data.append({
-                        "timestamp": idx.isoformat(),
-                        "date": idx.strftime('%Y-%m-%d'),
-                        "value": self.safe_float(sma_value)
-                    })
+            if strategy == 'sma_crossover':
+                # SMA Crossover: 단기/장기 이동평균 표시
+                short_window = strategy_params.get('short_window', 10)
+                long_window = strategy_params.get('long_window', 20)
+                
+                # 단기 SMA
+                sma_short = data['Close'].rolling(window=short_window).mean()
+                short_data = []
+                for idx, sma_value in sma_short.items():
+                    if not pd.isna(sma_value):
+                        short_data.append({
+                            "timestamp": idx.isoformat(),
+                            "date": idx.strftime('%Y-%m-%d'),
+                            "value": self.safe_float(sma_value)
+                        })
+                
+                if short_data:
+                    indicators.append(IndicatorData(
+                        name=f"SMA_{short_window}",
+                        type="line",
+                        color="#ff7300",  # 주황색
+                        data=short_data
+                    ))
+                
+                # 장기 SMA
+                sma_long = data['Close'].rolling(window=long_window).mean()
+                long_data = []
+                for idx, sma_value in sma_long.items():
+                    if not pd.isna(sma_value):
+                        long_data.append({
+                            "timestamp": idx.isoformat(),
+                            "date": idx.strftime('%Y-%m-%d'),
+                            "value": self.safe_float(sma_value)
+                        })
+                
+                if long_data:
+                    indicators.append(IndicatorData(
+                        name=f"SMA_{long_window}",
+                        type="line",
+                        color="#0088ff",  # 파란색
+                        data=long_data
+                    ))
             
-            if indicator_data:
-                indicators.append(IndicatorData(
-                    name="SMA_20",      # 지표명: 20일 단순이동평균
-                    type="line",        # 차트 타입: 선형
-                    color="#ff7300",    # 주황색으로 표시
-                    data=indicator_data
-                ))
+            elif strategy == 'rsi_strategy':
+                # RSI 전략: RSI 지표 표시
+                # RSI 계산을 위한 간단한 구현
+                delta = data['Close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                rsi = 100 - (100 / (1 + rs))
+                
+                rsi_data = []
+                for idx, rsi_value in rsi.items():
+                    if not pd.isna(rsi_value):
+                        rsi_data.append({
+                            "timestamp": idx.isoformat(),
+                            "date": idx.strftime('%Y-%m-%d'),
+                            "value": self.safe_float(rsi_value)
+                        })
+                
+                if rsi_data:
+                    indicators.append(IndicatorData(
+                        name="RSI_14",
+                        type="line",
+                        color="#ff3366",  # 빨간색
+                        data=rsi_data
+                    ))
+            
+            else:
+                # 기본: 20일 SMA 표시
+                sma_20 = data['Close'].rolling(window=20).mean()
+                indicator_data = []
+                for idx, sma_value in sma_20.items():
+                    if not pd.isna(sma_value):
+                        indicator_data.append({
+                            "timestamp": idx.isoformat(),
+                            "date": idx.strftime('%Y-%m-%d'),
+                            "value": self.safe_float(sma_value)
+                        })
+                
+                if indicator_data:
+                    indicators.append(IndicatorData(
+                        name="SMA_20",
+                        type="line",
+                        color="#ff7300",  # 주황색
+                        data=indicator_data
+                    ))
             
             print(f"기술 지표 생성 완료: {len(indicators)} 개")
             

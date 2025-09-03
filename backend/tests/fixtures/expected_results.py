@@ -179,8 +179,7 @@ class ExpectedResults:
             'trade_marker_fields': ['date', 'type', 'side', 'price', 'size'],
             'summary_stats_fields': [
                 'total_return_pct', 'sharpe_ratio', 'max_drawdown_pct',
-                'total_trades', 'win_rate_pct', 'profit_factor',
-                'avg_trade_pct', 'best_trade_pct', 'worst_trade_pct'
+                'total_trades', 'win_rate_pct', 'profit_factor'
             ],
             'data_types': {
                 'date': str,

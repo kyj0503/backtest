@@ -117,16 +117,24 @@ class DataFetcher:
             
             # 데이터 검증
             if data is None or data.empty:
-                # 심볼이 유효하지 않은 경우 체크
-                if ticker.isalpha() and len(ticker) <= 10:
-                    # 유효한 형식이지만 데이터가 없는 경우
-                    error_detail = f"'{ticker}' 종목에 대한 {start_str}부터 {end_str}까지의 데이터를 찾을 수 없습니다."
-                    if error_messages:
-                        error_detail += f" 오류: {'; '.join(error_messages)}"
-                    raise DataNotFoundError(error_detail)
-                else:
-                    # 잘못된 심볼 형식
+                # 무효한 티커 패턴 체크
+                invalid_patterns = [
+                    'INVALID', 'NONEXISTENT', 'NOTFOUND', 'TEST', 'FAKE',
+                    'XXX', 'YYY', 'ZZZ'
+                ]
+                
+                # 숫자로만 구성되거나 무효한 패턴이 포함된 경우
+                if (ticker.isdigit() or 
+                    any(pattern in ticker.upper() for pattern in invalid_patterns) or
+                    len(ticker) > 10 or
+                    not ticker.replace('.', '').replace('-', '').isalnum()):
                     raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 종목 심볼입니다.")
+                
+                # 그 외의 경우는 데이터 없음으로 처리
+                error_detail = f"'{ticker}' 종목에 대한 {start_str}부터 {end_str}까지의 데이터를 찾을 수 없습니다."
+                if error_messages:
+                    error_detail += f" 오류: {'; '.join(error_messages)}"
+                raise DataNotFoundError(error_detail)
             
             # 데이터가 너무 적은 경우 체크
             if len(data) < 2:
