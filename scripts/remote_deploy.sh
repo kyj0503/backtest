@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e
 
 BACKEND_IMAGE="$1"
 FRONTEND_IMAGE="$2"
@@ -16,7 +16,7 @@ sed -i "s|image: backtest-frontend:latest|image: ${FRONTEND_IMAGE}|g" "${DEPLOY_
 docker pull "${BACKEND_IMAGE}" || true
 docker pull "${FRONTEND_IMAGE}" || true
 
-TIMESTAMP=$(date --iso-8601=seconds)
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 LOGFILE="${DEPLOY_PATH}/deploy.log"
 
 echo "[${TIMESTAMP}] Starting deploy: backend=${BACKEND_IMAGE} frontend=${FRONTEND_IMAGE}" | tee -a "${LOGFILE}"
