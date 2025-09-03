@@ -6,6 +6,7 @@ export interface PortfolioStock {
   amount: number;
   investment_type?: 'lump_sum' | 'dca';
   dca_periods?: number;
+  asset_type?: 'stock' | 'cash';
 }
 
 // 통합 백테스트 요청
