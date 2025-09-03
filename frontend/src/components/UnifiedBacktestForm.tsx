@@ -110,6 +110,12 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
     const newPortfolio = [...portfolio];
     if (field === 'symbol') {
       newPortfolio[index].symbol = (value as string).toUpperCase();
+      // 심볼이 변경될 때 자산 타입을 자동으로 조정
+      if ((value as string).toUpperCase() === '현금' || (value as string).toUpperCase() === 'CASH') {
+        newPortfolio[index].assetType = ASSET_TYPES.CASH;
+      } else {
+        newPortfolio[index].assetType = ASSET_TYPES.STOCK;
+      }
     } else if (field === 'investmentType') {
       newPortfolio[index].investmentType = value as 'lump_sum' | 'dca';
     } else if (field === 'assetType') {
@@ -262,6 +268,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                       <th>종목/자산</th>
                       <th>투자 금액 ($)</th>
                       <th>투자 방식</th>
+                      <th>자산 타입</th>
                       <th>비중 (%)</th>
                       <th>작업</th>
                     </tr>
@@ -337,6 +344,16 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                           )}
                         </td>
                         <td>
+                          <Form.Select
+                            value={stock.assetType || ASSET_TYPES.STOCK}
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'assetType', e.target.value)}
+                            size="sm"
+                          >
+                            <option value={ASSET_TYPES.STOCK}>주식</option>
+                            <option value={ASSET_TYPES.CASH}>현금</option>
+                          </Form.Select>
+                        </td>
+                        <td>
                           {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
                         </td>
                         <td>
@@ -356,6 +373,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                     <tr className="table-info">
                       <th>합계</th>
                       <th>${getTotalAmount().toLocaleString()}</th>
+                      <th>-</th>
                       <th>-</th>
                       <th>100.0%</th>
                       <th></th>
