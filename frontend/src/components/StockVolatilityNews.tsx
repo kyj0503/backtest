@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Card, Row, Col, Badge, Button, Spinner, Alert, Modal, ListGroup } from "react-bootstrap";
+import React, { useState, useEffect } from 'react';
+import { Card, Alert, Button, Spinner, Row, Col, Badge } from 'react-bootstrap';
 import { backtestApiService } from "../services/api";
 
 interface VolatilityEvent {
@@ -328,7 +328,7 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
                   {selectedEvents.map((event, index) => (
                     <Col md={6} lg={4} key={index} className="mb-3">
                       <Card className="h-100 border-start border-4" 
-                            style={{ borderStartColor: event.daily_return > 0 ? '#dc3545' : '#198754' }}>
+                            style={{ borderLeftColor: event.daily_return > 0 ? '#dc3545' : '#198754' }}>
                         <Card.Body className="p-3">
                           <div className="d-flex justify-content-between align-items-start mb-2">
                             <Badge 

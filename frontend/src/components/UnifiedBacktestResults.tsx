@@ -47,6 +47,8 @@ interface PortfolioStatistics {
 interface ChartData {
   ticker?: string;
   strategy?: string;
+  start_date?: string;
+  end_date?: string;
   ohlc_data?: any[];
   equity_data?: any[];
   trade_markers?: any[];
