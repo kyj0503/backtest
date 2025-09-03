@@ -17,6 +17,19 @@
 
 ## 📋 문제 해결 타임라인
 
+### Phase 10: 프론트엔드 TypeScript 빌드 오류 해결 (Build #42)
+**문제**: 현금 자산 기능 구현 후 프론트엔드 TypeScript 컴파일 오류 발생
+- `Property 'assetType' does not exist on type 'PortfolioStock'`
+- `Property 'investmentType' does not exist on type 'PortfolioStock'`
+- API 타입 정의와 컴포넌트 사용 속성명 불일치
+
+**해결책**:
+- **PortfolioStock 인터페이스 보완**: asset_type 필드 추가로 자산 타입 지원
+- **속성명 통일**: API 서비스에서 올바른 snake_case 속성명 사용
+- **타입 안정성 확보**: TypeScript strict 모드 호환성 유지
+
+**결과**: 프론트엔드 빌드 성공, 현금 자산 기능 완전 지원
+
 ### Phase 9: 배포 스크립트 CRLF 줄바꿈 문자 문제 해결 (Build #40)
 **문제**: 테스트·빌드 100% 성공, 배포 단계에서 bash 문법 오류 발생
 - `bash: 행 2번: set: -: 부적절한 옵션`
