@@ -143,17 +143,18 @@ backend/tests/
   - 네트워크 재시도 로직으로 안정성 확보
   - API 엔드포인트: `/api/v1/naver-news/*`
 
-### Jenkins CI/CD 파이프라인 상태: SUCCESS (부분적)
+### Jenkins CI/CD 파이프라인 상태: FAILURE (중요 수정 필요)
 - **Frontend Tests**: 23/23 통과
-- **Backend Tests**: 9 failed, 52 passed, 3 skipped (85% 성공률)
-- **Production Build**: 백엔드/프론트엔드 이미지 빌드 성공
-- **Deployment**: 서비스 정상 배포
-- **Integration Tests**: 헬스체크 및 기본 연결성 확인
+- **Frontend Build**: TypeScript 컴파일 에러로 실패 (수정 완료)
+- **Backend Tests**: 9 failed, 47 passed, 3 skipped (75% 성공률)
+- **Production Build**: 프론트엔드 빌드 실패로 중단
+- **Deployment**: 빌드 실패로 배포 중단
+- **주요 실패 원인**: TypeScript 타입 에러, MySQL 연결 실패, 테스트 데이터 일관성 문제
 
 ### 현재 주요 이슈 (Critical 해결 필요)
-- **현금 자산 처리 버그**: CASH를 종목으로 처리하는 문제 (데이터 수집 시도함)
-- **테스트 재현성**: 모킹 데이터의 랜덤성으로 인한 일관되지 않은 결과
-- **에러 처리**: 유효하지 않은 종목에 대해 200 OK 반환 (모킹 데이터로 대체)
+- **프론트엔드 TypeScript 빌드 실패**: `UnifiedBacktestForm.tsx`에서 Type 'number' is not assignable to type 'never' 에러 (수정 완료)
+- **테스트 재현성**: 모킹 데이터의 랜덤성으로 인한 일관되지 않은 결과 (부분 수정)
+- **MySQL 연결 실패**: Jenkins CI 환경에서 MySQL 서버 없어서 연결 실패 (모킹 추가 필요)
 - **포트폴리오 기능**: API 미구현 상태 (422 오류 발생)
 
 ### 통합 테스트 현황
@@ -170,13 +171,14 @@ backend/tests/
 
 ## To-Do
 
+## To-Do
+
 1. **Critical (즉시 필요 - 버그 수정)**
-   - [ ] **현금 자산 처리 버그 수정**: 현재 CASH 티커를 종목으로 처리하는 문제 해결
-     - 백엔드: data_fetcher에서 CASH 자산 타입 별도 처리 로직 추가
-     - 프론트엔드: assetType 필드 활용하여 현금과 주식 구분 처리
-   - [ ] **테스트 재현성 문제**: 모킹 데이터 랜덤 시드 고정으로 일관된 테스트 결과 확보
+   - [x] **TypeScript 빌드 에러 수정**: UnifiedBacktestForm.tsx의 assetType 타입 처리 및 이벤트 핸들러 타입 안정성 확보
+   - [ ] **MySQL 연결 모킹 완성**: 백엔드 테스트에서 data_fetcher와 yfinance_db 완전 모킹
+   - [ ] **테스트 재현성 문제**: 모킹 데이터 시드 고정으로 일관된 테스트 결과 확보 (부분 완료)
    - [ ] **에러 처리 개선**: 유효하지 않은 종목 입력 시 적절한 400/422 에러 반환 대신 200 반환 문제
-   - [ ] **Pydantic V2 완전 마이그레이션**: 테스트 코드에서 `.copy()` → `.model_copy()` 변환
+   - [ ] **Pydantic V2 완전 마이그레이션**: 테스트 코드에서 `.copy()` → `.model_copy()` 변환 (부분 완료)
 
 2. **High (비즈니스 핵심 기능)**
    - [ ] **포트폴리오 API 구현**: 현재 스킵된 포트폴리오 백테스트 기능 완성

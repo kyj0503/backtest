@@ -24,8 +24,8 @@ def setup_offline_environment():
     완전 오프라인 환경 설정
     모든 외부 의존성(yfinance, MySQL)을 모킹
     """
-    # Mock 데이터 생성기 초기화
-    mock_generator = MockStockDataGenerator()
+    # Mock 데이터 생성기 초기화 (고정 시드로 재현성 보장)
+    mock_generator = MockStockDataGenerator(seed=42)
     
     def mock_ticker_factory(ticker_symbol):
         """티커별 Mock 객체 생성"""
@@ -35,9 +35,9 @@ def setup_offline_environment():
         valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX']
         
         if ticker_symbol.upper() in valid_tickers:
-            # 유효한 티커의 경우
+            # 유효한 티커의 경우 - 동일한 시드로 재현성 보장
             mock_ticker_instance.info = mock_generator.generate_ticker_info(ticker_symbol)
-            mock_ticker_instance.history.return_value = mock_generator.generate_ohlcv_data(ticker_symbol)
+            mock_ticker_instance.history.return_value = mock_generator.generate_ohlcv_data(ticker_symbol, seed=42)
         else:
             # 무효한 티커의 경우 빈 데이터 반환
             mock_ticker_instance.info = {}
@@ -50,25 +50,42 @@ def setup_offline_environment():
         valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX']
         
         if ticker.upper() in valid_tickers:
-            return mock_generator.generate_ohlcv_data(ticker)
+            return mock_generator.generate_ohlcv_data(ticker, seed=42)
         else:
             return pd.DataFrame()  # 무효한 티커는 빈 데이터
     
-    # yfinance 모킹
+    def mock_load_ticker_data(ticker, start_date, end_date):
+        """load_ticker_data 모킹"""
+        valid_tickers = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'META', 'NVDA', 'NFLX']
+        
+        if ticker.upper() in valid_tickers:
+            return mock_generator.generate_ohlcv_data(ticker, start_date, end_date, seed=42)
+        else:
+            return pd.DataFrame()
+    
+    def mock_save_ticker_data(ticker, data):
+        """save_ticker_data 모킹 (아무것도 하지 않음)"""
+        pass
+    
+    # yfinance와 데이터베이스 함수들 모킹
     with patch('yfinance.Ticker', side_effect=mock_ticker_factory) as mock_ticker, \
-         patch('yfinance.download', side_effect=mock_download_func) as mock_download:
+         patch('yfinance.download', side_effect=mock_download_func) as mock_download, \
+         patch('app.services.yfinance_db.load_ticker_data', side_effect=mock_load_ticker_data) as mock_load, \
+         patch('app.services.yfinance_db.save_ticker_data', side_effect=mock_save_ticker_data) as mock_save:
         
         yield {
             'mock_ticker': mock_ticker,
             'mock_download': mock_download,
+            'mock_load': mock_load,
+            'mock_save': mock_save,
             'mock_generator': mock_generator
         }
 
 
 @pytest.fixture
 def mock_data_generator():
-    """Mock 데이터 생성기 픽스처"""
-    return MockStockDataGenerator()
+    """Mock 데이터 생성기 픽스처 (고정 시드)"""
+    return MockStockDataGenerator(seed=42)
 
 
 @pytest.fixture

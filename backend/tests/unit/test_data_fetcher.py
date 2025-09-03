@@ -75,11 +75,13 @@ class TestDataFetcher:
         end_date = date(2023, 6, 30)
         
         # When & Then
-        # 실제 DataFetcher는 잘못된 티커에 대해 빈 DataFrame을 반환할 수 있음
-        result = data_fetcher.get_stock_data(invalid_ticker, start_date, end_date)
+        # DataFetcher는 잘못된 티커에 대해 InvalidSymbolError를 발생시켜야 함
+        from app.utils.data_fetcher import InvalidSymbolError
         
-        # 빈 DataFrame이거나 최소한 유효한 DataFrame이어야 함
-        assert isinstance(result, pd.DataFrame)
+        with pytest.raises(InvalidSymbolError) as exc_info:
+            data_fetcher.get_stock_data(invalid_ticker, start_date, end_date)
+        
+        assert str(exc_info.value) == f"'{invalid_ticker}'는 유효하지 않은 종목 심볼입니다."
     
     def test_get_stock_data_empty_result(self, mock_data_generator):
         """빈 결과 처리 테스트"""

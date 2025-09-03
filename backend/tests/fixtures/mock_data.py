@@ -75,7 +75,8 @@ class MockStockDataGenerator:
         ticker: str,
         start_date: date = date(2023, 1, 1),
         end_date: date = date(2023, 12, 31),
-        scenario: str = 'normal'
+        scenario: str = 'normal',
+        seed: Optional[int] = None
     ) -> pd.DataFrame:
         """
         OHLCV 데이터 생성
@@ -85,10 +86,16 @@ class MockStockDataGenerator:
             start_date: 시작 날짜
             end_date: 종료 날짜
             scenario: 시나리오 ('normal', 'volatile', 'trending', 'crash')
+            seed: 재현성을 위한 시드값
         
         Returns:
             OHLCV 데이터가 담긴 DataFrame
         """
+        # 시드 설정 (재현성 보장)
+        if seed is not None:
+            np.random.seed(seed)
+            random.seed(seed)
+        
         if scenario == 'empty':
             # 빈 데이터 시나리오
             return pd.DataFrame(columns=['Open', 'High', 'Low', 'Close', 'Volume'])

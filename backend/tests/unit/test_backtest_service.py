@@ -263,7 +263,7 @@ class TestBacktestService:
         
         for cash in cash_amounts:
             # When
-            request = base_request.copy()
+            request = base_request.model_copy()
             request.initial_cash = cash
             result = await backtest_service.run_backtest(request)
             results.append((cash, result))
@@ -332,10 +332,10 @@ class TestBacktestService:
         )
         
         # When - 수수료 없음 vs 수수료 있음
-        request_no_commission = base_request.copy()
+        request_no_commission = base_request.model_copy()
         request_no_commission.commission = 0.0
         
-        request_with_commission = base_request.copy()
+        request_with_commission = base_request.model_copy()
         request_with_commission.commission = 0.001  # 0.1%
         
         result_no_commission = await backtest_service.run_backtest(request_no_commission)

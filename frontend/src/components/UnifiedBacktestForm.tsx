@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { Form, Row, Col, Button, Table, Card, Container, Alert } from 'react-bootstrap';
 import { UnifiedBacktestRequest } from '../types/api';
 import { PREDEFINED_STOCKS, STRATEGY_CONFIGS, ASSET_TYPES, AssetType } from '../constants/strategies';
@@ -112,6 +112,8 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
       newPortfolio[index].symbol = (value as string).toUpperCase();
     } else if (field === 'investmentType') {
       newPortfolio[index].investmentType = value as 'lump_sum' | 'dca';
+    } else if (field === 'assetType') {
+      newPortfolio[index].assetType = value as AssetType;
     } else {
       newPortfolio[index][field] = Number(value);
     }
@@ -206,7 +208,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                     <Form.Control
                       type="number"
                       value={strategyParams[key] || param.default}
-                      onChange={(e) => updateStrategyParam(key, e.target.value)}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => updateStrategyParam(key, e.target.value)}
                       min={param.min}
                       max={param.max}
                     />
@@ -270,7 +272,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                           <div>
                             <Form.Select
                               value={stock.symbol || 'CUSTOM'}
-                              onChange={(e) => {
+                              onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                                 const selectedValue = e.target.value;
                                 if (selectedValue === 'CUSTOM') {
                                   updateStock(index, 'symbol', '');
@@ -290,7 +292,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                               <Form.Control
                                 type="text"
                                 value={stock.symbol}
-                                onChange={(e) => updateStock(index, 'symbol', e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'symbol', e.target.value)}
                                 placeholder="종목 심볼 입력 (예: AAPL)"
                                 maxLength={10}
                               />
@@ -301,7 +303,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                           <Form.Control
                             type="number"
                             value={stock.amount}
-                            onChange={(e) => updateStock(index, 'amount', e.target.value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'amount', e.target.value)}
                             min="100"
                             step="100"
                           />
@@ -310,7 +312,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                           <div>
                             <Form.Select
                               value={stock.investmentType}
-                              onChange={(e) => updateStock(index, 'investmentType', e.target.value)}
+                              onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'investmentType', e.target.value)}
                               className="mb-2"
                             >
                               <option value="lump_sum">일시불 투자</option>
@@ -320,7 +322,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                               <Form.Control
                                 type="number"
                                 value={stock.dcaPeriods || 12}
-                                onChange={(e) => updateStock(index, 'dcaPeriods', e.target.value)}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'dcaPeriods', e.target.value)}
                                 min="1"
                                 max="60"
                                 placeholder="개월 수"
@@ -384,7 +386,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                   <Form.Control
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
                   />
                 </Form.Group>
               </Col>
@@ -394,7 +396,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                   <Form.Control
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
                   />
                 </Form.Group>
               </Col>
@@ -406,7 +408,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                   <Form.Label>투자 전략</Form.Label>
                   <Form.Select
                     value={selectedStrategy}
-                    onChange={(e) => setSelectedStrategy(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedStrategy(e.target.value)}
                   >
                     <option value="buy_and_hold">매수 후 보유</option>
                     <option value="sma_crossover">단순이동평균 교차</option>
@@ -419,7 +421,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                   <Form.Label>리밸런싱 주기</Form.Label>
                   <Form.Select
                     value={rebalanceFrequency}
-                    onChange={(e) => setRebalanceFrequency(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setRebalanceFrequency(e.target.value)}
                   >
                     <option value="never">리밸런싱 안함</option>
                     <option value="monthly">매월</option>
@@ -440,7 +442,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                   <Form.Control
                     type="number"
                     value={commission}
-                    onChange={(e) => setCommission(Number(e.target.value))}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setCommission(Number(e.target.value))}
                     min="0"
                     max="5"
                     step="0.01"
