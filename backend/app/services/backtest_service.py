@@ -86,6 +86,7 @@ from ..models.responses import BacktestResult, OptimizationResult, ChartDataResp
 from ..utils.data_fetcher import data_fetcher
 from .strategy_service import strategy_service
 from ..core.config import settings
+from ..core.custom_exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -568,6 +569,17 @@ class BacktestService:
         logger = logging.getLogger(__name__)
         
         try:
+            # 전략 파라미터 검증 (전략이 buy_and_hold가 아닐 때만)
+            if request.strategy != "buy_and_hold":
+                try:
+                    self.strategy_service.validate_strategy_params(
+                        request.strategy, 
+                        request.strategy_params or {}
+                    )
+                except ValueError as ve:
+                    logger.error(f"전략 파라미터 검증 실패: {str(ve)}")
+                    raise ValidationError(str(ve))
+            
             # 데이터 가져오기
             print(f"차트 데이터 생성 시작: {request.ticker}")
             data = self.data_fetcher.get_stock_data(
@@ -772,6 +784,11 @@ class BacktestService:
                 indicators=indicators,
                 summary_stats=summary_stats
             )
+            
+        except ValidationError as ve:
+            # ValidationError는 그대로 재발생 (API에서 422 처리)
+            logger.error(f"차트 데이터 검증 실패: {str(ve)}")
+            raise ve
             
         except Exception as e:
             logger.error(f"차트 데이터 생성 실패: {str(e)}")

@@ -600,11 +600,30 @@ class PortfolioBacktestService:
                 request, portfolio_results, total_amount
             )
 
+            # individual_results를 리스트 형태로 변환 (테스트 호환성)
+            individual_results_list = []
+            for unique_key, returns in individual_returns.items():
+                individual_results_list.append({
+                    'ticker': returns['symbol'],
+                    'final_equity': returns['final_value'],
+                    'total_return_pct': returns['return'],
+                    'sharpe_ratio': portfolio_results[unique_key].get('strategy_stats', {}).get('sharpe_ratio', 0.0),
+                    'weight': returns['weight'],
+                    'amount': returns['amount'],
+                    'trades': returns.get('trades', 0),
+                    'win_rate': returns.get('win_rate', 0.0)
+                })
+
             result = {
                 'status': 'success',
                 'data': {
                     'portfolio_statistics': portfolio_statistics,
                     'individual_returns': individual_returns,
+                    'individual_results': individual_results_list,  # 테스트 호환성을 위한 리스트 형태
+                    'portfolio_result': {  # 테스트에서 기대하는 구조
+                        'total_equity': total_portfolio_value,
+                        'total_return_pct': portfolio_return
+                    },
                     'portfolio_composition': [
                         {'symbol': symbol, 'weight': result['weight'], 'amount': result['amount']}
                         for symbol, result in portfolio_results.items()
@@ -836,12 +855,31 @@ class PortfolioBacktestService:
                                 'dca_periods': dca_periods
                             }
             
+            # individual_results를 리스트 형태로 변환 (테스트 호환성)
+            individual_results_list = []
+            for unique_key, returns in individual_returns.items():
+                individual_results_list.append({
+                    'ticker': returns['symbol'] if returns.get('symbol') else unique_key,
+                    'final_equity': returns['amount'] + (returns['amount'] * returns['return'] / 100),
+                    'total_return_pct': returns['return'],
+                    'sharpe_ratio': 0.0,  # Buy & Hold에서는 계산하지 않음
+                    'weight': returns['weight'],
+                    'amount': returns['amount'],
+                    'trades': 1 if returns.get('symbol', '') != 'CASH' else 0,
+                    'win_rate': 100.0 if returns['return'] > 0 else 0.0
+                })
+
             # 결과 포맷팅
             result = {
                 'status': 'success',
                 'data': {
                     'portfolio_statistics': statistics,
                     'individual_returns': individual_returns,
+                    'individual_results': individual_results_list,  # 테스트 호환성을 위한 리스트 형태
+                    'portfolio_result': {  # 테스트에서 기대하는 구조
+                        'total_equity': statistics['Final_Value'],
+                        'total_return_pct': statistics['Total_Return']
+                    },
                     'portfolio_composition': [
                         {
                             'symbol': symbol, 

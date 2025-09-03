@@ -165,8 +165,13 @@ class TestE2EScenarios:
         
         result = response.json()
         
+        # 응답 구조 확인: {status, data} 형태
+        assert 'status' in result
+        assert 'data' in result
+        data = result['data']
+        
         # 1. 개별 종목 결과 검증
-        individual_results = result['individual_results']
+        individual_results = data['individual_results']
         assert isinstance(individual_results, list)
         assert len(individual_results) == 3, "3개 종목 결과가 있어야 함"
         
@@ -184,26 +189,25 @@ class TestE2EScenarios:
             total_individual_final += individual['final_equity']
         
         # 2. 포트폴리오 전체 결과 검증
-        portfolio_result = result['portfolio_result']
+        portfolio_result = data['portfolio_result']
         assert isinstance(portfolio_result, dict)
         assert 'total_equity' in portfolio_result
         assert 'total_return_pct' in portfolio_result
-        assert 'weights' in portfolio_result
         
         # 포트폴리오 합계 일치성
         assert abs(total_individual_final - portfolio_result['total_equity']) < 50, "개별 합계와 포트폴리오 총합이 일치해야 함"
         
-        # 3. 포트폴리오 비중 검증
-        weights = portfolio_result['weights']
-        assert isinstance(weights, list)
-        assert len(weights) == 3
+        # 3. 포트폴리오 비중 검증 (portfolio_composition에서)
+        portfolio_composition = data['portfolio_composition']
+        assert isinstance(portfolio_composition, list)
+        assert len(portfolio_composition) == 3
         
         # 동일 투자금액이므로 비중도 동일해야 함 (약 33.33% 씩)
-        for weight in weights:
-            assert 0.30 <= weight <= 0.37, f"동일 투자시 비중이 약 1/3이어야 함: {weight}"
+        for comp in portfolio_composition:
+            assert 0.30 <= comp['weight'] <= 0.37, f"동일 투자시 비중이 약 1/3이어야 함: {comp['weight']}"
         
         # 비중 합계는 1.0
-        total_weight = sum(weights)
+        total_weight = sum(comp['weight'] for comp in portfolio_composition)
         assert abs(total_weight - 1.0) < 0.01, f"비중 합계가 1.0이어야 함: {total_weight}"
         
         # 4. 분산효과 검증 (포트폴리오 리스크 < 개별 평균 리스크)
@@ -399,10 +403,11 @@ class TestE2EScenarios:
             assert execution_time <= max_time, f"Large portfolio took {execution_time:.2f}s, exceeds {max_time}s"
             
             result = response.json()
-            assert len(result['individual_results']) == 10, "10개 종목 결과가 모두 있어야 함"
+            data = result['data']
+            assert len(data['individual_results']) == 10, "10개 종목 결과가 모두 있어야 함"
             
             # 모든 개별 결과가 유효한지 확인
-            for individual in result['individual_results']:
+            for individual in data['individual_results']:
                 assert individual['final_equity'] > 0, "모든 종목의 최종 자산이 양수여야 함"
         
         else:

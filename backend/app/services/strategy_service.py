@@ -321,6 +321,19 @@ class StrategyService:
                 if 'default' in param_info:
                     validated_params[param_name] = param_info['default']
         
+        # 전략별 특수 검증 로직
+        if strategy_name == 'sma_crossover':
+            short_window = validated_params.get('short_window', 10)
+            long_window = validated_params.get('long_window', 20)
+            if short_window >= long_window:
+                raise ValueError(f"SMA 전략에서 short_window({short_window})는 long_window({long_window})보다 작아야 합니다")
+        
+        elif strategy_name == 'rsi_strategy':
+            rsi_overbought = validated_params.get('rsi_overbought', 70)
+            rsi_oversold = validated_params.get('rsi_oversold', 30)
+            if rsi_oversold >= rsi_overbought:
+                raise ValueError(f"RSI 전략에서 rsi_oversold({rsi_oversold})는 rsi_overbought({rsi_overbought})보다 작아야 합니다")
+        
         return validated_params
 
 

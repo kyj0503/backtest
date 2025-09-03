@@ -187,18 +187,24 @@ async def get_chart_data(request: BacktestRequest):
             return chart_data
         
     except ValueError as e:
-        from app.core.custom_exceptions import ValidationError
         from app.utils.user_messages import get_user_friendly_message, log_error_for_debugging
-        
+
         error_id = log_error_for_debugging(e, "차트 데이터 요청", {"ticker": request.ticker})
         logger.error(f"[{error_id}] 차트 데이터 요청 오류: {str(e)}")
-        
-        raise ValidationError(
-            get_user_friendly_message("ValidationError", str(e))
+
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=get_user_friendly_message("ValidationError", str(e))
         )
-    
-    except (DataNotFoundError, InvalidSymbolError, YFinanceRateLimitError) as e:
+
+    except (DataNotFoundError, InvalidSymbolError, YFinanceRateLimitError, ValidationError) as e:
         # 이미 적절한 HTTP 상태코드와 메시지를 가진 커스텀 예외들은 그대로 전파
+        # ValidationError는 422 Unprocessable Entity로 처리
+        if isinstance(e, ValidationError):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(e)
+            )
         raise e
         
     except Exception as e:
