@@ -393,26 +393,17 @@ assert 0 <= max_drawdown <= 1.0
 
 ## 향후 개선 계획
 
-### 단기 계획 (1-2주)
+### 단기 계획
 - [ ] 성능 테스트 추가 (로드 테스트)
 - [ ] 테스트 리포트 자동화
 - [ ] 커버리지 임계값 설정
 
-### 중기 계획 (1개월)
+### 중기 계획
 - [ ] 뮤테이션 테스트 도입
 - [ ] API 계약 테스트 (Contract Testing)
 - [ ] 테스트 데이터 관리 도구
 
-### 장기 계획 (3개월)
+### 장기 계획
 - [ ] 스트레스 테스트 환경 구축
 - [ ] A/B 테스트 프레임워크
 - [ ] 테스트 메트릭 대시보드
-
----
-
-## 참고 자료
-
-- [pytest 공식 문서](https://docs.pytest.org/)
-- [FastAPI 테스팅 가이드](https://fastapi.tiangolo.com/tutorial/testing/)
-- [백테스팅 라이브러리 문서](https://kernc.github.io/backtesting.py/)
-- [기하 브라운 운동 수학적 배경](https://en.wikipedia.org/wiki/Geometric_Brownian_motion)
