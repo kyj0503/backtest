@@ -191,6 +191,20 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
             (portfolio_statistics.Total_Return / Math.abs(portfolio_statistics.Max_Drawdown || 1)) : 1.0
         }} />
 
+        {/* 포트폴리오 백테스트 결과 차트 */}
+        <Row className="mb-4">
+          <Col lg={12}>
+            <Card>
+              <Card.Header>
+                <h5 className="mb-0">📈 백테스트 수익률 곡선</h5>
+              </Card.Header>
+              <Card.Body>
+                <EquityChart data={equityChartData} />
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
         {/* 개별 종목 주가 차트 */}
         {loadingStockData ? (
           <Card className="mb-4">
@@ -475,11 +489,42 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
 
       <StatsSummary stats={chartData.summary_stats || {}} />
 
+      {/* 백테스트 결과 차트 (단일 종목) */}
+      <Row className="mb-4">
+        <Col lg={12}>
+          <Card>
+            <Card.Header>
+              <h5 className="mb-0">📈 백테스트 결과</h5>
+            </Card.Header>
+            <Card.Body>
+              <OHLCChart 
+                data={chartData.ohlc_data || []} 
+                indicators={chartData.indicators || []} 
+                trades={chartData.trade_markers || []} 
+              />
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row className="mb-4">
+        <Col lg={12}>
+          <Card>
+            <Card.Header>
+              <h5 className="mb-0">📊 수익률 곡선</h5>
+            </Card.Header>
+            <Card.Body>
+              <EquityChart data={chartData.equity_data || []} />
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
       {/* 개별 주가 차트 (단일 종목) */}
       {chartData.ticker && (
         <Card className="mb-4">
           <Card.Header>
-            <h5 className="mb-0">개별 주가 변동</h5>
+            <h5 className="mb-0">📊 개별 주가 변동</h5>
           </Card.Header>
           <Card.Body>
             <StockPriceChart 
@@ -515,21 +560,21 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
         />
       )}
 
-      <Row>
-        <Col lg={12}>
-          <OHLCChart 
-            data={chartData.ohlc_data || []} 
-            indicators={chartData.indicators || []} 
-            trades={chartData.trade_markers || []} 
-          />
-        </Col>
-        <Col lg={12}>
-          <EquityChart data={chartData.equity_data || []} />
-        </Col>
-        {chartData.trade_markers && chartData.trade_markers.length > 0 && (
-          <Col lg={12}><TradesChart trades={chartData.trade_markers} /></Col>
-        )}
-      </Row>
+      {/* 거래 내역 차트 (단일 종목) */}
+      {chartData.trade_markers && chartData.trade_markers.length > 0 && (
+        <Row className="mb-4">
+          <Col lg={12}>
+            <Card>
+              <Card.Header>
+                <h5 className="mb-0">📋 거래 내역</h5>
+              </Card.Header>
+              <Card.Body>
+                <TradesChart trades={chartData.trade_markers} />
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
     </Container>
   );
 };

@@ -97,7 +97,8 @@ const StockPriceChart: React.FC<StockPriceChartProps> = ({ stocksData, className
             <XAxis 
               dataKey="date" 
               tickFormatter={formatDate}
-              interval="preserveStartEnd"
+              tick={{ fontSize: 12 }}
+              interval={Math.max(1, Math.floor(currentStock.data.length / 8))}
             />
             <YAxis 
               tickFormatter={formatPrice}
