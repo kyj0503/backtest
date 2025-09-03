@@ -1,258 +1,474 @@
 # 백엔드 개발 가이드
 
-## 최근 업데이트 (2025-09-03)
-
-### 🚀 Pydantic V2 완전 마이그레이션
-- **@validator → @field_validator**: 모든 검증 로직 최신 문법 적용
-- **schema_extra → json_schema_extra**: 스키마 문서 생성 현대화
-- **lifespan 패턴**: FastAPI on_event 대신 최신 lifespan 관리 적용
-- **Query 매개변수**: regex → pattern 매개변수 업데이트
-- **완전 호환성**: 모든 Pydantic deprecation 경고 제거
-
-### 🧪 테스트 시스템 완전 재설계
-- **완전 오프라인 모킹**: yfinance API와 MySQL 의존성 완전 제거
-- **수학적 데이터 생성**: 기하 브라운 운동 기반 현실적 주식 데이터 시뮬레이션
-- **CI/CD 안정성**: 젠킨스 우분투 환경에서 네트워크 의존성 없는 테스트 실행
-- **DB 스키마 준수**: 실제 stock_data_cache 테이블 구조와 일치하는 모의 데이터
-
-### � 최신 구현 완료 기능
-- **진짜 현금 자산 처리**: CASH 티커 문제 해결, 실제 무위험 자산으로 구현
-- **자산 타입 구분**: asset_type 필드로 현금과 주식 명확히 분리
-- **포트폴리오 안정성**: 현금 혼합 포트폴리오에서 리스크 완화 기능 구현
-
----
-
-## 개요
-
-FastAPI 기반의 백테스팅 API 서버입니다. 포트폴리오 백테스트, 투자 전략 실행, 주식 데이터 관리 기능을 제공합니다.
+FastAPI 기반의 백테스팅 시스템 백엔드 개발 가이드입니다.
 
 ## 기술 스택
 
-- **프레임워크**: FastAPI 0.104+
-- **언어**: Python 3.11+
-- **데이터 처리**: pandas, numpy
-- **주식 데이터**: yfinance
-- **백테스팅**: backtesting.py
-- **데이터베이스**: MySQL
+- **Framework**: FastAPI + uvicorn
+- **Database**: MySQL (캐시 저장소)
+- **Data Source**: yfinance API
+- **Testing**: pytest + asyncio
+- **Container**: Docker
+- **Validation**: Pydantic V2
 
 ## 프로젝트 구조
 
 ```
 backend/
 ├── app/
-│   ├── api/             # API 라우터 계층
-│   │   ├── v1/          # v1 API 엔드포인트
-│   │   │   └── endpoints/  # 개별 엔드포인트 (backtest, stock, naver_news)
-│   │   ├── v2/          # v2 API (확장 예정)
-│   │   └── api.py       # 기본 API 라우터
-│   ├── core/            # 핵심 설정 및 예외 처리
-│   ├── models/          # Pydantic 모델 (요청/응답 스키마)
-│   ├── services/        # 비즈니스 로직 (백테스트, 포트폴리오, 전략)
-│   ├── utils/           # 유틸리티 (데이터 수집, 직렬화, 포트폴리오)
-│   └── main.py          # FastAPI 애플리케이션 엔트리포인트
-├── strategies/          # 투자 전략 구현체 (RSI, SMA 등)
-├── tests/              # 백엔드 테스트 코드 (재설계 중)
-│   ├── conftest.py     # pytest 설정 및 전역 픽스처
-│   ├── unit/           # 단위 테스트 (계층별 분리)
-│   ├── integration/    # 통합 테스트 (컴포넌트 간)
-│   ├── e2e/           # End-to-End 테스트 (전체 시나리오)
-│   └── fixtures/      # 모의 데이터 및 테스트 픽스처
-│       ├── mock_data_generator.py  # 수학적 주식 데이터 생성기
-│       ├── stock_metadata.json    # 테스트용 주식 메타데이터
-│       └── expected_results.json  # 예상 백테스팅 결과
-├── doc/                # 백엔드 개발 문서
-├── Dockerfile          # 백엔드 도커 이미지 설정
-└── requirements.txt    # Python 의존성 패키지
+│   ├── main.py                    # FastAPI 애플리케이션 진입점
+│   ├── api/                       # API 라우터
+│   │   ├── api.py                # 메인 라우터
+│   │   └── v1/endpoints/         # API 엔드포인트
+│   ├── core/                     # 핵심 설정
+│   │   ├── config.py            # 환경 설정
+│   │   └── exceptions.py        # 예외 처리
+│   ├── models/                   # 데이터 모델
+│   │   ├── requests.py          # 요청 모델
+│   │   ├── responses.py         # 응답 모델
+│   │   └── schemas.py           # 데이터베이스 스키마
+│   ├── services/                # 비즈니스 로직
+│   │   ├── backtest_service.py  # 백테스트 서비스
+│   │   ├── strategy_service.py  # 전략 관리
+│   │   └── portfolio_service.py # 포트폴리오 서비스
+│   └── utils/                   # 유틸리티
+│       ├── data_fetcher.py      # 데이터 수집
+│       └── portfolio_utils.py   # 포트폴리오 유틸리티
+├── strategies/                  # 투자 전략
+│   ├── sma_cross.py            # 이동평균 전략
+│   └── rsi_strategy.py         # RSI 전략
+├── tests/                      # 테스트 코드
+│   ├── unit/                   # 단위 테스트
+│   ├── integration/            # 통합 테스트
+│   └── e2e/                    # 종단 간 테스트
+└── doc/                        # 문서
 ```
 
-## 개발 환경 설정
+## 핵심 서비스
 
-### Docker 사용 (권장)
-
-```bash
-# 프로젝트 루트에서
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up backend --build
-```
-
-### 로컬 개발
-
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-**주의**: Docker 환경에서는 호스트 포트 8001로 매핑됩니다.
-
-## 주요 기능
-
-### 1. 포트폴리오 백테스트
-
-투자 금액 기반 포트폴리오 구성 및 전략 적용:
+### BacktestService
+백테스트 실행을 담당하는 핵심 서비스입니다.
 
 ```python
-# 포트폴리오 백테스트 요청
-{
-  "portfolio": [
-    {"symbol": "AAPL", "amount": 10000},
-    {"symbol": "GOOGL", "amount": 15000}
-  ],
-  "start_date": "2023-01-01",
-  "end_date": "2024-12-31",
-  "strategy": "sma_crossover",
-  "strategy_params": {
-    "short_window": 10,
-    "long_window": 20
-  }
-}
+# 백테스트 실행
+async def run_backtest(
+    request: UnifiedBacktestRequest
+) -> UnifiedBacktestResponse:
+    # 데이터 수집
+    data = await fetch_stock_data(request.portfolio)
+    
+    # 전략 적용
+    strategy = get_strategy(request.strategy)
+    
+    # 백테스트 실행
+    bt = Backtest(data, strategy, **strategy_params)
+    result = bt.run()
+    
+    return format_response(result)
 ```
 
-### 2. 투자 전략
+### StrategyService
+투자 전략 관리를 담당합니다.
 
-지원하는 전략들:
+```python
+# 전략 등록
+_strategies = {
+    'sma_cross': SMAStrategy,
+    'rsi': RSIStrategy,
+    'buy_and_hold': BuyAndHoldStrategy
+}
 
-- **Buy & Hold**: 매수 후 보유 전략
-- **SMA Crossover**: 단순이동평균 교차 전략
-- **RSI Strategy**: 상대강도지수 기반 전략
+def get_strategy(strategy_name: str) -> Strategy:
+    """전략 인스턴스 반환"""
+    if strategy_name not in _strategies:
+        raise ValueError(f"Unknown strategy: {strategy_name}")
+    return _strategies[strategy_name]
+```
 
-### 3. 데이터 관리
+### DataFetcher
+yfinance를 통한 주식 데이터 수집을 담당합니다.
 
-- yfinance를 통한 주식 데이터 수집
-- 로컬 캐시를 통한 빠른 데이터 접근
-- 자동 데이터 업데이트
+```python
+async def fetch_stock_data(
+    symbols: List[str],
+    start_date: str,
+    end_date: str
+) -> pd.DataFrame:
+    """주식 데이터 수집 및 캐싱"""
+    # MySQL 캐시 확인
+    cached_data = await get_cached_data(symbols, start_date, end_date)
+    if cached_data:
+        return cached_data
+    
+    # yfinance에서 데이터 수집
+    data = yf.download(symbols, start=start_date, end=end_date)
+    
+    # MySQL에 캐싱
+    await cache_data(data, symbols, start_date, end_date)
+    
+    return data
+```
+
+## 현금 자산 처리
+
+### 무위험 자산 구현
+현금 자산은 `asset_type='cash'`로 식별되며, 무위험 자산으로 처리됩니다.
+
+```python
+def process_cash_assets(portfolio: List[PortfolioStock]) -> pd.DataFrame:
+    """현금 자산을 무위험 자산으로 처리"""
+    cash_assets = [asset for asset in portfolio if asset.asset_type == 'cash']
+    
+    for cash_asset in cash_assets:
+        # 현금은 0% 수익률, 변동성 없음
+        cash_data = create_cash_data(
+            amount=cash_asset.amount,
+            start_date=start_date,
+            end_date=end_date
+        )
+        portfolio_data[f"CASH_{cash_asset.symbol}"] = cash_data
+    
+    return portfolio_data
+```
+
+### 현금 데이터 생성
+```python
+def create_cash_data(amount: float, start_date: str, end_date: str) -> pd.Series:
+    """현금 자산 데이터 생성 (일정한 가치 유지)"""
+    date_range = pd.date_range(start=start_date, end=end_date)
+    return pd.Series(
+        data=[amount] * len(date_range),
+        index=date_range,
+        name='Cash'
+    )
+```
 
 ## API 엔드포인트
 
-자세한 API 문서는 [api.md](api.md)를 참조하세요.
+### 통합 백테스트 API
+```python
+@router.post("/backtest", response_model=UnifiedBacktestResponse)
+async def run_unified_backtest(
+    request: UnifiedBacktestRequest
+) -> UnifiedBacktestResponse:
+    """단일 종목 및 포트폴리오 백테스트 통합 API"""
+    try:
+        result = await backtest_service.run_backtest(request)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+```
 
-### 주요 엔드포인트
+### 네이버 뉴스 API
+```python
+@router.get("/naver-news/{ticker}")
+async def get_news_for_ticker(
+    ticker: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+) -> List[NewsItem]:
+    """종목별 네이버 뉴스 검색"""
+    return await naver_news_service.search_news(ticker, start_date, end_date)
+```
 
-- `POST /api/v1/backtest/portfolio` - 포트폴리오 백테스트
-- `POST /api/v1/backtest/chart-data` - 차트 데이터 조회
+## 데이터 모델 (Pydantic V2)
 
-## 새로운 전략 추가
+### 요청 모델
+```python
+class PortfolioStock(BaseModel):
+    symbol: str = Field(..., description="종목 심볼")
+    amount: float = Field(..., gt=0, description="투자 금액")
+    investment_type: Optional[Literal['lump_sum', 'dca']] = 'lump_sum'
+    dca_periods: Optional[int] = Field(None, gt=0)
+    asset_type: Optional[Literal['stock', 'cash']] = 'stock'
 
-1. `strategies/` 디렉터리에 새 전략 파일 생성
-2. `backtesting.Strategy` 클래스 상속
-3. `app/services/strategy_service.py`에 전략 등록
+class UnifiedBacktestRequest(BaseModel):
+    portfolio: List[PortfolioStock]
+    start_date: str = Field(..., regex=r'^\d{4}-\d{2}-\d{2}$')
+    end_date: str = Field(..., regex=r'^\d{4}-\d{2}-\d{2}$')
+    strategy: str
+    strategy_params: Optional[Dict[str, Any]] = {}
+    commission: Optional[float] = Field(0.001, ge=0, le=1)
+    rebalance_frequency: Optional[str] = 'quarterly'
+```
 
-예시:
+### 응답 모델
+```python
+class BacktestMetrics(BaseModel):
+    total_return: float = Field(..., description="총 수익률")
+    sharpe_ratio: float = Field(..., description="샤프 비율")
+    max_drawdown: float = Field(..., description="최대 손실폭")
+    volatility: float = Field(..., description="변동성")
+    
+class UnifiedBacktestResponse(BaseModel):
+    success: bool
+    metrics: BacktestMetrics
+    chart_data: List[Dict[str, Any]]
+    portfolio_composition: List[PortfolioStock]
+```
+
+## 투자 전략 개발
+
+### 새 전략 추가
+1. `strategies/` 디렉터리에 전략 클래스 생성
+2. `strategy_service.py`의 `_strategies` 딕셔너리에 등록
 
 ```python
-# strategies/my_strategy.py 또는 app/services/strategy_service.py 내부에 직접 구현
+# strategies/ma_strategy.py
 from backtesting import Strategy
+import talib
 
-class MyStrategy(Strategy):
-    # 전략 파라미터 (클래스 변수)
-    param1 = 10
-    param2 = 20
+class MovingAverageStrategy(Strategy):
+    short_period = 10
+    long_period = 30
     
     def init(self):
-        # 초기화 로직 (지표 계산 등)
-        close = self.data.Close
-        self.indicator = self.I(SomeIndicator, close, self.param1)
+        self.short_ma = self.I(talib.SMA, self.data.Close, self.short_period)
+        self.long_ma = self.I(talib.SMA, self.data.Close, self.long_period)
     
     def next(self):
-        # 매 봉마다 실행되는 매매 로직
-        if some_condition:
-            self.buy()
-        elif other_condition:
-            self.sell()
+        if self.short_ma[-1] > self.long_ma[-1]:
+            if not self.position:
+                self.buy()
+        elif self.short_ma[-1] < self.long_ma[-1]:
+            if self.position:
+                self.sell()
 
-# app/services/strategy_service.py의 _strategies 딕셔너리에 등록
+# strategy_service.py에 등록
 _strategies = {
-    # 기존 전략들...
-    'my_strategy': {
-        'class': MyStrategy,
-        'parameters': {
-            'param1': {'type': 'int', 'default': 10, 'min': 5, 'max': 50},
-            'param2': {'type': 'int', 'default': 20, 'min': 10, 'max': 100}
-        }
-    }
+    'sma_cross': SMAStrategy,
+    'rsi': RSIStrategy,
+    'ma_strategy': MovingAverageStrategy,  # 새 전략 추가
 }
 ```
 
-## 문제 해결
+## 테스트 아키텍처
 
-### 자주 발생하는 문제
+### 완전 오프라인 모킹
+CI/CD 안정성을 위해 모든 외부 의존성을 모킹합니다.
 
-1. **종목 데이터 로딩 실패**
-   - 종목 심볼 확인 (대문자 사용)
-   - 네트워크 연결 상태 확인
-   - yfinance 서비스 상태 확인
+```python
+# conftest.py
+@pytest.fixture
+def mock_yfinance_data():
+    """yfinance 데이터 모킹"""
+    with patch('yfinance.download') as mock_download:
+        mock_download.return_value = create_mock_stock_data()
+        yield mock_download
 
-2. **백테스트 실행 오류**
-   - 전략 파라미터 범위 확인
-   - 날짜 범위 유효성 확인
-   - 충분한 데이터 기간 확인
-
-3. **성능 이슈**
-   - 데이터 캐시 상태 확인
-   - 메모리 사용량 모니터링
-   - DB 연결 상태 확인
-
-### 로그 확인
-
-```bash
-# Docker 환경
-docker logs backtest-backend-1
-
-# 로컬 개발 환경
-# 콘솔에서 직접 확인 가능
+@pytest.fixture
+def mock_mysql_connection():
+    """MySQL 연결 모킹"""
+    with patch('app.services.yfinance_db.get_connection') as mock_conn:
+        mock_conn.return_value = create_mock_connection()
+        yield mock_conn
 ```
 
-## 개발 참고사항
-
-### 코드 스타일
-
-- PEP 8 준수
-- Type hints 사용 권장
-- Docstring 작성 (Google 스타일)
-
-### 테스트
-
+### 테스트 실행
 ```bash
-# 전체 테스트 실행 (새로운 오프라인 모킹 시스템)
-python -m pytest backend/tests/ -v
+# 전체 테스트
+docker-compose exec backend pytest tests/ -v
 
-# 계층별 테스트 실행
-python -m pytest backend/tests/unit/ -v           # 단위 테스트
-python -m pytest backend/tests/integration/ -v   # 통합 테스트
-python -m pytest backend/tests/e2e/ -v           # E2E 테스트
+# 단위 테스트만
+pytest tests/unit/ -v
 
-# 커버리지와 함께 실행
-python -m pytest backend/tests/ --cov=app --cov-report=html
+# 통합 테스트만
+pytest tests/integration/ -v
 
-# Docker 환경에서 테스트 실행
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pytest tests/ -v
+# 커버리지 리포트
+pytest tests/ --cov=app --cov-report=html
 ```
 
-**개발 환경 주의사항:**
-- 개발 환경에서는 볼륨 마운트(`./backend:/app`)로 인해 로컬 파일 변경 시 즉시 반영됨
-- 새로운 테스트 파일 추가 후에는 컨테이너 재빌드 필요: `docker-compose up --build`
-- 테스트 파일 수정은 로컬에서 하고, 실행은 Docker 컨테이너에서 하는 것을 권장
+## 데이터베이스 설계
 
-**테스트 특징:**
-- **완전 오프라인**: yfinance API, MySQL 연결 없이 실행
-- **수학적 모의 데이터**: 기하 브라운 운동으로 현실적 주가 생성
-- **CI/CD 호환**: 젠킨스 우분투 환경에서 100% 안정성
-- **DB 스키마 준수**: 실제 데이터베이스 구조와 동일한 모의 데이터
-- **시나리오 테스트**: bull_market, bear_market, volatile 등 다양한 시장 상황
+### MySQL 캐시 테이블
+```sql
+CREATE TABLE stock_data_cache (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    symbol VARCHAR(10) NOT NULL,
+    date DATE NOT NULL,
+    open DECIMAL(10,2),
+    high DECIMAL(10,2),
+    low DECIMAL(10,2),
+    close DECIMAL(10,2),
+    volume BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_symbol_date (symbol, date),
+    INDEX idx_symbol (symbol),
+    INDEX idx_date (date)
+);
+```
 
-### 배포
+### 캐시 전략
+- **TTL**: 데이터는 1일 후 만료
+- **Upsert**: 중복 데이터 자동 업데이트
+- **Batch Insert**: 대량 데이터 효율적 삽입
 
-프로덕션 배포 시 고려사항:
+## 성능 최적화
 
-- 환경 변수 설정 (`.env` 파일)
-- 데이터베이스 마이그레이션
-- SSL 인증서 설정
-- 로그 레벨 조정
+### 데이터 수집 최적화
+```python
+async def fetch_multiple_stocks(symbols: List[str]) -> Dict[str, pd.DataFrame]:
+    """멀티 심볼 병렬 데이터 수집"""
+    tasks = [fetch_single_stock(symbol) for symbol in symbols]
+    results = await asyncio.gather(*tasks)
+    return dict(zip(symbols, results))
+```
 
-자세한 배포 가이드는 프로젝트 루트의 `README.md`를 참조하세요.
+### 백테스트 캐싱
+```python
+@lru_cache(maxsize=128)
+def run_cached_backtest(
+    strategy_name: str,
+    params_hash: str,
+    data_hash: str
+) -> BacktestResult:
+    """백테스트 결과 캐싱"""
+    # 동일한 조건의 백테스트 결과 재사용
+    pass
+```
 
-## 관련 문서
+## 환경 설정
 
-- **[API 가이드](./api.md)**: 백엔드 API 엔드포인트 및 사용법
-- **[네이버 뉴스 API](./naver_news_api.md)**: 종목별 뉴스 검색 기능
-- **[테스트 아키텍처](./TEST_ARCHITECTURE.md)**: 백엔드 테스트 구조 및 모킹 시스템
-- **[현금 자산 처리](./CASH_ASSETS.md)**: 무위험 현금 자산 처리 로직
+### config.py
+```python
+class Settings(BaseSettings):
+    # 데이터베이스
+    MYSQL_HOST: str = "host.docker.internal"  # 윈도우 Docker
+    MYSQL_PORT: int = 3306
+    MYSQL_USER: str = "root"
+    MYSQL_PASSWORD: str = "password"
+    MYSQL_DATABASE: str = "yfinance_cache"
+    
+    # API 설정
+    NAVER_CLIENT_ID: Optional[str] = None
+    NAVER_CLIENT_SECRET: Optional[str] = None
+    
+    # 백테스트 설정
+    DEFAULT_COMMISSION: float = 0.001
+    MAX_PORTFOLIO_SIZE: int = 20
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = True
+
+settings = Settings()
+```
+
+## 에러 처리
+
+### 커스텀 예외
+```python
+class BacktestError(Exception):
+    """백테스트 관련 예외"""
+    pass
+
+class DataFetchError(Exception):
+    """데이터 수집 관련 예외"""
+    pass
+
+class StrategyError(Exception):
+    """전략 관련 예외"""
+    pass
+```
+
+### 글로벌 에러 핸들러
+```python
+@app.exception_handler(BacktestError)
+async def backtest_error_handler(request: Request, exc: BacktestError):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": f"백테스트 오류: {str(exc)}"}
+    )
+```
+
+## 모니터링 및 로깅
+
+### 구조화된 로깅
+```python
+import logging
+import structlog
+
+logger = structlog.get_logger(__name__)
+
+async def run_backtest(request: UnifiedBacktestRequest):
+    logger.info(
+        "백테스트 시작",
+        portfolio_size=len(request.portfolio),
+        strategy=request.strategy,
+        start_date=request.start_date,
+        end_date=request.end_date
+    )
+    
+    try:
+        result = await execute_backtest(request)
+        logger.info("백테스트 완료", duration=result.duration)
+        return result
+    except Exception as e:
+        logger.error("백테스트 실패", error=str(e))
+        raise
+```
+
+## 보안 고려사항
+
+### 입력 검증
+- **Pydantic 검증**: 모든 입력 데이터 검증
+- **SQL 인젝션 방지**: 파라미터화된 쿼리 사용
+- **레이트 리미팅**: API 호출 횟수 제한
+
+### 환경 변수 관리
+- **민감 정보**: .env 파일로 관리
+- **API 키**: 환경 변수로 분리
+- **Docker Secrets**: 프로덕션 환경에서 사용
+
+## 배포 및 운영
+
+### Docker 이미지
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### 헬스 체크
+```python
+@app.get("/health")
+async def health_check():
+    """서버 상태 확인"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+```
+
+## 향후 개선 계획
+
+### 단기 (성능 개선)
+- **Redis 캐싱**: 메모리 캐시 추가
+- **비동기 최적화**: 더 많은 비동기 처리
+- **배치 처리**: 대량 데이터 처리 최적화
+
+### 중기 (기능 확장)
+- **실시간 데이터**: WebSocket을 통한 실시간 가격 업데이트
+- **알림 시스템**: 백테스트 완료 알림
+- **사용자 관리**: 인증 및 권한 시스템
+
+### 장기 (확장성)
+- **마이크로서비스**: 서비스별 분리
+- **클라우드 배포**: AWS/GCP 배포
+- **머신러닝**: AI 기반 전략 추천
+
+## 참고 링크
+
+- **FastAPI 문서**: https://fastapi.tiangolo.com/
+- **Pydantic 문서**: https://docs.pydantic.dev/
+- **backtesting.py**: https://kernc.github.io/backtesting.py/
+- **yfinance**: https://pypi.org/project/yfinance/
