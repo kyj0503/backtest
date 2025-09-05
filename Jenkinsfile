@@ -18,6 +18,19 @@ pipeline {
             }
         }
 
+        stage('Debug Environment') {
+            steps {
+                script {
+                    echo "🔍 Debug Information:"
+                    echo "BRANCH_NAME: ${env.BRANCH_NAME}"
+                    echo "GIT_BRANCH: ${env.GIT_BRANCH}"
+                    echo "BUILD_NUMBER: ${env.BUILD_NUMBER}"
+                    echo "All env vars:"
+                    sh 'env | grep -E "(BRANCH|GIT)" | sort'
+                }
+            }
+        }
+
         stage('Frontend Tests') {
             steps {
                 script {
@@ -57,8 +70,10 @@ pipeline {
 
         stage('Build and Push Backend PROD') {
             when {
-                expression {
-                    return env.BRANCH_NAME == 'main'
+                anyOf {
+                    expression { return env.BRANCH_NAME == 'main' }
+                    expression { return env.GIT_BRANCH == 'origin/main' }
+                    expression { return env.GIT_BRANCH == 'main' }
                 }
             }
             steps {
@@ -77,8 +92,10 @@ pipeline {
 
         stage('Build and Push Frontend PROD') {
             when {
-                expression {
-                    return env.BRANCH_NAME == 'main'
+                anyOf {
+                    expression { return env.BRANCH_NAME == 'main' }
+                    expression { return env.GIT_BRANCH == 'origin/main' }
+                    expression { return env.GIT_BRANCH == 'main' }
                 }
             }
             steps {
@@ -97,8 +114,10 @@ pipeline {
 
         stage('Deploy to Production (Local)') {
             when {
-                expression {
-                    return env.BRANCH_NAME == 'main'
+                anyOf {
+                    expression { return env.BRANCH_NAME == 'main' }
+                    expression { return env.GIT_BRANCH == 'origin/main' }
+                    expression { return env.GIT_BRANCH == 'main' }
                 }
             }
             steps {
@@ -126,8 +145,10 @@ pipeline {
 
         stage('Integration Tests') {
             when {
-                expression {
-                    return env.BRANCH_NAME == 'main'
+                anyOf {
+                    expression { return env.BRANCH_NAME == 'main' }
+                    expression { return env.GIT_BRANCH == 'origin/main' }
+                    expression { return env.GIT_BRANCH == 'main' }
                 }
             }
             steps {
