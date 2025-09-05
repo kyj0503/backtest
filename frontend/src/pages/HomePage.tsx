@@ -7,7 +7,6 @@ const HomePage: React.FC = () => {
       <div className="container mx-auto px-4 max-w-6xl">
         {/* 메인 히어로 섹션 */}
         <div className="text-center mb-16">
-          <div className="text-4xl mb-6">📊</div>
           <h1 className="text-5xl font-bold text-blue-600 mb-6">
             백테스팅을 시작하세요
           </h1>
@@ -18,7 +17,7 @@ const HomePage: React.FC = () => {
             to="/backtest" 
             className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
-            지금 시작하기 →
+            지금 시작하기
           </Link>
         </div>
 

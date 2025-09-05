@@ -236,7 +236,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
     <div className="max-w-6xl mx-auto">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-lg">
-          <h4 className="text-xl font-semibold text-gray-800 mb-2">🏦 포트폴리오 백테스트</h4>
+          <h4 className="text-xl font-semibold text-gray-800 mb-2">포트폴리오 백테스트</h4>
           <p className="text-sm text-gray-600">
             종목/자산별 투자 금액과 방식을 설정하여 포트폴리오 백테스트를 실행합니다.
           </p>
@@ -251,7 +251,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800 mb-2">⚠️ 입력 오류</h3>
+                  <h3 className="text-sm font-medium text-red-800 mb-2">입력 오류</h3>
                   <ul className="text-sm text-red-700 space-y-1">
                     {errors.map((error, index) => (
                       <li key={index}>• {error}</li>
