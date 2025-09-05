@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { Suspense, memo, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import OHLCChart from '../OHLCChart';
-import EquityChart from '../EquityChart';
-import TradesChart from '../TradesChart';
-import StatsSummary from '../StatsSummary';
-import StockPriceChart from '../StockPriceChart';
+import { 
+  LazyOHLCChart, 
+  LazyEquityChart, 
+  LazyTradesChart, 
+  LazyStatsSummary, 
+  LazyStockPriceChart 
+} from '../lazy/LazyChartComponents';
+import ChartLoading from '../common/ChartLoading';
 import { formatPercent } from '../../utils/formatters';
 import { useStockData } from '../../hooks/useStockData';
 import { 
@@ -18,9 +21,9 @@ interface ChartsSectionProps {
   isPortfolio: boolean;
 }
 
-const ChartsSection: React.FC<ChartsSectionProps> = ({ data, isPortfolio }) => {
-  // 화폐 포맷터 함수
-  const formatCurrency = (value: number): string => {
+const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio }) => {
+  // 화폐 포맷터 함수 메모이제이션
+  const formatCurrency = useMemo(() => (value: number): string => {
     if (value >= 1e9) {
       return `${(value / 1e9).toFixed(1)}B`;
     } else if (value >= 1e6) {
@@ -29,7 +32,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = ({ data, isPortfolio }) => {
       return `${(value / 1e3).toFixed(1)}K`;
     }
     return value.toLocaleString();
-  };
+  }, []);
 
   // 포트폴리오 차트 렌더링
   const renderPortfolioCharts = () => {
@@ -63,15 +66,18 @@ const ChartsSection: React.FC<ChartsSectionProps> = ({ data, isPortfolio }) => {
     return (
       <>
         {/* 백테스트 성과 통계 */}
-        <StatsSummary stats={{
-          total_return_pct: portfolio_statistics.Total_Return,
-          total_trades: portfolio_statistics.Total_Trading_Days,
-          win_rate_pct: portfolio_statistics.Win_Rate,
-          max_drawdown_pct: portfolio_statistics.Max_Drawdown,
-          sharpe_ratio: portfolio_statistics.Sharpe_Ratio,
-          profit_factor: portfolio_statistics.Total_Return > 0 ? 
-            (portfolio_statistics.Total_Return / Math.abs(portfolio_statistics.Max_Drawdown || 1)) : 1.0
-        }} />
+                <Suspense fallback={<ChartLoading height={300} />}>
+          <LazyStatsSummary stats={{
+            '총 수익률': formatPercent(portfolio_statistics['Return [%]'] || 0),
+            '연간 수익률': formatPercent(portfolio_statistics['Annual Return [%]'] || 0),
+            '변동성': formatPercent(portfolio_statistics['Volatility [%]'] || 0),
+            '샤프 비율': (portfolio_statistics['Sharpe Ratio'] || 0).toFixed(2),
+            '최대 낙폭': formatPercent(portfolio_statistics['Max Drawdown [%]'] || 0),
+            '총 거래 횟수': portfolio_statistics['# Trades'] || 0,
+            '승률': formatPercent(portfolio_statistics['Win Rate [%]'] || 0),
+            '평균 수익': formatPercent(portfolio_statistics['Avg Return [%]'] || 0)
+          }} />
+        </Suspense>
 
         {/* 포트폴리오 백테스트 결과 차트 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">

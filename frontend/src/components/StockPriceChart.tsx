@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, memo, useMemo, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useChartOptimization } from "../hooks/useChartOptimization";
+import { useRenderPerformance } from "./common/PerformanceMonitor";
 
 interface StockData {
   symbol: string;
@@ -15,20 +17,27 @@ interface StockPriceChartProps {
   className?: string;
 }
 
-const StockPriceChart: React.FC<StockPriceChartProps> = ({ stocksData, className = "" }) => {
+const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, className = "" }) => {
+  // 성능 모니터링
+  useRenderPerformance('StockPriceChart');
+  
+  // 차트 최적화 훅 사용
+  const { chartColors, chartConfig, formatters } = useChartOptimization();
+  
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const handlePrevious = () => {
+  // 이벤트 핸들러 메모이제이션
+  const handlePrevious = useCallback(() => {
     setCurrentIndex((prevIndex) => 
       prevIndex === 0 ? stocksData.length - 1 : prevIndex - 1
     );
-  };
+  }, [stocksData.length]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     setCurrentIndex((prevIndex) => 
       prevIndex === stocksData.length - 1 ? 0 : prevIndex + 1
     );
-  };
+  }, [stocksData.length]);
 
   if (!stocksData || stocksData.length === 0) {
     return (
@@ -128,6 +137,8 @@ const StockPriceChart: React.FC<StockPriceChartProps> = ({ stocksData, className
       </div>
     </div>
   );
-};
+});
+
+StockPriceChart.displayName = 'StockPriceChart';
 
 export default StockPriceChart;

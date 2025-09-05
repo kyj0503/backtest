@@ -591,6 +591,231 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
 };
 ```
 
+## 4.4 성능 최적화 구현 (2024-12-20 완료)
+
+### 메모이제이션 적용
+
+#### 차트 컴포넌트 최적화
+```typescript
+// hooks/useChartOptimization.ts (178줄)
+export const useChartOptimization = () => {
+  // 차트 색상 설정 메모이제이션
+  const chartColors = useMemo(() => ({
+    primary: '#0d6efd',
+    success: '#198754',
+    danger: '#dc3545',
+    // ... 기타 색상들
+  }), []);
+
+  // 차트 기본 설정 메모이제이션
+  const chartConfig = useMemo(() => ({
+    margin: { top: 20, right: 30, left: 20, bottom: 5 },
+    strokeWidth: { thin: 1, normal: 1.5, thick: 2, bold: 3 },
+    opacity: { low: 0.1, medium: 0.3, high: 0.6, full: 1.0 },
+    heights: { small: 200, medium: 300, large: 400, xlarge: 500 }
+  }), []);
+
+  // 데이터 변환 함수 메모이제이션
+  const transformChartData = useCallback((data: any[], transformFn?: (item: any) => any) => {
+    if (!data || !Array.isArray(data)) return [];
+    
+    return data.map(item => {
+      const baseItem = {
+        ...item,
+        // 숫자 데이터 안전성 보장
+        ...(item.value !== undefined && { value: Number(item.value) || 0 }),
+        ...(item.price !== undefined && { price: Number(item.price) || 0 })
+      };
+      return transformFn ? transformFn(baseItem) : baseItem;
+    });
+  }, []);
+
+  return { chartColors, chartConfig, transformChartData, /* ... */ };
+};
+```
+
+#### React.memo 적용 사례
+```typescript
+// components/EquityChart.tsx (최적화 후)
+const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
+  // 데이터 안전성 검사 및 메모이제이션
+  const safeData = useMemo(() => {
+    if (!data || !Array.isArray(data)) return [];
+    
+    return data.map(item => ({
+      ...item,
+      return_pct: Number(item.return_pct) || 0,
+      drawdown_pct: Number(item.drawdown_pct) || 0
+    }));
+  }, [data]);
+
+  // 차트 설정 메모이제이션
+  const chartConfig = useMemo(() => ({
+    margin: { top: 20, right: 30, left: 20, bottom: 5 },
+    strokeWidth: 2,
+    fillOpacity: 0.3
+  }), []);
+
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <ComposedChart data={safeData} margin={chartConfig.margin}>
+        {/* 차트 내용 */}
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+});
+
+EquityChart.displayName = 'EquityChart';
+```
+
+### 코드 분할 (Code Splitting)
+
+#### 지연 로딩 컴포넌트
+```typescript
+// components/lazy/LazyChartComponents.tsx
+import { lazy } from 'react';
+
+// 차트 컴포넌트들의 지연 로딩
+export const LazyEquityChart = lazy(() => import('../EquityChart'));
+export const LazyOHLCChart = lazy(() => import('../OHLCChart'));
+export const LazyTradesChart = lazy(() => import('../TradesChart'));
+export const LazyStockPriceChart = lazy(() => import('../StockPriceChart'));
+
+// 뉴스 관련 컴포넌트 지연 로딩
+export const LazyStockVolatilityNews = lazy(() => import('../StockVolatilityNews'));
+```
+
+#### 로딩 상태 컴포넌트
+```typescript
+// components/common/ChartLoading.tsx
+const ChartLoading: React.FC<ChartLoadingProps> = ({ 
+  height = 320, 
+  message = "차트를 로딩 중입니다..." 
+}) => {
+  return (
+    <div 
+      className="flex items-center justify-center bg-gray-50 rounded-lg border"
+      style={{ height }}
+    >
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+        <p className="text-gray-600 text-sm">{message}</p>
+      </div>
+    </div>
+  );
+};
+```
+
+### 성능 모니터링
+
+#### 렌더링 성능 측정
+```typescript
+// components/common/PerformanceMonitor.tsx (140줄)
+export const useRenderPerformance = (componentName: string) => {
+  const renderStartTime = useRef<number>();
+  const renderCount = useRef<number>(0);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      renderCount.current += 1;
+      const renderEndTime = performance.now();
+      const renderDuration = renderEndTime - (renderStartTime.current || renderEndTime);
+      
+      // 성능 측정 마크 생성
+      performance.mark(`${componentName}-render-end`);
+      
+      console.log(`⏱️ [Render Performance] ${componentName}:`, {
+        renderCount: renderCount.current,
+        renderDuration: `${renderDuration.toFixed(2)}ms`,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+};
+
+// 사용법
+const StockPriceChart = memo(({ stocksData }) => {
+  useRenderPerformance('StockPriceChart');
+  // ... 컴포넌트 로직
+});
+```
+
+#### 메모리 사용량 모니터링
+```typescript
+export const useMemoryMonitor = (componentName: string) => {
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+
+    const checkMemory = () => {
+      if ('memory' in performance) {
+        const memory = (performance as any).memory;
+        console.log(`💾 [Memory] ${componentName}:`, {
+          used: `${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
+          total: `${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
+          limit: `${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`
+        });
+      }
+    };
+
+    const interval = setInterval(checkMemory, 5000);
+    return () => clearInterval(interval);
+  }, [componentName]);
+};
+```
+
+### 번들 최적화
+
+#### Vite 설정 개선
+```typescript
+// vite.config.ts
+export default defineConfig(({ mode }) => ({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React 관련 라이브러리 분리
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // 차트 라이브러리 분리
+          'chart-vendor': ['recharts'],
+          // 아이콘 라이브러리 분리
+          'icon-vendor': ['react-icons'],
+          // 유틸리티 라이브러리 분리
+          'util-vendor': ['axios']
+        }
+      }
+    },
+    // 청크 크기 경고 임계값 설정 (1MB)
+    chunkSizeWarningLimit: 1000,
+    // 소스맵 생성 (개발 시에만)
+    sourcemap: mode === 'development'
+  }
+}))
+```
+
+#### 번들 분석 스크립트
+```json
+// package.json
+{
+  "scripts": {
+    "build:analyze": "tsc && vite build --mode analyze"
+  }
+}
+```
+
+### 성능 최적화 결과
+
+#### 달성한 개선 사항
+1. **메모리 사용량 감소**: React.memo와 useMemo로 불필요한 재렌더링 방지
+2. **번들 크기 최적화**: 라이브러리별 청크 분리로 초기 로딩 속도 개선
+3. **지연 로딩**: 차트 컴포넌트들의 조건부 로딩으로 초기 렌더링 속도 향상
+4. **성능 모니터링**: 개발 환경에서 실시간 성능 추적 가능
+
+#### 최적화 전후 비교
+- **EquityChart**: 기본 컴포넌트 → memo + useMemo 적용
+- **OHLCChart**: 복잡한 데이터 처리 → 데이터 변환 로직 메모이제이션
+- **TradesChart**: 반복 렌더링 → useCallback으로 이벤트 핸들러 최적화
+- **번들 크기**: 단일 청크 → 라이브러리별 분리로 캐싱 효율성 증대
+
 ## 리팩터링 결과
 
 ### Before (기존 구조)

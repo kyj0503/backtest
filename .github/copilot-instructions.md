@@ -226,21 +226,27 @@ docker-compose exec backend pytest tests/ -v
   - [x] `useFormValidation`: 폼 검증 로직 (89줄)
   - [x] `useStrategyParams`: 전략 파라미터 관리 (118줄)
 
-#### 4.4. 성능 최적화 (Performance)
+#### 4.4. 성능 최적화 (Performance) ✅ 완료
 **목표**: 불필요한 리렌더링 방지 및 메모이제이션
 
-- [ ] **메모이제이션 적용**
-  - [ ] React.memo: 차트 컴포넌트들 (EquityChart, OHLCChart 등)
-  - [ ] useMemo: 차트 데이터 변환 로직, 필터링된 옵션 리스트
-  - [ ] useCallback: 이벤트 핸들러 함수들
+- [x] **메모이제이션 적용**
+  - [x] React.memo: 차트 컴포넌트들 (EquityChart, OHLCChart, TradesChart, StockPriceChart)
+  - [x] useMemo: 차트 데이터 변환 로직, 필터링된 옵션 리스트
+  - [x] useCallback: 이벤트 핸들러 함수들
 
-- [ ] **코드 분할**
-  - [ ] React.lazy: 큰 차트 라이브러리 지연 로딩
-  - [ ] 뉴스 모달, 상세 차트 등 조건부 로딩
+- [x] **커스텀 훅 생성**
+  - [x] useChartOptimization: 차트 설정, 색상, 포맷터 메모이제이션 (178줄)
+  - [x] useRenderPerformance: 렌더링 성능 측정 및 모니터링
 
-- [ ] **성능 측정**
-  - [ ] React DevTools Profiler로 병목 지점 확인
-  - [ ] Bundle Analyzer로 번들 크기 최적화
+- [x] **코드 분할**
+  - [x] LazyChartComponents: 차트 컴포넌트들의 지연 로딩 설정
+  - [x] ChartLoading: 차트 로딩 상태 컴포넌트
+  - [x] PerformanceMonitor: 성능 모니터링 컴포넌트 (140줄)
+
+- [x] **번들 최적화**
+  - [x] Vite manualChunks: React, Recharts, Icons, Utils 라이브러리 분리
+  - [x] Bundle Analyzer: 번들 크기 분석 스크립트 추가
+  - [x] 청크 크기 경고 임계값 설정 (1MB)
 
 #### 4.5. 코드 표준화 및 재사용성 (DRY Principle)
 **목표**: 중복 코드 제거 및 일관성 확보
