@@ -203,23 +203,28 @@ docker-compose exec backend pytest tests/ -v
   - [x] `useModal`: 모달 상태 관리 (범용, 44줄)
   - [x] 유틸리티 함수 분리: `numberUtils.ts`, `dateUtils.ts`
 
-#### 4.3. 커스텀 훅 추출 (Custom Hooks)
+#### 4.3. 커스텀 훅 추출 (Custom Hooks) ✅ 완료
 **목표**: 로직과 뷰 분리, 재사용성 향상
 
-- [ ] **폼 관련 훅**
-  - [ ] `useBacktestForm`: 백테스트 폼 상태 및 검증 로직
-  - [ ] `usePortfolio`: 포트폴리오 추가/삭제/수정 로직
-  - [ ] `useFormInput`: 공통 입력 필드 로직
+- [x] **폼 관련 훅**
+  - [x] `useBacktestForm`: 백테스트 폼 상태 및 검증 로직 (154줄)
+  - [x] `usePortfolio`: 포트폴리오 추가/삭제/수정 로직 (101줄)
+  - [x] `useFormInput`: 공통 입력 필드 로직 (94줄)
 
-- [ ] **데이터 페칭 훅**
-  - [ ] `useStockPrice`: 주가 데이터 페칭 및 캐싱
-  - [ ] `useVolatilityNews`: 변동성 뉴스 데이터 관리
-  - [ ] `useExchangeRate`: 환율 데이터 페칭
+- [x] **데이터 페칭 훅**
+  - [x] `useStockData`: 주가 데이터 페칭 및 캐싱 (92줄)
+  - [x] `useVolatilityNews`: 변동성 뉴스 데이터 관리 (147줄)
+  - [x] `useExchangeRate`: 환율 데이터 페칭 (69줄)
 
-- [ ] **UI 상태 훅**
-  - [ ] `useModal`: 모달 상태 관리 (뉴스, 차트 등)
-  - [ ] `useDropdown`: 드롭다운 상태 관리
-  - [ ] `useTooltip`: 툴팁 상태 관리
+- [x] **UI 상태 훅**
+  - [x] `useModal`: 모달 상태 관리 (뉴스, 차트 등) (44줄)
+  - [x] `useDropdown`: 드롭다운 상태 관리 (94줄)
+  - [x] `useTooltip`: 툴팁 상태 관리 (157줄)
+
+- [x] **추가 완성된 훅들**
+  - [x] `useBacktest`: 백테스트 API 호출 (74줄)
+  - [x] `useFormValidation`: 폼 검증 로직 (89줄)
+  - [x] `useStrategyParams`: 전략 파라미터 관리 (118줄)
 
 #### 4.4. 성능 최적화 (Performance)
 **목표**: 불필요한 리렌더링 방지 및 메모이제이션
