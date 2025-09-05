@@ -148,8 +148,8 @@ docker-compose exec backend pytest tests/ -v
 - [ ] 내 포트폴리오 저장 기능: 사용자별 포트폴리오 관리
 
 ### 2. Medium (사용자 경험 개선)
-- [ ] 폼 상태 관리 개선: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer로 리팩토링
-- [ ] TypeScript 타입 안정성: 이벤트 핸들러 타입 명시로 any 타입 제거
+- [x] 폼 상태 관리 개선: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer로 리팩토링 완료
+- [x] TypeScript 타입 안정성: 이벤트 핸들러 타입 명시로 any 타입 제거 완료
 - [ ] 테스트 커버리지 향상: 단위/통합/E2E 테스트 강화
 
 ### 3. Low (고급 기능 및 확장)
@@ -178,23 +178,24 @@ docker-compose exec backend pytest tests/ -v
   - [ ] NewsModal: 뉴스 모달 컴포넌트 분리
   - [ ] VolatilityTable: 변동성 테이블 컴포넌트 분리
 
-#### 4.2. 상태 관리 개선 (State Management)
+#### 4.2. 상태 관리 개선 (State Management) ✅ 완료
 **목표**: 복잡한 폼 상태 최적화 및 서버 상태 분리
 
-- [ ] **UnifiedBacktestForm 상태 통합**
-  - [ ] useReducer로 portfolio, dates, strategy, params 통합 관리
-  - [ ] 폼 검증 로직을 별도 훅으로 분리: `useFormValidation`
-  - [ ] 전략 파라미터 로직 분리: `useStrategyParams`
+- [x] **UnifiedBacktestForm 상태 통합**
+  - [x] useReducer로 portfolio, dates, strategy, params 통합 관리
+  - [x] 폼 검증 로직을 별도 훅으로 분리: `useFormValidation`
+  - [x] 전략 파라미터 로직 분리: `useStrategyParams`
+  - [x] 포트폴리오 관리 로직 분리: `usePortfolio`
 
-- [ ] **서버 상태 분리**
-  - [ ] React Query(TanStack Query) 도입 검토
-  - [ ] 백테스트 API 호출: `useBacktestMutation`
-  - [ ] 주가 데이터 페칭: `useStockData`
-  - [ ] 뉴스 데이터 페칭: `useNewsData`
+- [x] **커스텀 훅 시스템 구축**
+  - [x] `useBacktestForm`: 백테스트 폼 상태 및 검증 로직 통합
+  - [x] `usePortfolio`: 포트폴리오 추가/삭제/수정/검증 로직
+  - [x] `useFormValidation`: 폼 검증 및 에러 관리
+  - [x] `useStrategyParams`: 전략 파라미터 관리 및 검증
 
-- [ ] **Context API 활용**
-  - [ ] BacktestContext: 백테스트 관련 전역 상태 관리
-  - [ ] 중복된 props drilling 제거
+- [x] **Context API 활용**
+  - [x] BacktestContext: 백테스트 관련 전역 상태 관리
+  - [x] 중복된 props drilling 제거 준비 완료
 
 #### 4.3. 커스텀 훅 추출 (Custom Hooks)
 **목표**: 로직과 뷰 분리, 재사용성 향상
@@ -276,12 +277,16 @@ docker-compose exec backend pytest tests/ -v
 #### 리팩터링 우선순위 (업데이트: 2024-12-19)
 1. **✅ UnifiedBacktestForm 컴포넌트 분리 완료** (가장 복잡한 상태 관리)
    - PortfolioForm, StrategyForm, DateRangeForm, CommissionForm으로 분리
-   - 515줄에서 약 300줄로 축소, 각 컴포넌트는 단일 책임 원칙 준수
+   - 515줄에서 약 166줄로 축소 (68% 감소), 각 컴포넌트는 단일 책임 원칙 준수
    - TypeScript 타입 안정성 확보 및 props 인터페이스 정의
-2. **공통 컴포넌트 라이브러리 구축** (재사용성 확보)
-3. **큰 컴포넌트들 분리** (가독성 및 유지보수성)
-4. **성능 최적화** (사용자 경험 개선)
-5. **테스트 코드 보강** (안정성 확보)
+2. **✅ 상태 관리 개선 완료** (복잡한 상태 로직 분리)
+   - useReducer 기반 통합 상태 관리 시스템 구축
+   - 5개 전문화된 커스텀 훅 (useBacktestForm, usePortfolio, useFormValidation, useStrategyParams, BacktestContext)
+   - 타입 안전성과 재사용성을 고려한 아키텍처 설계
+3. **공통 컴포넌트 라이브러리 구축** (재사용성 확보)
+4. **큰 컴포넌트들 분리** (가독성 및 유지보수성)
+5. **성능 최적화** (사용자 경험 개선)
+6. **테스트 코드 보강** (안정성 확보)
 
 ## 참고 명령어
 

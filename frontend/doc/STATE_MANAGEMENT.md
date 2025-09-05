@@ -10,17 +10,438 @@ React 백테스팅 시스템의 상태 관리 전략과 패턴을 설명합니�
 3. **상태 정규화**: 중복 데이터 방지, 단일 진실 공급원 유지
 4. **타입 안전성**: TypeScript를 활용한 상태 타입 안전성 보장
 
-### 상태 분류
+## 현재 구현된 상태 관리 시스템
+
+### 1. 백테스트 폼 상태 (useReducer 기반)
+
 ```typescript
-// 로컬 상태: 컴포넌트 내부에서만 사용
-const [isLoading, setIsLoading] = useState(false);
-const [errors, setErrors] = useState<Record<string, string>>({});
+// types/backtest-form.ts
+export interface BacktestFormState {
+  portfolio: Stock[];
+  dates: {
+    startDate: string;
+    endDate: string;
+  };
+  strategy: {
+    selectedStrategy: string;
+    strategyParams: Record<string, any>;
+  };
+  settings: {
+    rebalanceFrequency: string;
+    commission: number;
+  };
+  ui: {
+    errors: string[];
+    isLoading: boolean;
+  };
+}
 
-// 공유 상태: 여러 컴포넌트 간 공유 (Context API 사용)
-const { theme, apiBaseUrl, updateTheme } = useAppContext();
+// reducers/backtestFormReducer.ts
+export function backtestFormReducer(
+  state: BacktestFormState, 
+  action: BacktestFormAction
+): BacktestFormState {
+  switch (action.type) {
+    case 'UPDATE_STOCK':
+      const { index, field, value } = action.payload;
+      const updatedPortfolio = state.portfolio.map((stock, i) => 
+        i === index ? { ...stock, [field]: value } : stock
+      );
+      return { ...state, portfolio: updatedPortfolio };
+    
+    case 'SET_STRATEGY':
+      return {
+        ...state,
+        strategy: { ...state.strategy, selectedStrategy: action.payload }
+      };
+    
+    // 기타 액션들...
+    default:
+      return state;
+  }
+}
+```
 
-// 서버 상태: API에서 가져온 데이터 (커스텀 Hook 사용)
-const { data, loading, error, refetch } = useBacktestApi();
+### 2. 커스텀 훅 시스템
+
+#### useBacktestForm (통합 폼 관리)
+```typescript
+// hooks/useBacktestForm.ts
+export const useBacktestForm = (initialState?: Partial<BacktestFormState>) => {
+  const [state, dispatch] = useReducer(
+    backtestFormReducer, 
+    { ...initialBacktestFormState, ...initialState }
+  );
+
+  // 전략 변경 시 기본 파라미터 자동 설정
+  useEffect(() => {
+    const config = STRATEGY_CONFIGS[state.strategy.selectedStrategy];
+    if (config && config.parameters) {
+      const defaultParams = Object.entries(config.parameters).reduce((acc, [key, param]) => {
+        acc[key] = (param as any).default;
+        return acc;
+      }, {} as Record<string, any>);
+      dispatch({ type: 'SET_STRATEGY_PARAMS', payload: defaultParams });
+    }
+  }, [state.strategy.selectedStrategy]);
+
+  const actions = {
+    updateStock: (index: number, field: keyof Stock, value: string | number) => {
+      dispatch({ type: 'UPDATE_STOCK', payload: { index, field, value } });
+    },
+    setSelectedStrategy: (strategy: string) => {
+      dispatch({ type: 'SET_STRATEGY', payload: strategy });
+    },
+    // 기타 액션들...
+  };
+
+  const helpers = {
+    getTotalAmount: () => state.portfolio.reduce((sum, stock) => sum + stock.amount, 0),
+    validateForm: () => {
+      // 폼 검증 로직
+      return validationErrors;
+    }
+  };
+
+  return { state, actions, helpers };
+};
+```
+
+#### usePortfolio (포트폴리오 관리)
+```typescript
+// hooks/usePortfolio.ts
+export const usePortfolio = (): UsePortfolioReturn => {
+  const addStock = useCallback((): Stock => ({
+    symbol: '',
+    amount: 10000,
+    investmentType: 'lump_sum',
+    dcaPeriods: 12,
+    assetType: ASSET_TYPES.STOCK
+  }), []);
+
+  const validatePortfolio = useCallback((stocks: Stock[]): string[] => {
+    const errors: string[] = [];
+    
+    if (stocks.length === 0) {
+      errors.push('최소 하나의 종목을 추가해야 합니다.');
+    }
+
+    // 중복 종목 검사 (현금 제외)
+    const symbols = stocks
+      .filter(stock => stock.assetType !== ASSET_TYPES.CASH)
+      .map(stock => stock.symbol.toUpperCase());
+    const duplicates = symbols.filter((symbol, index) => symbols.indexOf(symbol) !== index);
+    
+    if (duplicates.length > 0) {
+      errors.push(`중복된 종목이 있습니다: ${[...new Set(duplicates)].join(', ')}`);
+    }
+
+    return errors;
+  }, []);
+
+  return {
+    addStock,
+    addCash,
+    updateStock,
+    removeStock,
+    getTotalAmount,
+    getPortfolioWeights,
+    validatePortfolio
+  };
+};
+```
+
+#### useFormValidation (폼 검증)
+```typescript
+// hooks/useFormValidation.ts
+export const useFormValidation = (): UseFormValidationReturn => {
+  const [errors, setErrorsState] = useState<string[]>([]);
+
+  const validateForm = useCallback((formState: BacktestFormState): boolean => {
+    const newErrors: string[] = [];
+    
+    // 포트폴리오 검증
+    formState.portfolio.forEach((stock, index) => {
+      if (!stock.symbol.trim()) {
+        newErrors.push(`${index + 1}번째 종목의 심볼을 입력해주세요.`);
+      }
+      if (stock.amount < 100) {
+        newErrors.push(`${index + 1}번째 종목의 투자 금액은 최소 $100 이상이어야 합니다.`);
+      }
+    });
+    
+    // 날짜 검증
+    if (formState.dates.startDate >= formState.dates.endDate) {
+      newErrors.push('시작 날짜는 종료 날짜보다 이전이어야 합니다.');
+    }
+
+    setErrorsState(newErrors);
+    return newErrors.length === 0;
+  }, []);
+
+  return {
+    errors,
+    isValid: errors.length === 0,
+    validateForm,
+    setErrors: setErrorsState
+  };
+};
+```
+
+#### useStrategyParams (전략 파라미터 관리)
+```typescript
+// hooks/useStrategyParams.ts
+export const useStrategyParams = (): UseStrategyParamsReturn => {
+  const getStrategyParams = useCallback((strategy: string, currentParams: Record<string, any>): StrategyParam[] => {
+    const config = STRATEGY_CONFIGS[strategy as keyof typeof STRATEGY_CONFIGS];
+    if (!config || !config.parameters) return [];
+
+    return Object.entries(config.parameters).map(([key, paramConfig]) => {
+      const param = paramConfig as any;
+      return {
+        key,
+        label: getParamLabel(key),
+        value: currentParams[key] !== undefined ? currentParams[key] : param.default,
+        min: param.min,
+        max: param.max,
+        default: param.default
+      };
+    });
+  }, []);
+
+  const getParamLabel = useCallback((key: string): string => {
+    const labelMap: Record<string, string> = {
+      'short_window': '단기 이동평균 기간',
+      'long_window': '장기 이동평균 기간',
+      'rsi_period': 'RSI 기간',
+      'rsi_oversold': 'RSI 과매도 기준',
+      'rsi_overbought': 'RSI 과매수 기준'
+    };
+    return labelMap[key] || key;
+  }, []);
+
+  return {
+    getStrategyConfig,
+    getDefaultParams,
+    getStrategyParams,
+    updateParam,
+    validateParams,
+    getParamLabel
+  };
+};
+```
+
+### 3. Context API 활용
+
+#### BacktestContext (전역 상태 관리)
+```typescript
+// contexts/BacktestContext.tsx
+export const BacktestProvider: React.FC<BacktestProviderProps> = ({ 
+  children, 
+  initialState 
+}) => {
+  const [state, dispatch] = useReducer(
+    backtestFormReducer,
+    { ...initialBacktestFormState, ...initialState }
+  );
+
+  const actions = {
+    updateStock: (index: number, field: keyof Stock, value: string | number) => {
+      dispatch({ type: 'UPDATE_STOCK', payload: { index, field, value } });
+    },
+    // 기타 액션들...
+  };
+
+  return (
+    <BacktestContext.Provider value={{ state, actions }}>
+      {children}
+    </BacktestContext.Provider>
+  );
+};
+
+export const useBacktestContext = (): BacktestContextType => {
+  const context = useContext(BacktestContext);
+  if (context === undefined) {
+    throw new Error('useBacktestContext must be used within a BacktestProvider');
+  }
+  return context;
+};
+```
+
+## 컴포넌트에서의 사용
+
+### UnifiedBacktestForm 리팩터링 결과
+```typescript
+// components/UnifiedBacktestForm.tsx
+const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loading = false }) => {
+  const { state, actions, helpers } = useBacktestForm();
+  const { errors, validateForm, setErrors } = useFormValidation();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    actions.setLoading(true);
+    
+    const isFormValid = validateForm(state);
+    if (!isFormValid) {
+      actions.setLoading(false);
+      return;
+    }
+
+    try {
+      // 백엔드 API 호출 데이터 준비
+      const portfolioData = state.portfolio.map(stock => ({
+        symbol: stock.symbol.toUpperCase(),
+        amount: stock.amount,
+        investment_type: stock.investmentType,
+        dca_periods: stock.dcaPeriods || 12,
+        asset_type: stock.assetType || ASSET_TYPES.STOCK
+      }));
+
+      await onSubmit({
+        portfolio: portfolioData,
+        start_date: state.dates.startDate,
+        end_date: state.dates.endDate,
+        strategy: state.strategy.selectedStrategy,
+        strategy_params: generateStrategyParams(),
+        commission: state.settings.commission / 100,
+        rebalance_frequency: state.settings.rebalanceFrequency
+      });
+    } catch (error) {
+      setErrors([error.message]);
+    } finally {
+      actions.setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* 분리된 컴포넌트들에 state와 actions 전달 */}
+      <PortfolioForm
+        portfolio={state.portfolio}
+        updateStock={actions.updateStock}
+        addStock={actions.addStock}
+        addCash={actions.addCash}
+        removeStock={actions.removeStock}
+        getTotalAmount={helpers.getTotalAmount}
+      />
+      
+      <DateRangeForm
+        startDate={state.dates.startDate}
+        setStartDate={actions.setStartDate}
+        endDate={state.dates.endDate}
+        setEndDate={actions.setEndDate}
+      />
+      
+      <StrategyForm
+        selectedStrategy={state.strategy.selectedStrategy}
+        setSelectedStrategy={actions.setSelectedStrategy}
+        strategyParams={state.strategy.strategyParams}
+        updateStrategyParam={actions.updateStrategyParam}
+      />
+      
+      <CommissionForm
+        rebalanceFrequency={state.settings.rebalanceFrequency}
+        setRebalanceFrequency={actions.setRebalanceFrequency}
+        commission={state.settings.commission}
+        setCommission={actions.setCommission}
+      />
+      
+      <button type="submit" disabled={loading || state.ui.isLoading}>
+        백테스트 실행
+      </button>
+    </form>
+  );
+};
+```
+
+## 리팩터링 결과
+
+### Before (기존 구조)
+```typescript
+// 515줄의 거대한 컴포넌트
+const UnifiedBacktestForm = () => {
+  const [portfolio, setPortfolio] = useState([...]);
+  const [startDate, setStartDate] = useState('...');
+  const [endDate, setEndDate] = useState('...');
+  const [selectedStrategy, setSelectedStrategy] = useState('...');
+  const [strategyParams, setStrategyParams] = useState({});
+  const [rebalanceFrequency, setRebalanceFrequency] = useState('...');
+  const [commission, setCommission] = useState(0.2);
+  const [errors, setErrors] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 수십 개의 함수들...
+  const addStock = () => { /* ... */ };
+  const removeStock = () => { /* ... */ };
+  const updateStock = () => { /* ... */ };
+  const validatePortfolio = () => { /* ... */ };
+  
+  // 복잡한 JSX...
+};
+```
+
+### After (리팩터링 후)
+```typescript
+// 166줄의 깔끔한 컴포넌트
+const UnifiedBacktestForm = ({ onSubmit, loading = false }) => {
+  const { state, actions, helpers } = useBacktestForm();
+  const { errors, validateForm, setErrors } = useFormValidation();
+
+  // 간단한 핸들러
+  const handleSubmit = async (e) => { /* ... */ };
+
+  // 분리된 컴포넌트들로 구성된 JSX
+  return (
+    <form onSubmit={handleSubmit}>
+      <PortfolioForm {...portfolioProps} />
+      <DateRangeForm {...dateProps} />
+      <StrategyForm {...strategyProps} />
+      <CommissionForm {...commissionProps} />
+    </form>
+  );
+};
+```
+
+### 개선점
+
+1. **코드 크기 축소**: 515줄 → 166줄 (68% 감소)
+2. **관심사 분리**: 각 커스텀 훅이 특정 기능에 집중
+3. **재사용성 향상**: 훅들을 다른 컴포넌트에서도 활용 가능
+4. **타입 안전성**: 강타입 인터페이스로 버그 방지
+5. **테스트 용이성**: 각 훅을 독립적으로 테스트 가능
+6. **성능 최적화**: useCallback, useMemo로 불필요한 리렌더링 방지
+
+## 성능 최적화 팁
+
+### 상태 업데이트 최적화
+```typescript
+// ✅ 좋은 예: 함수형 업데이트
+const updatePortfolioItem = useCallback((index: number, updates: Partial<Stock>) => {
+  dispatch({ 
+    type: 'UPDATE_STOCK', 
+    payload: { index, field: 'amount', value: updates.amount } 
+  });
+}, []);
+
+// ❌ 나쁜 예: 직접 상태 변경
+const updatePortfolioItem = (index, updates) => {
+  const newPortfolio = [...portfolio];
+  newPortfolio[index] = { ...newPortfolio[index], ...updates };
+  setPortfolio(newPortfolio);
+};
+```
+
+### 메모이제이션 활용
+```typescript
+// 비싼 계산 메모이제이션
+const totalAmount = useMemo(() => {
+  return state.portfolio.reduce((sum, stock) => sum + stock.amount, 0);
+}, [state.portfolio]);
+
+// 이벤트 핸들러 메모이제이션
+const handleStockUpdate = useCallback((index: number, field: keyof Stock, value: any) => {
+  actions.updateStock(index, field, value);
+}, [actions.updateStock]);
 ```
 
 ## 로컬 상태 관리

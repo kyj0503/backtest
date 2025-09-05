@@ -1,18 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { UnifiedBacktestRequest } from '../types/api';
-import { STRATEGY_CONFIGS, ASSET_TYPES, AssetType } from '../constants/strategies';
+import { ASSET_TYPES } from '../constants/strategies';
 import DateRangeForm from './DateRangeForm';
 import StrategyForm from './StrategyForm';
 import CommissionForm from './CommissionForm';
 import PortfolioForm from './PortfolioForm';
-
-interface Stock {
-  symbol: string;
-  amount: number;
-  investmentType: 'lump_sum' | 'dca';
-  dcaPeriods?: number;
-  assetType?: AssetType; // 자산 타입 추가
-}
+import { useBacktestForm } from '../hooks/useBacktestForm';
+import { useFormValidation } from '../hooks/useFormValidation';
 
 interface UnifiedBacktestFormProps {
   onSubmit: (request: UnifiedBacktestRequest) => Promise<void>;
@@ -20,151 +14,31 @@ interface UnifiedBacktestFormProps {
 }
 
 const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loading = false }) => {
-  const [portfolio, setPortfolio] = useState<Stock[]>([{ 
-    symbol: '', 
-    amount: 10000, 
-    investmentType: 'lump_sum',
-    dcaPeriods: 12 
-  }]);
-  const [startDate, setStartDate] = useState('2023-01-01');
-  const [endDate, setEndDate] = useState('2024-12-31');
-  const [selectedStrategy, setSelectedStrategy] = useState('buy_and_hold');
-  const [strategyParams, setStrategyParams] = useState<Record<string, any>>({});
-  const [rebalanceFrequency, setRebalanceFrequency] = useState('monthly');
-  const [commission, setCommission] = useState(0.2); // 퍼센트 형태로 변경 (0.2%)
-  const [errors, setErrors] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // 전략 변경 시 기본값 설정
-  useEffect(() => {
-    const config = STRATEGY_CONFIGS[selectedStrategy as keyof typeof STRATEGY_CONFIGS];
-    if (config && config.parameters) {
-      const defaultParams: Record<string, any> = {};
-      Object.entries(config.parameters).forEach(([key, param]) => {
-        defaultParams[key] = (param as any).default;
-      });
-      setStrategyParams(defaultParams);
-    } else {
-      setStrategyParams({});
-    }
-  }, [selectedStrategy]);
-
-  const validatePortfolio = (): string[] => {
-    const validationErrors: string[] = [];
-
-    if (portfolio.length === 0) {
-      validationErrors.push('포트폴리오는 최소 1개 종목을 포함해야 합니다.');
-      return validationErrors;
-    }
-
-    if (portfolio.length > 10) {
-      validationErrors.push('포트폴리오는 최대 10개 종목까지 포함할 수 있습니다.');
-    }
-
-    // 빈 심볼 검사 (CUSTOM 선택 후 미입력 제외)
-    const emptySymbols = portfolio.filter(stock => !stock.symbol.trim() || stock.symbol === 'CUSTOM');
-    if (emptySymbols.length > 0) {
-      validationErrors.push('모든 종목 심볼을 입력해주세요.');
-    }
-
-    // 투자 금액 검사
-    const invalidAmounts = portfolio.filter(stock => stock.amount <= 0);
-    if (invalidAmounts.length > 0) {
-      validationErrors.push('모든 투자 금액은 0보다 커야 합니다.');
-    }
-
-    // DCA 기간 검사
-    const invalidDCA = portfolio.filter(stock => 
-      stock.investmentType === 'dca' && (!stock.dcaPeriods || stock.dcaPeriods < 1 || stock.dcaPeriods > 60)
-    );
-    if (invalidDCA.length > 0) {
-      validationErrors.push('DCA 기간은 1개월 이상 60개월 이하여야 합니다.');
-    }
-
-    return validationErrors;
-  };
-
-  const addStock = () => {
-    setPortfolio([...portfolio, { 
-      symbol: '', 
-      amount: 10000, 
-      investmentType: 'lump_sum',
-      dcaPeriods: 12,
-      assetType: ASSET_TYPES.STOCK
-    }]);
-  };
-
-  const addCash = () => {
-    setPortfolio([...portfolio, { 
-      symbol: '현금', 
-      amount: 10000, 
-      investmentType: 'lump_sum',
-      dcaPeriods: 12,
-      assetType: ASSET_TYPES.CASH
-    }]);
-  };
-
-  const removeStock = (index: number) => {
-    const newPortfolio = portfolio.filter((_, i) => i !== index);
-    setPortfolio(newPortfolio);
-  };
-
-  const updateStock = (index: number, field: keyof Stock, value: string | number) => {
-    const newPortfolio = [...portfolio];
-    if (field === 'symbol') {
-      newPortfolio[index].symbol = (value as string).toUpperCase();
-      // 심볼이 변경될 때 자산 타입을 자동으로 조정
-      if ((value as string).toUpperCase() === '현금' || (value as string).toUpperCase() === 'CASH') {
-        newPortfolio[index].assetType = ASSET_TYPES.CASH;
-      } else {
-        newPortfolio[index].assetType = ASSET_TYPES.STOCK;
-      }
-    } else if (field === 'investmentType') {
-      newPortfolio[index].investmentType = value as 'lump_sum' | 'dca';
-    } else if (field === 'assetType') {
-      newPortfolio[index].assetType = value as AssetType;
-    } else {
-      newPortfolio[index][field] = Number(value);
-    }
-    setPortfolio(newPortfolio);
-  };
-
-  const updateStrategyParam = (key: string, value: any) => {
-    setStrategyParams(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
+  const { state, actions, helpers } = useBacktestForm();
+  const { errors, validateForm, setErrors } = useFormValidation();
 
   const generateStrategyParams = () => {
-    const config = STRATEGY_CONFIGS[selectedStrategy as keyof typeof STRATEGY_CONFIGS];
-    if (!config || !config.parameters) return {};
-
+    const strategyParams = state.strategy.strategyParams;
     const params: Record<string, any> = {};
-    Object.entries(config.parameters).forEach(([key, paramConfig]) => {
-      const value = strategyParams[key];
-      if (value !== undefined) {
-        params[key] = (paramConfig as any).type === 'int' ? parseInt(value) : value;
-      }
+    Object.entries(strategyParams).forEach(([key, value]) => {
+      params[key] = typeof value === 'string' ? parseInt(value) || value : value;
     });
     return params;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setErrors([]);
-
-    const validationErrors = validatePortfolio();
-    if (validationErrors.length > 0) {
-      setErrors(validationErrors);
-      setIsLoading(false);
+    actions.setLoading(true);
+    
+    const isFormValid = validateForm(state);
+    if (!isFormValid) {
+      actions.setLoading(false);
       return;
     }
 
     try {
-      // 포트폴리오 데이터 준비 (백엔드 API 스키마에 맞춤)
-      const portfolioData = portfolio.map(stock => ({
+      // 포트폴리오 데이터 준비 (백엔드 API 스키마에 맞춘 변환)
+      const portfolioData = state.portfolio.map(stock => ({
         symbol: stock.symbol.toUpperCase(),
         amount: stock.amount,
         investment_type: stock.investmentType,
@@ -178,24 +52,20 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
 
       await onSubmit({
         portfolio: portfolioData,
-        start_date: startDate,
-        end_date: endDate,
-        strategy: selectedStrategy || 'buy_and_hold',
+        start_date: state.dates.startDate,
+        end_date: state.dates.endDate,
+        strategy: state.strategy.selectedStrategy || 'buy_and_hold',
         strategy_params: params,
-        commission: commission / 100, // 퍼센트를 소수점으로 변환 (0.2 -> 0.002)
-        rebalance_frequency: rebalanceFrequency
+        commission: state.settings.commission / 100, // 퍼센트를 소수점으로 변환 (0.2 -> 0.002)
+        rebalance_frequency: state.settings.rebalanceFrequency
       });
     } catch (error) {
       console.error('백테스트 실행 중 오류:', error);
       const errorMessage = error instanceof Error ? error.message : '백테스트 실행 중 오류가 발생했습니다.';
       setErrors([errorMessage]);
     } finally {
-      setIsLoading(false);
+      actions.setLoading(false);
     }
-  };
-
-  const getTotalAmount = () => {
-    return portfolio.reduce((sum, stock) => sum + stock.amount, 0);
   };
 
   return (
@@ -208,7 +78,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
           </p>
         </div>
         <div className="p-6">
-          {errors.length > 0 && (
+          {(errors.length > 0 || state.ui.errors.length > 0) && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -219,7 +89,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-red-800 mb-2">입력 오류</h3>
                   <ul className="text-sm text-red-700 space-y-1">
-                    {errors.map((error, index) => (
+                    {[...errors, ...state.ui.errors].map((error, index) => (
                       <li key={index}>• {error}</li>
                     ))}
                   </ul>
@@ -231,37 +101,37 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
           <form onSubmit={handleSubmit}>
             {/* 포트폴리오 구성 */}
             <PortfolioForm
-              portfolio={portfolio}
-              updateStock={updateStock}
-              addStock={addStock}
-              addCash={addCash}
-              removeStock={removeStock}
-              getTotalAmount={getTotalAmount}
+              portfolio={state.portfolio}
+              updateStock={actions.updateStock}
+              addStock={actions.addStock}
+              addCash={actions.addCash}
+              removeStock={actions.removeStock}
+              getTotalAmount={helpers.getTotalAmount}
             />
 
             {/* 백테스트 설정 */}
             <div className="mb-8">
               <h5 className="text-lg font-semibold mb-4">백테스트 설정</h5>
               <DateRangeForm
-                startDate={startDate}
-                setStartDate={setStartDate}
-                endDate={endDate}
-                setEndDate={setEndDate}
+                startDate={state.dates.startDate}
+                setStartDate={actions.setStartDate}
+                endDate={state.dates.endDate}
+                setEndDate={actions.setEndDate}
               />
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <StrategyForm
-                selectedStrategy={selectedStrategy}
-                setSelectedStrategy={setSelectedStrategy}
-                strategyParams={strategyParams}
-                updateStrategyParam={updateStrategyParam}
+                selectedStrategy={state.strategy.selectedStrategy}
+                setSelectedStrategy={actions.setSelectedStrategy}
+                strategyParams={state.strategy.strategyParams}
+                updateStrategyParam={actions.updateStrategyParam}
               />
               <CommissionForm
-                rebalanceFrequency={rebalanceFrequency}
-                setRebalanceFrequency={setRebalanceFrequency}
-                commission={commission}
-                setCommission={setCommission}
+                rebalanceFrequency={state.settings.rebalanceFrequency}
+                setRebalanceFrequency={actions.setRebalanceFrequency}
+                commission={state.settings.commission}
+                setCommission={actions.setCommission}
               />
             </div>
 
@@ -269,10 +139,10 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
             <div>
               <button
                 type="submit"
-                disabled={loading || isLoading}
+                disabled={loading || state.ui.isLoading}
                 className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg text-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading || isLoading ? (
+                {loading || state.ui.isLoading ? (
                   <span className="flex items-center justify-center">
                     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
