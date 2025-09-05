@@ -111,12 +111,20 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
   useEffect(() => {
     if (isPortfolio && 'portfolio_composition' in data && 'portfolio_statistics' in data) {
       const portfolioData = data as PortfolioData;
-      const symbols = portfolioData.portfolio_composition.map((item: any) => item.symbol);
+      // 심볼에서 인덱스 제거 (예: AAPL_0 -> AAPL)
+      const symbols = portfolioData.portfolio_composition.map((item: any) => {
+        const symbol = item.symbol;
+        // _숫자 패턴 제거
+        return symbol.replace(/_\d+$/, '');
+      });
+      // 중복 제거
+      const uniqueSymbols = [...new Set(symbols)];
+      
       const startDate = portfolioData.portfolio_statistics.Start;
       const endDate = portfolioData.portfolio_statistics.End;
       
-      if (symbols.length > 0 && startDate && endDate) {
-        fetchStockData(symbols, startDate, endDate);
+      if (uniqueSymbols.length > 0 && startDate && endDate) {
+        fetchStockData(uniqueSymbols, startDate, endDate);
       }
     }
   }, [isPortfolio, data]);

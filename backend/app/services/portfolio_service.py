@@ -460,7 +460,8 @@ class PortfolioBacktestService:
                     logger.info(f"현금 자산 {symbol} 처리 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
                     
                     portfolio_results[unique_key] = {
-                        'symbol': f"현금",  # 사용자에게 명확하게 현금임을 표시
+                        'symbol': symbol,  # 원래 심볼 저장
+                        'original_symbol': symbol,  # 원래 심볼 명시적으로 저장
                         'initial_value': amount,
                         'final_value': amount,  # 현금은 변동 없음
                         'return_pct': 0.0,  # 현금 수익률 0%
@@ -513,6 +514,7 @@ class PortfolioBacktestService:
                         
                         portfolio_results[unique_key] = {
                             'symbol': symbol,
+                            'original_symbol': symbol,  # 원래 심볼 명시적으로 저장
                             'initial_value': initial_value,
                             'final_value': final_value,
                             'return_pct': stock_return,
@@ -630,7 +632,8 @@ class PortfolioBacktestService:
                         'total_return_pct': portfolio_return
                     },
                     'portfolio_composition': [
-                        {'symbol': symbol, 'weight': result['weight'], 'amount': result['amount']}
+                        {'symbol': result['original_symbol'] if 'original_symbol' in result else result['symbol'], 
+                         'weight': result['weight'], 'amount': result['amount']}
                         for symbol, result in portfolio_results.items()
                     ],
                     'strategy_details': {

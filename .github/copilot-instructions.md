@@ -57,6 +57,9 @@ docker-compose exec backend pytest tests/ -v
 - **Pydantic V2 완전 마이그레이션**: 모든 deprecated 경고 제거
 - **Tailwind CSS 마이그레이션**: React Bootstrap에서 Tailwind CSS로 완전 전환
 - **React Icons 도입**: 이모지 대신 react-icons 라이브러리로 전문적 UI 구현
+- **테이블 레이아웃 최적화**: 포트폴리오 테이블의 열 너비 고정으로 UI 겹침 문제 해결
+- **종목 선택 UI 개선**: 드롭다운과 직접 입력을 분리한 직관적인 인터페이스
+- **백테스트 결과 오류 수정**: 포트폴리오 구성에서 올바른 심볼 표시 (AAPL_0 → AAPL)
 - **Jenkins 배포 디버깅**: 환경변수 확인 및 브랜치 조건 개선으로 배포 문제 해결
 - **네이버 뉴스 API**: 70+ 종목 지원, 날짜별 필터링, 자동 콘텐츠 정제
 - **완전 오프라인 모킹 시스템**: CI/CD 안정성 극대화
@@ -165,4 +168,4 @@ docker-compose exec backend pytest tests/ -v
 - **테스트 분리**: 프론트엔드 `npm test`, 백엔드 `pytest` 각각 별도 스테이지
 - **배포**: scp 파일 복사 + 직접 실행 방식으로 안정성 확보
 
-로그만 입력하면 로그를 바탕으로 문제점이나 개선점을 찾아 분석하고 해결방안을 제시합니다.
+- 항상 코드를 스캔하기 전에 마크다운 문서들을 정독해.

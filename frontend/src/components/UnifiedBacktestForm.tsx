@@ -267,41 +267,41 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
             <div className="mb-8">
               <h5 className="text-lg font-semibold mb-4">포트폴리오 구성</h5>
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                <table className="min-w-full table-fixed divide-y divide-gray-200 border border-gray-200 rounded-lg">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">종목/자산</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">투자 금액 ($)</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">투자 방식</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">자산 타입</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">비중 (%)</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
+                      <th className="w-64 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">종목/자산</th>
+                      <th className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">투자 금액 ($)</th>
+                      <th className="w-28 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">투자 방식</th>
+                      <th className="w-24 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">자산 타입</th>
+                      <th className="w-24 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">비중 (%)</th>
+                      <th className="w-20 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {portfolio.map((stock, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="space-y-2">
+                        <td className="w-64 px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-2 max-w-full overflow-hidden">
                             <select
-                              value={stock.symbol || 'CUSTOM'}
+                              value={stock.symbol === '' ? 'CUSTOM' : stock.symbol}
                               onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                                const selectedValue = e.target.value;
-                                if (selectedValue === 'CUSTOM') {
+                                if (e.target.value === 'CUSTOM') {
                                   updateStock(index, 'symbol', '');
                                 } else {
-                                  updateStock(index, 'symbol', selectedValue);
+                                  updateStock(index, 'symbol', e.target.value);
                                 }
                               }}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
-                              {PREDEFINED_STOCKS.map(option => (
+                              <option value="CUSTOM">직접 입력</option>
+                              {PREDEFINED_STOCKS.slice(1).map(option => (
                                 <option key={option.value} value={option.value}>
                                   {option.label}
                                 </option>
                               ))}
                             </select>
-                            {(stock.symbol === '' || !PREDEFINED_STOCKS.find(opt => opt.value === stock.symbol)) && (
+                            {(stock.symbol === '' || !PREDEFINED_STOCKS.some(opt => opt.value === stock.symbol)) && (
                               <input
                                 type="text"
                                 value={stock.symbol}
@@ -313,7 +313,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="w-32 px-6 py-4 whitespace-nowrap">
                           <input
                             type="number"
                             value={stock.amount}
@@ -323,7 +323,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="w-28 px-6 py-4 whitespace-nowrap">
                           <div className="space-y-2">
                             <select
                               value={stock.investmentType}
@@ -351,7 +351,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                             </p>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="w-24 px-6 py-4 whitespace-nowrap">
                           <select
                             value={stock.assetType || ASSET_TYPES.STOCK}
                             onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'assetType', e.target.value)}
@@ -361,10 +361,10 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                             <option value={ASSET_TYPES.CASH}>현금</option>
                           </select>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="w-24 px-6 py-4 whitespace-nowrap text-sm">
                           {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="w-20 px-6 py-4 whitespace-nowrap">
                           <button
                             type="button"
                             onClick={() => removeStock(index)}
