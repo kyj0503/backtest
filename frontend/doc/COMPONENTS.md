@@ -10,25 +10,70 @@ App.tsx (최상위 애플리케이션)
 ├── ErrorBoundary.tsx (전역 에러 처리)
 ├── ServerStatus.tsx (서버 연결 상태)
 └── main content
-    ├── UnifiedBacktestForm.tsx (백테스트 입력 폼)
-    └── UnifiedBacktestResults.tsx (결과 표시)
+    ├── UnifiedBacktestForm.tsx (백테스트 입력 폼) - 515줄 → 166줄
+    └── UnifiedBacktestResults.tsx (결과 표시) - 546줄 → 48줄
 ```
 
-### 폼 컴포넌트 구조
+### 폼 컴포넌트 구조 (리팩토링 완료 - 2024-12-19)
 ```
-UnifiedBacktestForm.tsx
-├── Portfolio Input Section
+UnifiedBacktestForm.tsx (166줄, 68% 감소)
+├── PortfolioForm.tsx (145줄)
 │   ├── Stock Input Fields
 │   ├── Asset Type Selection (stock/cash)
 │   └── Investment Type Selection (lump_sum/dca)
-├── Date Range Section
-├── Strategy Selection Section
-└── Validation & Submission
+├── DateRangeForm.tsx (30줄)
+├── StrategyForm.tsx (65줄)
+│   ├── Strategy Selection
+│   └── Parameter Configuration
+├── CommissionForm.tsx (45줄)
+│   ├── Commission Settings
+│   └── Rebalancing Options
+└── State Management (useReducer + 5 Custom Hooks)
+    ├── useBacktestForm (154줄)
+    ├── usePortfolio (101줄)
+    ├── useFormValidation (89줄)
+    ├── useStrategyParams (118줄)
+    └── BacktestContext (138줄)
 ```
 
-### 결과 표시 컴포넌트 구조
+### 결과 표시 컴포넌트 구조 (리팩토링 완료 - 2024-12-19)
 ```
-UnifiedBacktestResults.tsx
+UnifiedBacktestResults.tsx (48줄, 91% 감소)
+├── results/
+│   ├── ResultsHeader.tsx (41줄)
+│   │   ├── Portfolio/Single Stock Title
+│   │   └── Summary Information
+│   ├── ChartsSection.tsx (381줄)
+│   │   ├── Portfolio Charts (StatsSummary, EquityChart, StockPriceChart)
+│   │   ├── Performance Metrics
+│   │   ├── Asset Curve Chart
+│   │   ├── Daily Returns Chart
+│   │   └── Single Stock Charts (OHLCChart, TradesChart)
+│   └── AdditionalFeatures.tsx (69줄)
+│       ├── ExchangeRateChart
+│       └── StockVolatilityNews
+└── Conditional Rendering (Portfolio vs Single Stock)
+```
+
+### 변동성 뉴스 컴포넌트 구조 (리팩토링 완료 - 2024-12-19)
+```
+StockVolatilityNews.tsx (199줄, 60% 감소)
+├── volatility/
+│   ├── VolatilityTable.tsx (73줄)
+│   │   ├── Event Date Display
+│   │   ├── Return Percentage
+│   │   ├── Price & Volume Info
+│   │   └── News Button
+│   └── NewsModal.tsx (107줄)
+│       ├── Modal Header with Stock Info
+│       ├── News Loading State
+│       ├── News Items Display
+│       └── External Link Navigation
+└── State Management
+    ├── Volatility Data Fetching
+    ├── Stock Selection Logic
+    └── News Modal Control
+```
 ├── StatsSummary.tsx (성과 요약)
 ├── Chart Components
 │   ├── EquityChart.tsx (수익률 곡선)

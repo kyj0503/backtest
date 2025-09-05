@@ -162,21 +162,21 @@ docker-compose exec backend pytest tests/ -v
 #### 4.1. 컴포넌트 분리 (Component Separation) ✅ 완료
 **목표**: God Component 해결 및 단일 책임 원칙 적용
 
-- [x] **UnifiedBacktestForm.tsx (515줄 → 약 300줄) 분리 완료**
+- [x] **UnifiedBacktestForm.tsx (515줄 → 166줄) 분리 완료**
   - [x] PortfolioForm: 포트폴리오 입력 테이블 분리 (145줄)
   - [x] StrategyForm: 전략 선택 및 파라미터 설정 분리 (65줄)  
   - [x] DateRangeForm: 날짜 범위 선택 분리 (30줄)
   - [x] CommissionForm: 수수료 및 리밸런싱 설정 분리 (45줄)
 
-- [ ] **UnifiedBacktestResults.tsx (546줄) 분리**
-  - [ ] ResultsHeader: 백테스트 결과 헤더 및 요약 정보 분리
-  - [ ] ChartsSection: 차트 영역 분리 (포트폴리오/단일 종목 조건부 렌더링)
-  - [ ] AdditionalFeatures: 추가 기능 (뉴스, 환율 등) 분리
+- [x] **UnifiedBacktestResults.tsx (546줄 → 48줄) 분리 완료**
+  - [x] ResultsHeader: 백테스트 결과 헤더 및 요약 정보 분리 (41줄)
+  - [x] ChartsSection: 차트 영역 분리 (포트폴리오/단일 종목 조건부 렌더링) (381줄)
+  - [x] AdditionalFeatures: 추가 기능 (뉴스, 환율 등) 분리 (69줄)
 
-- [ ] **StockVolatilityNews.tsx (495줄) 분리**
-  - [ ] VolatilityChart: 변동성 차트 컴포넌트 분리
-  - [ ] NewsModal: 뉴스 모달 컴포넌트 분리
-  - [ ] VolatilityTable: 변동성 테이블 컴포넌트 분리
+- [x] **StockVolatilityNews.tsx (495줄 → 199줄) 분리 완료**
+  - [x] VolatilityChart: 변동성 차트 컴포넌트 분리 → VolatilityTable로 구현 (73줄)
+  - [x] NewsModal: 뉴스 모달 컴포넌트 분리 (107줄)
+  - [x] VolatilityTable: 변동성 테이블 컴포넌트 분리 (73줄)
 
 #### 4.2. 상태 관리 개선 (State Management) ✅ 완료
 **목표**: 복잡한 폼 상태 최적화 및 서버 상태 분리
@@ -277,14 +277,17 @@ docker-compose exec backend pytest tests/ -v
 #### 리팩터링 우선순위 (업데이트: 2024-12-19)
 1. **✅ UnifiedBacktestForm 컴포넌트 분리 완료** (가장 복잡한 상태 관리)
    - PortfolioForm, StrategyForm, DateRangeForm, CommissionForm으로 분리
-   - 515줄에서 약 166줄로 축소 (68% 감소), 각 컴포넌트는 단일 책임 원칙 준수
+   - 515줄에서 166줄로 축소 (68% 감소), 각 컴포넌트는 단일 책임 원칙 준수
    - TypeScript 타입 안정성 확보 및 props 인터페이스 정의
 2. **✅ 상태 관리 개선 완료** (복잡한 상태 로직 분리)
    - useReducer 기반 통합 상태 관리 시스템 구축
    - 5개 전문화된 커스텀 훅 (useBacktestForm, usePortfolio, useFormValidation, useStrategyParams, BacktestContext)
    - 타입 안전성과 재사용성을 고려한 아키텍처 설계
-3. **공통 컴포넌트 라이브러리 구축** (재사용성 확보)
-4. **큰 컴포넌트들 분리** (가독성 및 유지보수성)
+3. **✅ 4.1 컴포넌트 분리 완료** (God Component 해결)
+   - UnifiedBacktestResults: 546줄 → 48줄 (91% 감소)
+   - StockVolatilityNews: 495줄 → 199줄 (60% 감소)
+   - 총 7개의 새로운 전문화된 컴포넌트 생성
+4. **공통 컴포넌트 라이브러리 구축** (재사용성 확보)
 5. **성능 최적화** (사용자 경험 개선)
 6. **테스트 코드 보강** (안정성 확보)
 
