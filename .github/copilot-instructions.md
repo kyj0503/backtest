@@ -280,7 +280,7 @@ docker-compose exec backend pytest tests/ -v
   - [ ] 백테스트 플로우 전체 테스트
   - [ ] API 모킹 테스트
 
-#### 리팩터링 우선순위 (업데이트: 2024-12-19)
+#### 리팩터링 우선순위 (업데이트: 2024-12-20)
 1. **✅ UnifiedBacktestForm 컴포넌트 분리 완료** (가장 복잡한 상태 관리)
    - PortfolioForm, StrategyForm, DateRangeForm, CommissionForm으로 분리
    - 515줄에서 166줄로 축소 (68% 감소), 각 컴포넌트는 단일 책임 원칙 준수
@@ -291,11 +291,19 @@ docker-compose exec backend pytest tests/ -v
    - 타입 안전성과 재사용성을 고려한 아키텍처 설계
 3. **✅ 4.1 컴포넌트 분리 완료** (God Component 해결)
    - UnifiedBacktestResults: 546줄 → 48줄 (91% 감소)
-   - StockVolatilityNews: 495줄 → 199줄 (60% 감소)
+   - StockVolatilityNews: 495줄 → 133줄 (73% 감소)
    - 총 7개의 새로운 전문화된 컴포넌트 생성
-4. **공통 컴포넌트 라이브러리 구축** (재사용성 확보)
-5. **성능 최적화** (사용자 경험 개선)
-6. **테스트 코드 보강** (안정성 확보)
+4. **✅ 4.2 상태 관리 개선 완료** (새 분리 컴포넌트 최적화)
+   - useStockData, useVolatilityNews, useModal 훅 구현 (총 283줄)
+   - 유틸리티 함수 분리: numberUtils.ts, dateUtils.ts
+   - ChartsSection, StockVolatilityNews 컴포넌트에 훅 적용
+5. **✅ 4.3 커스텀 훅 추출 완료** (로직과 뷰 분리)
+   - useExchangeRate, useFormInput, useDropdown, useTooltip 훅 구현 (총 341줄)
+   - ExchangeRateChart 컴포넌트 리팩터링으로 훅 적용 검증
+   - 재사용 가능한 UI 상태 관리 시스템 구축
+6. **공통 컴포넌트 라이브러리 구축** (재사용성 확보)
+7. **성능 최적화** (사용자 경험 개선)
+8. **테스트 코드 보강** (안정성 확보)
 
 ## 참고 명령어
 

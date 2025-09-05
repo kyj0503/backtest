@@ -314,11 +314,165 @@ export const useStrategyParams = (): UseStrategyParamsReturn => {
 };
 ```
 
-### 3. Context API 활용
+### 4. 4.3 리팩터링으로 추가된 커스텀 훅들
 
-#### BacktestContext (전역 상태 관리)
+#### 4.1. useExchangeRate (환율 데이터 페칭)
 ```typescript
-// contexts/BacktestContext.tsx
+// hooks/useExchangeRate.ts
+export const useExchangeRate = ({ 
+  startDate, 
+  endDate, 
+  enabled = true 
+}: UseExchangeRateParams): UseExchangeRateReturn => {
+  // USD/KRW 환율 데이터 페칭
+  // 자동 재시도 및 에러 처리
+  // 데이터 캐싱
+}
+
+// 사용법
+const { exchangeData, loading, error, refetch } = useExchangeRate({
+  startDate: '2023-01-01',
+  endDate: '2023-12-31'
+});
+```
+
+#### 4.2. useFormInput (범용 폼 입력 관리)
+```typescript
+// hooks/useFormInput.ts
+export const useFormInput = ({
+  initialValue = '',
+  validate,
+  transform
+}: UseFormInputOptions = {}): UseFormInputReturn => {
+  // 값 관리, 검증, 에러 처리 통합
+  // 터치 상태 기반 검증
+  // 변환 함수 지원
+}
+
+// 사용법
+const symbolInput = useFormInput({
+  initialValue: '',
+  validate: (value) => value.trim() ? null : '종목 심볼을 입력해주세요',
+  transform: (value) => value.toUpperCase()
+});
+
+const amountInput = useFormInput({
+  initialValue: 10000,
+  validate: (value) => Number(value) >= 100 ? null : '최소 $100 이상 입력해주세요',
+  transform: (value) => Number(value)
+});
+```
+
+#### 4.3. useDropdown (드롭다운 상태 관리)
+```typescript
+// hooks/useDropdown.ts
+export const useDropdown = ({
+  initialOpen = false,
+  closeOnOutsideClick = true
+}: UseDropdownOptions = {}): UseDropdownReturn => {
+  // 열기/닫기 상태 관리
+  // 외부 클릭 감지
+  // 키보드 이벤트 처리 (ESC)
+  // 포커스 관리
+}
+
+// 사용법
+const strategyDropdown = useDropdown({
+  closeOnOutsideClick: true
+});
+
+<div>
+  <button 
+    ref={strategyDropdown.triggerRef}
+    onClick={strategyDropdown.toggle}
+  >
+    전략 선택 {strategyDropdown.isOpen ? '▲' : '▼'}
+  </button>
+  
+  {strategyDropdown.isOpen && (
+    <div ref={strategyDropdown.dropdownRef}>
+      {/* 드롭다운 옵션들 */}
+    </div>
+  )}
+</div>
+```
+
+#### 4.4. useTooltip (툴팁 상태 관리)
+```typescript
+// hooks/useTooltip.ts
+export const useTooltip = ({
+  delay = 300,
+  offset = 8,
+  placement = 'auto'
+}: UseTooltipOptions = {}): UseTooltipReturn => {
+  // 마우스 호버 감지
+  // 자동 포지셔닝
+  // 지연 표시 기능
+  // 화면 경계 고려
+}
+
+// 사용법
+const helpTooltip = useTooltip({
+  delay: 500,
+  placement: 'top'
+});
+
+<div>
+  <span 
+    ref={helpTooltip.targetRef}
+    onMouseEnter={helpTooltip.show}
+    onMouseLeave={helpTooltip.hide}
+  >
+    도움말 ❓
+  </span>
+  
+  {helpTooltip.isVisible && (
+    <div 
+      ref={helpTooltip.tooltipRef}
+      style={{
+        position: 'fixed',
+        left: helpTooltip.position.x,
+        top: helpTooltip.position.y,
+        zIndex: 1000
+      }}
+    >
+      이것은 도움말입니다.
+    </div>
+  )}
+</div>
+```
+
+### 5. 적용된 컴포넌트 리팩터링
+
+#### 5.1. ExchangeRateChart 리팩터링
+```typescript
+// Before (174줄)
+const ExchangeRateChart = ({ startDate, endDate, className }) => {
+  const [exchangeData, setExchangeData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      // 복잡한 API 호출 로직...
+    };
+    fetchExchangeRate();
+  }, [startDate, endDate]);
+
+  // 복잡한 렌더링 로직...
+};
+
+// After (훅 사용으로 80% 간소화)
+const ExchangeRateChart = ({ startDate, endDate, className }) => {
+  const { exchangeData, loading, error } = useExchangeRate({ startDate, endDate });
+
+  // 포맷팅 함수들...
+  // 깔끔한 렌더링 로직...
+};
+```
+
+### 3. Context API 활용
+#### 3.1. BacktestContext (전역 상태 관리)
 export const BacktestProvider: React.FC<BacktestProviderProps> = ({ 
   children, 
   initialState 

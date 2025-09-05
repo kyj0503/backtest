@@ -1,12 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { backtestApiService } from "../services/api";
-
-interface ExchangeRateData {
-  date: string;
-  rate: number;
-  volume?: number;
-}
+import { useExchangeRate } from "../hooks/useExchangeRate";
 
 interface ExchangeRateChartProps {
   startDate: string;
@@ -19,34 +13,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
   endDate, 
   className = "" 
 }) => {
-  const [exchangeData, setExchangeData] = useState<ExchangeRateData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchExchangeRate = async () => {
-      if (!startDate || !endDate) return;
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const response = await backtestApiService.getExchangeRate(startDate, endDate);
-        if (response.status === 'success' && response.data.exchange_rates) {
-          setExchangeData(response.data.exchange_rates);
-        } else {
-          setError(response.message || '환율 데이터를 가져올 수 없습니다.');
-        }
-      } catch (error) {
-        console.error('환율 데이터 조회 실패:', error);
-        setError('환율 데이터 조회에 실패했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchExchangeRate();
-  }, [startDate, endDate]);
+  const { exchangeData, loading, error } = useExchangeRate({ startDate, endDate });
 
   // 날짜 포맷팅 함수
   const formatDate = (dateString: string) => {
@@ -101,8 +68,8 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
     );
   }
 
-  const minRate = Math.min(...exchangeData.map(d => d.rate));
-  const maxRate = Math.max(...exchangeData.map(d => d.rate));
+  const minRate = Math.min(...exchangeData.map((d) => d.rate));
+  const maxRate = Math.max(...exchangeData.map((d) => d.rate));
   const rateChange = ((exchangeData[exchangeData.length - 1]?.rate - exchangeData[0]?.rate) / exchangeData[0]?.rate * 100);
 
   return (
