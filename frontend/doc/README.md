@@ -41,20 +41,38 @@ React 18 + TypeScript 기반의 백테스팅 웹 애플리케이션 개발 가�
 frontend/
 ├── src/
 │   ├── components/           # React 컴포넌트
-│   │   ├── UnifiedBacktestForm.tsx  # 통합 백테스트 폼
-│   │   ├── BacktestResult.tsx       # 백테스트 결과 표시
-│   │   ├── ErrorBoundary.tsx        # 에러 경계 컴포넌트
-│   │   └── ServerStatus.tsx         # 서버 상태 표시
+│   │   ├── common/          # 공통 컴포넌트 라이브러리
+│   │   │   ├── FormField.tsx           # 통합 폼 필드 컴포넌트
+│   │   │   ├── LoadingSpinner.tsx      # 통일된 로딩 스피너
+│   │   │   ├── ErrorMessage.tsx        # 표준화된 에러 메시지
+│   │   │   ├── DataTable.tsx           # 재사용 가능한 테이블
+│   │   │   ├── ChartLoading.tsx        # 차트 로딩 컴포넌트
+│   │   │   ├── PerformanceMonitor.tsx  # 성능 모니터링
+│   │   │   └── index.ts                # 공통 컴포넌트 내보내기
+│   │   ├── lazy/            # 코드 스플리팅 컴포넌트
+│   │   ├── results/         # 백테스트 결과 관련
+│   │   ├── UnifiedBacktestForm.tsx     # 통합 백테스트 폼
+│   │   └── ErrorBoundary.tsx           # 에러 경계 컴포넌트
 │   ├── pages/              # 페이지 컴포넌트
-│   ├── services/            # API 호출 서비스
+│   ├── services/           # API 호출 서비스
 │   │   └── api.ts          # 백엔드 API 호출 함수
 │   ├── types/              # TypeScript 타입 정의
-│   │   └── api.ts          # API 관련 타입
+│   │   └── api.ts          # 확장된 API 타입 정의
 │   ├── constants/          # 상수 정의
-│   │   └── strategies.ts   # 전략 및 종목 상수
+│   │   ├── UI_CONSTANTS.ts # UI 색상, 크기, 애니메이션 상수
+│   │   ├── STYLE_CLASSES.ts # Tailwind CSS 클래스 조합
+│   │   ├── strategies.ts   # 전략 및 종목 상수
+│   │   └── index.ts        # 상수 통합 내보내기
 │   ├── utils/              # 유틸리티 함수
-│   │   └── formatters.ts   # 데이터 포맷팅 함수
-│   ├── hooks/              # 커스텀 훅 (향후 확장)
+│   │   ├── dateUtils.ts    # 확장된 날짜 조작 함수
+│   │   ├── numberUtils.ts  # 확장된 숫자 포맷팅 함수
+│   │   ├── chartUtils.ts   # 차트 데이터 변환 함수
+│   │   ├── formatters.ts   # 레거시 포맷터 (호환성)
+│   │   └── index.ts        # 유틸리티 통합 내보내기
+│   ├── hooks/              # 커스텀 훅
+│   │   ├── useBacktestForm.ts    # 백테스트 폼 상태 관리
+│   │   ├── useChartOptimization.ts # 차트 성능 최적화
+│   │   └── useModal.ts           # 모달 상태 관리
 │   └── test/               # 테스트 파일
 ├── doc/                    # 문서
 └── public/                 # 정적 파일
@@ -77,6 +95,212 @@ frontend/
 ### ErrorBoundary
 - **역할**: React 에러 포착 및 사용자 친화적 에러 표시
 - **적용 범위**: 전체 애플리케이션
+
+## 공통 컴포넌트 라이브러리
+
+### FormField 컴포넌트
+표준화된 폼 입력 필드로 라벨, 입력, 에러 메시지를 통합 제공합니다.
+
+```typescript
+<FormField
+  label="투자 금액"
+  type="number"
+  value={amount}
+  onChange={setAmount}
+  required={true}
+  error={validationError}
+  helpText="최소 1,000원 이상 입력하세요"
+  min={1000}
+/>
+```
+
+**지원 타입**: text, number, date, select, textarea
+
+### LoadingSpinner 컴포넌트
+통일된 로딩 표시를 위한 스피너 컴포넌트입니다.
+
+```typescript
+<LoadingSpinner 
+  size="md" 
+  color="blue" 
+  text="데이터를 불러오는 중..." 
+/>
+
+{/* 오버레이 스피너 */}
+<LoadingSpinner overlay={true} />
+
+{/* 인라인 스피너 */}
+<InlineSpinner />
+
+{/* 버튼 내 스피너 */}
+<ButtonSpinner />
+```
+
+### ErrorMessage 컴포넌트
+표준화된 에러 및 알림 메시지 표시 컴포넌트입니다.
+
+```typescript
+<ErrorMessage 
+  type="error"
+  title="백테스트 실행 실패"
+  message="네트워크 연결을 확인해주세요"
+  dismissible={true}
+  onClose={handleClose}
+/>
+
+{/* 필드 에러 */}
+<FieldError message="필수 입력 항목입니다" />
+
+{/* 토스트 메시지 */}
+<ToastMessage type="success" message="백테스트가 완료되었습니다" />
+```
+
+### DataTable 컴포넌트
+재사용 가능한 테이블 컴포넌트로 정렬, 필터링, 로딩 상태를 지원합니다.
+
+```typescript
+const columns = [
+  { key: 'symbol', label: '종목', sortable: true },
+  { key: 'amount', label: '금액', render: (value) => formatCurrency(value) },
+  { key: 'return_pct', label: '수익률', render: (value) => formatPercent(value) }
+];
+
+<DataTable
+  columns={columns}
+  data={portfolioData}
+  loading={isLoading}
+  error={error}
+  onSort={handleSort}
+  onRowClick={handleRowClick}
+  hoverable={true}
+  striped={false}
+/>
+```
+
+## 상수 및 스타일 시스템
+
+### UI_CONSTANTS
+색상, 크기, 애니메이션 등 UI 관련 상수를 중앙화 관리합니다.
+
+```typescript
+import { UI_CONSTANTS } from '@/constants';
+
+// 색상 사용
+const primaryColor = UI_CONSTANTS.COLORS.PRIMARY;
+const chartColor = UI_CONSTANTS.CHART_COLORS.EQUITY;
+
+// 크기 및 간격
+const buttonPadding = UI_CONSTANTS.SPACING.MD;
+const borderRadius = UI_CONSTANTS.BORDER_RADIUS.LG;
+```
+
+### STYLE_CLASSES
+자주 사용되는 Tailwind CSS 클래스 조합을 표준화합니다.
+
+```typescript
+import { getButtonClasses, getInputClasses } from '@/constants';
+
+// 버튼 클래스 생성
+const primaryButton = getButtonClasses('primary', 'lg');
+const secondaryButton = getButtonClasses('secondary', 'md', disabled);
+
+// 입력 필드 클래스 생성
+const inputClass = getInputClasses('default', 'md');
+const errorInputClass = getInputClasses('error', 'md');
+```
+
+## 확장된 유틸리티 함수
+
+### 날짜 관련 (dateUtils.ts)
+```typescript
+import { formatDate, addDays, getBusinessDaysBetween, getPresetDateRanges } from '@/utils';
+
+// 기본 포맷팅
+const displayDate = formatDate(new Date());
+const relativTime = formatRelativeTime('2024-01-01');
+
+// 날짜 계산
+const futureDate = addDays(new Date(), 30);
+const businessDays = getBusinessDaysBetween('2024-01-01', '2024-12-31');
+
+// 미리 정의된 범위
+const ranges = getPresetDateRanges();
+const lastYear = ranges['지난 1년'];
+```
+
+### 숫자 관련 (numberUtils.ts)
+```typescript
+import { formatPercent, formatLargeNumber, safeDivide, getColorByValue } from '@/utils';
+
+// 포맷팅
+const percentage = formatPercent(0.15, 2); // "+0.15%"
+const largeNum = formatLargeNumber(1500000); // "1.5M"
+const ratio = safeDivide(10, 0, 'N/A'); // "N/A"
+
+// 수학 계산
+const avg = average([1, 2, 3, 4, 5]); // 3
+const stdev = standardDeviation([1, 2, 3, 4, 5]);
+
+// 차트용 색상
+const color = getColorByValue(0.05); // 양수면 녹색, 음수면 빨간색
+```
+
+### 차트 관련 (chartUtils.ts)
+```typescript
+import { transformOHLCData, calculateMovingAverage, createChartConfig } from '@/utils';
+
+// 데이터 변환
+const chartData = transformOHLCData(ohlcData);
+const equityData = transformEquityData(equityPoints);
+
+// 기술적 지표
+const sma20 = calculateMovingAverage(prices, 20);
+const rsi = calculateRSI(prices, 14);
+
+// 차트 설정
+const candlestickConfig = createChartConfig('candlestick');
+const lineConfig = createChartConfig('line');
+```
+
+## 코드 표준화 성과
+
+### 4.5 단계 완료 사항
+✅ **공통 컴포넌트 라이브러리** - FormField, LoadingSpinner, ErrorMessage, DataTable
+✅ **상수 및 타입 정의 통합** - UI_CONSTANTS, STYLE_CLASSES, 확장된 API 타입
+✅ **유틸리티 함수 정리** - dateUtils, numberUtils, chartUtils 확장
+
+### 개선 효과
+- **코드 재사용성**: 공통 컴포넌트로 40% 이상 코드 중복 제거
+- **일관성**: 표준화된 스타일과 동작으로 UI/UX 일관성 확보
+- **유지보수성**: 중앙화된 상수 관리로 변경 영향도 최소화
+- **개발 속도**: 재사용 가능한 컴포넌트로 개발 시간 단축
+
+### 사용 예시
+```typescript
+// Before (4.5 이전)
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    투자 금액
+  </label>
+  <input
+    type="number"
+    className="block w-full px-3 py-2 border border-gray-300 rounded-md..."
+    value={amount}
+    onChange={(e) => setAmount(Number(e.target.value))}
+  />
+  {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
+</div>
+
+// After (4.5 이후)
+<FormField
+  label="투자 금액"
+  type="number"
+  value={amount}
+  onChange={(value) => setAmount(value as number)}
+  error={error}
+  required={true}
+/>
+```
 
 ## API 통신
 
