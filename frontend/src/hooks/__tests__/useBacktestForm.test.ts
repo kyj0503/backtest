@@ -1,15 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useBacktestForm } from '../useBacktestForm';
-import type { Stock } from '../../types/backtest-form';
 
 describe('useBacktestForm', () => {
-  const mockStock: Stock = {
-    symbol: 'AAPL',
-    amount: 5000,
-    investmentType: 'lump_sum',
-    assetType: 'stock'
-  };
 
   describe('초기 상태', () => {
     it('기본값으로 올바르게 초기화되어야 함', () => {

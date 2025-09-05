@@ -62,7 +62,7 @@ const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
 
   return (
     <div className="mb-8">
-      <h4 className="text-xl font-semibold mb-6">📈 백테스트 성과</h4>
+      <h4 className="text-xl font-semibold mb-6">백테스트 성과</h4>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {statItems.map((item, index) => (
           <div

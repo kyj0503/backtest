@@ -11,9 +11,8 @@ const BacktestPage: React.FC = () => {
       <div className="container mx-auto px-4 max-w-6xl">
         {/* 페이지 헤더 */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-blue-600 mb-4 flex items-center justify-center gap-2">
-            <span className="text-2xl">📊</span>
-            <span>백테스트 실행</span>
+          <h2 className="text-3xl font-bold text-blue-600 mb-4">
+            백테스트 실행
           </h2>
           <p className="text-gray-600">
             투자 전략을 설정하고 백테스트를 실행해보세요
@@ -87,7 +86,9 @@ const BacktestPage: React.FC = () => {
         {/* 초기 상태 안내 */}
         {!results && !loading && !error && (
           <div className="text-center py-16">
-            <div className="text-6xl mb-6">🎯</div>
+            <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-blue-100 rounded-full">
+              <span className="text-blue-600 text-2xl font-bold">!</span>
+            </div>
             <h4 className="text-xl font-semibold mb-4">백테스트 설정을 완료하고 실행 버튼을 눌러주세요</h4>
             <p className="text-gray-600">
               포트폴리오 구성, 투자 전략, 백테스트 기간을 설정한 후<br />

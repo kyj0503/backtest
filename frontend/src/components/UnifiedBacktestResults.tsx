@@ -10,7 +10,9 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
     return (
       <div className="max-w-6xl mx-auto">
         <div className="text-center py-16">
-          <div className="text-6xl mb-6">⚠️</div>
+          <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-yellow-100 rounded-full">
+            <span className="text-yellow-600 text-2xl font-bold">!</span>
+          </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">데이터가 없습니다</h3>
           <p className="text-gray-600">백테스트를 실행해 주세요.</p>
         </div>
@@ -23,7 +25,9 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
     return (
       <div className="max-w-6xl mx-auto">
         <div className="text-center py-16">
-          <div className="text-6xl mb-6">⚠️</div>
+          <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-yellow-100 rounded-full">
+            <span className="text-yellow-600 text-2xl font-bold">!</span>
+          </div>
           <h3 className="text-xl font-semibold text-gray-900 mb-2">포트폴리오 데이터가 없습니다</h3>
           <p className="text-gray-600">유효한 포트폴리오를 구성해 주세요.</p>
         </div>

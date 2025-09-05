@@ -151,7 +151,7 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                     포트폴리오 백테스트 실행 중...
                   </span>
                 ) : (
-                  '📈 포트폴리오 백테스트 실행'
+                  '포트폴리오 백테스트 실행'
                 )}
               </button>
             </div>

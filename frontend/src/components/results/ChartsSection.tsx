@@ -82,7 +82,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         {/* 포트폴리오 백테스트 결과 차트 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h5 className="text-lg font-semibold">📈 백테스트 수익률 곡선</h5>
+            <h5 className="text-lg font-semibold">백테스트 수익률 곡선</h5>
           </div>
           <div className="p-6">
             <Suspense fallback={<ChartLoading height={400} />}>
@@ -300,7 +300,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         {/* 백테스트 결과 차트 (단일 종목) */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h5 className="text-lg font-semibold">📈 백테스트 결과</h5>
+            <h5 className="text-lg font-semibold">백테스트 결과</h5>
           </div>
           <div className="p-6">
             <Suspense fallback={<ChartLoading height={400} />}>
@@ -315,7 +315,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h5 className="text-lg font-semibold">📊 수익률 곡선</h5>
+            <h5 className="text-lg font-semibold">수익률 곡선</h5>
           </div>
           <div className="p-6">
             <Suspense fallback={<ChartLoading height={400} />}>
@@ -328,7 +328,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         {chartData.ticker && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h5 className="text-lg font-semibold">📊 개별 주가 변동</h5>
+              <h5 className="text-lg font-semibold">개별 주가 변동</h5>
             </div>
             <div className="p-6">
               <Suspense fallback={<ChartLoading height={400} />}>

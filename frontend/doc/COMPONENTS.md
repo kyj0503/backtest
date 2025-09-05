@@ -10,6 +10,31 @@ App.tsx (최상위 애플리케이션)
 ├── ErrorBoundary.tsx (전역 에러 처리)
 ├── ServerStatus.tsx (서버 연결 상태)
 └── main content
+    ├── UnifiedBacktestForm.tsx (백테스트 입력 폼) - 515줄 → 165줄
+    └── UnifiedBacktestResults.tsx (결과 표시) - 546줄 → 48줄
+```
+
+### 폼 컴포넌트 구조 (리팩토링 완료 - 2024년)
+```
+UnifiedBacktestForm.tsx (165줄, 68% 감소)
+├── PortfolioForm.tsx (145줄)
+│   ├── Stock Input Fields
+│   ├── Asset Type Selection (stock/cash)
+│   └── Investment Type Selection (lump_sum/dca)
+├── DateRangeForm.tsx (30줄)
+├── StrategyForm.tsx (65줄)
+│   ├── Strategy Selection
+│   └── Parameter Configuration
+├── CommissionForm.tsx (45줄)
+│   ├── Commission Settings
+│   └── Rebalancing Options
+└── State Management (useReducer + 14 Custom Hooks)
+```
+```
+App.tsx (최상위 애플리케이션)
+├── ErrorBoundary.tsx (전역 에러 처리)
+├── ServerStatus.tsx (서버 연결 상태)
+└── main content
     ├── UnifiedBacktestForm.tsx (백테스트 입력 폼) - 515줄 → 166줄
     └── UnifiedBacktestResults.tsx (결과 표시) - 546줄 → 48줄
 ```

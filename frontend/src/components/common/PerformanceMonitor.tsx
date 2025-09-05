@@ -22,7 +22,7 @@ export const withPerformanceMonitor = <P extends object>(
         const renderEndTime = performance.now();
         const renderDuration = renderEndTime - (renderStartTime.current || renderEndTime);
         
-        console.log(`🔍 [Performance] ${componentName}:`, {
+        console.log(`[Performance] ${componentName}:`, {
           renderCount: renderCount.current,
           renderDuration: `${renderDuration.toFixed(2)}ms`,
           timestamp: new Date().toISOString()
@@ -52,7 +52,7 @@ const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
     const observer = new PerformanceObserver((list) => {
       list.getEntries().forEach((entry) => {
         if (entry.entryType === 'measure' && entry.name.includes(componentName)) {
-          console.log(`📊 [Performance Measure] ${entry.name}:`, {
+          console.log(`[Performance Measure] ${entry.name}:`, {
             duration: `${entry.duration.toFixed(2)}ms`,
             startTime: entry.startTime
           });
@@ -121,7 +121,7 @@ export const useRenderPerformance = (componentName: string) => {
         );
       }
       
-      console.log(`⏱️ [Render Performance] ${componentName}:`, {
+      console.log(`[Render Performance] ${componentName}:`, {
         renderCount: renderCount.current,
         renderDuration: `${renderDuration.toFixed(2)}ms`,
         timestamp: new Date().toISOString()

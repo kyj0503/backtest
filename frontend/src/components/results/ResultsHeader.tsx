@@ -16,7 +16,7 @@ const ResultsHeader: React.FC<ResultsHeaderProps> = ({ data, isPortfolio }) => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-2xl font-bold text-blue-600 mb-2">
-          {isMultipleStocks ? '📈 포트폴리오 백테스트 결과' : '📊 단일 종목 백테스트 결과'}
+          {isMultipleStocks ? '포트폴리오 백테스트 결과' : '단일 종목 백테스트 결과'}
         </h2>
         <p className="text-gray-600">
           {portfolio_composition.map((item: Stock) => item.symbol).join(', ')} | 
@@ -31,7 +31,7 @@ const ResultsHeader: React.FC<ResultsHeaderProps> = ({ data, isPortfolio }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <h2 className="text-2xl font-bold text-blue-600 mb-2">
-        📊 {chartData.ticker} - {chartData.strategy} 백테스트 결과
+        {chartData.ticker} - {chartData.strategy} 백테스트 결과
       </h2>
       <p className="text-gray-600">상세한 차트 분석과 거래 내역을 확인하세요</p>
     </div>
