@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Card, Row, Col, Spinner } from "react-bootstrap";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { backtestApiService } from "../services/api";
 
@@ -62,41 +61,43 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
 
   if (loading) {
     return (
-      <Card className={className}>
-        <Card.Header>
-          <h5 className="mb-0">원달러 환율 변동</h5>
-        </Card.Header>
-        <Card.Body className="text-center">
-          <Spinner animation="border" size="sm" className="me-2" />
-          <span>환율 데이터 로딩 중...</span>
-        </Card.Body>
-      </Card>
+      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h5 className="text-lg font-semibold text-gray-900 mb-0">원달러 환율 변동</h5>
+        </div>
+        <div className="px-6 py-4 text-center">
+          <div className="inline-flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            <span>환율 데이터 로딩 중...</span>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className={className}>
-        <Card.Header>
-          <h5 className="mb-0">원달러 환율 변동</h5>
-        </Card.Header>
-        <Card.Body className="text-center">
-          <p className="text-danger">{error}</p>
-        </Card.Body>
-      </Card>
+      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h5 className="text-lg font-semibold text-gray-900 mb-0">원달러 환율 변동</h5>
+        </div>
+        <div className="px-6 py-4 text-center">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
     );
   }
 
   if (!exchangeData || exchangeData.length === 0) {
     return (
-      <Card className={className}>
-        <Card.Header>
-          <h5 className="mb-0">원달러 환율 변동</h5>
-        </Card.Header>
-        <Card.Body className="text-center">
-          <p className="text-muted">표시할 환율 데이터가 없습니다.</p>
-        </Card.Body>
-      </Card>
+      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h5 className="text-lg font-semibold text-gray-900 mb-0">원달러 환율 변동</h5>
+        </div>
+        <div className="px-6 py-4 text-center">
+          <p className="text-gray-500">표시할 환율 데이터가 없습니다.</p>
+        </div>
+      </div>
     );
   }
 
@@ -105,20 +106,20 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
   const rateChange = ((exchangeData[exchangeData.length - 1]?.rate - exchangeData[0]?.rate) / exchangeData[0]?.rate * 100);
 
   return (
-    <Card className={className}>
-      <Card.Header>
-        <Row className="align-items-center">
-          <Col>
-            <h5 className="mb-0">원달러 환율 변동</h5>
-          </Col>
-          <Col xs="auto">
-            <small className={`badge ${rateChange >= 0 ? 'bg-danger' : 'bg-success'}`}>
+    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+      <div className="border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h5 className="text-lg font-semibold text-gray-900 mb-0">원달러 환율 변동</h5>
+          </div>
+          <div>
+            <small className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rateChange >= 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
               {rateChange >= 0 ? '+' : ''}{rateChange.toFixed(2)}%
             </small>
-          </Col>
-        </Row>
-      </Card.Header>
-      <Card.Body>
+          </div>
+        </div>
+      </div>
+      <div className="px-6 py-4">
         {/* 환율 차트 */}
         <div style={{ width: '100%', height: '300px' }}>
           <ResponsiveContainer>
@@ -150,22 +151,22 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
         </div>
 
         {/* 환율 요약 정보 */}
-        <Row className="mt-3">
-          <Col md={4}>
-            <small className="text-muted d-block">시작 환율</small>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+          <div>
+            <small className="text-gray-500 block">시작 환율</small>
             <strong>{formatRate(exchangeData[0]?.rate)}</strong>
-          </Col>
-          <Col md={4}>
-            <small className="text-muted d-block">종료 환율</small>
+          </div>
+          <div>
+            <small className="text-gray-500 block">종료 환율</small>
             <strong>{formatRate(exchangeData[exchangeData.length - 1]?.rate)}</strong>
-          </Col>
-          <Col md={4}>
-            <small className="text-muted d-block">기간 중 변동폭</small>
+          </div>
+          <div>
+            <small className="text-gray-500 block">기간 중 변동폭</small>
             <strong>{formatRate(maxRate - minRate)}</strong>
-          </Col>
-        </Row>
-      </Card.Body>
-    </Card>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Alert, Button, Spinner, Row, Col, Badge } from 'react-bootstrap';
 import { backtestApiService } from "../services/api";
 
 interface VolatilityEvent {
@@ -240,41 +239,43 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
 
   if (validSymbols.length === 0) {
     return (
-      <Card className={className}>
-        <Card.Header>
-          <h5 className="mb-0">📰 주가 급등/급락 뉴스</h5>
-        </Card.Header>
-        <Card.Body className="text-center">
-          <p className="text-muted">분석할 주식 종목이 없습니다.</p>
-        </Card.Body>
-      </Card>
+      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h5 className="text-lg font-semibold text-gray-900 mb-0">📰 주가 급등/급락 뉴스</h5>
+        </div>
+        <div className="px-6 py-4 text-center">
+          <p className="text-gray-500">분석할 주식 종목이 없습니다.</p>
+        </div>
+      </div>
     );
   }
 
   if (loading) {
     return (
-      <Card className={className}>
-        <Card.Header>
-          <h5 className="mb-0">📰 주가 급등/급락 뉴스</h5>
-        </Card.Header>
-        <Card.Body className="text-center">
-          <Spinner animation="border" size="sm" className="me-2" />
-          <span>주가 변동성 분석 중...</span>
-        </Card.Body>
-      </Card>
+      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h5 className="text-lg font-semibold text-gray-900 mb-0">📰 주가 급등/급락 뉴스</h5>
+        </div>
+        <div className="px-6 py-4 text-center">
+          <div className="inline-flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            <span>주가 변동성 분석 중...</span>
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className={className}>
-        <Card.Header>
-          <h5 className="mb-0">📰 주가 급등/급락 뉴스</h5>
-        </Card.Header>
-        <Card.Body>
-          <Alert variant="danger">{error}</Alert>
-        </Card.Body>
-      </Card>
+      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+        <div className="border-b border-gray-200 px-6 py-4">
+          <h5 className="text-lg font-semibold text-gray-900 mb-0">📰 주가 급등/급락 뉴스</h5>
+        </div>
+        <div className="px-6 py-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{error}</div>
+        </div>
+      </div>
     );
   }
 
@@ -282,216 +283,212 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
   const hasSignificantEvents = Object.values(volatilityData).some(events => events.length > 0);
 
   return (
-    <Card className={className}>
-      <Card.Header>
-        <h5 className="mb-0">📰 주가 급등/급락 뉴스 (5% 이상 변동일)</h5>
-      </Card.Header>
-      <Card.Body>
+    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+      <div className="border-b border-gray-200 px-6 py-4">
+        <h5 className="text-lg font-semibold text-gray-900 mb-0">📰 주가 급등/급락 뉴스 (5% 이상 변동일)</h5>
+      </div>
+      <div className="px-6 py-4">
         {!hasSignificantEvents ? (
           <div className="text-center">
-            <p className="text-muted">해당 기간 중 5% 이상 급등/급락한 날이 없습니다.</p>
+            <p className="text-gray-500">해당 기간 중 5% 이상 급등/급락한 날이 없습니다.</p>
           </div>
         ) : (
           <>
             {/* 종목 선택 버튼들 */}
-            <Row className="mb-3">
-              <Col>
-                <div className="d-flex flex-wrap gap-2">
-                  {validSymbols.map(symbol => {
-                    const eventCount = volatilityData[symbol]?.length || 0;
-                    return (
-                      <Button
-                        key={symbol}
-                        variant={selectedStock === symbol ? "primary" : "outline-primary"}
-                        size="sm"
-                        onClick={() => handleStockSelect(symbol)}
-                        disabled={eventCount === 0}
-                      >
-                        {symbol} 
-                        {eventCount > 0 && (
-                          <Badge bg="secondary" className="ms-1">{eventCount}</Badge>
-                        )}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </Col>
-            </Row>
+            <div className="mb-3">
+              <div className="flex flex-wrap gap-2">
+                {validSymbols.map(symbol => {
+                  const eventCount = volatilityData[symbol]?.length || 0;
+                  return (
+                    <button
+                      key={symbol}
+                      className={`px-3 py-1 text-sm rounded transition-colors ${
+                        selectedStock === symbol
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-blue-300 text-blue-700 hover:bg-blue-50'
+                      } ${eventCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={() => handleStockSelect(symbol)}
+                      disabled={eventCount === 0}
+                    >
+                      {symbol}
+                      {eventCount > 0 && (
+                        <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          {eventCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* 선택된 종목의 변동성 이벤트 */}
             {selectedStock && selectedEvents.length > 0 && (
               <div>
-                <h6 className="mb-3">
+                <h6 className="text-base font-medium text-gray-900 mb-3">
                   {getCompanyName(selectedStock)} ({selectedStock}) 주가 급변동일
                 </h6>
-                <Row>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {selectedEvents.map((event, index) => (
-                    <Col md={6} lg={4} key={index} className="mb-3">
-                      <Card className="h-100 border-start border-4" 
-                            style={{ borderLeftColor: event.daily_return > 0 ? '#dc3545' : '#198754' }}>
-                        <Card.Body className="p-3">
-                          <div className="d-flex justify-content-between align-items-start mb-2">
-                            <Badge 
-                              bg={event.daily_return > 0 ? "danger" : "success"}
-                              className="mb-1"
-                            >
-                              {event.event_type}
-                            </Badge>
-                            <small className="text-muted">{event.date}</small>
+                    <div key={index} className={`bg-white border rounded-lg p-4 h-full ${
+                      event.daily_return > 0 ? 'border-l-4 border-l-red-500' : 'border-l-4 border-l-green-500'
+                    }`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          event.daily_return > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          {event.event_type}
+                        </span>
+                        <small className="text-gray-500">{event.date}</small>
+                      </div>
+                      
+                      <h6 className={`mb-1 font-semibold ${
+                        event.daily_return > 0 ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {formatPercent(event.daily_return)}
+                      </h6>
+                      
+                      <div className="text-sm text-gray-500 mb-3">
+                        <div>종가: {formatPrice(event.close_price)}</div>
+                        <div>거래량: {event.volume.toLocaleString()}</div>
+                      </div>
+                      
+                      <button
+                        className="w-full px-4 py-2 text-sm border border-blue-300 text-blue-700 rounded hover:bg-blue-50 transition-colors disabled:opacity-50"
+                        disabled={newsLoading}
+                        onClick={() => openNaverNews(event.date, event)}
+                      >
+                        {newsLoading ? (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                            뉴스 로딩 중...
                           </div>
-                          
-                          <h6 className={`mb-1 ${event.daily_return > 0 ? 'text-danger' : 'text-success'}`}>
-                            {formatPercent(event.daily_return)}
-                          </h6>
-                          
-                          <div className="small text-muted mb-2">
-                            <div>종가: {formatPrice(event.close_price)}</div>
-                            <div>거래량: {event.volume.toLocaleString()}</div>
-                          </div>
-                          
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            className="w-100"
-                            disabled={newsLoading}
-                            onClick={() => openNaverNews(event.date, event)}
-                          >
-                            {newsLoading ? (
-                              <>
-                                <Spinner size="sm" className="me-2" />
-                                뉴스 로딩 중...
-                              </>
-                            ) : (
-                              '🔍 해당일 뉴스 보기'
-                            )}
-                          </Button>
-                        </Card.Body>
-                      </Card>
-                    </Col>
+                        ) : (
+                          '🔍 해당일 뉴스 보기'
+                        )}
+                      </button>
+                    </div>
                   ))}
-                </Row>
+                </div>
               </div>
             )}
           </>
         )}
-      </Card.Body>
+      </div>
 
       {/* 뉴스 모달 */}
       {showNewsModal && (
         <div 
-          className="modal fade show" 
-          style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowNewsModal(false);
             }
           }}
         >
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {currentNewsEvent && (
-                    <>
-                      {getCompanyName(selectedStock)} 뉴스 ({currentNewsEvent.date})
-                      <Badge 
-                        bg={currentNewsEvent.daily_return > 0 ? "danger" : "success"}
-                        className="ms-2"
-                      >
-                        {formatPercent(currentNewsEvent.daily_return)}
-                      </Badge>
-                    </>
-                  )}
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => setShowNewsModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-                {newsLoading ? (
-                  <div className="text-center">
-                    <Spinner animation="border" />
-                    <p className="mt-2">뉴스를 불러오는 중...</p>
-                  </div>
-                ) : newsData.length > 0 ? (
-                  <div>
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <small className="text-info">
-                        💡 최신 관련 뉴스를 표시합니다 (특정 날짜 뉴스 검색 제한으로 인해)
-                      </small>
-                    </div>
-                    <div className="list-group list-group-flush">
-                      {newsData.map((news, index) => (
-                        <div key={index} className="list-group-item border-0 px-0">
-                          <h6 
-                            className="mb-1" 
-                            dangerouslySetInnerHTML={{ __html: news.title }}
-                          />
-                          <p 
-                            className="mb-1 text-muted small" 
-                            dangerouslySetInnerHTML={{ __html: news.description }}
-                          />
-                          <div className="d-flex justify-content-between align-items-center">
-                            <small className="text-muted">{news.pubDate}</small>
-                            <a 
-                              href={news.link} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="btn btn-outline-primary btn-sm"
-                            >
-                              원문 보기
-                            </a>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-muted mb-3">
-                      해당 날짜({currentNewsEvent?.date})의 {getCompanyName(selectedStock)} 뉴스를 찾을 수 없습니다.
-                      <br />
-                      <small className="text-secondary">
-                        과거 날짜의 뉴스는 네이버 API에서 제한적으로 제공됩니다.
-                      </small>
-                    </p>
-                    <div className="d-flex gap-2 justify-content-center">
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => {
-                          const companyName = getCompanyName(selectedStock);
-                          const date = currentNewsEvent?.date.replace(/-/g, '.');
-                          const searchQuery = encodeURIComponent(`${companyName} 주가`);
-                          const url = `https://search.naver.com/search.naver?where=news&query=${searchQuery}&sm=tab_opt&sort=1&photo=0&field=0&pd=3&ds=${date}&de=${date}`;
-                          window.open(url, '_blank');
-                        }}
-                      >
-                        📅 해당 날짜로 검색
-                      </Button>
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() => {
-                          const companyName = getCompanyName(selectedStock);
-                          const searchQuery = encodeURIComponent(`${companyName} 주가`);
-                          const url = `https://search.naver.com/search.naver?where=news&query=${searchQuery}`;
-                          window.open(url, '_blank');
-                        }}
-                      >
-                        🔍 전체 뉴스 검색
-                      </Button>
-                    </div>
-                  </div>
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] mx-4">
+            <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h5 className="text-lg font-semibold text-gray-900">
+                {currentNewsEvent && (
+                  <>
+                    {getCompanyName(selectedStock)} 뉴스 ({currentNewsEvent.date})
+                    <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      currentNewsEvent.daily_return > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                    }`}>
+                      {formatPercent(currentNewsEvent.daily_return)}
+                    </span>
+                  </>
                 )}
-              </div>
+              </h5>
+              <button 
+                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setShowNewsModal(false)}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-4 max-h-96 overflow-y-auto">
+              {newsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p>뉴스를 불러오는 중...</p>
+                </div>
+              ) : newsData.length > 0 ? (
+                <div>
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <small className="text-blue-700">
+                      💡 최신 관련 뉴스를 표시합니다 (특정 날짜 뉴스 검색 제한으로 인해)
+                    </small>
+                  </div>
+                  <div className="space-y-4">
+                    {newsData.map((news, index) => (
+                      <div key={index} className="border-b border-gray-200 pb-4 last:border-b-0">
+                        <h6 
+                          className="font-medium text-gray-900 mb-2" 
+                          dangerouslySetInnerHTML={{ __html: news.title }}
+                        />
+                        <p 
+                          className="text-gray-600 text-sm mb-2" 
+                          dangerouslySetInnerHTML={{ __html: news.description }}
+                        />
+                        <div className="flex justify-between items-center">
+                          <small className="text-gray-500">{news.pubDate}</small>
+                          <a 
+                            href={news.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="px-3 py-1 text-sm border border-blue-300 text-blue-700 rounded hover:bg-blue-50 transition-colors"
+                          >
+                            원문 보기
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">
+                    해당 날짜({currentNewsEvent?.date})의 {getCompanyName(selectedStock)} 뉴스를 찾을 수 없습니다.
+                    <br />
+                    <small className="text-gray-400">
+                      과거 날짜의 뉴스는 네이버 API에서 제한적으로 제공됩니다.
+                    </small>
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      className="px-4 py-2 text-sm border border-blue-300 text-blue-700 rounded hover:bg-blue-50 transition-colors"
+                      onClick={() => {
+                        const companyName = getCompanyName(selectedStock);
+                        const date = currentNewsEvent?.date.replace(/-/g, '.');
+                        const searchQuery = encodeURIComponent(`${companyName} 주가`);
+                        const url = `https://search.naver.com/search.naver?where=news&query=${searchQuery}&sm=tab_opt&sort=1&photo=0&field=0&pd=3&ds=${date}&de=${date}`;
+                        window.open(url, '_blank');
+                      }}
+                    >
+                      📅 해당 날짜로 검색
+                    </button>
+                    <button
+                      className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        const companyName = getCompanyName(selectedStock);
+                        const searchQuery = encodeURIComponent(`${companyName} 주가`);
+                        const url = `https://search.naver.com/search.naver?where=news&query=${searchQuery}`;
+                        window.open(url, '_blank');
+                      }}
+                    >
+                      🔍 전체 뉴스 검색
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
-    </Card>
+    </div>
   );
 };
 

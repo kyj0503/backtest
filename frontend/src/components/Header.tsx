@@ -1,32 +1,43 @@
 import React from 'react';
-import { Navbar, Nav, Container } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
   return (
-    <Navbar bg="primary" variant="dark" expand="lg" sticky="top">
-      <Container>
-        <Navbar.Brand as={Link} to="/" className="fw-bold">
-          📈 백테스팅 플랫폼
-        </Navbar.Brand>
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="me-auto">
-            <Nav.Link as={Link} to="/">
+    <nav className="bg-blue-600 text-white sticky top-0 z-50 shadow-lg">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-16">
+          {/* Brand */}
+          <Link to="/" className="text-xl font-bold hover:text-blue-200 transition-colors flex items-center gap-2">
+            <span className="text-lg">📈</span>
+            <span>백테스팅 플랫폼</span>
+          </Link>
+          
+          {/* Navigation Links */}
+          <div className="flex space-x-6">
+            <Link 
+              to="/" 
+              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
               홈
-            </Nav.Link>
-            <Nav.Link as={Link} to="/backtest">
+            </Link>
+            <Link 
+              to="/backtest" 
+              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
               백테스트
-            </Nav.Link>
-          </Nav>
-          <Nav>
-            <Nav.Link href="https://github.com/capstone-backtest/backtest" target="_blank">
-              <i className="bi bi-github"></i> GitHub
-            </Nav.Link>
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+            </Link>
+            <a 
+              href="https://github.com/capstone-backtest/backtest" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 };
 

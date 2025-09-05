@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Badge } from 'react-bootstrap';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import OHLCChart from './OHLCChart';
 import EquityChart from './EquityChart';
@@ -132,13 +131,13 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
 
   if (!data) {
     return (
-      <Container>
-        <div className="text-center my-5">
-          <div style={{ fontSize: '3rem' }}>⚠️</div>
-          <h4 className="mt-3">결과 데이터가 없습니다</h4>
-          <p className="text-muted">백테스트를 다시 실행해주세요.</p>
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center py-16">
+          <div className="text-6xl mb-6">⚠️</div>
+          <h4 className="text-xl font-semibold mb-3">결과 데이터가 없습니다</h4>
+          <p className="text-gray-600">백테스트를 다시 실행해주세요.</p>
         </div>
-      </Container>
+      </div>
     );
   }
 
@@ -149,13 +148,13 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
 
     if (!portfolio_statistics || !individual_returns || !portfolio_composition || !equity_curve || !daily_returns) {
       return (
-        <Container>
-          <div className="text-center my-5">
-            <div style={{ fontSize: '3rem' }}>⚠️</div>
-            <h4 className="mt-3">결과 데이터가 불완전합니다</h4>
-            <p className="text-muted">포트폴리오 백테스트를 다시 실행해주세요.</p>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center py-16">
+            <div className="text-6xl mb-6">⚠️</div>
+            <h4 className="text-xl font-semibold mb-3">결과 데이터가 불완전합니다</h4>
+            <p className="text-gray-600">포트폴리오 백테스트를 다시 실행해주세요.</p>
           </div>
-        </Container>
+        </div>
       );
     }
 
@@ -168,19 +167,17 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
     const isMultipleStocks = portfolio_composition.length > 1;
 
     return (
-      <Container>
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* 헤더 */}
-        <Card className="mb-4 bg-light">
-          <Card.Body>
-            <h2 className="text-primary mb-2">
-              {isMultipleStocks ? '📈 포트폴리오 백테스트 결과' : '📊 단일 종목 백테스트 결과'}
-            </h2>
-            <p className="text-muted mb-0">
-              {portfolio_composition.map(item => item.symbol).join(', ')} | 
-              {portfolio_statistics.Start} ~ {portfolio_statistics.End}
-            </p>
-          </Card.Body>
-        </Card>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-2xl font-bold text-blue-600 mb-2">
+            {isMultipleStocks ? '📈 포트폴리오 백테스트 결과' : '📊 단일 종목 백테스트 결과'}
+          </h2>
+          <p className="text-gray-600">
+            {portfolio_composition.map(item => item.symbol).join(', ')} | 
+            {portfolio_statistics.Start} ~ {portfolio_statistics.End}
+          </p>
+        </div>
 
         {/* 백테스트 성과 통계 */}
         <StatsSummary stats={{
@@ -194,40 +191,32 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
         }} />
 
         {/* 포트폴리오 백테스트 결과 차트 */}
-        <Row className="mb-4">
-          <Col lg={12}>
-            <Card>
-              <Card.Header>
-                <h5 className="mb-0">📈 백테스트 수익률 곡선</h5>
-              </Card.Header>
-              <Card.Body>
-                <EquityChart data={equityChartData} />
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h5 className="text-lg font-semibold">📈 백테스트 수익률 곡선</h5>
+          </div>
+          <div className="p-6">
+            <EquityChart data={equityChartData} />
+          </div>
+        </div>
 
         {/* 개별 종목 주가 차트 */}
         {loadingStockData ? (
-          <Card className="mb-4">
-            <Card.Body className="text-center">
-              <div className="spinner-border" role="status">
-                <span className="visually-hidden">주가 데이터 로딩 중...</span>
-              </div>
-              <p className="mt-2">개별 종목 주가 데이터를 가져오는 중...</p>
-            </Card.Body>
-          </Card>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-gray-600">개별 종목 주가 데이터를 가져오는 중...</p>
+          </div>
         ) : stocksData.length > 0 && (
-          <Card className="mb-4">
-            <Card.Header>
-              <h5 className="mb-0">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h5 className="text-lg font-semibold">
                 개별 종목 주가 변동 ({stocksData.length}개 종목)
               </h5>
-            </Card.Header>
-            <Card.Body>
+            </div>
+            <div className="p-6">
               <StockPriceChart stocksData={stocksData} />
-            </Card.Body>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* 원달러 환율 차트 */}
@@ -235,7 +224,7 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
           <ExchangeRateChart 
             startDate={(data as PortfolioData).portfolio_statistics.Start}
             endDate={(data as PortfolioData).portfolio_statistics.End}
-            className="mb-4"
+            className="mb-8"
           />
         )}
 
@@ -245,234 +234,213 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
             symbols={(data as PortfolioData).portfolio_composition.map(item => item.symbol)}
             startDate={(data as PortfolioData).portfolio_statistics.Start}
             endDate={(data as PortfolioData).portfolio_statistics.End}
-            className="mb-4"
+            className="mb-8"
           />
         )}
 
         {/* 주요 성과 지표 */}
-        <Row className="mb-4">
-          <Col>
-            <Card>
-              <Card.Header>
-                <h4>{isMultipleStocks ? '포트폴리오' : '종목'} 성과 요약</h4>
-              </Card.Header>
-              <Card.Body>
-                <Row>
-                  <Col md={3}>
-                    <div className="text-center">
-                      <h6>총 수익률</h6>
-                      <h4 className={(portfolio_statistics.Total_Return || 0) >= 0 ? 'text-success' : 'text-danger'}>
-                        {formatPercent(portfolio_statistics.Total_Return)}
-                      </h4>
-                    </div>
-                  </Col>
-                  <Col md={3}>
-                    <div className="text-center">
-                      <h6>연간 수익률</h6>
-                      <h5 className={(portfolio_statistics.Annual_Return || 0) >= 0 ? 'text-success' : 'text-danger'}>
-                        {formatPercent(portfolio_statistics.Annual_Return)}
-                      </h5>
-                    </div>
-                  </Col>
-                  <Col md={3}>
-                    <div className="text-center">
-                      <h6>샤프 비율</h6>
-                      <h5>{portfolio_statistics.Sharpe_Ratio ? portfolio_statistics.Sharpe_Ratio.toFixed(2) : 'N/A'}</h5>
-                    </div>
-                  </Col>
-                  <Col md={3}>
-                    <div className="text-center">
-                      <h6>최대 낙폭</h6>
-                      <h5 className="text-danger">
-                        {formatPercent(portfolio_statistics.Max_Drawdown)}
-                      </h5>
-                    </div>
-                  </Col>
-                </Row>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h4 className="text-xl font-semibold">{isMultipleStocks ? '포트폴리오' : '종목'} 성과 요약</h4>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="text-center">
+                <h6 className="text-sm font-medium text-gray-600 mb-2">총 수익률</h6>
+                <h4 className={`text-2xl font-bold ${(portfolio_statistics.Total_Return || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatPercent(portfolio_statistics.Total_Return)}
+                </h4>
+              </div>
+              <div className="text-center">
+                <h6 className="text-sm font-medium text-gray-600 mb-2">연간 수익률</h6>
+                <h5 className={`text-xl font-semibold ${(portfolio_statistics.Annual_Return || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatPercent(portfolio_statistics.Annual_Return)}
+                </h5>
+              </div>
+              <div className="text-center">
+                <h6 className="text-sm font-medium text-gray-600 mb-2">샤프 비율</h6>
+                <h5 className="text-xl font-semibold text-gray-800">{portfolio_statistics.Sharpe_Ratio ? portfolio_statistics.Sharpe_Ratio.toFixed(2) : 'N/A'}</h5>
+              </div>
+              <div className="text-center">
+                <h6 className="text-sm font-medium text-gray-600 mb-2">최대 낙폭</h6>
+                <h5 className="text-xl font-semibold text-red-600">
+                  {formatPercent(portfolio_statistics.Max_Drawdown)}
+                </h5>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* 포트폴리오 구성 및 개별 수익률 */}
-        <Row className="mb-4">
-          <Col md={isMultipleStocks ? 6 : 12}>
-            <Card>
-              <Card.Header>
-                <h5>{isMultipleStocks ? '포트폴리오 구성' : '종목 정보'}</h5>
-              </Card.Header>
-              <Card.Body>
-                <Table striped bordered hover>
-                  <thead>
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h5 className="text-lg font-semibold">{isMultipleStocks ? '포트폴리오 구성' : '종목 정보'}</h5>
+            </div>
+            <div className="p-6">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th>종목</th>
-                      {isMultipleStocks && <th>비중</th>}
-                      <th>개별 수익률</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">종목</th>
+                      {isMultipleStocks && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">비중</th>}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">개별 수익률</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {portfolio_composition.map((item) => {
                       const individualReturn = individual_returns[item.symbol];
                       return (
                         <tr key={item.symbol}>
-                          <td>
-                            <Badge bg="primary">{item.symbol}</Badge>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {item.symbol}
+                            </span>
                           </td>
                           {isMultipleStocks && (
-                            <td>{formatPercent(item.weight * 100)}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{formatPercent(item.weight * 100)}</td>
                           )}
-                          <td className={individualReturn?.return >= 0 ? 'text-success' : 'text-danger'}>
+                          <td className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${individualReturn?.return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {individualReturn ? formatPercent(individualReturn.return) : 'N/A'}
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
-                </Table>
-              </Card.Body>
-            </Card>
-          </Col>
+                </table>
+              </div>
+            </div>
+          </div>
+          
           {isMultipleStocks && (
-            <Col md={6}>
-              <Card>
-                <Card.Header>
-                  <h5>상세 통계</h5>
-                </Card.Header>
-                <Card.Body>
-                  <Table size="sm">
-                    <tbody>
-                      <tr>
-                        <td>백테스트 기간</td>
-                        <td>{portfolio_statistics.Start} ~ {portfolio_statistics.End}</td>
-                      </tr>
-                      <tr>
-                        <td>초기 자본금</td>
-                        <td>{formatCurrency(portfolio_statistics.Initial_Value)}</td>
-                      </tr>
-                      <tr>
-                        <td>최종 자본금</td>
-                        <td>{formatCurrency(portfolio_statistics.Final_Value)}</td>
-                      </tr>
-                      <tr>
-                        <td>최고 자본금</td>
-                        <td>{formatCurrency(portfolio_statistics.Peak_Value)}</td>
-                      </tr>
-                      <tr>
-                        <td>연간 변동성</td>
-                        <td>{formatPercent(portfolio_statistics.Annual_Volatility)}</td>
-                      </tr>
-                      <tr>
-                        <td>평균 낙폭</td>
-                        <td>{formatPercent(portfolio_statistics.Avg_Drawdown)}</td>
-                      </tr>
-                      <tr>
-                        <td>상승일/하락일</td>
-                        <td>
-                          <span className="text-success">{portfolio_statistics.Positive_Days || 0}</span>
-                          {' / '}
-                          <span className="text-danger">{portfolio_statistics.Negative_Days || 0}</span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td>승률</td>
-                        <td>{formatPercent(portfolio_statistics.Win_Rate)}</td>
-                      </tr>
-                    </tbody>
-                  </Table>
-                </Card.Body>
-              </Card>
-            </Col>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h5 className="text-lg font-semibold">상세 통계</h5>
+              </div>
+              <div className="p-6">
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">백테스트 기간</span>
+                    <span className="text-sm font-medium text-gray-900">{portfolio_statistics.Start} ~ {portfolio_statistics.End}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">초기 자본금</span>
+                    <span className="text-sm font-medium text-gray-900">{formatCurrency(portfolio_statistics.Initial_Value)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">최종 자본금</span>
+                    <span className="text-sm font-medium text-gray-900">{formatCurrency(portfolio_statistics.Final_Value)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">최고 자본금</span>
+                    <span className="text-sm font-medium text-gray-900">{formatCurrency(portfolio_statistics.Peak_Value)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">연간 변동성</span>
+                    <span className="text-sm font-medium text-gray-900">{formatPercent(portfolio_statistics.Annual_Volatility)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">평균 낙폭</span>
+                    <span className="text-sm font-medium text-gray-900">{formatPercent(portfolio_statistics.Avg_Drawdown)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">상승일/하락일</span>
+                    <span className="text-sm font-medium">
+                      <span className="text-green-600">{portfolio_statistics.Positive_Days || 0}</span>
+                      {' / '}
+                      <span className="text-red-600">{portfolio_statistics.Negative_Days || 0}</span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">승률</span>
+                    <span className="text-sm font-medium text-gray-900">{formatPercent(portfolio_statistics.Win_Rate)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
-        </Row>
+        </div>
 
         {/* 자산 곡선 차트 */}
-        <Row className="mb-4">
-          <Col>
-            <Card>
-              <Card.Header>
-                <h5>자산 곡선</h5>
-              </Card.Header>
-              <Card.Body>
-                <ResponsiveContainer width="100%" height={400}>
-                  <AreaChart data={equityChartData}>
-                    <defs>
-                      <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => {
-                        const date = new Date(value);
-                        return `${date.getMonth() + 1}/${date.getDate()}`;
-                      }}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => formatCurrency(value)}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [formatCurrency(value), isMultipleStocks ? '포트폴리오 가치' : '자산 가치']}
-                      labelFormatter={(label) => `날짜: ${label}`}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="#8884d8" 
-                      fillOpacity={1} 
-                      fill="url(#colorValue)" 
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h5 className="text-lg font-semibold">자산 곡선</h5>
+          </div>
+          <div className="p-6">
+            <ResponsiveContainer width="100%" height={400}>
+              <AreaChart data={equityChartData}>
+                <defs>
+                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                  }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => formatCurrency(value)}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [formatCurrency(value), isMultipleStocks ? '포트폴리오 가치' : '자산 가치']}
+                  labelFormatter={(label) => `날짜: ${label}`}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#8884d8" 
+                  fillOpacity={1} 
+                  fill="url(#colorValue)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
 
         {/* 일일 수익률 차트 */}
-        <Row>
-          <Col>
-            <Card>
-              <Card.Header>
-                <h5>일일 수익률 분포</h5>
-              </Card.Header>
-              <Card.Body>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={equityChartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="date" 
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => {
-                        const date = new Date(value);
-                        return `${date.getMonth() + 1}/${date.getDate()}`;
-                      }}
-                    />
-                    <YAxis 
-                      tick={{ fontSize: 12 }}
-                      tickFormatter={(value) => `${value.toFixed(1)}%`}
-                    />
-                    <Tooltip 
-                      formatter={(value: number) => [`${value.toFixed(2)}%`, '일일 수익률']}
-                      labelFormatter={(label) => `날짜: ${label}`}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="return" 
-                      stroke="#ff7300" 
-                      strokeWidth={1}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h5 className="text-lg font-semibold">일일 수익률 분포</h5>
+          </div>
+          <div className="p-6">
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={equityChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => {
+                    const date = new Date(value);
+                    return `${date.getMonth() + 1}/${date.getDate()}`;
+                  }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => `${value.toFixed(1)}%`}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [`${value.toFixed(2)}%`, '일일 수익률']}
+                  labelFormatter={(label) => `날짜: ${label}`}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="return" 
+                  stroke="#ff7300" 
+                  strokeWidth={1}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -480,55 +448,45 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
   const chartData = data as ChartData;
   
   return (
-    <Container>
+    <div className="max-w-6xl mx-auto space-y-8">
       {/* 헤더 */}
-      <Card className="mb-4 bg-light">
-        <Card.Body>
-          <h2 className="text-primary mb-2">📊 {chartData.ticker} - {chartData.strategy} 백테스트 결과</h2>
-          <p className="text-muted mb-0">상세한 차트 분석과 거래 내역을 확인하세요</p>
-        </Card.Body>
-      </Card>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-2xl font-bold text-blue-600 mb-2">📊 {chartData.ticker} - {chartData.strategy} 백테스트 결과</h2>
+        <p className="text-gray-600">상세한 차트 분석과 거래 내역을 확인하세요</p>
+      </div>
 
       <StatsSummary stats={chartData.summary_stats || {}} />
 
       {/* 백테스트 결과 차트 (단일 종목) */}
-      <Row className="mb-4">
-        <Col lg={12}>
-          <Card>
-            <Card.Header>
-              <h5 className="mb-0">📈 백테스트 결과</h5>
-            </Card.Header>
-            <Card.Body>
-              <OHLCChart 
-                data={chartData.ohlc_data || []} 
-                indicators={chartData.indicators || []} 
-                trades={chartData.trade_markers || []} 
-              />
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h5 className="text-lg font-semibold">📈 백테스트 결과</h5>
+        </div>
+        <div className="p-6">
+          <OHLCChart 
+            data={chartData.ohlc_data || []} 
+            indicators={chartData.indicators || []} 
+            trades={chartData.trade_markers || []} 
+          />
+        </div>
+      </div>
 
-      <Row className="mb-4">
-        <Col lg={12}>
-          <Card>
-            <Card.Header>
-              <h5 className="mb-0">📊 수익률 곡선</h5>
-            </Card.Header>
-            <Card.Body>
-              <EquityChart data={chartData.equity_data || []} />
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h5 className="text-lg font-semibold">📊 수익률 곡선</h5>
+        </div>
+        <div className="p-6">
+          <EquityChart data={chartData.equity_data || []} />
+        </div>
+      </div>
 
       {/* 개별 주가 차트 (단일 종목) */}
       {chartData.ticker && (
-        <Card className="mb-4">
-          <Card.Header>
-            <h5 className="mb-0">📊 개별 주가 변동</h5>
-          </Card.Header>
-          <Card.Body>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h5 className="text-lg font-semibold">📊 개별 주가 변동</h5>
+          </div>
+          <div className="p-6">
             <StockPriceChart 
               stocksData={[{
                 symbol: chartData.ticker,
@@ -539,8 +497,8 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
                 })) || []
               }]} 
             />
-          </Card.Body>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* 원달러 환율 차트 (단일 종목) */}
@@ -548,7 +506,7 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
         <ExchangeRateChart 
           startDate={chartData.start_date}
           endDate={chartData.end_date}
-          className="mb-4"
+          className="mb-8"
         />
       )}
 
@@ -558,26 +516,22 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
           symbols={[chartData.ticker]}
           startDate={chartData.start_date}
           endDate={chartData.end_date}
-          className="mb-4"
+          className="mb-8"
         />
       )}
 
       {/* 거래 내역 차트 (단일 종목) */}
       {chartData.trade_markers && chartData.trade_markers.length > 0 && (
-        <Row className="mb-4">
-          <Col lg={12}>
-            <Card>
-              <Card.Header>
-                <h5 className="mb-0">📋 거래 내역</h5>
-              </Card.Header>
-              <Card.Body>
-                <TradesChart trades={chartData.trade_markers} />
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h5 className="text-lg font-semibold">📋 거래 내역</h5>
+          </div>
+          <div className="p-6">
+            <TradesChart trades={chartData.trade_markers} />
+          </div>
+        </div>
       )}
-    </Container>
+    </div>
   );
 };
 

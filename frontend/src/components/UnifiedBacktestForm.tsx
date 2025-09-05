@@ -1,5 +1,4 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
-import { Form, Row, Col, Button, Table, Card, Container, Alert } from 'react-bootstrap';
 import { UnifiedBacktestRequest } from '../types/api';
 import { PREDEFINED_STOCKS, STRATEGY_CONFIGS, ASSET_TYPES, AssetType } from '../constants/strategies';
 
@@ -196,39 +195,36 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
     if (!config || !config.parameters) return null;
 
     return (
-      <Row className="mb-4">
-        <Col>
-          <h5>전략 파라미터</h5>
-          <Row>
-            {Object.entries(config.parameters).map(([key, paramConfig]) => {
-              const param = paramConfig as any;
-              return (
-                <Col md={6} key={key}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>
-                      {key === 'short_window' ? '단기 이동평균 기간' :
-                       key === 'long_window' ? '장기 이동평균 기간' :
-                       key === 'rsi_period' ? 'RSI 기간' :
-                       key === 'rsi_oversold' ? 'RSI 과매도 기준' :
-                       key === 'rsi_overbought' ? 'RSI 과매수 기준' : key}
-                    </Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={strategyParams[key] || param.default}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => updateStrategyParam(key, e.target.value)}
-                      min={param.min}
-                      max={param.max}
-                    />
-                    <Form.Text className="text-muted">
-                      기본값: {param.default}, 범위: {param.min} - {param.max}
-                    </Form.Text>
-                  </Form.Group>
-                </Col>
-              );
-            })}
-          </Row>
-        </Col>
-      </Row>
+      <div className="mb-8">
+        <h5 className="text-lg font-semibold mb-4">전략 파라미터</h5>
+        <div className="grid md:grid-cols-2 gap-6">
+          {Object.entries(config.parameters).map(([key, paramConfig]) => {
+            const param = paramConfig as any;
+            return (
+              <div key={key}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {key === 'short_window' ? '단기 이동평균 기간' :
+                   key === 'long_window' ? '장기 이동평균 기간' :
+                   key === 'rsi_period' ? 'RSI 기간' :
+                   key === 'rsi_oversold' ? 'RSI 과매도 기준' :
+                   key === 'rsi_overbought' ? 'RSI 과매수 기준' : key}
+                </label>
+                <input
+                  type="number"
+                  value={strategyParams[key] || param.default}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => updateStrategyParam(key, e.target.value)}
+                  min={param.min}
+                  max={param.max}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  기본값: {param.default}, 범위: {param.min} - {param.max}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     );
   };
 
@@ -237,48 +233,57 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
   };
 
   return (
-    <Container>
-      <Card>
-        <Card.Header>
-          <h4>🏦 포트폴리오 백테스트</h4>
-          <p className="mb-0 text-muted">
+    <div className="max-w-6xl mx-auto">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-lg">
+          <h4 className="text-xl font-semibold text-gray-800 mb-2">🏦 포트폴리오 백테스트</h4>
+          <p className="text-sm text-gray-600">
             종목/자산별 투자 금액과 방식을 설정하여 포트폴리오 백테스트를 실행합니다.
           </p>
-        </Card.Header>
-        <Card.Body>
+        </div>
+        <div className="p-6">
           {errors.length > 0 && (
-            <Alert variant="danger">
-              <Alert.Heading>⚠️ 입력 오류</Alert.Heading>
-              <ul className="mb-0">
-                {errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </Alert>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800 mb-2">⚠️ 입력 오류</h3>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    {errors.map((error, index) => (
+                      <li key={index}>• {error}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
           )}
 
-          <Form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             {/* 포트폴리오 구성 */}
-            <Row className="mb-4">
-              <Col>
-                <h5>포트폴리오 구성</h5>
-                <Table striped bordered hover responsive>
-                  <thead>
+            <div className="mb-8">
+              <h5 className="text-lg font-semibold mb-4">포트폴리오 구성</h5>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th>종목/자산</th>
-                      <th>투자 금액 ($)</th>
-                      <th>투자 방식</th>
-                      <th>자산 타입</th>
-                      <th>비중 (%)</th>
-                      <th>작업</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">종목/자산</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">투자 금액 ($)</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">투자 방식</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">자산 타입</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">비중 (%)</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {portfolio.map((stock, index) => (
-                      <tr key={index}>
-                        <td>
-                          <div>
-                            <Form.Select
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-2">
+                            <select
                               value={stock.symbol || 'CUSTOM'}
                               onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                                 const selectedValue = e.target.value;
@@ -288,219 +293,222 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
                                   updateStock(index, 'symbol', selectedValue);
                                 }
                               }}
-                              className="mb-2"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                               {PREDEFINED_STOCKS.map(option => (
                                 <option key={option.value} value={option.value}>
                                   {option.label}
                                 </option>
                               ))}
-                            </Form.Select>
+                            </select>
                             {(stock.symbol === '' || !PREDEFINED_STOCKS.find(opt => opt.value === stock.symbol)) && (
-                              <Form.Control
+                              <input
                                 type="text"
                                 value={stock.symbol}
                                 onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'symbol', e.target.value)}
                                 placeholder="종목 심볼 입력 (예: AAPL)"
                                 maxLength={10}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               />
                             )}
                           </div>
                         </td>
-                        <td>
-                          <Form.Control
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
                             type="number"
                             value={stock.amount}
                             onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'amount', e.target.value)}
                             min="100"
                             step="100"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         </td>
-                        <td>
-                          <div>
-                            <Form.Select
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="space-y-2">
+                            <select
                               value={stock.investmentType}
                               onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'investmentType', e.target.value)}
-                              className="mb-2"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                               <option value="lump_sum">일시불 투자</option>
                               <option value="dca">분할 매수 (DCA)</option>
-                            </Form.Select>
+                            </select>
                             {stock.investmentType === 'dca' && (
-                              <Form.Control
+                              <input
                                 type="number"
                                 value={stock.dcaPeriods || 12}
                                 onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'dcaPeriods', e.target.value)}
                                 min="1"
                                 max="60"
                                 placeholder="개월 수"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               />
                             )}
                           </div>
                           {stock.investmentType === 'dca' && stock.dcaPeriods && (
-                            <small className="text-muted">
+                            <p className="text-xs text-gray-500 mt-1">
                               월 ${Math.round(stock.amount / stock.dcaPeriods)}씩 {stock.dcaPeriods}개월
-                            </small>
+                            </p>
                           )}
                         </td>
-                        <td>
-                          <Form.Select
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <select
                             value={stock.assetType || ASSET_TYPES.STOCK}
                             onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'assetType', e.target.value)}
-                            size="sm"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
                             <option value={ASSET_TYPES.STOCK}>주식</option>
                             <option value={ASSET_TYPES.CASH}>현금</option>
-                          </Form.Select>
+                          </select>
                         </td>
-                        <td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
                           {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
                         </td>
-                        <td>
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            type="button"
                             onClick={() => removeStock(index)}
                             disabled={portfolio.length <= 1}
+                            className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             삭제
-                          </Button>
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot>
-                    <tr className="table-info">
-                      <th>합계</th>
-                      <th>${getTotalAmount().toLocaleString()}</th>
-                      <th>-</th>
-                      <th>-</th>
-                      <th>100.0%</th>
-                      <th></th>
+                  <tfoot className="bg-blue-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">합계</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">${getTotalAmount().toLocaleString()}</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">-</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">-</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">100.0%</th>
+                      <th className="px-6 py-3 text-left text-sm font-medium text-gray-700"></th>
                     </tr>
                   </tfoot>
-                </Table>
+                </table>
+              </div>
 
-                <div className="d-flex gap-2 mb-3">
-                  <Button variant="outline-primary" onClick={addStock} disabled={portfolio.length >= 10}>
-                    + 종목 추가
-                  </Button>
-                  <Button 
-                    variant="outline-success" 
-                    onClick={addCash}
-                    disabled={portfolio.length >= 10}
-                    title="현금을 포트폴리오에 추가 (무위험 자산)"
-                  >
-                    💰 현금 추가
-                  </Button>
-                </div>
-              </Col>
-            </Row>
+              <div className="flex gap-3 mt-4">
+                <button
+                  type="button"
+                  onClick={addStock}
+                  disabled={portfolio.length >= 10}
+                  className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-300 rounded-md hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  + 종목 추가
+                </button>
+                <button
+                  type="button"
+                  onClick={addCash}
+                  disabled={portfolio.length >= 10}
+                  title="현금을 포트폴리오에 추가 (무위험 자산)"
+                  className="px-4 py-2 text-sm font-medium text-green-600 bg-green-50 border border-green-300 rounded-md hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  💰 현금 추가
+                </button>
+              </div>
+            </div>
 
             {/* 백테스트 설정 */}
-            <Row className="mb-4">
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>시작 날짜</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={startDate}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>종료 날짜</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={endDate}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">시작 날짜</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">종료 날짜</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
 
-            <Row className="mb-4">
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>투자 전략</Form.Label>
-                  <Form.Select
-                    value={selectedStrategy}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedStrategy(e.target.value)}
-                  >
-                    <option value="buy_and_hold">매수 후 보유</option>
-                    <option value="sma_crossover">단순이동평균 교차</option>
-                    <option value="rsi_strategy">RSI 전략</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>리밸런싱 주기</Form.Label>
-                  <Form.Select
-                    value={rebalanceFrequency}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => setRebalanceFrequency(e.target.value)}
-                  >
-                    <option value="never">리밸런싱 안함</option>
-                    <option value="monthly">매월</option>
-                    <option value="quarterly">분기별</option>
-                    <option value="yearly">연간</option>
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    포트폴리오 비중을 다시 맞추는 주기
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">투자 전략</label>
+                <select
+                  value={selectedStrategy}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedStrategy(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="buy_and_hold">매수 후 보유</option>
+                  <option value="sma_crossover">단순이동평균 교차</option>
+                  <option value="rsi_strategy">RSI 전략</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">리밸런싱 주기</label>
+                <select
+                  value={rebalanceFrequency}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setRebalanceFrequency(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="never">리밸런싱 안함</option>
+                  <option value="monthly">매월</option>
+                  <option value="quarterly">분기별</option>
+                  <option value="yearly">연간</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  포트폴리오 비중을 다시 맞추는 주기
+                </p>
+              </div>
+            </div>
 
-            <Row className="mb-4">
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>거래 수수료 (%)</Form.Label>
-                  <Form.Control
-                    type="number"
-                    value={commission}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setCommission(Number(e.target.value))}
-                    min="0"
-                    max="5"
-                    step="0.01"
-                  />
-                  <Form.Text className="text-muted">
-                    예: 0.2 (0.2% 수수료)
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">거래 수수료 (%)</label>
+                <input
+                  type="number"
+                  value={commission}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setCommission(Number(e.target.value))}
+                  min="0"
+                  max="5"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  예: 0.2 (0.2% 수수료)
+                </p>
+              </div>
+            </div>
 
             {/* 전략 파라미터 */}
             {renderStrategyParams()}
 
             {/* 실행 버튼 */}
-            <Row>
-              <Col>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  disabled={loading || isLoading}
-                  className="w-100"
-                >
-                  {loading || isLoading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      포트폴리오 백테스트 실행 중...
-                    </>
-                  ) : (
-                    '📈 포트폴리오 백테스트 실행'
-                  )}
-                </Button>
-              </Col>
-            </Row>
-          </Form>
-        </Card.Body>
-      </Card>
-    </Container>
+            <div>
+              <button
+                type="submit"
+                disabled={loading || isLoading}
+                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg text-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading || isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    포트폴리오 백테스트 실행 중...
+                  </span>
+                ) : (
+                  '📈 포트폴리오 백테스트 실행'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 };
 

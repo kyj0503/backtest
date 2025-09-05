@@ -1,5 +1,4 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { Alert, Button, Container, Row, Col } from 'react-bootstrap';
 
 interface Props {
   children: ReactNode;
@@ -90,35 +89,35 @@ class ErrorBoundary extends Component<Props, State> {
 
       // 기본 에러 UI
       return (
-        <Container className="mt-5">
-          <Row className="justify-content-center">
-            <Col md={8}>
-              <Alert variant="danger">
-                <Alert.Heading>
+        <div className="container mx-auto px-4 mt-5">
+          <div className="flex justify-center">
+            <div className="w-full max-w-2xl">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <div className="flex items-center mb-2">
                   <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                  오류가 발생했습니다
-                </Alert.Heading>
-                <p>
+                  <h4 className="text-lg font-semibold">오류가 발생했습니다</h4>
+                </div>
+                <p className="mb-4">
                   예상치 못한 오류로 인해 애플리케이션이 정상적으로 동작하지 않습니다.
                   페이지를 새로고침하거나 다시 시도해주세요.
                 </p>
                 
                 {import.meta.env.DEV && this.state.error && (
                   <details className="mt-3">
-                    <summary className="text-muted">개발자 정보 (클릭하여 펼치기)</summary>
-                    <div className="mt-2 p-3 bg-light rounded">
-                      <h6>오류 메시지:</h6>
-                      <code className="text-danger">{this.state.error.message}</code>
+                    <summary className="text-gray-600 cursor-pointer">개발자 정보 (클릭하여 펼치기)</summary>
+                    <div className="mt-2 p-3 bg-gray-100 rounded">
+                      <h6 className="font-semibold">오류 메시지:</h6>
+                      <code className="text-red-600 block">{this.state.error.message}</code>
                       
-                      <h6 className="mt-3">스택 트레이스:</h6>
-                      <pre className="text-muted small">
+                      <h6 className="font-semibold mt-3">스택 트레이스:</h6>
+                      <pre className="text-gray-600 text-sm bg-white p-2 rounded overflow-auto">
                         {this.state.error.stack}
                       </pre>
                       
                       {this.state.errorInfo && (
                         <>
-                          <h6 className="mt-3">컴포넌트 스택:</h6>
-                          <pre className="text-muted small">
+                          <h6 className="font-semibold mt-3">컴포넌트 스택:</h6>
+                          <pre className="text-gray-600 text-sm bg-white p-2 rounded overflow-auto">
                             {this.state.errorInfo.componentStack}
                           </pre>
                         </>
@@ -127,23 +126,29 @@ class ErrorBoundary extends Component<Props, State> {
                   </details>
                 )}
                 
-                <hr />
-                <div className="d-flex gap-2">
-                  <Button variant="outline-danger" onClick={this.handleRestart}>
+                <hr className="border-red-300 my-4" />
+                <div className="flex gap-2">
+                  <button 
+                    className="px-4 py-2 border border-red-300 text-red-700 rounded hover:bg-red-100 transition-colors"
+                    onClick={this.handleRestart}
+                  >
                     다시 시도
-                  </Button>
-                  <Button variant="danger" onClick={this.handleReload}>
+                  </button>
+                  <button 
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                    onClick={this.handleReload}
+                  >
                     페이지 새로고침
-                  </Button>
+                  </button>
                 </div>
                 
-                <div className="mt-3 text-muted small">
+                <div className="mt-3 text-gray-500 text-sm">
                   오류 ID: {this.state.errorId}
                 </div>
-              </Alert>
-            </Col>
-          </Row>
-        </Container>
+              </div>
+            </div>
+          </div>
+        </div>
       );
     }
 

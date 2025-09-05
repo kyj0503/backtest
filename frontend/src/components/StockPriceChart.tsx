@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Card, Button, Badge, Row, Col } from "react-bootstrap";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface StockData {
@@ -33,11 +32,11 @@ const StockPriceChart: React.FC<StockPriceChartProps> = ({ stocksData, className
 
   if (!stocksData || stocksData.length === 0) {
     return (
-      <Card className={className}>
-        <Card.Body className="text-center">
-          <p className="text-muted">표시할 주가 데이터가 없습니다.</p>
-        </Card.Body>
-      </Card>
+      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+        <div className="px-6 py-4 text-center">
+          <p className="text-gray-500">표시할 주가 데이터가 없습니다.</p>
+        </div>
+      </div>
     );
   }
 
@@ -57,37 +56,30 @@ const StockPriceChart: React.FC<StockPriceChartProps> = ({ stocksData, className
   return (
     <div className={className}>
       {/* 헤더: 종목명과 네비게이션 */}
-      <Row className="mb-3 align-items-center">
-        <Col>
-          <div className="d-flex justify-content-between align-items-center">
-            <div>
-              <h5 className="mb-1">{currentStock.symbol}</h5>
-              <Badge bg="secondary">
-                {currentIndex + 1} / {stocksData.length}
-              </Badge>
-            </div>
-            <div>
-              <Button 
-                variant="outline-primary" 
-                size="sm" 
-                onClick={handlePrevious}
-                disabled={stocksData.length <= 1}
-                className="me-2"
-              >
-                ← 이전
-              </Button>
-              <Button 
-                variant="outline-primary" 
-                size="sm" 
-                onClick={handleNext}
-                disabled={stocksData.length <= 1}
-              >
-                다음 →
-              </Button>
-            </div>
-          </div>
-        </Col>
-      </Row>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h5 className="text-lg font-semibold text-gray-900 mb-1">{currentStock.symbol}</h5>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            {currentIndex + 1} / {stocksData.length}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            className="px-3 py-1 text-sm border border-blue-300 text-blue-700 rounded hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handlePrevious}
+            disabled={stocksData.length <= 1}
+          >
+            ← 이전
+          </button>
+          <button 
+            className="px-3 py-1 text-sm border border-blue-300 text-blue-700 rounded hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleNext}
+            disabled={stocksData.length <= 1}
+          >
+            다음 →
+          </button>
+        </div>
+      </div>
 
       {/* 차트 */}
       <div style={{ width: '100%', height: '400px' }}>
@@ -121,19 +113,19 @@ const StockPriceChart: React.FC<StockPriceChartProps> = ({ stocksData, className
       </div>
 
       {/* 차트 하단 정보 */}
-      <Row className="mt-3">
-        <Col md={6}>
-          <small className="text-muted">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+        <div>
+          <small className="text-gray-500">
             시작: {currentStock.data[0]?.date} | 
             종료: {currentStock.data[currentStock.data.length - 1]?.date}
           </small>
-        </Col>
-        <Col md={6} className="text-end">
-          <small className="text-muted">
+        </div>
+        <div className="text-left md:text-right">
+          <small className="text-gray-500">
             데이터 포인트: {currentStock.data.length}개
           </small>
-        </Col>
-      </Row>
+        </div>
+      </div>
     </div>
   );
 };

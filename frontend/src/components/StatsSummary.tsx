@@ -1,5 +1,4 @@
 import React from 'react';
-import { Row, Col, Card, Badge, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { formatPercent, getStatVariant } from '../utils/formatters';
 
 const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
@@ -49,23 +48,35 @@ const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
     }
   ];
 
+  const getVariantClasses = (variant: string) => {
+    switch (variant) {
+      case 'primary': return 'bg-blue-600 text-white';
+      case 'success': return 'bg-green-600 text-white';
+      case 'danger': return 'bg-red-600 text-white';
+      case 'warning': return 'bg-yellow-600 text-white';
+      case 'info': return 'bg-cyan-600 text-white';
+      case 'secondary': return 'bg-gray-600 text-white';
+      default: return 'bg-blue-600 text-white';
+    }
+  };
+
   return (
-    <div className="mb-4">
-      <h4 className="mb-3">📈 백테스트 성과</h4>
-      <Row>
+    <div className="mb-8">
+      <h4 className="text-xl font-semibold mb-6">📈 백테스트 성과</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {statItems.map((item, index) => (
-          <Col md={6} lg={4} key={index} className="mb-3">
-            <OverlayTrigger placement="top" overlay={<Tooltip>{item.description}</Tooltip>}>
-              <Card className="h-100 shadow-sm border-0">
-                <Card.Body className="text-center">
-                  <Card.Title className="fs-6 text-muted">{item.label}</Card.Title>
-                  <Badge bg={item.variant} className="fs-5 px-3 py-2">{item.value}</Badge>
-                </Card.Body>
-              </Card>
-            </OverlayTrigger>
-          </Col>
+          <div
+            key={index}
+            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center hover:shadow-md transition-shadow"
+            title={item.description}
+          >
+            <h5 className="text-sm font-medium text-gray-600 mb-3">{item.label}</h5>
+            <span className={`inline-block px-4 py-2 rounded-lg text-lg font-semibold ${getVariantClasses(item.variant)}`}>
+              {item.value}
+            </span>
+          </div>
         ))}
-      </Row>
+      </div>
     </div>
   );
 };
