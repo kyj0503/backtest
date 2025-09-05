@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { FaChartLine, FaCalculator, FaNewspaper, FaArrowRight, FaCheckCircle, FaBullseye } from 'react-icons/fa';
 
 const HomePage: React.FC = () => {
   return (
@@ -15,8 +16,9 @@ const HomePage: React.FC = () => {
           </p>
           <Link 
             to="/backtest" 
-            className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+            className="inline-flex items-center bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
           >
+            <FaChartLine className="mr-2" />
             지금 시작하기
           </Link>
         </div>
@@ -25,9 +27,7 @@ const HomePage: React.FC = () => {
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           <div className="text-center">
             <div className="w-20 h-20 bg-blue-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-              <svg className="w-10 h-10 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clipRule="evenodd" />
-              </svg>
+              <FaChartLine className="w-10 h-10 text-blue-600" />
             </div>
             <h5 className="text-xl font-semibold mb-3">다양한 전략</h5>
             <p className="text-gray-600 text-sm">
@@ -38,10 +38,7 @@ const HomePage: React.FC = () => {
           
           <div className="text-center">
             <div className="w-20 h-20 bg-green-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-              <svg className="w-10 h-10 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
-                <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
-              </svg>
+              <FaCalculator className="w-10 h-10 text-green-600" />
             </div>
             <h5 className="text-xl font-semibold mb-3">포트폴리오 분석</h5>
             <p className="text-gray-600 text-sm">
@@ -52,9 +49,7 @@ const HomePage: React.FC = () => {
           
           <div className="text-center">
             <div className="w-20 h-20 bg-cyan-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-              <svg className="w-10 h-10 text-cyan-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-              </svg>
+              <FaNewspaper className="w-10 h-10 text-cyan-600" />
             </div>
             <h5 className="text-xl font-semibold mb-3">실시간 시각화</h5>
             <p className="text-gray-600 text-sm">
@@ -66,29 +61,23 @@ const HomePage: React.FC = () => {
 
         {/* 지원 기능 */}
         <div className="bg-white rounded-lg p-8 mb-16 shadow-sm">
-          <h4 className="text-2xl font-semibold text-center mb-8">
-            <span className="text-xl mr-2">💡</span>
+          <h4 className="text-2xl font-semibold text-center mb-8 flex items-center justify-center">
+            <FaBullseye className="text-xl mr-2" />
             주요 기능
           </h4>
           <div className="grid md:grid-cols-2 gap-8">
             <div>
               <ul className="space-y-3">
                 <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
                   실시간 주가 데이터 (Yahoo Finance)
                 </li>
                 <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
                   커스터마이징 가능한 전략 파라미터
                 </li>
                 <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
                   상세한 성과 지표 (샤프 비율, 최대 낙폭 등)
                 </li>
               </ul>
@@ -96,21 +85,15 @@ const HomePage: React.FC = () => {
             <div>
               <ul className="space-y-3">
                 <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
                   거래 기록 및 진입/청산 포인트 표시
                 </li>
                 <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
                   포트폴리오 리밸런싱 시뮬레이션
                 </li>
                 <li className="flex items-center">
-                  <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                  <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
                   다양한 차트 타입 (캔들스틱, 라인, 거래량)
                 </li>
               </ul>
@@ -120,8 +103,8 @@ const HomePage: React.FC = () => {
 
         {/* 사용법 안내 */}
         <div className="mb-16">
-          <h4 className="text-2xl font-semibold text-center mb-8">
-            <span className="text-xl mr-2">🚀</span>
+          <h4 className="text-2xl font-semibold text-center mb-8 flex items-center justify-center">
+            <FaArrowRight className="text-xl mr-2" />
             사용법
           </h4>
           <div className="max-w-4xl mx-auto">

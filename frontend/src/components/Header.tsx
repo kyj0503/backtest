@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { FaChartLine } from 'react-icons/fa';
 
 const Header: React.FC = () => {
   return (
@@ -8,7 +9,7 @@ const Header: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           {/* Brand */}
           <Link to="/" className="text-xl font-bold hover:text-blue-200 transition-colors flex items-center gap-2">
-            <span className="text-lg">📈</span>
+            <FaChartLine className="text-lg" />
             <span>백테스팅 플랫폼</span>
           </Link>
           

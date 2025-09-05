@@ -56,6 +56,7 @@ docker-compose exec backend pytest tests/ -v
 - **진짜 현금 자산 처리**: asset_type 필드로 현금('cash')과 주식('stock') 구분
 - **Pydantic V2 완전 마이그레이션**: 모든 deprecated 경고 제거
 - **Tailwind CSS 마이그레이션**: React Bootstrap에서 Tailwind CSS로 완전 전환
+- **React Icons 도입**: 이모지 대신 react-icons 라이브러리로 전문적 UI 구현
 - **Jenkins 배포 디버깅**: 환경변수 확인 및 브랜치 조건 개선으로 배포 문제 해결
 - **네이버 뉴스 API**: 70+ 종목 지원, 날짜별 필터링, 자동 콘텐츠 정제
 - **완전 오프라인 모킹 시스템**: CI/CD 안정성 극대화
@@ -89,6 +90,7 @@ docker-compose exec backend pytest tests/ -v
 
 ### UI/UX 규칙
 - **이모지 금지**: 모든 UI 텍스트, 문서, 커밋 메시지에서 이모지 사용 금지
+- **React Icons 사용**: 시각적 요소가 필요한 경우 react-icons 라이브러리 사용
 - **일관성**: 텍스트 기반의 깔끔하고 전문적인 인터페이스 유지
 - **접근성**: 스크린 리더 호환성을 위한 의미있는 텍스트 사용
 
