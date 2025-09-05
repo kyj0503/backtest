@@ -1,6 +1,5 @@
-import React, { useState, memo, useMemo, useCallback } from "react";
+import React, { useState, memo, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { useChartOptimization } from "../hooks/useChartOptimization";
 import { useRenderPerformance } from "./common/PerformanceMonitor";
 
 interface StockData {
@@ -20,9 +19,6 @@ interface StockPriceChartProps {
 const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, className = "" }) => {
   // 성능 모니터링
   useRenderPerformance('StockPriceChart');
-  
-  // 차트 최적화 훅 사용
-  const { chartColors, chartConfig, formatters } = useChartOptimization();
   
   const [currentIndex, setCurrentIndex] = useState(0);
 

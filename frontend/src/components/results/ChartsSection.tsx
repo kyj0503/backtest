@@ -12,8 +12,7 @@ import { formatPercent } from '../../utils/formatters';
 import { useStockData } from '../../hooks/useStockData';
 import { 
   ChartData, 
-  PortfolioData, 
-  EquityChartDataItem 
+  PortfolioData
 } from '../../types/backtest-results';
 
 interface ChartsSectionProps {
@@ -55,10 +54,11 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     });
 
     // equity_curve를 배열로 변환
-    const equityChartData: EquityChartDataItem[] = Object.entries(equity_curve).map(([date, value]) => ({
+    const equityChartData = Object.entries(equity_curve).map(([date, value]) => ({
       date,
       value: value,
-      return: daily_returns[date] || 0
+      return_pct: daily_returns[date] || 0,
+      drawdown_pct: 0 // 포트폴리오에서는 drawdown 계산이 필요하면 추가
     }));
 
     const isMultipleStocks = portfolio_composition.length > 1;
@@ -66,16 +66,16 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     return (
       <>
         {/* 백테스트 성과 통계 */}
-                <Suspense fallback={<ChartLoading height={300} />}>
+        <Suspense fallback={<ChartLoading height={300} />}>
           <LazyStatsSummary stats={{
-            '총 수익률': formatPercent(portfolio_statistics['Return [%]'] || 0),
-            '연간 수익률': formatPercent(portfolio_statistics['Annual Return [%]'] || 0),
-            '변동성': formatPercent(portfolio_statistics['Volatility [%]'] || 0),
-            '샤프 비율': (portfolio_statistics['Sharpe Ratio'] || 0).toFixed(2),
-            '최대 낙폭': formatPercent(portfolio_statistics['Max Drawdown [%]'] || 0),
-            '총 거래 횟수': portfolio_statistics['# Trades'] || 0,
-            '승률': formatPercent(portfolio_statistics['Win Rate [%]'] || 0),
-            '평균 수익': formatPercent(portfolio_statistics['Avg Return [%]'] || 0)
+            '총 수익률': formatPercent(portfolio_statistics.Total_Return || 0),
+            '연간 수익률': formatPercent(portfolio_statistics.Annual_Return || 0),
+            '변동성': formatPercent(portfolio_statistics.Annual_Volatility || 0),
+            '샤프 비율': (portfolio_statistics.Sharpe_Ratio || 0).toFixed(2),
+            '최대 낙폭': formatPercent(portfolio_statistics.Max_Drawdown || 0),
+            '총 거래일': portfolio_statistics.Total_Trading_Days || 0,
+            '승률': formatPercent(portfolio_statistics.Win_Rate || 0),
+            '평균 낙폭': formatPercent(portfolio_statistics.Avg_Drawdown || 0)
           }} />
         </Suspense>
 
@@ -85,7 +85,9 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <h5 className="text-lg font-semibold">📈 백테스트 수익률 곡선</h5>
           </div>
           <div className="p-6">
-            <EquityChart data={equityChartData} />
+            <Suspense fallback={<ChartLoading height={400} />}>
+              <LazyEquityChart data={equityChartData} />
+            </Suspense>
           </div>
         </div>
 
@@ -95,7 +97,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
             <p className="text-gray-600">개별 종목 주가 데이터를 가져오는 중...</p>
           </div>
-        ) : stocksData.length > 0 && (
+        ) : stocksData.length > 0 ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h5 className="text-lg font-semibold">
@@ -103,10 +105,12 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
               </h5>
             </div>
             <div className="p-6">
-              <StockPriceChart stocksData={stocksData} />
+              <Suspense fallback={<ChartLoading height={400} />}>
+                <LazyStockPriceChart stocksData={stocksData} />
+              </Suspense>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* 주요 성과 지표 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -270,7 +274,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
                 />
                 <Line 
                   type="monotone" 
-                  dataKey="return" 
+                  dataKey="return_pct" 
                   stroke="#ff7300" 
                   strokeWidth={1}
                   dot={false}
@@ -289,7 +293,9 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     
     return (
       <>
-        <StatsSummary stats={chartData.summary_stats || {}} />
+        <Suspense fallback={<ChartLoading height={300} />}>
+          <LazyStatsSummary stats={chartData.summary_stats || {}} />
+        </Suspense>
 
         {/* 백테스트 결과 차트 (단일 종목) */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -297,11 +303,13 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <h5 className="text-lg font-semibold">📈 백테스트 결과</h5>
           </div>
           <div className="p-6">
-            <OHLCChart 
-              data={chartData.ohlc_data || []} 
-              indicators={chartData.indicators || []} 
-              trades={chartData.trade_markers || []} 
-            />
+            <Suspense fallback={<ChartLoading height={400} />}>
+              <LazyOHLCChart 
+                data={chartData.ohlc_data || []} 
+                indicators={chartData.indicators || []} 
+                trades={chartData.trade_markers || []} 
+              />
+            </Suspense>
           </div>
         </div>
 
@@ -310,7 +318,9 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <h5 className="text-lg font-semibold">📊 수익률 곡선</h5>
           </div>
           <div className="p-6">
-            <EquityChart data={chartData.equity_data || []} />
+            <Suspense fallback={<ChartLoading height={400} />}>
+              <LazyEquityChart data={chartData.equity_data || []} />
+            </Suspense>
           </div>
         </div>
 
@@ -321,16 +331,18 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
               <h5 className="text-lg font-semibold">📊 개별 주가 변동</h5>
             </div>
             <div className="p-6">
-              <StockPriceChart 
-                stocksData={[{
-                  symbol: chartData.ticker,
-                  data: chartData.ohlc_data?.map(item => ({
-                    date: item.date,
-                    price: item.close,
-                    volume: item.volume
-                  })) || []
-                }]} 
-              />
+              <Suspense fallback={<ChartLoading height={400} />}>
+                <LazyStockPriceChart 
+                  stocksData={[{
+                    symbol: chartData.ticker,
+                    data: chartData.ohlc_data?.map(item => ({
+                      date: item.date,
+                      price: item.close,
+                      volume: item.volume
+                    })) || []
+                  }]} 
+                />
+              </Suspense>
             </div>
           </div>
         )}
@@ -342,7 +354,9 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
               <h5 className="text-lg font-semibold">📋 거래 내역</h5>
             </div>
             <div className="p-6">
-              <TradesChart trades={chartData.trade_markers} />
+              <Suspense fallback={<ChartLoading height={400} />}>
+                <LazyTradesChart trades={chartData.trade_markers} />
+              </Suspense>
             </div>
           </div>
         )}
@@ -355,6 +369,8 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       {isPortfolio ? renderPortfolioCharts() : renderSingleStockCharts()}
     </>
   );
-};
+});
+
+ChartsSection.displayName = 'ChartsSection';
 
 export default ChartsSection;

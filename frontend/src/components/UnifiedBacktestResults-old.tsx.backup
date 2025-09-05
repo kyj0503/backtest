@@ -169,7 +169,8 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
     const equityChartData = Object.entries(equity_curve || {}).map(([date, value]) => ({
       date,
       value: value,
-      return: daily_returns[date] || 0
+      return_pct: daily_returns[date] || 0,
+      drawdown_pct: 0
     }));
 
     const isMultipleStocks = portfolio_composition.length > 1;
