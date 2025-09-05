@@ -1,5 +1,6 @@
 import React, { ChangeEvent } from 'react';
 import { PREDEFINED_STOCKS, ASSET_TYPES, AssetType } from '../constants/strategies';
+import { Tooltip, Badge } from './common';
 
 interface Stock {
   symbol: string;
@@ -115,14 +116,22 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                   )}
                 </td>
                 <td className="w-24 px-6 py-4 whitespace-nowrap">
-                  <select
-                    value={stock.assetType || ASSET_TYPES.STOCK}
-                    onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'assetType', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value={ASSET_TYPES.STOCK}>주식</option>
-                    <option value={ASSET_TYPES.CASH}>현금</option>
-                  </select>
+                  <div className="space-y-2">
+                    <select
+                      value={stock.assetType || ASSET_TYPES.STOCK}
+                      onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'assetType', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value={ASSET_TYPES.STOCK}>주식</option>
+                      <option value={ASSET_TYPES.CASH}>현금</option>
+                    </select>
+                    <Badge 
+                      variant={stock.assetType === ASSET_TYPES.CASH ? 'success' : 'info'}
+                      size="sm"
+                    >
+                      {stock.assetType === ASSET_TYPES.CASH ? '무위험' : '위험자산'}
+                    </Badge>
+                  </div>
                 </td>
                 <td className="w-24 px-6 py-4 whitespace-nowrap text-sm">
                   {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
@@ -162,15 +171,16 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
         >
           + 종목 추가
         </button>
-        <button
-          type="button"
-          onClick={addCash}
-          disabled={portfolio.length >= 10}
-          title="현금을 포트폴리오에 추가 (무위험 자산)"
-          className="px-4 py-2 text-sm font-medium text-green-600 bg-green-50 border border-green-300 rounded-md hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          현금 추가
-        </button>
+        <Tooltip content="현금을 포트폴리오에 추가 (무위험 자산)">
+          <button
+            type="button"
+            onClick={addCash}
+            disabled={portfolio.length >= 10}
+            className="px-4 py-2 text-sm font-medium text-green-600 bg-green-50 border border-green-300 rounded-md hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            현금 추가
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

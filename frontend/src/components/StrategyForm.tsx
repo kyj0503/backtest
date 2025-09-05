@@ -1,5 +1,6 @@
-import React, { ChangeEvent } from 'react';
+import React from 'react';
 import { STRATEGY_CONFIGS } from '../constants/strategies';
+import { FormField } from './common';
 
 export interface StrategyFormProps {
   selectedStrategy: string;
@@ -24,27 +25,24 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
         <div className="grid md:grid-cols-2 gap-6">
           {Object.entries(config.parameters).map(([key, paramConfig]) => {
             const param = paramConfig as any;
+            const labelText = 
+              key === 'short_window' ? '단기 이동평균 기간' :
+              key === 'long_window' ? '장기 이동평균 기간' :
+              key === 'rsi_period' ? 'RSI 기간' :
+              key === 'rsi_oversold' ? 'RSI 과매도 기준' :
+              key === 'rsi_overbought' ? 'RSI 과매수 기준' : key;
+
             return (
-              <div key={key}>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {key === 'short_window' ? '단기 이동평균 기간' :
-                   key === 'long_window' ? '장기 이동평균 기간' :
-                   key === 'rsi_period' ? 'RSI 기간' :
-                   key === 'rsi_oversold' ? 'RSI 과매도 기준' :
-                   key === 'rsi_overbought' ? 'RSI 과매수 기준' : key}
-                </label>
-                <input
-                  type="number"
-                  value={strategyParams[key] || param.default}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => updateStrategyParam(key, e.target.value)}
-                  min={param.min}
-                  max={param.max}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  기본값: {param.default}, 범위: {param.min} - {param.max}
-                </p>
-              </div>
+              <FormField
+                key={key}
+                label={labelText}
+                type="number"
+                value={strategyParams[key] || param.default}
+                onChange={(value) => updateStrategyParam(key, value.toString())}
+                min={param.min}
+                max={param.max}
+                helpText={`기본값: ${param.default}, 범위: ${param.min} - ${param.max}`}
+              />
             );
           })}
         </div>
@@ -55,18 +53,17 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
   return (
     <div className="space-y-8">
       {/* 투자 전략 선택 */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">투자 전략</label>
-        <select
-          value={selectedStrategy}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedStrategy(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="buy_and_hold">매수 후 보유</option>
-          <option value="sma_crossover">단순이동평균 교차</option>
-          <option value="rsi_strategy">RSI 전략</option>
-        </select>
-      </div>
+      <FormField
+        label="투자 전략"
+        type="select"
+        value={selectedStrategy}
+        onChange={(value) => setSelectedStrategy(value.toString())}
+        options={[
+          { value: 'buy_and_hold', label: '매수 후 보유' },
+          { value: 'sma_crossover', label: '단순이동평균 교차' },
+          { value: 'rsi_strategy', label: 'RSI 전략' },
+        ]}
+      />
 
       {/* 전략 파라미터 */}
       {renderStrategyParams()}

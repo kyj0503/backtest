@@ -1,4 +1,5 @@
-import React, { ChangeEvent } from 'react';
+import React from 'react';
+import { FormField } from './common';
 
 export interface DateRangeFormProps {
   startDate: string;
@@ -15,24 +16,18 @@ const DateRangeForm: React.FC<DateRangeFormProps> = ({
 }) => {
   return (
     <div className="grid md:grid-cols-2 gap-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">시작 날짜</label>
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">종료 날짜</label>
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
+      <FormField
+        label="시작 날짜"
+        type="date"
+        value={startDate}
+        onChange={(value) => setStartDate(value.toString())}
+      />
+      <FormField
+        label="종료 날짜"
+        type="date"
+        value={endDate}
+        onChange={(value) => setEndDate(value.toString())}
+      />
     </div>
   );
 };

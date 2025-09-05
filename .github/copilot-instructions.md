@@ -256,11 +256,11 @@ docker-compose exec backend pytest tests/ -v
 #### 4.5. 코드 표준화 및 재사용성 (DRY Principle)
 **목표**: 중복 코드 제거 및 일관성 확보
 
-- [ ] **공통 컴포넌트 라이브러리**
-  - [ ] FormField: 라벨, 입력, 에러 메시지 통합 컴포넌트
-  - [ ] LoadingSpinner: 통일된 로딩 표시 컴포넌트
-  - [ ] ErrorMessage: 표준화된 에러 표시 컴포넌트
-  - [ ] DataTable: 재사용 가능한 테이블 컴포넌트
+- [x] **공통 컴포넌트 라이브러리**
+  - [x] FormField: 라벨, 입력, 에러 메시지 통합 컴포넌트
+  - [x] LoadingSpinner: 통일된 로딩 표시 컴포넌트
+  - [x] ErrorMessage: 표준화된 에러 표시 컴포넌트
+  - [x] DataTable: 재사용 가능한 테이블 컴포넌트
 
 - [x] **상수 및 타입 정의 통합**
   - [x] UI 상수: `UI_CONSTANTS.ts` (색상, 크기, 애니메이션 등)
@@ -297,10 +297,12 @@ docker-compose exec backend pytest tests/ -v
   - [x] DateRangePicker: 날짜 범위 선택기 (175줄)
   - [x] ToggleSwitch: 토글 스위치 컴포넌트 (149줄)
 
-- [ ] **기존 컴포넌트 적용**
-  - [ ] 기존 폼 컴포넌트들을 새 컴포넌트로 리팩터링
-  - [ ] UI 일관성 확보를 위한 전체 적용
-  - [ ] 성능 최적화 및 접근성 개선
+- [x] **기존 컴포넌트 적용**
+  - [x] StrategyForm: FormField 컴포넌트로 리팩터링 (전략 선택 및 파라미터 입력)
+  - [x] DateRangeForm: FormField 컴포넌트로 리팩터링 (날짜 입력)
+  - [x] NewsModal: Modal 컴포넌트로 리팩터링 (뉴스 모달 다이얼로그)
+  - [x] PortfolioForm: Tooltip과 Badge 컴포넌트 적용 (도움말 및 상태 표시)
+  - [x] UI 일관성 확보: 공통 컴포넌트 사용으로 디자인 통일성 향상
 
 #### 4.7. 테스트 코드 강화
 **목표**: 리팩터링 안정성 확보
