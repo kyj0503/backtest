@@ -81,10 +81,11 @@ docker-compose exec backend pytest tests/ -v
 - 시스템 정보: 환경 변수나 버전 정보는 `system.py`와 `ServerStatus.tsx`에 반영
 
 ### 프론트엔드 개발 우선순위
-1. 폼 상태 관리 개선
-2. 에러 바운더리 구현
-3. 성능 최적화
-4. 테스트 코드 작성
+1. **UnifiedBacktestForm 리팩터링**: 복잡한 상태를 useReducer와 커스텀 훅으로 분리
+2. **공통 컴포넌트 라이브러리**: 재사용 가능한 UI 컴포넌트 구축
+3. **God Component 분리**: 500줄 이상 컴포넌트들을 단일 책임 원칙에 따라 분리
+4. **성능 최적화**: React.memo, useMemo, useCallback을 통한 렌더링 최적화
+5. **상수 및 타입 정리**: 매직 넘버/문자열 제거 및 TypeScript 타입 안정성 확보
 
 ### 커밋 메시지 규칙
 - **형식**: `type: 간결한 제목` (이모지 사용 금지)
@@ -155,6 +156,129 @@ docker-compose exec backend pytest tests/ -v
 - [ ] OpenAI API 포트폴리오 적합성 분석: AI 기반 투자 성향 분석
 - [ ] 커뮤니티 기능: 수익률 공유 및 랭킹 시스템
 - [ ] 주식 티커 자동 완성: 자연어 → 티커 자동 변환
+
+### 4. React 프론트엔드 리팩터링 계획
+
+#### 4.1. 컴포넌트 분리 (Component Separation)
+**목표**: God Component 해결 및 단일 책임 원칙 적용
+
+- [ ] **UnifiedBacktestForm.tsx (515줄) 분리**
+  - [ ] PortfolioForm: 포트폴리오 입력 테이블 분리
+  - [ ] StrategyForm: 전략 선택 및 파라미터 설정 분리  
+  - [ ] DateRangeForm: 날짜 범위 선택 분리
+  - [ ] CommissionForm: 수수료 및 리밸런싱 설정 분리
+
+- [ ] **UnifiedBacktestResults.tsx (546줄) 분리**
+  - [ ] ResultsHeader: 백테스트 결과 헤더 및 요약 정보 분리
+  - [ ] ChartsSection: 차트 영역 분리 (포트폴리오/단일 종목 조건부 렌더링)
+  - [ ] AdditionalFeatures: 추가 기능 (뉴스, 환율 등) 분리
+
+- [ ] **StockVolatilityNews.tsx (495줄) 분리**
+  - [ ] VolatilityChart: 변동성 차트 컴포넌트 분리
+  - [ ] NewsModal: 뉴스 모달 컴포넌트 분리
+  - [ ] VolatilityTable: 변동성 테이블 컴포넌트 분리
+
+#### 4.2. 상태 관리 개선 (State Management)
+**목표**: 복잡한 폼 상태 최적화 및 서버 상태 분리
+
+- [ ] **UnifiedBacktestForm 상태 통합**
+  - [ ] useReducer로 portfolio, dates, strategy, params 통합 관리
+  - [ ] 폼 검증 로직을 별도 훅으로 분리: `useFormValidation`
+  - [ ] 전략 파라미터 로직 분리: `useStrategyParams`
+
+- [ ] **서버 상태 분리**
+  - [ ] React Query(TanStack Query) 도입 검토
+  - [ ] 백테스트 API 호출: `useBacktestMutation`
+  - [ ] 주가 데이터 페칭: `useStockData`
+  - [ ] 뉴스 데이터 페칭: `useNewsData`
+
+- [ ] **Context API 활용**
+  - [ ] BacktestContext: 백테스트 관련 전역 상태 관리
+  - [ ] 중복된 props drilling 제거
+
+#### 4.3. 커스텀 훅 추출 (Custom Hooks)
+**목표**: 로직과 뷰 분리, 재사용성 향상
+
+- [ ] **폼 관련 훅**
+  - [ ] `useBacktestForm`: 백테스트 폼 상태 및 검증 로직
+  - [ ] `usePortfolio`: 포트폴리오 추가/삭제/수정 로직
+  - [ ] `useFormInput`: 공통 입력 필드 로직
+
+- [ ] **데이터 페칭 훅**
+  - [ ] `useStockPrice`: 주가 데이터 페칭 및 캐싱
+  - [ ] `useVolatilityNews`: 변동성 뉴스 데이터 관리
+  - [ ] `useExchangeRate`: 환율 데이터 페칭
+
+- [ ] **UI 상태 훅**
+  - [ ] `useModal`: 모달 상태 관리 (뉴스, 차트 등)
+  - [ ] `useDropdown`: 드롭다운 상태 관리
+  - [ ] `useTooltip`: 툴팁 상태 관리
+
+#### 4.4. 성능 최적화 (Performance)
+**목표**: 불필요한 리렌더링 방지 및 메모이제이션
+
+- [ ] **메모이제이션 적용**
+  - [ ] React.memo: 차트 컴포넌트들 (EquityChart, OHLCChart 등)
+  - [ ] useMemo: 차트 데이터 변환 로직, 필터링된 옵션 리스트
+  - [ ] useCallback: 이벤트 핸들러 함수들
+
+- [ ] **코드 분할**
+  - [ ] React.lazy: 큰 차트 라이브러리 지연 로딩
+  - [ ] 뉴스 모달, 상세 차트 등 조건부 로딩
+
+- [ ] **성능 측정**
+  - [ ] React DevTools Profiler로 병목 지점 확인
+  - [ ] Bundle Analyzer로 번들 크기 최적화
+
+#### 4.5. 코드 표준화 및 재사용성 (DRY Principle)
+**목표**: 중복 코드 제거 및 일관성 확보
+
+- [ ] **공통 컴포넌트 라이브러리**
+  - [ ] FormField: 라벨, 입력, 에러 메시지 통합 컴포넌트
+  - [ ] LoadingSpinner: 통일된 로딩 표시 컴포넌트
+  - [ ] ErrorMessage: 표준화된 에러 표시 컴포넌트
+  - [ ] DataTable: 재사용 가능한 테이블 컴포넌트
+
+- [ ] **상수 및 타입 정의 통합**
+  - [ ] UI 상수: `UI_CONSTANTS.ts` (색상, 크기, 애니메이션 등)
+  - [ ] 스타일 클래스: `STYLE_CLASSES.ts` (자주 사용되는 Tailwind 조합)
+  - [ ] API 타입: `api-types.ts` 확장 및 정리
+
+- [ ] **유틸리티 함수 정리**
+  - [ ] 날짜 포맷팅: `dateUtils.ts`
+  - [ ] 숫자 포맷팅: `numberUtils.ts` 
+  - [ ] 차트 데이터 변환: `chartUtils.ts`
+
+#### 4.6. 매직 넘버/문자열 제거
+**목표**: 하드코딩된 값들을 의미있는 상수로 변경
+
+- [ ] **UI 상수 정의**
+  - [ ] `UI_CONSTANTS.ts`: 자주 사용되는 className 조합
+  - [ ] `CHART_CONFIG.ts`: 차트 기본 설정값들
+  - [ ] `VALIDATION_RULES.ts`: 폼 검증 규칙 확장
+
+- [ ] **텍스트 상수화**
+  - [ ] `MESSAGES.ts`: 에러 메시지, 성공 메시지 등
+  - [ ] `LABELS.ts`: UI 라벨 텍스트들
+
+#### 4.7. 테스트 코드 강화
+**목표**: 리팩터링 안정성 확보
+
+- [ ] **단위 테스트 추가**
+  - [ ] 커스텀 훅 테스트
+  - [ ] 유틸리티 함수 테스트
+  - [ ] 컴포넌트 단위 테스트
+
+- [ ] **통합 테스트**
+  - [ ] 백테스트 플로우 전체 테스트
+  - [ ] API 모킹 테스트
+
+#### 리팩터링 우선순위
+1. **UnifiedBacktestForm 커스텀 훅 분리** (가장 복잡한 상태 관리)
+2. **공통 컴포넌트 라이브러리 구축** (재사용성 확보)
+3. **큰 컴포넌트들 분리** (가독성 및 유지보수성)
+4. **성능 최적화** (사용자 경험 개선)
+5. **테스트 코드 보강** (안정성 확보)
 
 ## 참고 명령어
 
