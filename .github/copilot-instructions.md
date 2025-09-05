@@ -10,7 +10,7 @@
 
 ### 기술 스택
 - **백엔드**: FastAPI + uvicorn, Pydantic V2, MySQL 캐시, yfinance API
-- **프론트엔드**: React 18 + TypeScript + Vite, React Bootstrap, Recharts
+- **프론트엔드**: React 18 + TypeScript + Vite, Tailwind CSS, Recharts
 - **배포**: Docker + Jenkins CI/CD, nginx 프록시
 
 ### 데이터 흐름
@@ -55,6 +55,7 @@ docker-compose exec backend pytest tests/ -v
 ### 완료된 주요 기능
 - **진짜 현금 자산 처리**: asset_type 필드로 현금('cash')과 주식('stock') 구분
 - **Pydantic V2 완전 마이그레이션**: 모든 deprecated 경고 제거
+- **Tailwind CSS 마이그레이션**: React Bootstrap에서 Tailwind CSS로 완전 전환
 - **네이버 뉴스 API**: 70+ 종목 지원, 날짜별 필터링, 자동 콘텐츠 정제
 - **완전 오프라인 모킹 시스템**: CI/CD 안정성 극대화
 

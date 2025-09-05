@@ -17,7 +17,7 @@ FastAPI + React 기반의 투자 전략 백테스팅 시스템입니다.
 ```
 Frontend (React + TypeScript) ←→ Backend (FastAPI + Python) ←→ Database (MySQL)
      ↓                                    ↓                        ↓
-Vite + Bootstrap                 backtesting.py               yfinance API
+Vite + Tailwind CSS             backtesting.py               yfinance API
 ```
 
 ## 빠른 시작
@@ -53,7 +53,7 @@ docker-compose exec frontend npm test
 ### 프론트엔드
 - **React 18** + TypeScript - 현대적 웹 UI 개발
 - **Vite** - 고속 빌드 도구
-- **React Bootstrap** - 반응형 UI 컴포넌트
+- **Tailwind CSS** - 유틸리티 기반 CSS 프레임워크
 - **Recharts** - 데이터 시각화
 
 ### 백엔드

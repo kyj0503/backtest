@@ -49,12 +49,12 @@ UnifiedBacktestResults.tsx
 // 좋은 예: 단일 책임
 function StatsSummary({ stats }: StatsSummaryProps) {
   return (
-    <Card>
-      <Card.Header>성과 요약</Card.Header>
-      <Card.Body>
+    <div className="card">
+      <div className="font-semibold text-lg mb-4">성과 요약</div>
+      <div>
         <StatsDisplay stats={stats} />
-      </Card.Body>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -94,7 +94,7 @@ interface FormComponentProps extends BaseComponentProps {
 // 큰 컴포넌트를 작은 조합으로 분해
 function BacktestResults({ data, isPortfolio }: BacktestResultsProps) {
   return (
-    <Container>
+    <div className="container mx-auto px-4">
       <ResultsHeader data={data} />
       <StatsSummary stats={data.summary_stats} />
       
@@ -105,7 +105,7 @@ function BacktestResults({ data, isPortfolio }: BacktestResultsProps) {
       )}
       
       <AdditionalFeatures data={data} />
-    </Container>
+    </div>
   );
 }
 ```
@@ -292,8 +292,8 @@ class ErrorBoundary extends Component<Props, State> {
 ```typescript
 function ErrorFallback({ error }: { error: Error | null }) {
   return (
-    <Alert variant="danger" className="m-3">
-      <Alert.Heading>문제가 발생했습니다</Alert.Heading>
+    <div className="alert alert-danger m-3">
+      <div className="font-semibold text-lg mb-2">문제가 발생했습니다</div>
       <p>
         차트를 표시하는 중 오류가 발생했습니다. 
         페이지를 새로고침하거나 다른 설정으로 다시 시도해보세요.
@@ -301,14 +301,17 @@ function ErrorFallback({ error }: { error: Error | null }) {
       {error && (
         <details className="mt-2">
           <summary>기술적 세부사항</summary>
-          <pre className="mt-2 text-small">{error.message}</pre>
+          <pre className="mt-2 text-sm">{error.message}</pre>
         </details>
       )}
-      <hr />
-      <Button variant="outline-danger" onClick={() => window.location.reload()}>
+      <hr className="my-3" />
+      <button 
+        className="btn btn-outline-primary" 
+        onClick={() => window.location.reload()}
+      >
         페이지 새로고침
-      </Button>
-    </Alert>
+      </button>
+    </div>
   );
 }
 ```
@@ -348,7 +351,7 @@ function DataTable({ data, filters }: DataTableProps) {
   }, [onRowSelect]);
   
   return (
-    <Table>
+    <div className="table">
       {filteredData.map(item => (
         <TableRow 
           key={item.id} 
@@ -356,7 +359,7 @@ function DataTable({ data, filters }: DataTableProps) {
           onClick={handleRowClick}
         />
       ))}
-    </Table>
+    </div>
   );
 }
 ```
@@ -380,7 +383,7 @@ describe('StatsSummary', () => {
   it('음수 드로다운을 빨간색으로 표시해야 함', () => {
     render(<StatsSummary stats={mockStats} />);
     const drawdown = screen.getByText('-8.20%');
-    expect(drawdown).toHaveClass('text-danger');
+    expect(drawdown).toHaveClass('text-red-600');
   });
 });
 ```

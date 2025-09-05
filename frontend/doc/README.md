@@ -6,7 +6,7 @@ React 18 + TypeScript 기반의 백테스팅 웹 애플리케이션 개발 가�
 
 - **Framework**: React 18 + TypeScript
 - **Build Tool**: Vite
-- **UI Framework**: React Bootstrap + Bootstrap 5
+- **UI Framework**: Tailwind CSS
 - **Charting**: Recharts
 - **Testing**: Vitest + Testing Library
 - **Container**: Docker
