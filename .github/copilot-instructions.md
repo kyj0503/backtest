@@ -159,14 +159,14 @@ docker-compose exec backend pytest tests/ -v
 
 ### 4. React 프론트엔드 리팩터링 계획
 
-#### 4.1. 컴포넌트 분리 (Component Separation)
+#### 4.1. 컴포넌트 분리 (Component Separation) ✅ 완료
 **목표**: God Component 해결 및 단일 책임 원칙 적용
 
-- [ ] **UnifiedBacktestForm.tsx (515줄) 분리**
-  - [ ] PortfolioForm: 포트폴리오 입력 테이블 분리
-  - [ ] StrategyForm: 전략 선택 및 파라미터 설정 분리  
-  - [ ] DateRangeForm: 날짜 범위 선택 분리
-  - [ ] CommissionForm: 수수료 및 리밸런싱 설정 분리
+- [x] **UnifiedBacktestForm.tsx (515줄 → 약 300줄) 분리 완료**
+  - [x] PortfolioForm: 포트폴리오 입력 테이블 분리 (145줄)
+  - [x] StrategyForm: 전략 선택 및 파라미터 설정 분리 (65줄)  
+  - [x] DateRangeForm: 날짜 범위 선택 분리 (30줄)
+  - [x] CommissionForm: 수수료 및 리밸런싱 설정 분리 (45줄)
 
 - [ ] **UnifiedBacktestResults.tsx (546줄) 분리**
   - [ ] ResultsHeader: 백테스트 결과 헤더 및 요약 정보 분리
@@ -273,8 +273,11 @@ docker-compose exec backend pytest tests/ -v
   - [ ] 백테스트 플로우 전체 테스트
   - [ ] API 모킹 테스트
 
-#### 리팩터링 우선순위
-1. **UnifiedBacktestForm 커스텀 훅 분리** (가장 복잡한 상태 관리)
+#### 리팩터링 우선순위 (업데이트: 2024-12-19)
+1. **✅ UnifiedBacktestForm 컴포넌트 분리 완료** (가장 복잡한 상태 관리)
+   - PortfolioForm, StrategyForm, DateRangeForm, CommissionForm으로 분리
+   - 515줄에서 약 300줄로 축소, 각 컴포넌트는 단일 책임 원칙 준수
+   - TypeScript 타입 안정성 확보 및 props 인터페이스 정의
 2. **공통 컴포넌트 라이브러리 구축** (재사용성 확보)
 3. **큰 컴포넌트들 분리** (가독성 및 유지보수성)
 4. **성능 최적화** (사용자 경험 개선)
