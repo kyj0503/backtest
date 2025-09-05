@@ -56,6 +56,7 @@ docker-compose exec backend pytest tests/ -v
 - **진짜 현금 자산 처리**: asset_type 필드로 현금('cash')과 주식('stock') 구분
 - **Pydantic V2 완전 마이그레이션**: 모든 deprecated 경고 제거
 - **Tailwind CSS 마이그레이션**: React Bootstrap에서 Tailwind CSS로 완전 전환
+- **Jenkins 배포 디버깅**: 환경변수 확인 및 브랜치 조건 개선으로 배포 문제 해결
 - **네이버 뉴스 API**: 70+ 종목 지원, 날짜별 필터링, 자동 콘텐츠 정제
 - **완전 오프라인 모킹 시스템**: CI/CD 안정성 극대화
 
@@ -86,6 +87,11 @@ docker-compose exec backend pytest tests/ -v
 - **본문**: 필요시 상세 설명 추가 (불필요한 수식어 제거)
 - **예시**: `fix: TypeScript 빌드 오류 해결`, `feat: 현금 자산 처리 기능 추가`
 
+### UI/UX 규칙
+- **이모지 금지**: 모든 UI 텍스트, 문서, 커밋 메시지에서 이모지 사용 금지
+- **일관성**: 텍스트 기반의 깔끔하고 전문적인 인터페이스 유지
+- **접근성**: 스크린 리더 호환성을 위한 의미있는 텍스트 사용
+
 ### 문서화 규칙
 - 코드 수정 시 관련 마크다운 문서 최신화 필수
 - 백엔드 문서: `backend/doc/`, 프론트엔드 문서: `frontend/doc/`
@@ -104,6 +110,7 @@ docker-compose exec backend pytest tests/ -v
 - 테스트 아키텍처: `backend/doc/TEST_ARCHITECTURE.md`
 - 현금 자산 처리: `backend/doc/CASH_ASSETS.md`
 - 프론트엔드 개발 가이드: `frontend/doc/README.md`
+- Jenkins 배포 문제해결: `JENKINS_DEPLOY_TROUBLESHOOTING.md`
 
 ## 외부 의존성
 
