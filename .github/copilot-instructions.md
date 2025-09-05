@@ -173,7 +173,7 @@ docker-compose exec backend pytest tests/ -v
   - [x] ChartsSection: 차트 영역 분리 (포트폴리오/단일 종목 조건부 렌더링) (381줄)
   - [x] AdditionalFeatures: 추가 기능 (뉴스, 환율 등) 분리 (69줄)
 
-- [x] **StockVolatilityNews.tsx (495줄 → 199줄) 분리 완료**
+- [x] **StockVolatilityNews.tsx (495줄 → 133줄) 분리 완료**
   - [x] VolatilityChart: 변동성 차트 컴포넌트 분리 → VolatilityTable로 구현 (73줄)
   - [x] NewsModal: 뉴스 모달 컴포넌트 분리 (107줄)
   - [x] VolatilityTable: 변동성 테이블 컴포넌트 분리 (73줄)
@@ -196,6 +196,12 @@ docker-compose exec backend pytest tests/ -v
 - [x] **Context API 활용**
   - [x] BacktestContext: 백테스트 관련 전역 상태 관리
   - [x] 중복된 props drilling 제거 준비 완료
+
+- [x] **새 분리 컴포넌트 상태 관리 (4.2 확장)**
+  - [x] `useStockData`: 주가 데이터 페칭 및 캐싱 (ChartsSection용, 92줄)
+  - [x] `useVolatilityNews`: 변동성 뉴스 데이터 관리 (StockVolatilityNews용, 147줄)
+  - [x] `useModal`: 모달 상태 관리 (범용, 44줄)
+  - [x] 유틸리티 함수 분리: `numberUtils.ts`, `dateUtils.ts`
 
 #### 4.3. 커스텀 훅 추출 (Custom Hooks)
 **목표**: 로직과 뷰 분리, 재사용성 향상

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import OHLCChart from '../OHLCChart';
 import EquityChart from '../EquityChart';
@@ -6,6 +6,8 @@ import TradesChart from '../TradesChart';
 import StatsSummary from '../StatsSummary';
 import StockPriceChart from '../StockPriceChart';
 import { formatPercent } from '../../utils/formatters';
+import { formatCurrency } from '../../utils/numberUtils';
+import { formatChartDate } from '../../utils/dateUtils';
 import { useStockData } from '../../hooks/useStockData';
 import { 
   ChartData, 
@@ -19,18 +21,6 @@ interface ChartsSectionProps {
 }
 
 const ChartsSection: React.FC<ChartsSectionProps> = ({ data, isPortfolio }) => {
-  // 화폐 포맷터 함수
-  const formatCurrency = (value: number): string => {
-    if (value >= 1e9) {
-      return `${(value / 1e9).toFixed(1)}B`;
-    } else if (value >= 1e6) {
-      return `${(value / 1e6).toFixed(1)}M`;
-    } else if (value >= 1e3) {
-      return `${(value / 1e3).toFixed(1)}K`;
-    }
-    return value.toLocaleString();
-  };
-
   // 포트폴리오 차트 렌더링
   const renderPortfolioCharts = () => {
     if (!isPortfolio || !('portfolio_composition' in data)) {
@@ -52,6 +42,25 @@ const ChartsSection: React.FC<ChartsSectionProps> = ({ data, isPortfolio }) => {
     });
 
     // equity_curve를 배열로 변환
+    const equityChartData: EquityChartDataItem[] = Object.entries(equity_curve).map(([date, value]) => ({
+      date,
+      value: value,
+      return: daily_returns[date] || 0
+    }));
+
+    const isMultipleStocks = portfolio_composition.length > 1;
+
+    // 화폐 포맷터 함수
+    const formatCurrency = (value: number): string => {
+      if (value >= 1e9) {
+        return `${(value / 1e9).toFixed(1)}B`;
+      } else if (value >= 1e6) {
+        return `${(value / 1e6).toFixed(1)}M`;
+      } else if (value >= 1e3) {
+        return `${(value / 1e3).toFixed(1)}K`;
+      }
+      return value.toLocaleString();
+    };
     const equityChartData: EquityChartDataItem[] = Object.entries(equity_curve).map(([date, value]) => ({
       date,
       value: value,

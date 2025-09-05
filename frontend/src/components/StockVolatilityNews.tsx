@@ -1,14 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { backtestApiService } from "../services/api";
+import React from 'react';
 import VolatilityTable from './volatility/VolatilityTable';
 import NewsModal from './volatility/NewsModal';
-import { 
-  VolatilityEvent, 
-  NewsItem, 
-  StockVolatilityNewsProps,
-  getCompanyName,
-  getApiBaseUrl 
-} from '../types/volatility-news';
+import { useVolatilityNews } from '../hooks/useVolatilityNews';
+import { StockVolatilityNewsProps } from '../types/volatility-news';
 
 const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({ 
   symbols, 
@@ -16,86 +10,26 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
   endDate, 
   className = "" 
 }) => {
-  const [volatilityData, setVolatilityData] = useState<{ [key: string]: VolatilityEvent[] }>({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedStock, setSelectedStock] = useState<string>('');
-  const [showNewsModal, setShowNewsModal] = useState(false);
-  const [newsData, setNewsData] = useState<NewsItem[]>([]);
-  const [newsLoading, setNewsLoading] = useState(false);
-  const [currentNewsEvent, setCurrentNewsEvent] = useState<VolatilityEvent | null>(null);
+  const {
+    volatilityData,
+    selectedStock,
+    newsData,
+    showNewsModal,
+    currentNewsEvent,
+    loading,
+    newsLoading,
+    error,
+    actions: {
+      setSelectedStock,
+      openNewsModal,
+      closeNewsModal
+    }
+  } = useVolatilityNews({ symbols, startDate, endDate });
 
   // 현금이 아닌 유효한 심볼만 필터링
   const validSymbols = symbols.filter(symbol => 
     symbol.toUpperCase() !== 'CASH' && symbol !== '현금'
   );
-
-  useEffect(() => {
-    if (validSymbols.length > 0) {
-      fetchVolatilityData();
-      setSelectedStock(validSymbols[0]);
-    }
-  }, [validSymbols, startDate, endDate]);
-
-  const fetchVolatilityData = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const results: { [key: string]: VolatilityEvent[] } = {};
-      
-      for (const symbol of validSymbols) {
-        try {
-          const response = await backtestApiService.getStockVolatilityNews(symbol, startDate, endDate);
-          if (response.status === 'success' && response.data.volatility_events) {
-            results[symbol] = response.data.volatility_events;
-          } else {
-            results[symbol] = [];
-          }
-        } catch (symbolError) {
-          console.warn(`Failed to fetch volatility data for ${symbol}:`, symbolError);
-          results[symbol] = [];
-        }
-      }
-      
-      setVolatilityData(results);
-    } catch (err) {
-      console.error('변동성 데이터 가져오기 실패:', err);
-      setError('변동성 데이터를 가져오는 중 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStockSelect = (symbol: string) => {
-    setSelectedStock(symbol);
-  };
-
-  const openNaverNews = async (date: string, event: VolatilityEvent) => {
-    setCurrentNewsEvent(event);
-    setShowNewsModal(true);
-    setNewsLoading(true);
-    
-    try {
-      const companyName = getCompanyName(selectedStock);
-      const baseUrl = getApiBaseUrl();
-      const apiUrl = `${baseUrl}/api/v1/naver-news/search?query=${encodeURIComponent(companyName)}&start_date=${date}&end_date=${date}`;
-      
-      const response = await fetch(apiUrl);
-      const data = await response.json();
-      
-      if (data.status === 'success' && data.data && data.data.items) {
-        setNewsData(data.data.items);
-      } else {
-        setNewsData([]);
-      }
-    } catch (err) {
-      console.error('뉴스 데이터 가져오기 실패:', err);
-      setNewsData([]);
-    } finally {
-      setNewsLoading(false);
-    }
-  };
 
   // 로딩 중일 때
   if (loading) {
@@ -157,7 +91,7 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
                             ? 'bg-blue-600 text-white'
                             : 'border border-blue-300 text-blue-700 hover:bg-blue-50'
                         } ${eventCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        onClick={() => handleStockSelect(symbol)}
+                        onClick={() => setSelectedStock(symbol)}
                         disabled={eventCount === 0}
                       >
                         {symbol}
@@ -176,7 +110,7 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
               <VolatilityTable 
                 selectedStock={selectedStock}
                 events={selectedEvents}
-                onNewsClick={openNaverNews}
+                onNewsClick={openNewsModal}
               />
             </>
           )}
@@ -186,7 +120,7 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
       {/* 뉴스 모달 */}
       <NewsModal
         isVisible={showNewsModal}
-        onClose={() => setShowNewsModal(false)}
+        onClose={closeNewsModal}
         selectedStock={selectedStock}
         currentEvent={currentNewsEvent}
         newsData={newsData}

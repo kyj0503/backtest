@@ -9,6 +9,8 @@ React 백테스팅 시스템의 상태 관리 전략과 패턴을 설명합니�
 2. **단방향 데이터 흐름**: Props down, Events up 패턴 준수
 3. **상태 정규화**: 중복 데이터 방지, 단일 진실 공급원 유지
 4. **타입 안전성**: TypeScript를 활용한 상태 타입 안전성 보장
+5. **관심사 분리**: 각 훅은 특정 도메인의 상태만 관리
+6. **재사용성**: 컴포넌트 독립적인 로직으로 설계
 
 ## 현재 구현된 상태 관리 시스템
 
@@ -49,6 +51,87 @@ export function backtestFormReducer(
       );
       return { ...state, portfolio: updatedPortfolio };
     
+### 2. 새로 추가된 커스텀 훅들 (4.2 리팩토링 완료)
+
+#### 2.1. useStockData (주가 데이터 페칭)
+```typescript
+// hooks/useStockData.ts
+export const useStockData = ({ 
+  symbols, 
+  startDate, 
+  endDate, 
+  enabled = true 
+}: UseStockDataParams): UseStockDataReturn => {
+  // 주가 데이터 병렬 페칭
+  // 캐싱 및 에러 처리
+  // 자동 재시도 로직
+}
+
+// 사용법
+const { stocksData, loading, error, refetch } = useStockData({
+  symbols: ['AAPL', 'GOOGL'],
+  startDate: '2023-01-01',
+  endDate: '2023-12-31'
+});
+```
+
+#### 2.2. useVolatilityNews (변동성 뉴스 관리)
+```typescript
+// hooks/useVolatilityNews.ts
+export const useVolatilityNews = ({ 
+  symbols, 
+  startDate, 
+  endDate, 
+  enabled = true 
+}: UseVolatilityNewsParams): UseVolatilityNewsReturn => {
+  // 변동성 이벤트 조회
+  // 종목 선택 상태 관리
+  // 뉴스 모달 상태 제어
+  // 뉴스 데이터 페칭
+}
+
+// 사용법
+const {
+  volatilityData,
+  selectedStock,
+  newsData,
+  showNewsModal,
+  loading,
+  actions: { setSelectedStock, openNewsModal, closeNewsModal }
+} = useVolatilityNews({ symbols, startDate, endDate });
+```
+
+#### 2.3. useModal (범용 모달 상태)
+```typescript
+// hooks/useModal.ts
+export const useModal = (initialOpen = false): UseModalReturn => {
+  // 모달 열기/닫기 상태
+  // 모달 데이터 관리
+  // 키보드 이벤트 처리
+}
+
+// 사용법
+const { isOpen, data, open, close, toggle } = useModal();
+```
+
+### 3. 유틸리티 함수 분리
+
+#### 3.1. numberUtils.ts
+```typescript
+export const formatCurrency = (value: number): string => { /* */ };
+export const formatPercent = (value: number): string => { /* */ };
+export const formatPrice = (value: number): string => { /* */ };
+export const formatKoreanCurrency = (value: number): string => { /* */ };
+```
+
+#### 3.2. dateUtils.ts
+```typescript
+export const formatDate = (date: string | Date): string => { /* */ };
+export const formatDateTime = (date: string | Date): string => { /* */ };
+export const formatChartDate = (date: string | Date): string => { /* */ };
+export const formatDateRange = (startDate: string, endDate: string): string => { /* */ };
+export const isValidDateRange = (startDate: string, endDate: string): boolean => { /* */ };
+```
     case 'SET_STRATEGY':
       return {
         ...state,

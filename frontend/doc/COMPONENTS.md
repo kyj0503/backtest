@@ -57,7 +57,7 @@ UnifiedBacktestResults.tsx (48줄, 91% 감소)
 
 ### 변동성 뉴스 컴포넌트 구조 (리팩토링 완료 - 2024-12-19)
 ```
-StockVolatilityNews.tsx (199줄, 60% 감소)
+StockVolatilityNews.tsx (133줄, 73% 감소)
 ├── volatility/
 │   ├── VolatilityTable.tsx (73줄)
 │   │   ├── Event Date Display
@@ -70,7 +70,7 @@ StockVolatilityNews.tsx (199줄, 60% 감소)
 │       ├── News Items Display
 │       └── External Link Navigation
 └── State Management
-    ├── Volatility Data Fetching
+    ├── useVolatilityNews Hook (147줄)
     ├── Stock Selection Logic
     └── News Modal Control
 ```
