@@ -9,20 +9,23 @@
 ## 아키텍처
 
 ### 기술 스택
-- **백엔드**: FastAPI + uv6. **✅ 4.4 성능 최적화 완료** (React 성능 패턴 적용)
+- **백엔드**: FastAPI + uv6. **[완료] 4.4 성능 최적화 완료** (React 성능 패턴 적용)
    - [x] React.memo, useMemo, useCallback 전 차트 컴포넌트 적용
    - [x] Code Splitting: React.lazy + Suspense 인프라 구축
    - [x] Bundle Optimization: Vite manualChunks 설정 및 크기 제한
    - [x] Performance Monitoring: 개발환경 성능 추적 시스템
    - [x] Jenkins 빌드 오류 해결: TypeScript 타입 안정성 확보
-7. **✅ 4.5 코드 표준화 및 재사용성 완료** (DRY 원칙 적용)
+7. **[완료] 4.5 코드 표준화 및 재사용성 완료** (DRY 원칙 적용)
    - [x] 공통 컴포넌트 라이브러리: FormField, LoadingSpinner, ErrorMessage, DataTable
    - [x] 상수 및 타입 정의 통합: UI_CONSTANTS, STYLE_CLASSES, 확장된 API 타입
    - [x] 유틸리티 함수 정리: dateUtils, numberUtils, chartUtils 확장
    - [x] 매직 넘버/문자열 제거: 중앙화된 상수 관리 시스템
    - [x] 기존 컴포넌트 적용: CommissionForm에 FormField 적용 완료
-8. **공통 컴포넌트 라이브러리 확장** (추가 컴포넌트 구축)
-9. **테스트 코드 보강** (안정성 확보)ydantic V2, MySQL 캐시, yfinance API
+8. **[완료] 4.6 공통 컴포넌트 라이브러리 확장 완료** (추가 컴포넌트 구축)
+   - [x] 추가 UI 컴포넌트: Badge, Tooltip, Modal, Pagination (총 575줄)
+   - [x] 고급 폼 컴포넌트: SearchableSelect, DateRangePicker, ToggleSwitch (총 531줄)
+   - [x] 통합 export 시스템: common/index.ts 업데이트로 일관된 import 패턴
+9. **4.7 테스트 코드 보강** (안정성 확보)ydantic V2, MySQL 캐시, yfinance API
 - **프론트엔드**: React 18 + TypeScript + Vite, Tailwind CSS, Recharts
 - **배포**: Docker + Jenkins CI/CD, nginx 프록시
 
@@ -82,8 +85,8 @@ docker-compose exec backend pytest tests/ -v
 ### Jenkins CI/CD 파이프라인 상태
 - **Frontend Tests**: 23/23 통과 (100%)
 - **Backend Tests**: 모든 테스트 통과
-- **TypeScript 빌드**: ✅ 구문 오류 완전 해결
-- **Vite 빌드**: ✅ 코드 스플리팅 최적화 완료
+- **TypeScript 빌드**: [완료] 구문 오류 완전 해결
+- **Vite 빌드**: [완료] 코드 스플리팅 최적화 완료
 - **번들 분석**: React(162kB), Chart(407kB), Icon(3kB) vendor 분리
 - **현재 상태**: 백엔드 Docker 푸시 중 네트워크 일시 오류 (재시도 필요)
 
@@ -176,7 +179,7 @@ docker-compose exec backend pytest tests/ -v
 
 ### 4. React 프론트엔드 리팩터링 계획
 
-#### 4.1. 컴포넌트 분리 (Component Separation) ✅ 완료
+#### 4.1. 컴포넌트 분리 (Component Separation) [완료] 완료
 **목표**: God Component 해결 및 단일 책임 원칙 적용
 
 - [x] **UnifiedBacktestForm.tsx (515줄 → 166줄) 분리 완료**
@@ -195,7 +198,7 @@ docker-compose exec backend pytest tests/ -v
   - [x] NewsModal: 뉴스 모달 컴포넌트 분리 (107줄)
   - [x] VolatilityTable: 변동성 테이블 컴포넌트 분리 (73줄)
 
-#### 4.2. 상태 관리 개선 (State Management) ✅ 완료
+#### 4.2. 상태 관리 개선 (State Management) [완료] 완료
 **목표**: 복잡한 폼 상태 최적화 및 서버 상태 분리
 
 - [x] **UnifiedBacktestForm 상태 통합**
@@ -220,7 +223,7 @@ docker-compose exec backend pytest tests/ -v
   - [x] `useModal`: 모달 상태 관리 (범용, 44줄)
   - [x] 유틸리티 함수 분리: `numberUtils.ts`, `dateUtils.ts`
 
-#### 4.3. 커스텀 훅 추출 (Custom Hooks) ✅ 완료
+#### 4.3. 커스텀 훅 추출 (Custom Hooks) [완료] 완료
 **목표**: 로직과 뷰 분리, 재사용성 향상
 
 - [x] **폼 관련 훅**
@@ -243,7 +246,7 @@ docker-compose exec backend pytest tests/ -v
   - [x] `useFormValidation`: 폼 검증 로직 (89줄)
   - [x] `useStrategyParams`: 전략 파라미터 관리 (118줄)
 
-- **✅ 4.4 성능 최적화 완료** (React 성능 패턴 적용)
+- **[완료] 4.4 성능 최적화 완료** (React 성능 패턴 적용)
   - [x] React.memo, useMemo, useCallback 전 차트 컴포넌트 적용
   - [x] Code Splitting: React.lazy + Suspense 인프라 구축
   - [x] Bundle Optimization: Vite manualChunks 설정 및 크기 제한
@@ -259,25 +262,18 @@ docker-compose exec backend pytest tests/ -v
   - [ ] ErrorMessage: 표준화된 에러 표시 컴포넌트
   - [ ] DataTable: 재사용 가능한 테이블 컴포넌트
 
-- [ ] **상수 및 타입 정의 통합**
-  - [ ] UI 상수: `UI_CONSTANTS.ts` (색상, 크기, 애니메이션 등)
-  - [ ] 스타일 클래스: `STYLE_CLASSES.ts` (자주 사용되는 Tailwind 조합)
-  - [ ] API 타입: `api-types.ts` 확장 및 정리
+- [x] **상수 및 타입 정의 통합**
+  - [x] UI 상수: `UI_CONSTANTS.ts` (색상, 크기, 애니메이션 등)
+  - [x] 스타일 클래스: `STYLE_CLASSES.ts` (자주 사용되는 Tailwind 조합)
+  - [x] API 타입: `api-types.ts` 확장 및 정리
 
-- [ ] **유틸리티 함수 정리**
-  - [ ] 날짜 포맷팅: `dateUtils.ts`
-  - [ ] 숫자 포맷팅: `numberUtils.ts` 
-  - [ ] 차트 데이터 변환: `chartUtils.ts`
+- [x] **유틸리티 함수 정리**
+  - [x] 날짜 포맷팅: `dateUtils.ts`
+  - [x] 숫자 포맷팅: `numberUtils.ts` 
+  - [x] 차트 데이터 변환: `chartUtils.ts`
 
-#### 4.6. 매직 넘버/문자열 제거 ✅ 완료
-**목표**: 하드코딩된 값들을 의미있는 상수로 변경
-
-- [x] **UI 상수 정의**
-  - [x] `UI_CONSTANTS.ts`: 색상, 크기, 애니메이션, Z-Index 등 UI 관련 상수
-  - [x] `STYLE_CLASSES.ts`: 자주 사용되는 Tailwind CSS 클래스 조합
-  - [x] 타입 안전성을 위한 TypeScript 타입 추출
-
-- [x] **텍스트 상수화**
+- [x] **매직 넘버/문자열 제거**
+  - [x] 하드코딩된 값들을 의미있는 상수로 변경
   - [x] 폼 옵션 배열: rebalanceOptions, strategyOptions 등
   - [x] 에러 메시지 표준화: ErrorMessage 컴포넌트로 통합
   - [x] 도움말 텍스트 일관성: helpText prop으로 표준화
@@ -286,6 +282,25 @@ docker-compose exec backend pytest tests/ -v
   - [x] CommissionForm: FormField 컴포넌트로 리팩터링 완료
   - [x] 하드코딩된 className을 STYLE_CLASSES 상수로 대체
   - [x] 매직 넘버 제거: min, max, step 값을 의미있는 상수로 정의
+
+#### 4.6. 공통 컴포넌트 라이브러리 확장 [완료] 완료
+**목표**: 추가 재사용 컴포넌트 구축
+
+- [x] **추가 UI 컴포넌트**
+  - [x] Badge: 상태 표시용 뱃지 컴포넌트 (92줄)
+  - [x] Tooltip: 도움말 툴팁 컴포넌트 (144줄)
+  - [x] Modal: 표준화된 모달 다이얼로그 (139줄)
+  - [x] Pagination: 페이지네이션 컴포넌트 (200줄)
+
+- [x] **고급 폼 컴포넌트**
+  - [x] SearchableSelect: 검색 가능한 드롭다운 (207줄)
+  - [x] DateRangePicker: 날짜 범위 선택기 (175줄)
+  - [x] ToggleSwitch: 토글 스위치 컴포넌트 (149줄)
+
+- [ ] **기존 컴포넌트 적용**
+  - [ ] 기존 폼 컴포넌트들을 새 컴포넌트로 리팩터링
+  - [ ] UI 일관성 확보를 위한 전체 적용
+  - [ ] 성능 최적화 및 접근성 개선
 
 #### 4.7. 테스트 코드 강화
 **목표**: 리팩터링 안정성 확보
@@ -300,40 +315,43 @@ docker-compose exec backend pytest tests/ -v
   - [ ] API 모킹 테스트
 
 #### 리팩터링 우선순위 (업데이트: 2024-12-20)
-1. **✅ UnifiedBacktestForm 컴포넌트 분리 완료** (가장 복잡한 상태 관리)
+1. **[완료] UnifiedBacktestForm 컴포넌트 분리 완료** (가장 복잡한 상태 관리)
    - PortfolioForm, StrategyForm, DateRangeForm, CommissionForm으로 분리
    - 515줄에서 166줄로 축소 (68% 감소), 각 컴포넌트는 단일 책임 원칙 준수
    - TypeScript 타입 안정성 확보 및 props 인터페이스 정의
-2. **✅ 상태 관리 개선 완료** (복잡한 상태 로직 분리)
+2. **[완료] 상태 관리 개선 완료** (복잡한 상태 로직 분리)
    - useReducer 기반 통합 상태 관리 시스템 구축
    - 5개 전문화된 커스텀 훅 (useBacktestForm, usePortfolio, useFormValidation, useStrategyParams, BacktestContext)
    - 타입 안전성과 재사용성을 고려한 아키텍처 설계
-3. **✅ 4.1 컴포넌트 분리 완료** (God Component 해결)
+3. **[완료] 4.1 컴포넌트 분리 완료** (God Component 해결)
    - UnifiedBacktestResults: 546줄 → 48줄 (91% 감소)
    - StockVolatilityNews: 495줄 → 133줄 (73% 감소)
    - 총 7개의 새로운 전문화된 컴포넌트 생성
-4. **✅ 4.2 상태 관리 개선 완료** (새 분리 컴포넌트 최적화)
+4. **[완료] 4.2 상태 관리 개선 완료** (새 분리 컴포넌트 최적화)
    - useStockData, useVolatilityNews, useModal 훅 구현 (총 283줄)
    - 유틸리티 함수 분리: numberUtils.ts, dateUtils.ts
    - ChartsSection, StockVolatilityNews 컴포넌트에 훅 적용
-5. **✅ 4.3 커스텀 훅 추출 완료** (로직과 뷰 분리)
+5. **[완료] 4.3 커스텀 훅 추출 완료** (로직과 뷰 분리)
    - useExchangeRate, useFormInput, useDropdown, useTooltip 훅 구현 (총 341줄)
    - ExchangeRateChart 컴포넌트 리팩터링으로 훅 적용 검증
    - 재사용 가능한 UI 상태 관리 시스템 구축
-6. **✅ 4.4 성능 최적화 완료** (React 성능 패턴 적용)
+6. **[완료] 4.4 성능 최적화 완료** (React 성능 패턴 적용)
    - React.memo, useMemo, useCallback 전 차트 컴포넌트 적용
    - Code Splitting: React.lazy + Suspense 인프라 구축
    - Bundle Optimization: Vite manualChunks 설정 및 크기 제한
    - Performance Monitoring: 개발환경 성능 추적 시스템
    - Jenkins 빌드 오류 해결: TypeScript 타입 안정성 확보
-7. **✅ 4.5 코드 표준화 및 재사용성 완료** (DRY 원칙 적용)
+7. **[완료] 4.5 코드 표준화 및 재사용성 완료** (DRY 원칙 적용)
    - 공통 컴포넌트 라이브러리: FormField, LoadingSpinner, ErrorMessage, DataTable (총 430줄)
    - 상수 및 타입 정의 통합: UI_CONSTANTS, STYLE_CLASSES, 확장된 API 타입 (총 380줄)
    - 유틸리티 함수 정리: dateUtils, numberUtils, chartUtils 확장 (총 680줄)
    - 매직 넘버/문자열 제거: 중앙화된 상수 관리 시스템
    - 기존 컴포넌트 적용: CommissionForm에 FormField 적용으로 검증 완료
-8. **공통 컴포넌트 라이브러리 확장** (추가 컴포넌트 구축)
-9. **테스트 코드 보강** (안정성 확보)
+8. **[완료] 4.6 공통 컴포넌트 라이브러리 확장 완료** (추가 컴포넌트 구축)
+   - 추가 UI 컴포넌트: Badge, Tooltip, Modal, Pagination (총 575줄)
+   - 고급 폼 컴포넌트: SearchableSelect, DateRangePicker, ToggleSwitch (총 531줄)
+   - 통합 export 시스템: common/index.ts 업데이트로 일관된 import 패턴
+9. **4.7 테스트 코드 보강** (안정성 확보)
 
 ## 참고 명령어
 
