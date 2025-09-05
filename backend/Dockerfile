@@ -26,15 +26,9 @@ COPY run_server.py .
 
 # 빌드 인자들
 ARG RUN_TESTS=false
-ARG GIT_COMMIT=unknown
-ARG GIT_BRANCH=unknown  
-ARG BUILD_NUMBER=unknown
 ARG IMAGE_TAG=latest
 
 # 환경변수로 설정
-ENV GIT_COMMIT=${GIT_COMMIT}
-ENV GIT_BRANCH=${GIT_BRANCH}
-ENV BUILD_NUMBER=${BUILD_NUMBER}
 ENV IMAGE_TAG=${IMAGE_TAG}
 ENV IMAGE_NAME=backtest-backend
 
