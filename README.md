@@ -67,7 +67,39 @@ docker-compose exec frontend npm test
 - **Jenkins** - CI/CD 파이프라인
 - **nginx** - 프로덕션 웹 서버
 
+## 개발 가이드
+
+### 커밋 메시지 컨벤션
+모노리포지토리 환경에 최적화된 커밋 메시지 규칙을 따릅니다.
+
+**기본 형식**: `<type>(<scope>): <description>`
+
+**주요 타입**:
+- `feat`: 새로운 기능 추가
+- `fix`: 버그 수정  
+- `refactor`: 코드 리팩터링
+- `test`: 테스트 코드
+- `docs`: 문서 변경
+- `ci`: CI/CD 설정
+
+**스코프 예시**:
+- `backend`, `frontend`, `infra`, `docs`
+- `backend/api`, `frontend/components` (세부 영역)
+
+**예시**:
+```bash
+feat(backend): 포트폴리오 최적화 서비스 추가
+fix(frontend/components): 차트 렌더링 버그 수정
+refactor(backend): Phase 4 DDD 아키텍처 완료
+docs: 배포 가이드 업데이트
+```
+
+자세한 내용은 [`COMMIT_CONVENTION.md`](COMMIT_CONVENTION.md)를 참조하세요.
+
 ## 문서 구조
+
+### 핵심 문서
+- [`COMMIT_CONVENTION.md`](COMMIT_CONVENTION.md) - 커밋 메시지 컨벤션 가이드
 
 ### 백엔드 문서 (`/backend/doc/`)
 백엔드 개발자를 위한 전문 문서
