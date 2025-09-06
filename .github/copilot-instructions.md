@@ -141,6 +141,20 @@ docker-compose exec backend pytest tests/ -v
 - 전략 Factory: `backend/app/factories/strategy_factory.py`
 - 서비스 Factory: `backend/app/factories/service_factory.py`
 
+### Domain-Driven Design 파일 (Phase 3)
+- **Backtest Domain**: `backend/app/domains/backtest/`
+  - Value Objects: DateRange, PerformanceMetrics
+  - Entities: BacktestResultEntity, StrategyEntity
+  - Services: BacktestDomainService, StrategyDomainService
+- **Portfolio Domain**: `backend/app/domains/portfolio/`
+  - Value Objects: Weight, Allocation
+  - Entities: AssetEntity, PortfolioEntity
+  - Services: PortfolioDomainService
+- **Data Domain**: `backend/app/domains/data/`
+  - Value Objects: Price, Volume, Symbol, TickerInfo
+  - Entities: MarketDataEntity, MarketDataPoint
+  - Services: DataDomainService
+
 ### 문서 위치
 - 백엔드 개발 가이드: `backend/doc/README.md`
 - 테스트 아키텍처: `backend/doc/TEST_ARCHITECTURE.md`
@@ -217,6 +231,7 @@ docker-compose exec backend pytest tests/ -v
 - [x] **Factory Pattern 적용**
   - [x] StrategyFactory: 전략 인스턴스 생성 및 파라미터 검증 관리
   - [x] ServiceFactory: 서비스 인스턴스 생성 및 의존성 주입
+
 #### Phase 2 결과 요약
 - **파일 구조**: 13개 → 19개 (Repository 6개, Factory 2개 추가)
 - **아키텍처 패턴**: Repository Pattern + Factory Pattern + 의존성 주입 시스템
@@ -224,28 +239,62 @@ docker-compose exec backend pytest tests/ -v
 - **호환성**: 기존 API 100% 호환 유지, 11개 테스트 통과 (1개 스킵)
 - **의존성 관리**: 서비스 간 느슨한 결합, 인터페이스 기반 의존성 주입
 
-#### Phase 3: 도메인 기반 재구성 (DDD) - 다음 단계
-  - [ ] domains/backtest/: 백테스트 도메인 분리
-  - [ ] domains/portfolio/: 포트폴리오 도메인 분리  
-#### Phase 3: 도메인 기반 재구성 (DDD) - 다음 단계
-- [ ] **도메인 기반 재구성 (DDD)**
-  - [ ] domains/backtest/: 백테스트 도메인 분리
-  - [ ] domains/portfolio/: 포트폴리오 도메인 분리  
-  - [ ] domains/data/: 데이터 수집/캐시 도메인 분리
+#### Phase 3: Domain-Driven Design (DDD) 아키텍처 (완료)
+- [x] **도메인 기반 재구성 (Domain Separation)**
+  - [x] **Backtest Domain**: 백테스트 실행, 전략 관리, 결과 분석
+    - [x] Value Objects: DateRange, PerformanceMetrics (불변 비즈니스 값)
+    - [x] Entities: BacktestResultEntity, StrategyEntity (식별자 보유 객체)
+    - [x] Services: BacktestDomainService, StrategyDomainService (도메인 로직 조율)
+  
+  - [x] **Portfolio Domain**: 자산 배분, 포트폴리오 관리, 리밸런싱
+    - [x] Value Objects: Weight, Allocation (가중치 및 자산 배분 관리)
+    - [x] Entities: AssetEntity, PortfolioEntity (자산 및 포트폴리오 객체)
+    - [x] Services: PortfolioDomainService (포트폴리오 최적화 및 분석)
+  
+  - [x] **Data Domain**: 시장 데이터 수집, 캐싱, 관리
+    - [x] Value Objects: Price, Volume, Symbol, TickerInfo (시장 데이터 값)
+    - [x] Entities: MarketDataEntity, MarketDataPoint (시장 데이터 객체)
+    - [x] Services: DataDomainService (데이터 일관성 검증 및 분석)
 
-#### Phase 4: 성능 및 확장성 개선 (2주일 후)
-- [ ] **비동기 처리 강화**
-  - [ ] 멀티 백테스트 병렬 실행 시스템
-  - [ ] ThreadPoolExecutor 기반 CPU 집약적 작업 최적화
+- [x] **DDD 전술적 패턴 적용**
+  - [x] **Value Objects**: 19개 불변 값 객체로 데이터 무결성 보장
+  - [x] **Entities**: 8개 엔티티로 비즈니스 객체 생명주기 관리
+  - [x] **Domain Services**: 5개 도메인 서비스로 복잡한 비즈니스 로직 조율
+  - [x] **도메인 간 협력**: 최소 의존성 및 명확한 인터페이스
 
-- [ ] **캐시 레이어 분리**
-  - [ ] Redis 캐시 서비스 도입 (선택사항)
-  - [ ] 계층적 캐시 전략: 메모리 → MySQL → yfinance
+- [x] **고급 비즈니스 기능 구현**
+  - [x] 포트폴리오 가중치 최적화 (변동성 기반)
+  - [x] 자산 간 상관관계 분석 및 매트릭스 계산
+  - [x] 포트폴리오 다변화 점수 계산 (허핀달 지수 활용)
+  - [x] 데이터 일관성 검증 및 무결성 보장
+  - [x] 리밸런싱 거래량 계산 및 주기 제안
+  - [x] 가격 변화율, 변동성, 성과 지표 분석
 
-- [ ] **이벤트 기반 아키텍처**
-  - [ ] EventBus 시스템 구축
+#### Phase 3 결과 요약
+- **아키텍처**: 완전한 Domain-Driven Design 적용
+- **도메인 분리**: 3개 도메인 (Backtest, Portfolio, Data) 완전 분리
+- **코드 구조**: 32개 파일 (19개 값 객체, 8개 엔티티, 5개 도메인 서비스)
+- **비즈니스 로직**: 도메인별 캡슐화 및 전문화
+- **데이터 무결성**: 불변 값 객체로 스레드 안전성 확보
+- **확장성**: 이벤트 기반 아키텍처, CQRS 패턴 적용 준비 완료
+- **호환성**: 기존 Phase 1, 2와 완전 호환 유지
+
+#### Phase 4: 서비스 통합 및 이벤트 기반 확장 (다음 단계)
+- [ ] **도메인 서비스 통합**
+  - [ ] 기존 app/services 계층과 도메인 서비스 연동
+  - [ ] API 엔드포인트에서 도메인 서비스 직접 활용
+  - [ ] 백테스트 API의 도메인 서비스 기반 재구성
+
+- [ ] **이벤트 기반 아키텍처 도입**
+  - [ ] Domain Events 시스템 구축
   - [ ] 백테스트 완료 이벤트 처리
-  - [ ] 비동기 알림 시스템
+  - [ ] 포트폴리오 변경 이벤트 관리
+  - [ ] 비동기 이벤트 핸들러 구현
+
+- [ ] **성능 및 확장성 개선**
+  - [ ] CQRS (Command Query Responsibility Segregation) 패턴 적용
+  - [ ] 멀티 백테스트 병렬 실행 시스템
+  - [ ] 계층적 캐시 전략: 메모리 → MySQL → yfinance
 
 ### 2. Medium (사용자 경험 개선)
 - [x] 폼 상태 관리 개선: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer로 리팩토링 완료

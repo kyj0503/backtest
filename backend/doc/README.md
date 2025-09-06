@@ -50,6 +50,80 @@ backend/
 │   │   ├── requests.py         # API 요청 모델 (Pydantic)
 │   │   ├── responses.py        # API 응답 모델 (Pydantic)
 │   │   └── schemas.py          # 공통 스키마 정의
+│   ├── services/               # 비즈니스 로직 서비스 (Phase 1)
+│   │   ├── strategy_service.py     # 전략 관리 (80줄)
+│   │   ├── backtest_service.py     # 백테스트 조율 (139줄)
+│   │   ├── portfolio_service.py    # 포트폴리오 관리
+│   │   ├── stock.py               # 주식 데이터 서비스
+│   │   ├── yfinance_db.py         # yfinance 캐시 관리
+│   │   └── backtest/          # 분리된 백테스트 서비스들
+│   │       ├── backtest_engine.py     # 실행 엔진 (240줄)
+│   │       ├── optimization_service.py # 최적화 (301줄)
+│   │       ├── chart_data_service.py   # 차트 데이터 (198줄)
+│   │       └── validation_service.py   # 검증 (121줄)
+│   ├── repositories/           # 데이터 접근 계층 (Phase 2)
+│   │   ├── backtest_repository.py  # 백테스트 결과 저장/조회
+│   │   └── data_repository.py      # yfinance 캐시 관리
+│   ├── factories/              # 객체 생성 팩토리 (Phase 2)
+│   │   ├── strategy_factory.py     # 전략 인스턴스 생성
+│   │   └── service_factory.py      # 서비스 의존성 주입
+│   ├── domains/                # 도메인 기반 설계 (Phase 3)
+│   │   ├── backtest/          # 백테스트 도메인
+│   │   │   ├── value_objects/      # 불변 값 객체
+│   │   │   │   ├── date_range.py       # 날짜 범위
+│   │   │   │   └── performance_metrics.py # 성과 지표
+│   │   │   ├── entities/          # 식별자 보유 객체
+│   │   │   │   ├── backtest_result_entity.py
+│   │   │   │   └── strategy_entity.py
+│   │   │   └── services/          # 도메인 서비스
+│   │   │       ├── backtest_domain_service.py
+│   │   │       └── strategy_domain_service.py
+│   │   ├── portfolio/         # 포트폴리오 도메인
+│   │   │   ├── value_objects/      # 가중치 및 배분
+│   │   │   │   ├── weight.py           # 포트폴리오 가중치
+│   │   │   │   └── allocation.py       # 자산 배분
+│   │   │   ├── entities/          # 자산 및 포트폴리오
+│   │   │   │   ├── asset_entity.py
+│   │   │   │   └── portfolio_entity.py
+│   │   │   └── services/          # 포트폴리오 최적화
+│   │   │       └── portfolio_domain_service.py
+│   │   └── data/              # 시장 데이터 도메인
+│   │       ├── value_objects/      # 시장 데이터 값
+│   │       │   ├── price.py            # 가격 정보
+│   │       │   ├── volume.py           # 거래량
+│   │       │   ├── symbol.py           # 심볼 정보
+│   │       │   └── ticker_info.py      # 티커 정보
+│   │       ├── entities/          # 시장 데이터 객체
+│   │       │   ├── market_data_entity.py
+│   │       │   └── market_data_point.py
+│   │       └── services/          # 데이터 분석 서비스
+│   │           └── data_domain_service.py
+│   ├── strategies/             # 투자 전략 구현체 (Phase 1)
+│   │   └── implementations/    # 분리된 전략 클래스들
+│   │       ├── sma_strategy.py     # 단순이동평균 전략
+│   │       ├── rsi_strategy.py     # RSI 전략
+│   │       ├── bollinger_strategy.py # 볼린저 밴드 전략
+│   │       ├── macd_strategy.py    # MACD 전략
+│   │       └── buy_hold_strategy.py # 매수 후 보유 전략
+│   └── utils/                  # 유틸리티 및 헬퍼 함수
+│       ├── data_fetcher.py     # yfinance 데이터 수집
+│       ├── portfolio_utils.py  # 포트폴리오 계산 함수
+│       ├── serializers.py      # 데이터 직렬화
+│       └── user_messages.py    # 사용자 메시지 관리
+├── tests/                      # 테스트 코드
+│   ├── unit/                   # 단위 테스트
+│   ├── integration/            # 통합 테스트
+│   ├── e2e/                    # End-to-End 테스트
+│   └── fixtures/               # 테스트 데이터 및 모킹
+├── doc/                        # 프로젝트 문서
+│   ├── README.md               # 개발 가이드 (현재 문서)
+│   ├── TEST_ARCHITECTURE.md    # 테스트 아키텍처
+│   └── CASH_ASSETS.md          # 현금 자산 처리
+├── requirements.txt            # Python 의존성
+├── requirements-test.txt       # 테스트 의존성
+└── Dockerfile                  # Docker 이미지 빌드
+```
+│   │   └── schemas.py          # 공통 스키마 정의
 │   ├── services/               # 비즈니스 로직 서비스
 │   │   ├── backtest_service.py      # 백테스트 핵심 로직 (Repository/Factory Pattern 적용)
 │   │   ├── portfolio_service.py     # 포트폴리오 관리
@@ -145,15 +219,87 @@ ENVIRONMENT=development
 LOG_LEVEL=INFO
 ```
 
-## 아키텍처 패턴 (Phase 2)
+## 아키텍처 패턴
 
-백테스팅 시스템은 Repository Pattern과 Factory Pattern을 적용하여 확장 가능하고 유지보수가 용이한 아키텍처를 구축했습니다.
+백테스팅 시스템은 3단계 리팩터링을 통해 현대적이고 확장 가능한 아키텍처를 구축했습니다.
 
-### Repository Pattern
+### Phase 3: Domain-Driven Design (DDD) 아키텍처
 
-데이터 액세스 계층을 추상화하여 비즈니스 로직과 데이터 저장소를 분리합니다.
+완전한 Domain-Driven Design 전술적 패턴을 적용하여 비즈니스 도메인별로 코드를 구조화했습니다.
 
-#### BacktestRepository
+#### 도메인 분리
+
+**1. Backtest Domain** (`app/domains/backtest/`)
+- **목적**: 백테스트 실행, 전략 관리, 성과 분석
+- **Value Objects**: DateRange (날짜 범위 관리), PerformanceMetrics (성과 지표)
+- **Entities**: BacktestResultEntity (백테스트 결과), StrategyEntity (전략 정보)
+- **Domain Services**: BacktestDomainService (결과 생성), StrategyDomainService (전략 관리)
+
+**2. Portfolio Domain** (`app/domains/portfolio/`)
+- **목적**: 자산 배분, 포트폴리오 최적화, 리밸런싱
+- **Value Objects**: Weight (포트폴리오 가중치), Allocation (자산 배분 관리)
+- **Entities**: AssetEntity (개별 자산), PortfolioEntity (포트폴리오)
+- **Domain Services**: PortfolioDomainService (최적화 알고리즘, 상관관계 분석)
+
+**3. Data Domain** (`app/domains/data/`)
+- **목적**: 시장 데이터 수집, 캐싱, 무결성 관리
+- **Value Objects**: Price (가격 정보), Volume (거래량), Symbol (심볼), TickerInfo (티커 메타데이터)
+- **Entities**: MarketDataEntity (시계열 데이터), MarketDataPoint (개별 데이터 포인트)
+- **Domain Services**: DataDomainService (상관관계 분석, 데이터 검증)
+
+#### DDD 전술적 패턴 활용
+
+**Value Objects (불변 객체)**
+```python
+from app.domains.portfolio.value_objects.weight import Weight
+from app.domains.data.value_objects.price import Price
+
+# 포트폴리오 가중치 (불변, 비즈니스 규칙 내장)
+weight = Weight(Decimal('0.6'))  # 60%
+percentage = weight.to_percentage()  # 60.0
+
+# 가격 정보 (통화 인식, 검증 포함)
+price = Price(Decimal('150.00'), 'USD')
+formatted = price.format()  # "USD 150.00"
+```
+
+**Entities (생명주기 관리)**
+```python
+from app.domains.portfolio.entities.portfolio_entity import PortfolioEntity
+
+# 포트폴리오 엔티티 (상태 변경 가능, 일관성 보장)
+portfolio = PortfolioEntity(
+    portfolio_id='port_001',
+    name='성장 포트폴리오',
+    assets=[asset1, asset2]
+)
+portfolio.rebalance()  # 내부 상태 업데이트
+```
+
+**Domain Services (복잡한 비즈니스 로직)**
+```python
+from app.domains.portfolio.services.portfolio_domain_service import PortfolioDomainService
+
+# 포트폴리오 최적화 (리스크 조정 가중치)
+portfolio_service = PortfolioDomainService()
+optimized_weights = portfolio_service.optimize_portfolio(assets, risk_tolerance=0.8)
+
+# 상관관계 분석
+correlation_matrix = portfolio_service.calculate_correlation_matrix(assets)
+```
+
+#### 고급 비즈니스 기능
+
+**포트폴리오 최적화**: 변동성 기반 리스크 조정 가중치 계산
+**다변화 분석**: 허핀달 지수를 활용한 포트폴리오 집중도 측정
+**상관관계 분석**: 자산 간 상관계수 매트릭스 계산
+**데이터 무결성**: 시계열 데이터 일관성 검증 및 이상치 탐지
+
+### Phase 2: Repository Pattern & Factory Pattern
+
+데이터 액세스 계층을 추상화하고 객체 생성을 체계화합니다.
+
+#### Repository Pattern
 ```python
 from app.repositories.backtest_repository import InMemoryBacktestRepository
 
@@ -163,21 +309,7 @@ await backtest_repo.save_result(backtest_result)
 result = await backtest_repo.get_result(result_id)
 ```
 
-#### DataRepository  
-```python
-from app.repositories.data_repository import YFinanceDataRepository
-
-# 주가 데이터 캐시 관리
-data_repo = YFinanceDataRepository()
-await data_repo.cache_data(symbol, data, ttl=3600)
-cached_data = await data_repo.get_cached_data(symbol)
-```
-
-### Factory Pattern
-
-객체 생성과 의존성 주입을 체계적으로 관리합니다.
-
-#### StrategyFactory
+#### Factory Pattern
 ```python
 from app.factories.strategy_factory import DefaultStrategyFactory
 
@@ -188,39 +320,21 @@ sma_strategy = strategy_factory.create_strategy('sma_crossover',
                                                slow_period=20)
 ```
 
-#### ServiceFactory
-```python
-from app.factories.service_factory import DefaultServiceFactory
+### Phase 1: 서비스 분리 (완료)
 
-# 의존성 주입된 서비스 생성
-service_factory = DefaultServiceFactory(backtest_repo, data_repo, strategy_factory)
-backtest_service = service_factory.create_backtest_service()
-```
+God Class 문제를 해결하고 단일 책임 원칙을 적용했습니다.
 
-### 의존성 주입 시스템
+- **BacktestService**: 885줄 → 139줄 (84% 감소)
+- **StrategyService**: 341줄 → 80줄 (77% 감소)
+- **분리된 서비스**: BacktestEngine, OptimizationService, ChartDataService, ValidationService
 
-서비스 간 느슨한 결합을 통해 테스트 가능성과 확장성을 확보합니다.
-
-```python
-# 기본 의존성 주입
-from app.services.backtest_service import BacktestService
-from app.factories.service_factory import service_factory
-
-# Factory를 통한 서비스 생성 (Repository 자동 주입)
-backtest_service = service_factory.create_backtest_service()
-
-# 기존 API 호환성 유지
-available_strategies = backtest_service.get_available_strategies()
-result = await backtest_service.run_backtest(request)
-```
-
-### 아키텍처 계층 구조
+### 계층 구조
 
 1. **API Layer** (`app/api/v1/endpoints/`) - HTTP 요청/응답 처리
-2. **Service Layer** (`app/services/`) - 비즈니스 로직 구현  
-3. **Repository Layer** (`app/repositories/`) - 데이터 액세스 추상화
-4. **Factory Layer** (`app/factories/`) - 객체 생성 및 의존성 주입
-5. **Domain Layer** (`app/strategies/`) - 도메인 로직 (투자 전략)
+2. **Service Layer** (`app/services/`) - 비즈니스 로직 조율  
+3. **Domain Layer** (`app/domains/`) - 핵심 비즈니스 로직 (Phase 3)
+4. **Repository Layer** (`app/repositories/`) - 데이터 액세스 추상화 (Phase 2)
+5. **Factory Layer** (`app/factories/`) - 객체 생성 및 의존성 주입 (Phase 2)
 
 ## API 개발
 
@@ -709,6 +823,32 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat()
     }
 ```
+
+## 로드맵
+
+### Phase 4: 서비스 통합 및 이벤트 기반 확장
+
+Domain-Driven Design 완료 후 다음 단계로 계획된 고급 아키텍처 패턴입니다.
+
+#### 도메인 서비스 통합
+- **API 엔드포인트 개선**: 기존 서비스 계층과 도메인 서비스 연동
+- **직접 도메인 활용**: 백테스트 API에서 도메인 서비스 직접 호출
+- **성능 최적화**: 도메인별 캐싱 및 최적화 전략 적용
+
+#### 이벤트 기반 아키텍처
+- **Domain Events**: 도메인 내 상태 변경 이벤트 발행
+- **Event Handlers**: 비동기 이벤트 처리 시스템
+- **Event Sourcing**: 이벤트 기반 상태 관리 (선택사항)
+
+#### CQRS 패턴 적용
+- **Command/Query 분리**: 쓰기와 읽기 작업 최적화
+- **Read Models**: 조회 최적화된 별도 모델
+- **Command Handlers**: 비즈니스 로직 처리 전용 핸들러
+
+#### 성능 및 확장성
+- **멀티 백테스트**: 병렬 실행 시스템 구축
+- **계층적 캐시**: 메모리 → MySQL → yfinance 캐시 전략
+- **비동기 처리**: 장기 실행 작업 백그라운드 처리
 
 ## 문제 해결
 
