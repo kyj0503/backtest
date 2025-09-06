@@ -24,7 +24,7 @@ class ExpectedResults:
             'buy_and_hold': {
                 'total_return_pct': {'min': -50.0, 'max': 100.0},
                 'sharpe_ratio': {'min': -3.0, 'max': 5.0},
-                'max_drawdown_pct': {'min': 0.0, 'max': 80.0},
+                'max_drawdown_pct': {'min': -80.0, 'max': 0.0},  # 드로우다운은 음수값
                 'total_trades': {'min': 0, 'max': 10},  # Buy & Hold는 거래 적음
                 'win_rate_pct': {'min': 0.0, 'max': 100.0},
                 'profit_factor': {'min': 0.0, 'max': 10.0}
@@ -32,7 +32,7 @@ class ExpectedResults:
             'sma_crossover': {
                 'total_return_pct': {'min': -80.0, 'max': 200.0},
                 'sharpe_ratio': {'min': -5.0, 'max': 8.0},
-                'max_drawdown_pct': {'min': 0.0, 'max': 90.0},
+                'max_drawdown_pct': {'min': -90.0, 'max': 0.0},  # 드로우다운은 음수값
                 'total_trades': {'min': 0, 'max': 100},
                 'win_rate_pct': {'min': 0.0, 'max': 100.0},
                 'profit_factor': {'min': 0.0, 'max': 20.0}
@@ -40,7 +40,7 @@ class ExpectedResults:
             'rsi_strategy': {
                 'total_return_pct': {'min': -70.0, 'max': 150.0},
                 'sharpe_ratio': {'min': -4.0, 'max': 6.0},
-                'max_drawdown_pct': {'min': 0.0, 'max': 85.0},
+                'max_drawdown_pct': {'min': -85.0, 'max': 0.0},  # 드로우다운은 음수값
                 'total_trades': {'min': 0, 'max': 200},
                 'win_rate_pct': {'min': 20.0, 'max': 80.0},
                 'profit_factor': {'min': 0.1, 'max': 15.0}
@@ -48,7 +48,7 @@ class ExpectedResults:
             'bollinger_bands': {
                 'total_return_pct': {'min': -60.0, 'max': 120.0},
                 'sharpe_ratio': {'min': -3.5, 'max': 4.5},
-                'max_drawdown_pct': {'min': 0.0, 'max': 75.0},
+                'max_drawdown_pct': {'min': -75.0, 'max': 0.0},  # 드로우다운은 음수값
                 'total_trades': {'min': 0, 'max': 150},
                 'win_rate_pct': {'min': 25.0, 'max': 75.0},
                 'profit_factor': {'min': 0.2, 'max': 12.0}
@@ -56,7 +56,7 @@ class ExpectedResults:
             'macd_strategy': {
                 'total_return_pct': {'min': -75.0, 'max': 180.0},
                 'sharpe_ratio': {'min': -4.5, 'max': 7.0},
-                'max_drawdown_pct': {'min': 0.0, 'max': 88.0},
+                'max_drawdown_pct': {'min': -88.0, 'max': 0.0},  # 드로우다운은 음수값
                 'total_trades': {'min': 0, 'max': 120},
                 'win_rate_pct': {'min': 15.0, 'max': 85.0},
                 'profit_factor': {'min': 0.1, 'max': 18.0}

@@ -169,6 +169,66 @@ docker-compose exec backend pytest tests/ -v
 - [ ] 회원 가입 기능: 사용자 관리 시스템 구축
 - [ ] 내 포트폴리오 저장 기능: 사용자별 포트폴리오 관리
 
+### 1.1. 백엔드 리팩터링 (Backend Refactoring) - 완료
+**목표**: God Class 해결 및 서비스 분리를 통한 유지보수성 향상
+
+#### Phase 1: 서비스 분리 (완료)
+- [x] **Strategy 클래스 분리** (우선순위: 최고)
+  - [x] SMAStrategy → strategies/implementations/sma_strategy.py 이동 완료
+  - [x] RSIStrategy → strategies/implementations/rsi_strategy.py 이동 완료
+  - [x] BollingerBandsStrategy → strategies/implementations/bollinger_strategy.py 이동 완료
+  - [x] MACDStrategy → strategies/implementations/macd_strategy.py 이동 완료
+  - [x] BuyAndHoldStrategy → strategies/implementations/buy_hold_strategy.py 이동 완료
+  - [x] StrategyService 간소화: 관리 로직만 유지 (341줄 → 80줄, 77% 감소)
+
+- [x] **BacktestService 분리** (우선순위: 최고, 885줄 → 139줄, 84% 감소)
+  - [x] BacktestEngine: 백테스트 실행 핵심 로직 (240줄)
+  - [x] OptimizationService: 파라미터 최적화 로직 (301줄)  
+  - [x] ChartDataService: 차트 데이터 생성 로직 (198줄)
+  - [x] ValidationService: 데이터 검증 및 변환 로직 (121줄)
+  - [x] 위임 패턴(Delegation Pattern) 적용으로 기존 API 호환성 유지
+
+- [x] **Pydantic 모델 호환성 수정**
+  - [x] BacktestResult 필드명 매핑: 기존 모델과 새 서비스 데이터 호환
+  - [x] 날짜 타입 변환: datetime.date → str 자동 변환
+  - [x] 테스트 범위 수정: max_drawdown_pct 음수 값 허용 (-80% ~ 0%)
+
+#### Phase 1 결과 요약
+- **파일 구조**: 8개 → 13개 (전문화된 서비스)
+- **코드 감소**: BacktestService 885줄 → 139줄 (84% 감소), StrategyService 341줄 → 80줄 (77% 감소)
+- **아키텍처**: God Class → 단일 책임 원칙(SRP) 적용
+- **테스트**: 11개 테스트 통과, 1개 스킵 (포트폴리오 테스트)
+- **호환성**: 기존 API 인터페이스 완전 유지, 위임 패턴으로 안정성 확보
+
+#### Phase 2: 아키텍처 패턴 도입 (다음 단계)
+- [ ] **Repository Pattern 도입**
+  - [ ] BacktestRepository: 백테스트 결과 저장/조회
+  - [ ] DataRepository: yfinance 캐시 데이터 관리 분리
+  - [ ] 인터페이스 기반 의존성 주입 시스템
+
+- [ ] **Factory Pattern 적용**
+  - [ ] StrategyFactory: 전략 인스턴스 생성 관리
+  - [ ] ServiceFactory: 서비스 인스턴스 생성 및 DI
+
+- [ ] **도메인 기반 재구성 (DDD)**
+  - [ ] domains/backtest/: 백테스트 도메인 분리
+  - [ ] domains/portfolio/: 포트폴리오 도메인 분리  
+  - [ ] domains/data/: 데이터 수집/캐시 도메인 분리
+
+#### Phase 3: 성능 및 확장성 개선 (2주일 후)
+- [ ] **비동기 처리 강화**
+  - [ ] 멀티 백테스트 병렬 실행 시스템
+  - [ ] ThreadPoolExecutor 기반 CPU 집약적 작업 최적화
+
+- [ ] **캐시 레이어 분리**
+  - [ ] Redis 캐시 서비스 도입 (선택사항)
+  - [ ] 계층적 캐시 전략: 메모리 → MySQL → yfinance
+
+- [ ] **이벤트 기반 아키텍처**
+  - [ ] EventBus 시스템 구축
+  - [ ] 백테스트 완료 이벤트 처리
+  - [ ] 비동기 알림 시스템
+
 ### 2. Medium (사용자 경험 개선)
 - [x] 폼 상태 관리 개선: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer로 리팩토링 완료
 - [x] TypeScript 타입 안정성: 이벤트 핸들러 타입 명시로 any 타입 제거 완료
