@@ -49,38 +49,271 @@ backend/
 │   ├── models/                 # 데이터 모델 정의
 │   │   ├── requests.py         # API 요청 모델 (Pydantic)
 │   │   ├── responses.py        # API 응답 모델 (Pydantic)
-│   │   └── schemas.py          # 공통 스키마 정의
-│   ├── services/               # 비즈니스 로직 서비스 (Phase 1)
-│   │   ├── strategy_service.py     # 전략 관리 (80줄)
-│   │   ├── backtest_service.py     # 백테스트 조율 (139줄)
-│   │   ├── portfolio_service.py    # 포트폴리오 관리
-│   │   ├── stock.py               # 주식 데이터 서비스
-│   │   ├── yfinance_db.py         # yfinance 캐시 관리
-│   │   └── backtest/          # 분리된 백테스트 서비스들
-│   │       ├── backtest_engine.py     # 실행 엔진 (240줄)
-│   │       ├── optimization_service.py # 최적화 (301줄)
-│   │       ├── chart_data_service.py   # 차트 데이터 (198줄)
-│   │       └── validation_service.py   # 검증 (121줄)
+│   │   └── schemas.py          # 데이터베이스 스키마
+│   ├── services/               # 비즈니스 로직 서비스 (Phase 1-2)
+│   │   ├── strategy_service.py      # 전략 관리 서비스
+│   │   ├── backtest_service.py      # 백테스트 서비스
+│   │   ├── portfolio_service.py     # 포트폴리오 서비스
+│   │   ├── enhanced_backtest_service.py  # 강화된 백테스트 서비스 (Phase 4)
+│   │   ├── enhanced_portfolio_service.py # 강화된 포트폴리오 서비스 (Phase 4)
+│   │   └── backtest/           # 백테스트 세부 서비스
+│   │       ├── backtest_engine.py   # 백테스트 실행 엔진
+│   │       ├── optimization_service.py # 최적화 서비스
+│   │       ├── chart_data_service.py   # 차트 데이터 서비스
+│   │       └── validation_service.py   # 검증 서비스
 │   ├── repositories/           # 데이터 접근 계층 (Phase 2)
-│   │   ├── backtest_repository.py  # 백테스트 결과 저장/조회
-│   │   └── data_repository.py      # yfinance 캐시 관리
+│   │   ├── backtest_repository.py   # 백테스트 결과 저장소
+│   │   └── data_repository.py       # 데이터 저장소
 │   ├── factories/              # 객체 생성 팩토리 (Phase 2)
-│   │   ├── strategy_factory.py     # 전략 인스턴스 생성
-│   │   └── service_factory.py      # 서비스 의존성 주입
+│   │   ├── strategy_factory.py      # 전략 팩토리
+│   │   └── service_factory.py       # 서비스 팩토리
 │   ├── domains/                # 도메인 기반 설계 (Phase 3)
-│   │   ├── backtest/          # 백테스트 도메인
-│   │   │   ├── value_objects/      # 불변 값 객체
-│   │   │   │   ├── date_range.py       # 날짜 범위
-│   │   │   │   └── performance_metrics.py # 성과 지표
-│   │   │   ├── entities/          # 식별자 보유 객체
-│   │   │   │   ├── backtest_result_entity.py
-│   │   │   │   └── strategy_entity.py
-│   │   │   └── services/          # 도메인 서비스
-│   │   │       ├── backtest_domain_service.py
-│   │   │       └── strategy_domain_service.py
-│   │   ├── portfolio/         # 포트폴리오 도메인
-│   │   │   ├── value_objects/      # 가중치 및 배분
-│   │   │   │   ├── weight.py           # 포트폴리오 가중치
+│   │   ├── backtest/           # 백테스트 도메인
+│   │   │   ├── value_objects/  # 불변 값 객체
+│   │   │   ├── entities/       # 엔티티
+│   │   │   └── services/       # 도메인 서비스
+│   │   ├── portfolio/          # 포트폴리오 도메인
+│   │   │   ├── value_objects/
+│   │   │   ├── entities/
+│   │   │   └── services/
+│   │   └── data/               # 데이터 도메인
+│   │       ├── value_objects/
+│   │       ├── entities/
+│   │       └── services/
+│   ├── events/                 # 이벤트 기반 아키텍처 (Phase 4)
+│   │   ├── __init__.py         # EventBus 및 DomainEvent 기본 클래스
+│   │   ├── backtest_events.py  # 백테스트 도메인 이벤트
+│   │   ├── portfolio_events.py # 포트폴리오 도메인 이벤트
+│   │   ├── data_events.py      # 데이터 도메인 이벤트
+│   │   ├── backtest_handlers.py # 백테스트 이벤트 핸들러
+│   │   ├── portfolio_handlers.py # 포트폴리오 이벤트 핸들러
+│   │   └── event_system.py     # 이벤트 시스템 매니저
+│   ├── cqrs/                   # CQRS 패턴 (Phase 4)
+│   │   ├── __init__.py         # Command/Query 기본 클래스 및 CQRSBus
+│   │   ├── commands.py         # 커맨드 정의
+│   │   ├── queries.py          # 쿼리 정의
+│   │   ├── command_handlers.py # 커맨드 핸들러
+│   │   ├── query_handlers.py   # 쿼리 핸들러
+│   │   └── service_manager.py  # CQRS 서비스 통합 매니저
+│   ├── strategies/             # 투자 전략 구현체 (Phase 1)
+│   │   └── implementations/    # 전략 구현 클래스들
+│   │       ├── sma_strategy.py      # SMA 전략
+│   │       ├── rsi_strategy.py      # RSI 전략
+│   │       ├── bollinger_strategy.py # 볼린저 밴드 전략
+│   │       ├── macd_strategy.py     # MACD 전략
+│   │       └── buy_hold_strategy.py # 매수 후 보유 전략
+│   └── utils/                  # 유틸리티 및 헬퍼 함수
+│       ├── data_fetcher.py     # 데이터 수집 유틸리티
+│       ├── portfolio_utils.py  # 포트폴리오 계산 유틸리티
+│       └── serializers.py      # 직렬화 유틸리티
+├── tests/                      # 테스트 코드
+│   ├── unit/                   # 단위 테스트
+│   ├── integration/            # 통합 테스트
+│   └── e2e/                    # E2E 테스트
+└── doc/                        # 문서
+    ├── README.md               # 이 파일
+    ├── DDD_ARCHITECTURE.md     # DDD 아키텍처 가이드
+    ├── TEST_ARCHITECTURE.md    # 테스트 아키텍처 가이드
+    └── CASH_ASSETS.md          # 현금 자산 처리 가이드
+```
+## 아키텍처 진화 과정
+
+### Phase 1: 서비스 분리 (완료)
+**목표**: God Class 해결 및 단일 책임 원칙 적용
+
+#### 주요 성과
+- **StrategyService 간소화**: 341줄 → 80줄 (77% 감소)
+- **BacktestService 분리**: 885줄 → 139줄 (84% 감소)
+- **전략 클래스 분리**: 5개 전략을 개별 파일로 이동
+- **세부 서비스 분리**: BacktestEngine, OptimizationService, ChartDataService, ValidationService
+
+#### 위임 패턴 적용
+기존 API 호환성 유지를 위해 위임 패턴 적용:
+```python
+# BacktestService (기존 인터페이스 유지)
+class BacktestService:
+    def __init__(self):
+        self.backtest_engine = BacktestEngine()
+        self.optimization_service = OptimizationService()
+        self.chart_data_service = ChartDataService()
+        self.validation_service = ValidationService()
+    
+    def run_backtest(self, ...):
+        # 실제 로직은 BacktestEngine에 위임
+        return self.backtest_engine.execute_backtest(...)
+```
+
+### Phase 2: 아키텍처 패턴 도입 (완료)
+**목표**: Repository Pattern + Factory Pattern 적용
+
+#### Repository Pattern
+```python
+# 인터페이스 기반 의존성 주입
+class IBacktestRepository(ABC):
+    @abstractmethod
+    def save_backtest_result(self, result: BacktestResult) -> str: ...
+    
+class InMemoryBacktestRepository(IBacktestRepository):
+    def save_backtest_result(self, result: BacktestResult) -> str:
+        # 인메모리 저장 로직
+```
+
+#### Factory Pattern
+```python
+# 전략 객체 생성 및 파라미터 검증
+class StrategyFactory:
+    @staticmethod
+    def create_strategy(strategy_name: str, params: Dict[str, Any]) -> Strategy:
+        # 전략 타입별 인스턴스 생성 및 검증
+```
+
+#### 의존성 주입 시스템
+```python
+# 서비스 간 느슨한 결합
+class ServiceFactory:
+    def create_backtest_service(self) -> BacktestService:
+        return BacktestService(
+            repository=self.backtest_repository,
+            data_repository=self.data_repository
+        )
+```
+
+### Phase 3: Domain-Driven Design (완료)
+**목표**: 도메인 중심 아키텍처 및 비즈니스 로직 캡슐화
+
+#### 도메인 분리
+- **Backtest Domain**: 백테스트 실행, 전략 관리, 결과 분석
+- **Portfolio Domain**: 자산 배분, 포트폴리오 관리, 리밸런싱
+- **Data Domain**: 시장 데이터 수집, 캐싱, 관리
+
+#### DDD 전술적 패턴
+```python
+# Value Objects (불변 값 객체)
+@dataclass(frozen=True)
+class DateRange:
+    start_date: date
+    end_date: date
+    
+    def __post_init__(self):
+        if self.start_date >= self.end_date:
+            raise ValueError("시작일은 종료일보다 이전이어야 합니다")
+
+# Entities (식별자 보유 객체)
+class BacktestResultEntity:
+    def __init__(self, backtest_id: str, ...):
+        self.backtest_id = backtest_id
+        # 비즈니스 로직 메서드들
+
+# Domain Services (도메인 서비스)
+class BacktestDomainService:
+    def analyze_strategy_quality(self, result: BacktestResultEntity) -> float:
+        # 복잡한 비즈니스 로직
+```
+
+#### 고급 비즈니스 기능
+- 포트폴리오 가중치 최적화 (변동성 기반)
+- 자산 간 상관관계 분석 및 매트릭스 계산
+- 포트폴리오 다변화 점수 계산 (허핀달 지수)
+- 데이터 일관성 검증 및 무결성 보장
+
+### Phase 4: 이벤트 기반 아키텍처 + CQRS (완료)
+**목표**: 확장성, 비동기 처리, 명령/조회 분리
+
+#### Enhanced Services
+도메인 서비스와 기존 서비스 계층 통합:
+```python
+class EnhancedBacktestService(BacktestService):
+    def __init__(self, ..., backtest_domain_service: BacktestDomainService):
+        super().__init__(...)
+        self.domain_service = backtest_domain_service
+    
+    def run_enhanced_backtest(self, ...):
+        # 기본 백테스트 + 도메인 분석
+        result = self.run_backtest(...)
+        analysis = self.domain_service.analyze_strategy_quality(result)
+        return {**result, 'domain_analysis': analysis}
+```
+
+#### Event-Driven Architecture
+```python
+# 17개 도메인 이벤트 정의
+class BacktestCompletedEvent(DomainEvent):
+    def __init__(self, backtest_id: str, final_value: float, ...):
+        super().__init__()
+        self.backtest_id = backtest_id
+        self.final_value = final_value
+
+# 이벤트 핸들러
+class BacktestMetricsHandler:
+    async def handle(self, event: BacktestCompletedEvent):
+        # 메트릭 수집 및 분석
+        await self.collect_performance_metrics(event)
+
+# EventBus 시스템
+class EventBus:
+    async def publish(self, event: DomainEvent):
+        # 비동기 이벤트 발행 및 핸들러 실행
+```
+
+#### CQRS Pattern
+```python
+# Command (명령) - 상태 변경
+class RunBacktestCommand(Command):
+    def __init__(self, symbol: str, strategy: str, ...):
+        super().__init__()
+        self.symbol = symbol
+        self.strategy = strategy
+
+# Query (조회) - 상태 조회
+class GetBacktestResultQuery(Query):
+    def __init__(self, backtest_id: str, include_chart_data: bool = False):
+        super().__init__()
+        self.backtest_id = backtest_id
+        self.include_chart_data = include_chart_data
+
+# CQRS Bus (라우팅 시스템)
+class CQRSBus:
+    async def execute_command(self, command: Command) -> Dict[str, Any]:
+        handler = self.command_handlers[type(command)]
+        return await handler.handle(command)
+    
+    async def execute_query(self, query: Query) -> Dict[str, Any]:
+        handler = self.query_handlers[type(query)]
+        return await handler.handle(query)
+```
+
+#### CQRSServiceManager
+모든 Phase 4 기능을 통합한 고수준 매니저:
+```python
+class CQRSServiceManager:
+    def __init__(self):
+        self.cqrs_bus = CQRSBus()
+        self.event_bus = EventBus()
+    
+    async def run_backtest(self, symbol: str, strategy: str, ...):
+        command = RunBacktestCommand(symbol, strategy, ...)
+        return await self.cqrs_bus.execute_command(command)
+    
+    async def get_backtest_result(self, backtest_id: str, ...):
+        query = GetBacktestResultQuery(backtest_id, ...)
+        return await self.cqrs_bus.execute_query(query)
+```
+
+### Phase 4 결과 요약
+- **아키텍처**: Enhanced Services + Event-Driven + CQRS 패턴 완전 적용
+- **파일 구조**: 32개 → 45개 (Enhanced Services 2개, Events 8개, CQRS 5개)
+- **서비스 통합**: 도메인 서비스를 활용한 고급 분석 및 추천 시스템
+- **이벤트 처리**: 17개 도메인 이벤트와 포괄적 핸들러 시스템
+- **CQRS 시스템**: 명령/조회 분리로 확장성 및 성능 최적화
+- **비즈니스 인텔리전스**: 메트릭 수집, 분석, 알림 시스템 구축
+- **호환성**: 기존 Phase 1-3와 완전 호환, API 인터페이스 확장성 확보
+
+### Phase 5: 엔터프라이즈 확장 (다음 단계)
+- **API 엔드포인트 통합**: CQRSServiceManager 기반 API 재구성
+- **Enhanced 서비스 활용**: 고급 분석 API 제공
+- **이벤트 기반 비동기 처리**: 실시간 알림 및 스트리밍
+- **성능 최적화**: 멀티 백테스트 병렬 실행, 캐시 전략 개선
+
 │   │   │   │   └── allocation.py       # 자산 배분
 │   │   │   ├── entities/          # 자산 및 포트폴리오
 │   │   │   │   ├── asset_entity.py

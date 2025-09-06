@@ -191,111 +191,6 @@ docker-compose exec backend pytest tests/ -v
 - [ ] 회원 가입 기능: 사용자 관리 시스템 구축
 - [ ] 내 포트폴리오 저장 기능: 사용자별 포트폴리오 관리
 
-### 1.1. 백엔드 리팩터링 (Backend Refactoring) - 완료
-**목표**: God Class 해결 및 서비스 분리를 통한 유지보수성 향상
-
-#### Phase 1: 서비스 분리 (완료)
-- [x] **Strategy 클래스 분리** (우선순위: 최고)
-  - [x] SMAStrategy → strategies/implementations/sma_strategy.py 이동 완료
-  - [x] RSIStrategy → strategies/implementations/rsi_strategy.py 이동 완료
-  - [x] BollingerBandsStrategy → strategies/implementations/bollinger_strategy.py 이동 완료
-  - [x] MACDStrategy → strategies/implementations/macd_strategy.py 이동 완료
-  - [x] BuyAndHoldStrategy → strategies/implementations/buy_hold_strategy.py 이동 완료
-  - [x] StrategyService 간소화: 관리 로직만 유지 (341줄 → 80줄, 77% 감소)
-
-- [x] **BacktestService 분리** (우선순위: 최고, 885줄 → 139줄, 84% 감소)
-  - [x] BacktestEngine: 백테스트 실행 핵심 로직 (240줄)
-  - [x] OptimizationService: 파라미터 최적화 로직 (301줄)  
-  - [x] ChartDataService: 차트 데이터 생성 로직 (198줄)
-  - [x] ValidationService: 데이터 검증 및 변환 로직 (121줄)
-  - [x] 위임 패턴(Delegation Pattern) 적용으로 기존 API 호환성 유지
-
-- [x] **Pydantic 모델 호환성 수정**
-  - [x] BacktestResult 필드명 매핑: 기존 모델과 새 서비스 데이터 호환
-  - [x] 날짜 타입 변환: datetime.date → str 자동 변환
-  - [x] 테스트 범위 수정: max_drawdown_pct 음수 값 허용 (-80% ~ 0%)
-
-#### Phase 1 결과 요약
-- **파일 구조**: 8개 → 13개 (전문화된 서비스)
-- **코드 감소**: BacktestService 885줄 → 139줄 (84% 감소), StrategyService 341줄 → 80줄 (77% 감소)
-- **아키텍처**: God Class → 단일 책임 원칙(SRP) 적용
-- **테스트**: 11개 테스트 통과, 1개 스킵 (포트폴리오 테스트)
-- **호환성**: 기존 API 인터페이스 완전 유지, 위임 패턴으로 안정성 확보
-
-#### Phase 2: 아키텍처 패턴 도입 (완료)
-- [x] **Repository Pattern 도입**
-  - [x] BacktestRepository: 백테스트 결과 저장/조회 (인메모리 및 향후 MySQL 지원)
-  - [x] DataRepository: yfinance 캐시 데이터 관리 분리 (메모리/MySQL 계층 지원)
-  - [x] 인터페이스 기반 의존성 주입 시스템 구축
-
-- [x] **Factory Pattern 적용**
-  - [x] StrategyFactory: 전략 인스턴스 생성 및 파라미터 검증 관리
-  - [x] ServiceFactory: 서비스 인스턴스 생성 및 의존성 주입
-
-#### Phase 2 결과 요약
-- **파일 구조**: 13개 → 19개 (Repository 6개, Factory 2개 추가)
-- **아키텍처 패턴**: Repository Pattern + Factory Pattern + 의존성 주입 시스템
-- **코드 품질**: 인터페이스 기반 설계로 테스트 가능성 및 확장성 확보
-- **호환성**: 기존 API 100% 호환 유지, 11개 테스트 통과 (1개 스킵)
-- **의존성 관리**: 서비스 간 느슨한 결합, 인터페이스 기반 의존성 주입
-
-#### Phase 3: Domain-Driven Design (DDD) 아키텍처 (완료)
-- [x] **도메인 기반 재구성 (Domain Separation)**
-  - [x] **Backtest Domain**: 백테스트 실행, 전략 관리, 결과 분석
-    - [x] Value Objects: DateRange, PerformanceMetrics (불변 비즈니스 값)
-    - [x] Entities: BacktestResultEntity, StrategyEntity (식별자 보유 객체)
-    - [x] Services: BacktestDomainService, StrategyDomainService (도메인 로직 조율)
-  
-  - [x] **Portfolio Domain**: 자산 배분, 포트폴리오 관리, 리밸런싱
-    - [x] Value Objects: Weight, Allocation (가중치 및 자산 배분 관리)
-    - [x] Entities: AssetEntity, PortfolioEntity (자산 및 포트폴리오 객체)
-    - [x] Services: PortfolioDomainService (포트폴리오 최적화 및 분석)
-  
-  - [x] **Data Domain**: 시장 데이터 수집, 캐싱, 관리
-    - [x] Value Objects: Price, Volume, Symbol, TickerInfo (시장 데이터 값)
-    - [x] Entities: MarketDataEntity, MarketDataPoint (시장 데이터 객체)
-    - [x] Services: DataDomainService (데이터 일관성 검증 및 분석)
-
-- [x] **DDD 전술적 패턴 적용**
-  - [x] **Value Objects**: 19개 불변 값 객체로 데이터 무결성 보장
-  - [x] **Entities**: 8개 엔티티로 비즈니스 객체 생명주기 관리
-  - [x] **Domain Services**: 5개 도메인 서비스로 복잡한 비즈니스 로직 조율
-  - [x] **도메인 간 협력**: 최소 의존성 및 명확한 인터페이스
-
-- [x] **고급 비즈니스 기능 구현**
-  - [x] 포트폴리오 가중치 최적화 (변동성 기반)
-  - [x] 자산 간 상관관계 분석 및 매트릭스 계산
-  - [x] 포트폴리오 다변화 점수 계산 (허핀달 지수 활용)
-  - [x] 데이터 일관성 검증 및 무결성 보장
-  - [x] 리밸런싱 거래량 계산 및 주기 제안
-  - [x] 가격 변화율, 변동성, 성과 지표 분석
-
-#### Phase 3 결과 요약
-- **아키텍처**: 완전한 Domain-Driven Design 적용
-- **도메인 분리**: 3개 도메인 (Backtest, Portfolio, Data) 완전 분리
-- **코드 구조**: 32개 파일 (19개 값 객체, 8개 엔티티, 5개 도메인 서비스)
-- **비즈니스 로직**: 도메인별 캡슐화 및 전문화
-- **데이터 무결성**: 불변 값 객체로 스레드 안전성 확보
-- **확장성**: 이벤트 기반 아키텍처, CQRS 패턴 적용 준비 완료
-- **호환성**: 기존 Phase 1, 2와 완전 호환 유지
-
-#### Phase 4: 서비스 통합 및 이벤트 기반 확장 (다음 단계)
-- [ ] **도메인 서비스 통합**
-  - [ ] 기존 app/services 계층과 도메인 서비스 연동
-  - [ ] API 엔드포인트에서 도메인 서비스 직접 활용
-  - [ ] 백테스트 API의 도메인 서비스 기반 재구성
-
-- [ ] **이벤트 기반 아키텍처 도입**
-  - [ ] Domain Events 시스템 구축
-  - [ ] 백테스트 완료 이벤트 처리
-  - [ ] 포트폴리오 변경 이벤트 관리
-  - [ ] 비동기 이벤트 핸들러 구현
-
-- [ ] **성능 및 확장성 개선**
-  - [ ] CQRS (Command Query Responsibility Segregation) 패턴 적용
-  - [ ] 멀티 백테스트 병렬 실행 시스템
-  - [ ] 계층적 캐시 전략: 메모리 → MySQL → yfinance
-
 ### 2. Medium (사용자 경험 개선)
 - [x] 폼 상태 관리 개선: `UnifiedBacktestForm.tsx`의 복잡한 상태를 useReducer로 리팩토링 완료
 - [x] TypeScript 타입 안정성: 이벤트 핸들러 타입 명시로 any 타입 제거 완료
@@ -495,6 +390,133 @@ docker-compose exec backend pytest tests/ -v
    - 유틸리티 함수 테스트: dateUtils.test.ts (38개), numberUtils.test.ts (57개)
    - 컴포넌트 테스트: FormField.test.tsx (19개 테스트 케이스)
    - 모든 테스트 통과 (156개 테스트 케이스), 완전한 테스트 환경 구축
+
+### 5. 백엔드 리팩터링 (Backend Refactoring)
+**목표**: God Class 해결 및 서비스 분리를 통한 유지보수성 향상
+
+#### Phase 1: 서비스 분리 (완료)
+- [x] **Strategy 클래스 분리** (우선순위: 최고)
+  - [x] SMAStrategy → strategies/implementations/sma_strategy.py 이동 완료
+  - [x] RSIStrategy → strategies/implementations/rsi_strategy.py 이동 완료
+  - [x] BollingerBandsStrategy → strategies/implementations/bollinger_strategy.py 이동 완료
+  - [x] MACDStrategy → strategies/implementations/macd_strategy.py 이동 완료
+  - [x] BuyAndHoldStrategy → strategies/implementations/buy_hold_strategy.py 이동 완료
+  - [x] StrategyService 간소화: 관리 로직만 유지 (341줄 → 80줄, 77% 감소)
+
+- [x] **BacktestService 분리** (우선순위: 최고, 885줄 → 139줄, 84% 감소)
+  - [x] BacktestEngine: 백테스트 실행 핵심 로직 (240줄)
+  - [x] OptimizationService: 파라미터 최적화 로직 (301줄)  
+  - [x] ChartDataService: 차트 데이터 생성 로직 (198줄)
+  - [x] ValidationService: 데이터 검증 및 변환 로직 (121줄)
+  - [x] 위임 패턴(Delegation Pattern) 적용으로 기존 API 호환성 유지
+
+- [x] **Pydantic 모델 호환성 수정**
+  - [x] BacktestResult 필드명 매핑: 기존 모델과 새 서비스 데이터 호환
+  - [x] 날짜 타입 변환: datetime.date → str 자동 변환
+  - [x] 테스트 범위 수정: max_drawdown_pct 음수 값 허용 (-80% ~ 0%)
+
+#### Phase 1 결과 요약
+- **파일 구조**: 8개 → 13개 (전문화된 서비스)
+- **코드 감소**: BacktestService 885줄 → 139줄 (84% 감소), StrategyService 341줄 → 80줄 (77% 감소)
+- **아키텍처**: God Class → 단일 책임 원칙(SRP) 적용
+- **테스트**: 11개 테스트 통과, 1개 스킵 (포트폴리오 테스트)
+- **호환성**: 기존 API 인터페이스 완전 유지, 위임 패턴으로 안정성 확보
+
+#### Phase 2: 아키텍처 패턴 도입 (완료)
+- [x] **Repository Pattern 도입**
+  - [x] BacktestRepository: 백테스트 결과 저장/조회 (인메모리 및 향후 MySQL 지원)
+  - [x] DataRepository: yfinance 캐시 데이터 관리 분리 (메모리/MySQL 계층 지원)
+  - [x] 인터페이스 기반 의존성 주입 시스템 구축
+
+- [x] **Factory Pattern 적용**
+  - [x] StrategyFactory: 전략 인스턴스 생성 및 파라미터 검증 관리
+  - [x] ServiceFactory: 서비스 인스턴스 생성 및 의존성 주입
+
+#### Phase 2 결과 요약
+- **파일 구조**: 13개 → 19개 (Repository 6개, Factory 2개 추가)
+- **아키텍처 패턴**: Repository Pattern + Factory Pattern + 의존성 주입 시스템
+- **코드 품질**: 인터페이스 기반 설계로 테스트 가능성 및 확장성 확보
+- **호환성**: 기존 API 100% 호환 유지, 11개 테스트 통과 (1개 스킵)
+- **의존성 관리**: 서비스 간 느슨한 결합, 인터페이스 기반 의존성 주입
+
+#### Phase 3: Domain-Driven Design (DDD) 아키텍처 (완료)
+- [x] **도메인 기반 재구성 (Domain Separation)**
+  - [x] **Backtest Domain**: 백테스트 실행, 전략 관리, 결과 분석
+    - [x] Value Objects: DateRange, PerformanceMetrics (불변 비즈니스 값)
+    - [x] Entities: BacktestResultEntity, StrategyEntity (식별자 보유 객체)
+    - [x] Services: BacktestDomainService, StrategyDomainService (도메인 로직 조율)
+  
+  - [x] **Portfolio Domain**: 자산 배분, 포트폴리오 관리, 리밸런싱
+    - [x] Value Objects: Weight, Allocation (가중치 및 자산 배분 관리)
+    - [x] Entities: AssetEntity, PortfolioEntity (자산 및 포트폴리오 객체)
+    - [x] Services: PortfolioDomainService (포트폴리오 최적화 및 분석)
+  
+  - [x] **Data Domain**: 시장 데이터 수집, 캐싱, 관리
+    - [x] Value Objects: Price, Volume, Symbol, TickerInfo (시장 데이터 값)
+    - [x] Entities: MarketDataEntity, MarketDataPoint (시장 데이터 객체)
+    - [x] Services: DataDomainService (데이터 일관성 검증 및 분석)
+
+- [x] **DDD 전술적 패턴 적용**
+  - [x] **Value Objects**: 19개 불변 값 객체로 데이터 무결성 보장
+  - [x] **Entities**: 8개 엔티티로 비즈니스 객체 생명주기 관리
+  - [x] **Domain Services**: 5개 도메인 서비스로 복잡한 비즈니스 로직 조율
+  - [x] **도메인 간 협력**: 최소 의존성 및 명확한 인터페이스
+
+- [x] **고급 비즈니스 기능 구현**
+  - [x] 포트폴리오 가중치 최적화 (변동성 기반)
+  - [x] 자산 간 상관관계 분석 및 매트릭스 계산
+  - [x] 포트폴리오 다변화 점수 계산 (허핀달 지수 활용)
+  - [x] 데이터 일관성 검증 및 무결성 보장
+  - [x] 리밸런싱 거래량 계산 및 주기 제안
+  - [x] 가격 변화율, 변동성, 성과 지표 분석
+
+#### Phase 3 결과 요약
+- **아키텍처**: 완전한 Domain-Driven Design 적용
+- **도메인 분리**: 3개 도메인 (Backtest, Portfolio, Data) 완전 분리
+- **코드 구조**: 32개 파일 (19개 값 객체, 8개 엔티티, 5개 도메인 서비스)
+- **비즈니스 로직**: 도메인별 캡슐화 및 전문화
+- **데이터 무결성**: 불변 값 객체로 스레드 안전성 확보
+- **확장성**: 이벤트 기반 아키텍처, CQRS 패턴 적용 준비 완료
+- **호환성**: 기존 Phase 1, 2와 완전 호환 유지
+
+#### Phase 4: 서비스 통합 및 이벤트 기반 확장 (완료)
+- [x] **도메인 서비스 통합**
+  - [x] EnhancedBacktestService: 기존 BacktestService와 도메인 서비스 연동
+  - [x] EnhancedPortfolioService: 포트폴리오 도메인 서비스 연동 및 고급 분석 기능
+  - [x] 도메인 분석 기능: 전략 추천, 품질 평가, 포트폴리오 최적화
+
+- [x] **이벤트 기반 아키텍처 도입**
+  - [x] EventBus 시스템: 중앙 집중식 이벤트 라우팅 및 비동기 처리
+  - [x] Domain Events: 17개 비즈니스 이벤트 (백테스트 5개, 포트폴리오 6개, 데이터 6개)
+  - [x] Event Handlers: 로깅, 메트릭 수집, 분석, 알림 시스템 구축
+  - [x] Event System Manager: 이벤트 시스템 통합 관리 및 상태 모니터링
+
+- [x] **CQRS 패턴 적용**
+  - [x] Command/Query 분리: 명령과 조회 책임 분리 아키텍처
+  - [x] 7개 커맨드: 백테스트/포트폴리오 실행, 최적화, 리밸런싱, 생성
+  - [x] 10개 쿼리: 결과 조회, 히스토리, 차트 데이터, 분석, 시장 데이터
+  - [x] CQRS Bus: 커맨드/쿼리 라우팅 및 핸들러 관리 시스템
+  - [x] CQRSServiceManager: 통합 매니저로 API 엔드포인트 연동 준비
+
+#### Phase 4 결과 요약
+- **아키텍처**: Enhanced Services + Event-Driven + CQRS 패턴 완전 적용
+- **파일 구조**: 32개 → 45개 (Enhanced Services 2개, Events 8개, CQRS 5개)
+- **서비스 통합**: 도메인 서비스를 활용한 고급 분석 및 추천 시스템
+- **이벤트 처리**: 17개 도메인 이벤트와 포괄적 핸들러 시스템
+- **CQRS 시스템**: 명령/조회 분리로 확장성 및 성능 최적화
+- **비즈니스 인텔리전스**: 메트릭 수집, 분석, 알림 시스템 구축
+- **호환성**: 기존 Phase 1-3와 완전 호환, API 인터페이스 확장성 확보
+
+#### Phase 5: 엔터프라이즈 확장 (다음 단계)
+- [ ] **API 엔드포인트 통합**
+  - [ ] 기존 API를 CQRSServiceManager 기반으로 재구성
+  - [ ] Enhanced 서비스를 통한 고급 분석 API 제공
+  - [ ] 이벤트 기반 비동기 처리 API 엔드포인트
+
+- [ ] **성능 및 확장성 개선**
+  - [ ] 멀티 백테스트 병렬 실행 시스템
+  - [ ] 이벤트 스트리밍 및 실시간 알림 시스템
+  - [ ] 캐시 전략 최적화: Enhanced 서비스 기반
 
 ## 참고 명령어
 
