@@ -382,3 +382,4 @@ docker-compose exec backend pytest tests/ -v
 - **배포**: scp 파일 복사 + 직접 실행 방식으로 안정성 확보
 
 - 항상 코드를 스캔하기 전에 마크다운 문서들을 정독해.
+- 이모티콘, 이모지 사용하지 마.

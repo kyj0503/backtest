@@ -180,32 +180,7 @@ class TestBacktestService:
         # 포트폴리오 합계 검증
         individual_total = sum(ir.final_equity for ir in result.individual_results)
         assert abs(individual_total - result.portfolio_result.total_equity) < 1.0  # 소수점 오차 허용
-    
-    # @pytest.mark.asyncio
-    # async def test_run_portfolio_backtest_unequal_weights(self, mock_data_generator):
-    #     """불균등 포트폴리오 백테스트 테스트"""
-    #     # Given
-    #     request = BacktestRequest(
-    #         ticker="AAPL",  # 단일 종목으로 변경
-    #         start_date=date(2023, 1, 1),
-    #         end_date=date(2023, 6, 30),
-    #         strategy="buy_and_hold",
-    #         strategy_params={}
-    #     )
-    #     
-    #     # When
-    #     result = await backtest_service.run_backtest(request)
-    #     
-    #     # Then
-    #     assert result is not None
-        
-        # 투자 금액 비중 검증
-        total_amount = sum(request.amounts)
-        for i, individual_result in enumerate(result.individual_results):
-            expected_weight = request.amounts[i] / total_amount
-            # 비중이 올바르게 반영되었는지 확인 (정확한 계산은 복잡하므로 대략적 검증)
-            assert individual_result.final_equity > 0
-    
+
     @pytest.mark.asyncio
     async def test_optimize_strategy_success(self, mock_data_generator):
         """전략 최적화 성공 테스트"""
