@@ -1,5 +1,6 @@
 """
 백테스팅 실행 서비스 (리팩터링된 버전)
+Repository Pattern과 Factory Pattern 적용
 """
 import time
 import signal
@@ -10,6 +11,10 @@ import numpy as np
 import logging
 import traceback
 from fastapi import HTTPException
+
+# Repository와 Factory 패턴 import
+from app.repositories import backtest_repository, data_repository
+from app.factories import strategy_factory, service_factory
 
 # Monkey patch for pandas Timedelta compatibility issue
 def _patch_backtesting_stats():
@@ -101,42 +106,93 @@ logger = logging.getLogger(__name__)
 
 class BacktestService:
     """
-    백테스팅 서비스 클래스 (리팩터링된 버전)
+    백테스팅 서비스 클래스 (Repository Pattern 및 Factory Pattern 적용)
     
-    이제 실제 작업은 분리된 전담 서비스들에게 위임합니다:
-    - BacktestEngine: 백테스트 실행
-    - OptimizationService: 파라미터 최적화  
-    - ChartDataService: 차트 데이터 생성
+    이제 Repository와 Factory를 통해 의존성을 주입받고,
+    분리된 전담 서비스들에게 작업을 위임합니다:
+    - BacktestEngine: 백테스트 실행 (Repository 주입)
+    - OptimizationService: 파라미터 최적화 (Repository 주입)
+    - ChartDataService: 차트 데이터 생성 (Repository 주입)
     - ValidationService: 검증 및 유틸리티
     """
     
-    def __init__(self):
-        self.backtest_engine = backtest_engine
-        self.optimization_service = optimization_service
-        self.chart_data_service = chart_data_service
-        self.validation_service = validation_service
+    def __init__(self, service_factory_instance=None):
+        # Factory Pattern을 통한 서비스 생성
+        self.service_factory = service_factory_instance or service_factory
+        
+        # Repository Pattern을 통한 의존성 주입된 서비스들
+        self.backtest_engine = self.service_factory.create_backtest_engine()
+        self.optimization_service = self.service_factory.create_optimization_service()
+        self.chart_data_service = self.service_factory.create_chart_data_service()
+        self.validation_service = self.service_factory.create_validation_service()
+        
+        # Repository 직접 접근 (필요시)
+        self.backtest_repository = backtest_repository
+        self.data_repository = data_repository
+        self.strategy_factory = strategy_factory
         
         # 호환성을 위해 기존 속성들 유지
+        from app.utils.data_fetcher import data_fetcher
+        from app.services.strategy_service import strategy_service
         self.data_fetcher = data_fetcher
         self.strategy_service = strategy_service
     
     async def run_backtest(self, request: BacktestRequest) -> BacktestResult:
-        """백테스트 실행 - BacktestEngine에 위임"""
+        """백테스트 실행 - Repository Pattern이 적용된 BacktestEngine에 위임"""
         return await self.backtest_engine.run_backtest(request)
     
     async def optimize_strategy(self, request: OptimizationRequest) -> OptimizationResult:
-        """전략 파라미터 최적화 - OptimizationService에 위임"""
+        """전략 파라미터 최적화 - Repository Pattern이 적용된 OptimizationService에 위임"""
         return await self.optimization_service.optimize_strategy(request)
     
     async def generate_chart_data(self, request: BacktestRequest, backtest_result: BacktestResult = None) -> ChartDataResponse:
-        """차트 데이터 생성 - ChartDataService에 위임"""
+        """차트 데이터 생성 - Repository Pattern이 적용된 ChartDataService에 위임"""
         return await self.chart_data_service.generate_chart_data(request, backtest_result)
     
     def validate_backtest_request(self, request: BacktestRequest) -> None:
         """백테스트 요청 검증 - ValidationService에 위임"""
         return self.validation_service.validate_backtest_request(request)
     
-    # 호환성을 위한 유틸리티 메서드들
+    # Repository를 활용한 새로운 메서드들
+    async def save_backtest_result(self, result: BacktestResult, user_id: Optional[str] = None) -> str:
+        """백테스트 결과 저장"""
+        return await self.backtest_repository.save_result(result, user_id)
+    
+    async def get_backtest_result(self, result_id: str) -> Optional[BacktestResult]:
+        """백테스트 결과 조회"""
+        return await self.backtest_repository.get_result(result_id)
+    
+    async def get_user_backtest_results(self, user_id: str, limit: int = 10) -> List[BacktestResult]:
+        """사용자별 백테스트 결과 목록 조회"""
+        return await self.backtest_repository.get_user_results(user_id, limit)
+    
+    async def get_cached_stock_data(self, ticker: str, start_date, end_date) -> pd.DataFrame:
+        """캐시된 주식 데이터 조회"""
+        return await self.data_repository.get_stock_data(ticker, start_date, end_date)
+    
+    def get_available_strategies(self) -> Dict[str, Dict[str, Any]]:
+        """사용 가능한 전략 목록 (Factory Pattern)"""
+        return self.strategy_factory.get_available_strategies()
+    
+    def validate_strategy_params(self, strategy_name: str, params: Dict[str, Any]) -> bool:
+        """전략 파라미터 검증 (Factory Pattern)"""
+        return self.strategy_factory.validate_strategy_params(strategy_name, params)
+    
+    async def get_system_stats(self) -> Dict[str, Any]:
+        """시스템 통계 정보"""
+        return {
+            'repository_stats': {
+                'backtest_cache': await self.backtest_repository.get_stats() if hasattr(self.backtest_repository, 'get_stats') else {},
+                'data_cache': await self.data_repository.get_cache_stats()
+            },
+            'service_stats': self.service_factory.get_service_stats(),
+            'strategy_stats': {
+                'available_strategies': len(self.strategy_factory.get_available_strategies()),
+                'factory_type': type(self.strategy_factory).__name__
+            }
+        }
+    
+    # 호환성을 위한 유틸리티 메서드들 (ValidationService 위임)
     def safe_float(self, value, default: float = 0.0) -> float:
         """안전한 float 변환 - ValidationService에 위임"""
         return self.validation_service.safe_float(value, default)
@@ -144,11 +200,7 @@ class BacktestService:
     def safe_int(self, value, default: int = 0) -> int:
         """안전한 int 변환 - ValidationService에 위임"""
         return self.validation_service.safe_int(value, default)
-    
-    def _safe_timedelta_to_days(self, timedelta):
-        """Timedelta를 일수로 변환 - ValidationService에 위임"""
-        return self.validation_service.safe_timedelta_to_days(timedelta)
 
 
-# 글로벌 인스턴스
+# 전역 인스턴스 (Repository Pattern과 Factory Pattern 적용)
 backtest_service = BacktestService()

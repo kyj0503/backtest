@@ -133,6 +133,14 @@ docker-compose exec backend pytest tests/ -v
 - 뉴스 API: `backend/app/api/v1/endpoints/naver_news.py`
 - 설정 관리: `backend/app/core/config.py`
 
+### Repository Pattern 파일 (Phase 2)
+- 백테스트 Repository: `backend/app/repositories/backtest_repository.py`
+- 데이터 Repository: `backend/app/repositories/data_repository.py`
+
+### Factory Pattern 파일 (Phase 2)
+- 전략 Factory: `backend/app/factories/strategy_factory.py`
+- 서비스 Factory: `backend/app/factories/service_factory.py`
+
 ### 문서 위치
 - 백엔드 개발 가이드: `backend/doc/README.md`
 - 테스트 아키텍처: `backend/doc/TEST_ARCHITECTURE.md`
@@ -200,22 +208,32 @@ docker-compose exec backend pytest tests/ -v
 - **테스트**: 11개 테스트 통과, 1개 스킵 (포트폴리오 테스트)
 - **호환성**: 기존 API 인터페이스 완전 유지, 위임 패턴으로 안정성 확보
 
-#### Phase 2: 아키텍처 패턴 도입 (다음 단계)
-- [ ] **Repository Pattern 도입**
-  - [ ] BacktestRepository: 백테스트 결과 저장/조회
-  - [ ] DataRepository: yfinance 캐시 데이터 관리 분리
-  - [ ] 인터페이스 기반 의존성 주입 시스템
+#### Phase 2: 아키텍처 패턴 도입 (완료)
+- [x] **Repository Pattern 도입**
+  - [x] BacktestRepository: 백테스트 결과 저장/조회 (인메모리 및 향후 MySQL 지원)
+  - [x] DataRepository: yfinance 캐시 데이터 관리 분리 (메모리/MySQL 계층 지원)
+  - [x] 인터페이스 기반 의존성 주입 시스템 구축
 
-- [ ] **Factory Pattern 적용**
-  - [ ] StrategyFactory: 전략 인스턴스 생성 관리
-  - [ ] ServiceFactory: 서비스 인스턴스 생성 및 DI
+- [x] **Factory Pattern 적용**
+  - [x] StrategyFactory: 전략 인스턴스 생성 및 파라미터 검증 관리
+  - [x] ServiceFactory: 서비스 인스턴스 생성 및 의존성 주입
+#### Phase 2 결과 요약
+- **파일 구조**: 13개 → 19개 (Repository 6개, Factory 2개 추가)
+- **아키텍처 패턴**: Repository Pattern + Factory Pattern + 의존성 주입 시스템
+- **코드 품질**: 인터페이스 기반 설계로 테스트 가능성 및 확장성 확보
+- **호환성**: 기존 API 100% 호환 유지, 11개 테스트 통과 (1개 스킵)
+- **의존성 관리**: 서비스 간 느슨한 결합, 인터페이스 기반 의존성 주입
 
+#### Phase 3: 도메인 기반 재구성 (DDD) - 다음 단계
+  - [ ] domains/backtest/: 백테스트 도메인 분리
+  - [ ] domains/portfolio/: 포트폴리오 도메인 분리  
+#### Phase 3: 도메인 기반 재구성 (DDD) - 다음 단계
 - [ ] **도메인 기반 재구성 (DDD)**
   - [ ] domains/backtest/: 백테스트 도메인 분리
   - [ ] domains/portfolio/: 포트폴리오 도메인 분리  
   - [ ] domains/data/: 데이터 수집/캐시 도메인 분리
 
-#### Phase 3: 성능 및 확장성 개선 (2주일 후)
+#### Phase 4: 성능 및 확장성 개선 (2주일 후)
 - [ ] **비동기 처리 강화**
   - [ ] 멀티 백테스트 병렬 실행 시스템
   - [ ] ThreadPoolExecutor 기반 CPU 집약적 작업 최적화
@@ -443,3 +461,4 @@ docker-compose exec backend pytest tests/ -v
 
 - 항상 코드를 스캔하기 전에 마크다운 문서들을 정독해.
 - 이모티콘, 이모지 사용하지 마.
+- 모든 작업, 실행, 테스트는 도커 환경에서 진행되어야 해.

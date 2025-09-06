@@ -51,10 +51,28 @@ backend/
 │   │   ├── responses.py        # API 응답 모델 (Pydantic)
 │   │   └── schemas.py          # 공통 스키마 정의
 │   ├── services/               # 비즈니스 로직 서비스
-│   │   ├── backtest_service.py      # 백테스트 핵심 로직
+│   │   ├── backtest_service.py      # 백테스트 핵심 로직 (Repository/Factory Pattern 적용)
 │   │   ├── portfolio_service.py     # 포트폴리오 관리
 │   │   ├── strategy_service.py      # 전략 관리
-│   │   └── yfinance_db.py          # 데이터베이스 캐시 관리
+│   │   ├── yfinance_db.py          # 데이터베이스 캐시 관리
+│   │   └── backtest/               # 백테스트 서비스 분리 (Phase 1)
+│   │       ├── backtest_engine.py       # 백테스트 실행 엔진
+│   │       ├── optimization_service.py  # 파라미터 최적화
+│   │       ├── chart_data_service.py    # 차트 데이터 생성
+│   │       └── validation_service.py    # 데이터 검증
+│   ├── repositories/           # Repository Pattern (Phase 2)
+│   │   ├── backtest_repository.py      # 백테스트 결과 저장/조회
+│   │   └── data_repository.py          # 데이터 캐시 관리
+│   ├── factories/              # Factory Pattern (Phase 2)
+│   │   ├── strategy_factory.py         # 전략 인스턴스 생성
+│   │   └── service_factory.py          # 서비스 의존성 주입
+│   ├── strategies/             # 투자 전략 구현 (Phase 1)
+│   │   └── implementations/
+│   │       ├── sma_strategy.py         # SMA 교차 전략
+│   │       ├── rsi_strategy.py         # RSI 기반 전략
+│   │       ├── bollinger_strategy.py   # 볼린저 밴드 전략
+│   │       ├── macd_strategy.py        # MACD 전략
+│   │       └── buy_hold_strategy.py    # 매수 후 보유 전략
 │   └── utils/                  # 유틸리티 함수
 │       ├── data_fetcher.py     # 데이터 수집 유틸리티
 │       ├── portfolio_utils.py  # 포트폴리오 계산 유틸리티
@@ -126,6 +144,83 @@ NAVER_CLIENT_SECRET=your_naver_client_secret
 ENVIRONMENT=development
 LOG_LEVEL=INFO
 ```
+
+## 아키텍처 패턴 (Phase 2)
+
+백테스팅 시스템은 Repository Pattern과 Factory Pattern을 적용하여 확장 가능하고 유지보수가 용이한 아키텍처를 구축했습니다.
+
+### Repository Pattern
+
+데이터 액세스 계층을 추상화하여 비즈니스 로직과 데이터 저장소를 분리합니다.
+
+#### BacktestRepository
+```python
+from app.repositories.backtest_repository import InMemoryBacktestRepository
+
+# 백테스트 결과 저장/조회
+backtest_repo = InMemoryBacktestRepository()
+await backtest_repo.save_result(backtest_result)
+result = await backtest_repo.get_result(result_id)
+```
+
+#### DataRepository  
+```python
+from app.repositories.data_repository import YFinanceDataRepository
+
+# 주가 데이터 캐시 관리
+data_repo = YFinanceDataRepository()
+await data_repo.cache_data(symbol, data, ttl=3600)
+cached_data = await data_repo.get_cached_data(symbol)
+```
+
+### Factory Pattern
+
+객체 생성과 의존성 주입을 체계적으로 관리합니다.
+
+#### StrategyFactory
+```python
+from app.factories.strategy_factory import DefaultStrategyFactory
+
+# 전략 인스턴스 생성
+strategy_factory = DefaultStrategyFactory()
+sma_strategy = strategy_factory.create_strategy('sma_crossover', 
+                                               fast_period=10, 
+                                               slow_period=20)
+```
+
+#### ServiceFactory
+```python
+from app.factories.service_factory import DefaultServiceFactory
+
+# 의존성 주입된 서비스 생성
+service_factory = DefaultServiceFactory(backtest_repo, data_repo, strategy_factory)
+backtest_service = service_factory.create_backtest_service()
+```
+
+### 의존성 주입 시스템
+
+서비스 간 느슨한 결합을 통해 테스트 가능성과 확장성을 확보합니다.
+
+```python
+# 기본 의존성 주입
+from app.services.backtest_service import BacktestService
+from app.factories.service_factory import service_factory
+
+# Factory를 통한 서비스 생성 (Repository 자동 주입)
+backtest_service = service_factory.create_backtest_service()
+
+# 기존 API 호환성 유지
+available_strategies = backtest_service.get_available_strategies()
+result = await backtest_service.run_backtest(request)
+```
+
+### 아키텍처 계층 구조
+
+1. **API Layer** (`app/api/v1/endpoints/`) - HTTP 요청/응답 처리
+2. **Service Layer** (`app/services/`) - 비즈니스 로직 구현  
+3. **Repository Layer** (`app/repositories/`) - 데이터 액세스 추상화
+4. **Factory Layer** (`app/factories/`) - 객체 생성 및 의존성 주입
+5. **Domain Layer** (`app/strategies/`) - 도메인 로직 (투자 전략)
 
 ## API 개발
 
