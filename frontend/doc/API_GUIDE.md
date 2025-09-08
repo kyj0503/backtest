@@ -14,7 +14,9 @@
 
 #### 베이스 URL 결정 로직 (중요)
 - 프론트엔드 코드는 `VITE_API_BASE_URL`가 설정되어 있으면 이를 우선 사용합니다.
-- 미설정 시 상대 경로(`/api`)로 호출하며, 개발 환경에서는 Vite proxy가 백엔드로 라우팅합니다.
+- 미설정 시 상대 경로(`/api`)로 호출합니다.
+- 개발: Vite dev 서버 proxy(`/vite.config.ts`)가 `/api`를 백엔드로 라우팅합니다.
+- 프로덕션: Nginx가 `/api`를 `backend:8000`으로 리버스 프록시합니다. cf. `frontend/nginx.conf`
 - 참조: `frontend/src/services/api.ts`
 
  ### 주요 API

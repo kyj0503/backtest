@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+        timestamps()
+    }
+
     environment {
         GHCR_OWNER = 'kyj05030'
         BACKEND_PROD_IMAGE = 'backtest-backend'
@@ -31,38 +36,32 @@ pipeline {
             }
         }
 
-        stage('Frontend Tests') {
-            steps {
-                script {
-                    echo 'Running frontend tests...'
-                    try {
-                        sh '''
-                            cd frontend
-                            docker build --build-arg RUN_TESTS=true \
-                                -t backtest-frontend-test:${BUILD_NUMBER} .
-                        '''
-                        echo "✅ Frontend tests passed"
-                    } catch (Exception e) {
-                        echo "⚠️ Frontend tests failed: ${e.getMessage()}"
-                        // Continue pipeline even if tests fail (for now)
+        stage('Tests') {
+            parallel {
+                stage('Frontend Tests') {
+                    steps {
+                        script {
+                            echo 'Running frontend tests...'
+                            sh '''
+                                cd frontend
+                                docker build --build-arg RUN_TESTS=true \
+                                    -t backtest-frontend-test:${BUILD_NUMBER} .
+                            '''
+                            echo "✅ Frontend tests passed"
+                        }
                     }
                 }
-            }
-        }
-
-        stage('Backend Tests') {
-            steps {
-                script {
-                    echo 'Running backend tests with controlled environment...'
-                    try {
-                        sh '''
-                            cd backend
-                            docker build --build-arg RUN_TESTS=true \
-                                -t backtest-backend-test:${BUILD_NUMBER} .
-                        '''
-                        echo "✅ Backend tests passed"
-                    } catch (Exception e) {
-                        echo "⚠️ Backend tests failed: ${e.getMessage()}"
+                stage('Backend Tests') {
+                    steps {
+                        script {
+                            echo 'Running backend tests with controlled environment...'
+                            sh '''
+                                cd backend
+                                docker build --build-arg RUN_TESTS=true \
+                                    -t backtest-backend-test:${BUILD_NUMBER} .
+                            '''
+                            echo "✅ Backend tests passed"
+                        }
                     }
                 }
             }
@@ -81,10 +80,9 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                         def fullImageName = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         echo "Building PROD backend image: ${fullImageName}"
-                        sh "cd backend && docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} -t ${fullImageName} ."
-                        docker.withRegistry("https://ghcr.io", 'github-token') {
-                            docker.image(fullImageName).push()
-                        }
+                        sh "cd backend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} -t ${fullImageName} ."
+                        sh "echo \"${GH_TOKEN}\" | docker login ghcr.io -u ${GH_USER} --password-stdin"
+                        sh "docker push ${fullImageName}"
                     }
                 }
             }
@@ -103,10 +101,9 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                         def fullImageName = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         echo "Building PROD frontend image: ${fullImageName}"
-                        sh "cd frontend && docker build --build-arg RUN_TESTS=false -t ${fullImageName} ."
-                        docker.withRegistry("https://ghcr.io", 'github-token') {
-                            docker.image(fullImageName).push()
-                        }
+                        sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false -t ${fullImageName} ."
+                        sh "echo \"${GH_TOKEN}\" | docker login ghcr.io -u ${GH_USER} --password-stdin"
+                        sh "docker push ${fullImageName}"
                     }
                 }
             }
@@ -154,21 +151,31 @@ pipeline {
             steps {
                 script {
                     echo 'Running integration tests against deployed environment...'
+                    sh '''
+                        # Poll until healthy
+                        for i in $(seq 1 30); do
+                          if curl -fsS http://localhost:8001/health >/dev/null; then echo "backend healthy"; break; fi
+                          sleep 1;
+                        done
+                        for i in $(seq 1 30); do
+                          if curl -fsS http://localhost:8082/ >/dev/null; then echo "frontend up"; break; fi
+                          sleep 1;
+                        done
+                    '''
+                    // Optional API check (non-blocking)
                     try {
                         sh '''
-                            # Wait for services to be ready
-                            sleep 30
-                            
-                            # Test backend health
-                            curl -f http://localhost:8001/health || echo "Backend health check failed"
-                            
-                            # Test frontend availability  
-                            curl -f http://localhost:8082/ || echo "Frontend availability check failed"
+                            cat > /tmp/payload.json <<'EOF'
+                            {"ticker":"AAPL","start_date":"2023-01-03","end_date":"2023-01-20","initial_cash":10000,"strategy":"buy_and_hold","strategy_params":{}}
+EOF
+                            curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8001/api/v1/backtest/chart-data | jq -e '.ticker and .ohlc_data and .equity_data and .summary_stats' >/dev/null
                         '''
-                        echo "✅ Integration tests completed"
+                        echo "✅ Integration API check passed"
                     } catch (Exception e) {
-                        echo "⚠️ Integration tests failed: ${e.getMessage()}"
+                        echo "⚠️ Integration API check failed (non-blocking): ${e.getMessage()}"
+                        currentBuild.result = 'UNSTABLE'
                     }
+                    echo "✅ Integration tests completed"
                 }
             }
         }
