@@ -14,6 +14,9 @@ pipeline {
         DEPLOY_USER = 'jenkins'
         DEPLOY_PATH_PROD = '/opt/backtest'
         DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/docker-compose.prod.yml'
+        // Extend Docker client timeouts to reduce transient failures
+        DOCKER_CLIENT_TIMEOUT = '300'
+        COMPOSE_HTTP_TIMEOUT  = '300'
     }
 
     stages {
@@ -91,37 +94,122 @@ pipeline {
             }
         }
 
-        stage('Build and Push Backend PROD') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
-                        def fullImageName = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                        echo "Building PROD backend image: ${fullImageName}"
-                        sh "docker buildx create --use --name backtest-builder || true"
-                        sh "docker pull ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
-                        sh "cd backend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest -t ${fullImageName} ."
-                        sh 'echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin'
-                        sh "docker push ${fullImageName}"
-                        sh "docker tag ${fullImageName} ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
-                        sh "docker push ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
+        stage('Build and Push PROD') {
+            parallel {
+                stage('Backend PROD') {
+                    steps {
+                        script {
+                            withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                                def fullImageName = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                                echo "Building PROD backend image: ${fullImageName}"
+                                // Ensure a usable buildx builder exists without noisy errors
+                                sh '''
+                                  if ! docker buildx inspect backtest-builder >/dev/null 2>&1; then
+                                    docker buildx create --use --name backtest-builder || true
+                                  else
+                                    docker buildx use backtest-builder || true
+                                  fi
+                                '''
+                                sh "docker pull ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
+                                sh "cd backend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest -t ${fullImageName} ."
+                                // Robust GHCR login with retries (handles intermittent network timeouts)
+                                sh '''
+                                  set -euo pipefail
+                                  export DOCKER_CLIENT_TIMEOUT=${DOCKER_CLIENT_TIMEOUT:-300}
+                                  export COMPOSE_HTTP_TIMEOUT=${COMPOSE_HTTP_TIMEOUT:-300}
+                                  curl -fsSLI --connect-timeout 10 --max-time 20 https://ghcr.io/v2/ >/dev/null 2>&1 || echo 'Warning: GHCR probe failed; continuing'
+                                  docker logout ghcr.io >/dev/null 2>&1 || true
+                                  ok=''
+                                  for i in 1 2 3; do
+                                    if printf "%s" "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin; then
+                                      ok=1; break
+                                    fi
+                                    echo "docker login to ghcr.io failed (attempt $i), retrying..."
+                                    sleep $((i*5))
+                                  done
+                                  if [ -z "$ok" ]; then
+                                    echo 'ERROR: docker login to ghcr.io failed after retries' >&2
+                                    exit 1
+                                  fi
+                                '''
+                                // Push with retries to mitigate transient network hiccups
+                                withEnv(["FULL_IMAGE_NAME=${fullImageName}"]) {
+                                  sh '''
+                                    set -euo pipefail
+                                    ok=''
+                                    for i in 1 2 3; do
+                                      if docker push "$FULL_IMAGE_NAME"; then
+                                        ok=1; break
+                                      fi
+                                      echo "docker push failed (attempt $i), retrying..."
+                                      sleep $((i*5))
+                                    done
+                                    if [ -z "$ok" ]; then
+                                      echo 'ERROR: docker push failed after retries' >&2
+                                      exit 1
+                                    fi
+                                  '''
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
-
-        stage('Build and Push Frontend PROD') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
-                        def fullImageName = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
-                        echo "Building PROD frontend image: ${fullImageName}"
-                        sh "docker buildx create --use --name backtest-builder || true"
-                        sh "docker pull ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
-                        sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest -t ${fullImageName} ."
-                        sh 'echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin'
-                        sh "docker push ${fullImageName}"
-                        sh "docker tag ${fullImageName} ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
-                        sh "docker push ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
+                stage('Frontend PROD') {
+                    steps {
+                        script {
+                            withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+                                def fullImageName = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
+                                echo "Building PROD frontend image: ${fullImageName}"
+                                // Ensure a usable buildx builder exists without noisy errors
+                                sh '''
+                                  if ! docker buildx inspect backtest-builder >/dev/null 2>&1; then
+                                    docker buildx create --use --name backtest-builder || true
+                                  else
+                                    docker buildx use backtest-builder || true
+                                  fi
+                                '''
+                                sh "docker pull ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
+                                sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest -t ${fullImageName} ."
+                                // Robust GHCR login with retries (handles intermittent network timeouts)
+                                sh '''
+                                  set -euo pipefail
+                                  export DOCKER_CLIENT_TIMEOUT=${DOCKER_CLIENT_TIMEOUT:-300}
+                                  export COMPOSE_HTTP_TIMEOUT=${COMPOSE_HTTP_TIMEOUT:-300}
+                                  curl -fsSLI --connect-timeout 10 --max-time 20 https://ghcr.io/v2/ >/dev/null 2>&1 || echo 'Warning: GHCR probe failed; continuing'
+                                  docker logout ghcr.io >/dev/null 2>&1 || true
+                                  ok=''
+                                  for i in 1 2 3; do
+                                    if printf "%s" "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin; then
+                                      ok=1; break
+                                    fi
+                                    echo "docker login to ghcr.io failed (attempt $i), retrying..."
+                                    sleep $((i*5))
+                                  done
+                                  if [ -z "$ok" ]; then
+                                    echo 'ERROR: docker login to ghcr.io failed after retries' >&2
+                                    exit 1
+                                  fi
+                                '''
+                                // Push with retries to mitigate transient network hiccups
+                                withEnv(["FULL_IMAGE_NAME=${fullImageName}"]) {
+                                  sh '''
+                                    set -euo pipefail
+                                    ok=''
+                                    for i in 1 2 3; do
+                                      if docker push "$FULL_IMAGE_NAME"; then
+                                        ok=1; break
+                                      fi
+                                      echo "docker push failed (attempt $i), retrying..."
+                                      sleep $((i*5))
+                                    done
+                                    if [ -z "$ok" ]; then
+                                      echo 'ERROR: docker push failed after retries' >&2
+                                      exit 1
+                                    fi
+                                  '''
+                                }
+                            }
+                        }
                     }
                 }
             }
