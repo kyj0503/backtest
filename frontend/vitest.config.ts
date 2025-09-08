@@ -1,5 +1,10 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config'
+
+// Determine reporters dynamically for CI environments
+const isCI = process.env.CI === '1' || process.env.CI === 'true'
+// Allow overriding JUnit output path from environment (e.g., Jenkins step)
+const junitOutputFile = process.env.VITEST_JUNIT_FILE || 'reports/frontend/junit.xml'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
@@ -9,6 +14,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    reporters: isCI ? [
+      'default',
+      ['junit', { outputFile: junitOutputFile }]
+    ] : ['default'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
