@@ -112,6 +112,16 @@ docs: 배포 가이드 업데이트
 
 자세한 내용은 [`COMMIT_CONVENTION.md`](COMMIT_CONVENTION.md)를 참조하세요.
 
+### 커밋 전 검증(필수)
+- 커밋 전에 Docker 기반 빌드/테스트/헬스체크를 자동 수행합니다.
+- 최초 1회 Git 훅 경로를 설정하세요:
+  ```bash
+  git config core.hooksPath .githooks
+  ```
+- 수동 실행: `scripts/verify-before-commit.sh`
+
+기여 가이드는 [`CONTRIBUTING.md`](CONTRIBUTING.md)를 참고하세요.
+
 ## 문서 구조
 
 ### 핵심 문서
