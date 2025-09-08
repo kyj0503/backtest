@@ -12,6 +12,11 @@
 - **프로토콜**: HTTP (개발), HTTPS (프로덕션)
 - **데이터 형식**: JSON
 
+#### 베이스 URL 결정 로직 (중요)
+- 프론트엔드 코드는 `VITE_API_BASE_URL`가 설정되어 있으면 이를 우선 사용합니다.
+- 미설정 시 상대 경로(`/api`)로 호출하며, 개발 환경에서는 Vite proxy가 백엔드로 라우팅합니다.
+- 참조: `frontend/src/services/api.ts`
+
  ### 주요 API
 
 | 메서드 | API | 용도 | 상태 |

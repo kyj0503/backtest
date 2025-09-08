@@ -1,0 +1,53 @@
+# 운영 런북 (DB 캐시 vs yfinance)
+
+프로덕션/개발 환경에서 데이터 소스와 API 베이스 URL을 일관되게 운영하기 위한 가이드입니다.
+
+## 데이터 소스 전략
+
+- 원칙: 파일 기반 캐시는 사용하지 않습니다.
+- 데이터 소스 우선순위
+  1) MySQL 캐시(DB)
+  2) yfinance API(부재 구간 보충 및 최초 적재)
+
+### 구성 요소
+- `app/services/yfinance_db.py`
+  - `load_ticker_data(ticker, start_date, end_date)`
+    - DB에 데이터가 없으면 yfinance에서 가져와 `save_ticker_data()`로 저장 후 재조회
+    - DB 범위에 누락 구간이 있으면 보강 페치(+/- PAD) 후 upsert
+- `app/utils/data_fetcher.py`
+  - 직접 yfinance에서 데이터를 수집(파일 캐시 미사용)
+
+### 환경 변수
+- `DATABASE_URL`: SQLAlchemy 연결 문자열
+  - 예: `mysql+pymysql://user:pass@host:3306/stock_data_cache?charset=utf8mb4`
+
+### 로컬 개발(도커) 예시
+- `docker-compose.yml` 사용 시 백엔드는 8001 포트로 노출됩니다.
+- 별도의 MySQL 컨테이너를 사용하는 경우, `DATABASE_URL`을 컨테이너 호스트:포트로 설정하세요.
+
+## API 베이스 URL 전략(프론트엔드)
+
+- 기본: 상대 경로(`/api`) 사용 → 개발 시 Vite proxy가 백엔드로 라우팅
+- 환경 변수: `VITE_API_BASE_URL`가 설정된 경우 이를 우선 사용
+  - 예: `VITE_API_BASE_URL=https://backtest-be.example.com`
+
+참고: `frontend/src/services/api.ts`에서 위 전략을 구현합니다.
+
+## 헬스체크
+
+- `GET /health`: 외부 네트워크 호출 없이 경량 자체 점검만 수행합니다.
+- OpenAPI 문서: `GET /api/v1/docs`
+
+## 트러블슈팅
+
+- DB 연결 불가 시
+  - `DATABASE_URL` 포맷과 네트워크 접근 가능 여부를 확인합니다.
+  - yfinance가 대체 소스로 동작할 수 있으나, 프로덕션에서는 DB 캐시 사용을 권장합니다.
+- yfinance 레이트리밋
+  - 테스트/CI에서는 오프라인 모킹 픽스처 사용을 권장합니다. (backend/doc/TEST_ARCHITECTURE.md 참고)
+
+## 체크리스트
+- [ ] `DATABASE_URL` 설정 확인
+- [ ] (개발) Vite proxy 타깃 확인(`vite.config.ts`)
+- [ ] (프론트) 필요 시 `VITE_API_BASE_URL` 지정
+- [ ] `/api/v1/docs` 접근 확인

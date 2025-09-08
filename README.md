@@ -35,9 +35,9 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
 ```
 
 ### 접속 정보
-- **프론트엔드**: http://localhost:5174
-- **백엔드 API**: http://localhost:8001
-- **API 문서**: http://localhost:8001/docs
+- `frontend`(Vite): http://localhost:5174
+- `backend` API base: http://localhost:8001
+- `OpenAPI Docs`: http://localhost:8001/api/v1/docs
 
 ### 테스트 실행
 ```bash
@@ -110,7 +110,7 @@ docs: 배포 가이드 업데이트
 ### 프론트엔드 문서 (`/frontend/doc/`)
 프론트엔드 개발자를 위한 전문 문서
 - [`README.md`](frontend/doc/README.md) - React 개발 가이드
-- [`API_GUIDE.md`](frontend/doc/API_GUIDE.md) - 백엔드 API 연동 가이드
+- [`API_GUIDE.md`](frontend/doc/API_GUIDE.md) - 백엔드 API 연동 가이드 (VITE_API_BASE_URL 지원)
 - [`STATE_MANAGEMENT.md`](frontend/doc/STATE_MANAGEMENT.md) - React 상태 관리 패턴
 - [`COMPONENTS.md`](frontend/doc/COMPONENTS.md) - 컴포넌트 아키텍처
 
