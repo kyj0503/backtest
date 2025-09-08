@@ -1,6 +1,10 @@
 # Domain-Driven Design 아키텍처 가이드
 
-Phase 3에서 구현된 Domain-Driven Design (DDD) 아키텍처에 대한 상세 가이드입니다.
+Phase 3에서 설계된 Domain-Driven Design (DDD) 아키텍처에 대한 가이드입니다.
+
+정합성 메모:
+- 본 도메인 계층은 점진적으로 도입되었으며, 현재 API 경로는 서비스 계층(예: `app/services/backtest/*`, `backtest_engine.py`)이 중심입니다.
+- 문서의 예시 경로와 실제 파일 구조는 아래 표기를 기준으로 최신화했습니다.
 
 ## 개요
 
@@ -45,9 +49,9 @@ print(metrics.format_metrics())  # 포맷된 성과 지표 출력
 
 #### Entities (엔티티)
 
-**BacktestResultEntity** (`entities/backtest_result_entity.py`)
+**BacktestResultEntity** (`entities/backtest_result.py`)
 ```python
-from app.domains.backtest.entities.backtest_result_entity import BacktestResultEntity
+from app.domains.backtest.entities.backtest_result import BacktestResultEntity
 
 # 백테스트 결과 생성
 result = BacktestResultEntity(

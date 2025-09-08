@@ -112,6 +112,8 @@ docs: 배포 가이드 업데이트
 
 자세한 내용은 [`COMMIT_CONVENTION.md`](COMMIT_CONVENTION.md)를 참조하세요.
 
+추가 규칙: Type/Scope는 영어로, 설명은 한글로 작성합니다.
+
 ### 커밋 전 검증(필수)
 - 커밋 전에 Docker 기반 빌드/테스트/헬스체크를 자동 수행합니다.
 - 최초 1회 Git 훅 경로를 설정하세요:

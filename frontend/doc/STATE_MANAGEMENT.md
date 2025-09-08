@@ -423,7 +423,7 @@ const helpTooltip = useTooltip({
     onMouseEnter={helpTooltip.show}
     onMouseLeave={helpTooltip.hide}
   >
-    도움말 ❓
+    도움말
   </span>
   
   {helpTooltip.isVisible && (
@@ -749,7 +749,7 @@ export const useMemoryMonitor = (componentName: string) => {
     const checkMemory = () => {
       if ('memory' in performance) {
         const memory = (performance as any).memory;
-        console.log(`💾 [Memory] ${componentName}:`, {
+  console.log(`[Memory] ${componentName}:`, {
           used: `${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
           total: `${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
           limit: `${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`

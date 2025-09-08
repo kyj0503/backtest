@@ -88,19 +88,7 @@ with patch('app.services.yfinance_db.load_ticker_data') as mock_func:
 └─────────────────────────────────────────┘
 ```
 
-#### 3. 현재 Jenkins 실패 원인 분석
-
-**MySQL 연결 실패 지점들:**
-1. `app.services.yfinance_db.py:134` - `engine.connect()` 직접 호출
-2. `app.services.portfolio_service.py:679` - `load_ticker_data()` 간접 호출  
-3. `app.api.v1.endpoints.backtest.py:51` - API 레벨에서 DB 접근
-
-**현재 모킹의 한계:**
-- `conftest.py`에서 `load_ticker_data` 함수만 모킹
-- 하지만 실제로는 `engine.connect()` 호출이 먼저 실행되어 MySQL 연결 시도
-- SQLAlchemy 엔진 레벨 모킹이 누락됨
-
-#### 4. 트러블슈팅 계획 및 구현 전략
+#### 3. CI 통합 및 신뢰성 강화를 위한 전략
 
 **Phase 1: Critical Path - MySQL 엔진 모킹 (우선순위: HIGH)**
 
@@ -158,17 +146,7 @@ exception.detail → "백테스트 실행 실패: 'INVALID999'는 유효하지 �
 - 클래스 기반 Config → ConfigDict 사용
 - `json_encoders` → 커스텀 시리얼라이저 적용
 
-#### 5. 모킹 검증 체크리스트
-
-**완성 기준:**
-- [x] 모든 MySQL 연결 시도 차단 (engine.connect() 포함)
-- [x] yfinance API 호출 완전 차단
-- [x] 모든 테스트에서 동일한 시드(42) 사용
-- [x] Invalid ticker → 422 상태 코드 반환
-- [x] HTTPException 문자열 처리 정상화
-- [ ] Jenkins CI에서 64개 테스트 모두 통과 (현재 진행 중)
-
-**검증 방법:**
+#### 4. 검증 방법
 ```bash
 # 1. 로컬 테스트 (완전 오프라인 확인)
 docker-compose exec backend pytest tests/ -v -s --tb=short
@@ -181,23 +159,11 @@ git commit -m "fix: 완전 오프라인 모킹 시스템 구축"
 git push origin main
 ```
 
-#### 6. 현재 진행 상황 (2025년 9월 3일)
+#### 5. 현재 상태(요약)
 
-**완료된 작업:**
-- SQLAlchemy 엔진 완전 모킹 (`_get_engine()` 함수 모킹)
-- 다중 경로 DB 호출 모킹 (portfolio_service, API endpoints)
-- InvalidSymbolError → 422 에러 처리 개선
-- HTTPException 문자열 처리 수정 (detail 속성 사용)
-- API 엔드포인트 테스트 8/9 개 통과
-
-**테스트 결과 개선:**
-- Before: 10 failed, 51 passed, 3 skipped (84% 실패율)
-- Current: 1 failed, 8 passed in API tests (89% 성공률)
-- Progress: MySQL 연결 에러 완전 해결, 422 에러 처리 정상화
-
-#### 7. 예상 성과
-
-**Before (현재):**
+- Jenkins 파이프라인에서 백엔드/프론트엔드 테스트가 Docker 빌드 단계에서 실행되며 안정적으로 통과합니다.
+- JUnit XML을 수집하여 Jenkins Test Result Trend 대시보드에 게시합니다(백엔드 pytest, 프론트는 Vitest JUnit 설정).
+- 배포 후 통합 검증은 백엔드 직접 호출과 프론트 Nginx 프록시 체인을 모두 검사하며, 응답 구조와 주요 지표 범위까지 확인합니다.
 - 10 failed, 51 passed, 3 skipped (84% 실패율)
 - MySQL 연결 에러로 인한 500 응답
 - Jenkins CI/CD 파이프라인 중단
