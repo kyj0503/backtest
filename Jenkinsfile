@@ -92,13 +92,6 @@ pipeline {
         }
 
         stage('Build and Push Backend PROD') {
-            when {
-                anyOf {
-                    expression { return env.BRANCH_NAME == 'main' }
-                    expression { return env.GIT_BRANCH == 'origin/main' }
-                    expression { return env.GIT_BRANCH == 'main' }
-                }
-            }
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
@@ -117,13 +110,6 @@ pipeline {
         }
 
         stage('Build and Push Frontend PROD') {
-            when {
-                anyOf {
-                    expression { return env.BRANCH_NAME == 'main' }
-                    expression { return env.GIT_BRANCH == 'origin/main' }
-                    expression { return env.GIT_BRANCH == 'main' }
-                }
-            }
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
@@ -142,13 +128,6 @@ pipeline {
         }
 
         stage('Deploy to Production (Local)') {
-            when {
-                anyOf {
-                    expression { return env.BRANCH_NAME == 'main' }
-                    expression { return env.GIT_BRANCH == 'origin/main' }
-                    expression { return env.GIT_BRANCH == 'main' }
-                }
-            }
             steps {
                 script {
                     withCredentials([
@@ -173,13 +152,6 @@ pipeline {
         }
 
         stage('Integration Tests') {
-            when {
-                anyOf {
-                    expression { return env.BRANCH_NAME == 'main' }
-                    expression { return env.GIT_BRANCH == 'origin/main' }
-                    expression { return env.GIT_BRANCH == 'main' }
-                }
-            }
             steps {
                 script {
                     echo 'Running integration tests against deployed environment...'
