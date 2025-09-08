@@ -11,9 +11,7 @@ export interface ApiError {
 export class BacktestApiService {
   private getApiBaseUrl(): string {
     // 1) 환경변수 우선 (Vite)
-    const envBase = (typeof import !== 'undefined' && (import.meta as any)?.env?.VITE_API_BASE_URL)
-      ? (import.meta as any).env.VITE_API_BASE_URL
-      : undefined;
+    const envBase = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
     if (envBase && typeof envBase === 'string') {
       return envBase.replace(/\/$/, '');
     }
