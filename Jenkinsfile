@@ -114,7 +114,7 @@ pipeline {
                                 sh "cd backend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest -t ${fullImageName} ."
                                 // Robust GHCR login with retries (handles intermittent network timeouts)
                                 sh '''
-                                  set -euo pipefail
+                                  set -eu
                                   export DOCKER_CLIENT_TIMEOUT=${DOCKER_CLIENT_TIMEOUT:-300}
                                   export COMPOSE_HTTP_TIMEOUT=${COMPOSE_HTTP_TIMEOUT:-300}
                                   curl -fsSLI --connect-timeout 10 --max-time 20 https://ghcr.io/v2/ >/dev/null 2>&1 || echo 'Warning: GHCR probe failed; continuing'
@@ -135,7 +135,7 @@ pipeline {
                                 // Push with retries to mitigate transient network hiccups
                                 withEnv(["FULL_IMAGE_NAME=${fullImageName}"]) {
                                   sh '''
-                                    set -euo pipefail
+                                    set -eu
                                     ok=''
                                     for i in 1 2 3; do
                                       if docker push "$FULL_IMAGE_NAME"; then
@@ -172,7 +172,7 @@ pipeline {
                                 sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest -t ${fullImageName} ."
                                 // Robust GHCR login with retries (handles intermittent network timeouts)
                                 sh '''
-                                  set -euo pipefail
+                                  set -eu
                                   export DOCKER_CLIENT_TIMEOUT=${DOCKER_CLIENT_TIMEOUT:-300}
                                   export COMPOSE_HTTP_TIMEOUT=${COMPOSE_HTTP_TIMEOUT:-300}
                                   curl -fsSLI --connect-timeout 10 --max-time 20 https://ghcr.io/v2/ >/dev/null 2>&1 || echo 'Warning: GHCR probe failed; continuing'
@@ -193,7 +193,7 @@ pipeline {
                                 // Push with retries to mitigate transient network hiccups
                                 withEnv(["FULL_IMAGE_NAME=${fullImageName}"]) {
                                   sh '''
-                                    set -euo pipefail
+                                    set -eu
                                     ok=''
                                     for i in 1 2 3; do
                                       if docker push "$FULL_IMAGE_NAME"; then
