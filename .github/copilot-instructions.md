@@ -162,7 +162,8 @@ docker-compose exec backend pytest tests/ -v
 - 프론트엔드 개발 가이드: `frontend/doc/README.md`
 - Jenkins 배포 문제해결: `JENKINS_DEPLOY_TROUBLESHOOTING.md`
 
-## 외부 의존성
+
+### 외부 의존성
 
 ### API 키 필요
 - **네이버 검색 API**: NAVER_CLIENT_ID, NAVER_CLIENT_SECRET
@@ -170,6 +171,10 @@ docker-compose exec backend pytest tests/ -v
 
 ### 데이터베이스
 - **MySQL**: 캐시 저장소 (윈도우: host.docker.internal, 운영: 127.0.0.1)
+
+### 패키지 관리
+- **백엔드 Python 패키지**는 uv로 설치/관리합니다. requirements.txt는 그대로 사용하며, 도커 빌드 시 uv로 설치됩니다.
+- 로컬에서 직접 설치가 필요하다면 uv pip install --system -r requirements.txt 명령을 사용하세요.
 
 ## 제한 사항
 

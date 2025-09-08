@@ -22,6 +22,7 @@ Vite + Tailwind CSS             backtesting.py               yfinance API
 
 ## 빠른 시작
 
+
 ### 개발 환경 실행
 ```bash
 # 개발 환경 시작 (Windows PowerShell + Docker Desktop)
@@ -34,6 +35,17 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
 ```
 
+### 패키지 관리 및 실행환경
+- **백엔드 Python 패키지**는 pip 대신 [uv](https://github.com/astral-sh/uv)로 설치 및 관리합니다.
+- requirements.txt는 그대로 사용하며, 도커 빌드 시 uv로 설치됩니다.
+- 로컬에서 직접 설치가 필요하다면:
+     ```bash
+     uv pip install --system -r requirements.txt
+     ```
+     (uv가 없다면 pip로 설치 가능)
+
+> 모든 빌드와 실행은 도커 환경에서 진행하는 것이 표준입니다.
+
 ### 접속 정보
 - `frontend`(Vite): http://localhost:5174
 - `backend` API base: http://localhost:8001
@@ -41,10 +53,10 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
 
 ### 테스트 실행
 ```bash
-# 백엔드 테스트 (65/68 통과, 95.3%)
+# 백엔드 테스트
 docker-compose exec backend pytest tests/ -v
 
-# 프론트엔드 테스트 (23/23 통과, 100%)
+# 프론트엔드 테스트
 docker-compose exec frontend npm test
 ```
 
@@ -56,16 +68,20 @@ docker-compose exec frontend npm test
 - **Tailwind CSS** - 유틸리티 기반 CSS 프레임워크
 - **Recharts** - 데이터 시각화
 
+
 ### 백엔드
 - **FastAPI** + Python - 고성능 API 서버
 - **Pydantic V2** - 데이터 검증 및 직렬화
 - **MySQL** - 주가 데이터 캐시
 - **backtesting.py** - 백테스트 엔진
+- **uv** - Python 패키지 초고속 설치/관리 도구 (pip 대체)
 
 ### 인프라
 - **Docker** + Docker Compose - 컨테이너 환경
 - **Jenkins** - CI/CD 파이프라인
 - **nginx** - 프로덕션 웹 서버
+
+docs: 배포 가이드 업데이트
 
 ## 개발 가이드
 
@@ -76,7 +92,7 @@ docker-compose exec frontend npm test
 
 **주요 타입**:
 - `feat`: 새로운 기능 추가
-- `fix`: 버그 수정  
+- `fix`: 버그 수정
 - `refactor`: 코드 리팩터링
 - `test`: 테스트 코드
 - `docs`: 문서 변경

@@ -11,13 +11,16 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Python 의존성 먼저 설치 (캐시 최적화)
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
 
-# 백테스팅 라이브러리: PyPI 원격 사용
-RUN pip install --no-cache-dir backtesting
+# Python 의존성 먼저 설치 (uv 기반)
+COPY requirements.txt .
+# uv 설치 (Rust 기반, 공식 스크립트 사용) 및 PATH 반영
+RUN curl -Ls https://astral.sh/uv/install.sh | sh \
+    && cp /root/.local/bin/uv /usr/local/bin/uv
+# requirements.txt 기반 패키지 설치
+RUN uv pip install --system -r requirements.txt
+# 백테스팅 라이브러리 별도 설치
+RUN uv pip install --system backtesting
 
 # 애플리케이션 코드 복사
 COPY app ./app
