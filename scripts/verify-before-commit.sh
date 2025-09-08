@@ -27,5 +27,4 @@ for i in {1..30}; do
   fi
 done
 
-echo "[verify] All checks passed ✅"
-
+echo "[verify] All checks passed"

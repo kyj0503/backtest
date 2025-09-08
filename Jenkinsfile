@@ -26,7 +26,7 @@ pipeline {
         stage('Debug Environment') {
             steps {
                 script {
-                    echo "🔍 Debug Information:"
+                    echo "Debug Information:"
                     echo "BRANCH_NAME: ${env.BRANCH_NAME}"
                     echo "GIT_BRANCH: ${env.GIT_BRANCH}"
                     echo "BUILD_NUMBER: ${env.BUILD_NUMBER}"
@@ -47,7 +47,7 @@ pipeline {
                                 docker build --build-arg RUN_TESTS=true \
                                     -t backtest-frontend-test:${BUILD_NUMBER} .
                             '''
-                            echo "✅ Frontend tests passed"
+                            echo "Frontend tests passed"
                         }
                     }
                 }
@@ -60,7 +60,7 @@ pipeline {
                                 docker build --build-arg RUN_TESTS=true \
                                     -t backtest-backend-test:${BUILD_NUMBER} .
                             '''
-                            echo "✅ Backend tests passed"
+                            echo "Backend tests passed"
                         }
                     }
                 }
@@ -217,20 +217,20 @@ EOF
                             cat /tmp/resp2.json | $JQ '.ticker=="AAPL" and (.ohlc_data|length)>0 and (.equity_data|length)>0 and (.summary_stats!=null)' >/dev/null
                             cat /tmp/resp2.json | $JQ '.summary_stats.total_trades>=0 and (.summary_stats.win_rate_pct>=0 and .summary_stats.win_rate_pct<=100) and .summary_stats.max_drawdown_pct>=0' >/dev/null
                         '''
-                        echo "✅ Integration API checks (direct & via frontend) passed"
+                        echo "Integration API checks (direct & via frontend) passed"
                     } catch (Exception e) {
-                        echo "⚠️ Integration API check failed (non-blocking): ${e.getMessage()}"
+                        echo "Integration API check failed (non-blocking): ${e.getMessage()}"
                         currentBuild.result = 'UNSTABLE'
                     }
-                    echo "✅ Integration tests completed"
+                    echo "Integration tests completed"
                 }
             }
         }
     }
 
     post {
-        success { echo 'Pipeline succeeded! 🎉' }
-        failure { echo 'Pipeline failed! ❌' }
+        success { echo 'Pipeline succeeded!' }
+        failure { echo 'Pipeline failed!' }
         always {
             sh 'docker system prune -f'
             cleanWs()

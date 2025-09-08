@@ -877,7 +877,7 @@ const UnifiedBacktestForm = ({ onSubmit, loading = false }) => {
 
 ### 상태 업데이트 최적화
 ```typescript
-// ✅ 좋은 예: 함수형 업데이트
+// 좋은 예: 함수형 업데이트
 const updatePortfolioItem = useCallback((index: number, updates: Partial<Stock>) => {
   dispatch({ 
     type: 'UPDATE_STOCK', 
@@ -885,7 +885,7 @@ const updatePortfolioItem = useCallback((index: number, updates: Partial<Stock>)
   });
 }, []);
 
-// ❌ 나쁜 예: 직접 상태 변경
+// 나쁜 예: 직접 상태 변경
 const updatePortfolioItem = (index, updates) => {
   const newPortfolio = [...portfolio];
   newPortfolio[index] = { ...newPortfolio[index], ...updates };
