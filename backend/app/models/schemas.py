@@ -119,42 +119,10 @@ class PortfolioBacktestRequest(BaseModel):
                 raise ValueError('백테스트 기간은 최대 5년으로 제한됩니다.')
         return v
 
-class BacktestRequest(BaseModel):
-    """백테스트 요청 모델"""
-    symbol: str = Field(..., min_length=1, max_length=10, description="주식 심볼")
-    start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
-    end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
-    cash: float = Field(10000, gt=0, description="초기 자본금")
-    commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
-    strategy: StrategyParams = Field(default_factory=StrategyParams, description="전략 파라미터")
-
-    @field_validator('symbol')
-    @classmethod
-    def validate_symbol(cls, v):
-        if not v.isalpha():
-            raise ValueError('주식 심볼은 영문자만 포함해야 합니다.')
-        return v.upper()
-
-    @field_validator('start_date', 'end_date')
-    @classmethod
-    def validate_date_format(cls, v):
-        try:
-            datetime.strptime(v, '%Y-%m-%d')
-        except ValueError:
-            raise ValueError('날짜는 YYYY-MM-DD 형식이어야 합니다.')
-        return v
-
-    @field_validator('end_date')
-    @classmethod
-    def validate_date_range(cls, v, info):
-        if 'start_date' in info.data:
-            start = datetime.strptime(info.data['start_date'], '%Y-%m-%d')
-            end = datetime.strptime(v, '%Y-%m-%d')
-            if end < start:
-                raise ValueError('종료 날짜는 시작 날짜보다 이후여야 합니다.')
-            if (end - start).days > 365 * 5:  # 5년 제한
-                raise ValueError('백테스트 기간은 최대 5년으로 제한됩니다.')
-        return v
+"""
+주의: BacktestRequest는 app.models.requests.BacktestRequest를 사용하세요.
+이 파일의 레거시 정의는 제거되었습니다(중복/혼동 방지).
+"""
 
 class Trade(BaseModel):
     """거래 정보 모델"""
