@@ -4,7 +4,7 @@ FastAPI + React 기반의 투자 전략 백테스팅 시스템입니다.
 
 ## 프로젝트 소개
 
-투자 전략의 과거 성과를 분석할 수 있는 웹 기반 백테스팅 도구입니다. 다양한 기술적 지표를 활용한 전략을 시뮬레이션하고, 리스크와 수익성을 분석할 수 있습니다.
+투자 전략의 과거 성과를 분석하는 웹 기반 백테스팅 도구입니다. 다양한 기술적 지표로 전략을 시뮬레이션하고 리스크와 수익성을 분석합니다.
 
 ### 주요 특징
 - 포트폴리오 및 단일 종목 백테스트 지원
@@ -44,7 +44,7 @@ docker compose -f compose.yml -f compose/compose.dev.yml down
      ```
      (uv가 없다면 pip로 설치 가능)
 
-> 모든 빌드와 실행은 도커 환경에서 진행하는 것이 표준입니다.
+> 모든 빌드와 실행은 Docker 환경에서 진행하는 것이 표준입니다.
 
 ### 접속 정보
 - `frontend`(Vite): http://localhost:5174
@@ -61,13 +61,11 @@ docker compose exec frontend npm test
 ```
 
 ## 기술 스택
-
 ### 프론트엔드
 - **React 18** + TypeScript - 현대적 웹 UI 개발
 - **Vite** - 고속 빌드 도구
 - **Tailwind CSS** - 유틸리티 기반 CSS 프레임워크
 - **Recharts** - 데이터 시각화
-
 
 ### 백엔드
 - **FastAPI** + Python - 고성능 API 서버
@@ -81,66 +79,18 @@ docker compose exec frontend npm test
 - **Jenkins** - CI/CD 파이프라인
 - **nginx** - 프로덕션 웹 서버
 
-docs: 배포 가이드 업데이트
+## 개발 가이드 / 문서
 
-## 개발 가이드
+- 문서 인덱스: `docs/README.md`
+- 시작 가이드: `docs/GETTING_STARTED.md`
+- 테스트 아키텍처: `docs/TEST_ARCHITECTURE.md`
+- DDD 개요: `docs/DDD_ARCHITECTURE.md`
+- API 연동: `docs/API_GUIDE.md`
+- 프론트 구조: `docs/STATE_MANAGEMENT.md`, `docs/COMPONENTS.md`
+- 운영 런북: `docs/RUNBOOK.md`
+- TODO/Roadmap: `docs/TODO.md`
 
-### 커밋 메시지 컨벤션
-모노리포지토리 환경에 최적화된 커밋 메시지 규칙을 따릅니다.
-
-**기본 형식**: `<type>(<scope>): <description>`
-
-**주요 타입**:
-- `feat`: 새로운 기능 추가
-- `fix`: 버그 수정
-- `refactor`: 코드 리팩터링
-- `test`: 테스트 코드
-- `docs`: 문서 변경
-- `ci`: CI/CD 설정
-
-**스코프 예시**:
-- `backend`, `frontend`, `infra`, `docs`
-- `backend/api`, `frontend/components` (세부 영역)
-
-**예시**:
-```bash
-feat(backend): 포트폴리오 최적화 서비스 추가
-fix(frontend/components): 차트 렌더링 버그 수정
-refactor(backend): Phase 4 DDD 아키텍처 완료
-docs: 배포 가이드 업데이트
-```
-
-자세한 내용은 [`COMMIT_CONVENTION.md`](COMMIT_CONVENTION.md)를 참조하세요.
-
-추가 규칙: Type/Scope는 영어로, 설명은 한글로 작성합니다.
-
-### 커밋 전 검증(필수)
-- 커밋 전에 Docker 기반 빌드/테스트/헬스체크를 자동 수행합니다.
-- 최초 1회 Git 훅 경로를 설정하세요:
-  ```bash
-  git config core.hooksPath .githooks
-  ```
-- 수동 실행: `scripts/verify-before-commit.sh`
-
-기여 가이드는 [`CONTRIBUTING.md`](CONTRIBUTING.md)를 참고하세요.
-
-## 문서 구조
-
-### 핵심 문서
-- [`COMMIT_CONVENTION.md`](COMMIT_CONVENTION.md) - 커밋 메시지 컨벤션 가이드
-
-### 백엔드 문서 (`/backend/doc/`)
-백엔드 개발자를 위한 전문 문서
-- [`README.md`](backend/doc/README.md) - FastAPI 개발 가이드
-- [`CASH_ASSETS.md`](backend/doc/CASH_ASSETS.md) - 현금 자산 처리 구현 상세
-- [`TEST_ARCHITECTURE.md`](backend/doc/TEST_ARCHITECTURE.md) - 백엔드 테스트 구조
-
-### 프론트엔드 문서 (`/frontend/doc/`)
-프론트엔드 개발자를 위한 전문 문서
-- [`README.md`](frontend/doc/README.md) - React 개발 가이드
-- [`API_GUIDE.md`](frontend/doc/API_GUIDE.md) - 백엔드 API 연동 가이드 (VITE_API_BASE_URL 지원)
-- [`STATE_MANAGEMENT.md`](frontend/doc/STATE_MANAGEMENT.md) - React 상태 관리 패턴
-- [`COMPONENTS.md`](frontend/doc/COMPONENTS.md) - 컴포넌트 아키텍처
+커밋/기여 규칙은 루트의 [`COMMIT_CONVENTION.md`](COMMIT_CONVENTION.md), [`CONTRIBUTING.md`](CONTRIBUTING.md)를 참고하세요. 커밋 시 `.githooks/pre-commit`이 `scripts/verify-before-commit.sh`를 실행하여 빌드/테스트/헬스체크를 수행합니다.
 
 ## 라이선스
 

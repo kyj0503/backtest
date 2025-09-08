@@ -4,7 +4,7 @@
 
 ## 시작하기
 
-- 개발 빠른 시작: `docs/GUIDE.md`
+- 개발 빠른 시작: `docs/GETTING_STARTED.md`
 - 실행 명령 예시(Compose): `compose.yml` + `compose/compose.dev.yml`
 
 ## 아키텍처/설계
@@ -29,4 +29,3 @@
 ## 기타
 
 - 작업 TODO: `docs/TODO.md`
-
