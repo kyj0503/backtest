@@ -7,7 +7,7 @@ pipeline {
     }
 
     environment {
-        GHCR_OWNER = 'kyj05030'
+        GHCR_OWNER = 'kyj0503'
         BACKEND_PROD_IMAGE = 'backtest-backend'
         FRONTEND_PROD_IMAGE = 'backtest-frontend'
         DEPLOY_HOST = 'localhost'
