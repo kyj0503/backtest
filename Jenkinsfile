@@ -100,7 +100,7 @@ pipeline {
                         sh "docker buildx create --use --name backtest-builder || true"
                         sh "docker pull ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
                         sh "cd backend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest -t ${fullImageName} ."
-                        sh "echo \"${GH_TOKEN}\" | docker login ghcr.io -u ${GH_USER} --password-stdin"
+                        sh 'echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin'
                         sh "docker push ${fullImageName}"
                         sh "docker tag ${fullImageName} ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
                         sh "docker push ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
@@ -118,7 +118,7 @@ pipeline {
                         sh "docker buildx create --use --name backtest-builder || true"
                         sh "docker pull ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
                         sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest -t ${fullImageName} ."
-                        sh "echo \"${GH_TOKEN}\" | docker login ghcr.io -u ${GH_USER} --password-stdin"
+                        sh 'echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin'
                         sh "docker push ${fullImageName}"
                         sh "docker tag ${fullImageName} ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
                         sh "docker push ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
