@@ -10,17 +10,16 @@ export interface ApiError {
 
 export class BacktestApiService {
   private getApiBaseUrl(): string {
-    if (typeof window !== 'undefined') {
-      const hostname = window.location.hostname;
-      const protocol = window.location.protocol;
-      
-      // 프로덕션 환경 (도메인 사용)
-      if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-        return `${protocol}//backtest-be.yeonjae.kr`;
-      }
+    // 1) 환경변수 우선 (Vite)
+    const envBase = (typeof import !== 'undefined' && (import.meta as any)?.env?.VITE_API_BASE_URL)
+      ? (import.meta as any).env.VITE_API_BASE_URL
+      : undefined;
+    if (envBase && typeof envBase === 'string') {
+      return envBase.replace(/\/$/, '');
     }
-    // 개발 환경
-    return 'http://localhost:8001';
+
+    // 2) 기본: 상대 경로 사용 -> dev에서는 vite proxy(/api), prod에서는 동일 오리진
+    return '';
   }
 
   private async handleApiError(response: Response): Promise<ApiError> {
