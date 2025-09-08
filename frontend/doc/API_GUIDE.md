@@ -21,7 +21,7 @@
 
 | 메서드 | API | 용도 | 상태 |
 |--------|------------|------|------|
-| `POST` | `/api/v2/backtest/chart-data` | 차트 데이터 조회 | 사용 중 |
+| `POST` | `/api/v1/backtest/chart-data` | 차트 데이터 조회 | 사용 중 |
 | `POST` | `/api/v1/backtest/run` | 백테스트 실행 | 미사용 |
 | `GET` | `/api/v1/strategies/` | 전략 목록 조회 | 미사용 |
 | `GET` | `/health` | 서버 상태 확인 | 미사용 |
@@ -63,7 +63,7 @@ interface ChartDataResponse {
 const fetchChartData = async (params: BacktestParams): Promise<ChartDataResponse> => {
   console.log('API 요청 시작:', params);
   
-  const response = await fetch('/api/v2/backtest/chart-data', {
+  const response = await fetch('/api/v1/backtest/chart-data', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -406,7 +406,7 @@ const applyPreset = (presetKey: keyof typeof PRESETS) => {
 
 ```javascript
 // 브라우저 콘솔에서 직접 테스트
-fetch('/api/v2/backtest/chart-data', {
+fetch('/api/v1/backtest/chart-data', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -426,7 +426,7 @@ fetch('/api/v2/backtest/chart-data', {
 
 ```bash
 # 직접 API 서버 테스트
-curl -X POST http://localhost:8001/api/v2/backtest/chart-data \
+curl -X POST http://localhost:8001/api/v1/backtest/chart-data \
   -H "Content-Type: application/json" \
   -d '{
     "ticker": "AAPL",
