@@ -32,63 +32,65 @@ class BacktestEngine:
             self.validation_service.validate_backtest_request(request)
             
             # 데이터 가져오기
-            print(f"백테스트 시작: {request.ticker}, {request.start_date} ~ {request.end_date}")
+            self.logger.info(
+                f"백테스트 시작: {request.ticker}, {request.start_date} ~ {request.end_date}"
+            )
             data = self.data_fetcher.get_stock_data(
                 ticker=request.ticker, 
                 start_date=request.start_date, 
                 end_date=request.end_date
             )
             
-            print(f"데이터 로드 완료: {len(data)} 행")
-            print(f"데이터 컬럼: {list(data.columns)}")
-            print(f"데이터 범위: {data.index[0]} ~ {data.index[-1]}")
+            self.logger.info(f"데이터 로드 완료: {len(data)} 행")
+            self.logger.debug(f"데이터 컬럼: {list(data.columns)}")
+            self.logger.info(f"데이터 범위: {data.index[0]} ~ {data.index[-1]}")
             
             # 전략 클래스 가져오기
             strategy_class = self.strategy_service.get_strategy_class(request.strategy)
             
             # 전략 파라미터 적용
             if request.strategy_params:
-                print(f"전략 파라미터 적용: {request.strategy_params}")
+                self.logger.debug(f"전략 파라미터 적용: {request.strategy_params}")
                 for param, value in request.strategy_params.items():
                     if hasattr(strategy_class, param):
                         setattr(strategy_class, param, value)
-                        print(f"  {param} = {value}")
+                        self.logger.debug(f"  {param} = {value}")
             
-            print(f"전략 클래스: {strategy_class.__name__}")
-            print(f"초기 자본: ${request.initial_cash}")
+            self.logger.info(f"전략 클래스: {strategy_class.__name__}")
+            self.logger.info(f"초기 자본: ${request.initial_cash}")
             
             # 백테스트 실행
             bt = Backtest(data, strategy_class, cash=request.initial_cash, commission=.002)
-            print("백테스트 객체 생성 완료")
+            self.logger.debug("백테스트 객체 생성 완료")
             
             try:
                 result = bt.run()
-                print(f"백테스트 실행 완료")
-                print(f"거래 수: {result['# Trades']}")
-                print(f"수익률: {result.get('Return [%]', 0):.2f}%")
-                print(f"Buy & Hold: {result.get('Buy & Hold Return [%]', 0):.2f}%")
+                self.logger.info("백테스트 실행 완료")
+                self.logger.info(f"거래 수: {result['# Trades']}")
+                self.logger.info(f"수익률: {result.get('Return [%]', 0):.2f}%")
+                self.logger.info(f"Buy & Hold: {result.get('Buy & Hold Return [%]', 0):.2f}%")
                 
                 # 디버깅: 실제 stats 키들 출력
-                print("=== 백테스트 결과 키들 ===")
+                self.logger.debug("=== 백테스트 결과 키들 ===")
                 for key in result.index:
-                    print(f"  '{key}': {result.get(key)}")
-                print("========================")
+                    self.logger.debug(f"  '{key}': {result.get(key)}")
+                self.logger.debug("========================")
                 
                 # 결과가 유효한지 확인
                 if result is not None and '# Trades' in result:
                     return self._convert_result_to_response(result, request)
                 else:
-                    print("백테스트 결과가 유효하지 않음, fallback 사용")
+                    self.logger.warning("백테스트 결과가 유효하지 않음, fallback 사용")
                     raise Exception("Invalid backtest result")
                     
             except Exception as e:
-                print(f"백테스트 실행 중 오류: {e}")
-                print("Fallback 통계 생성 중...")
+                self.logger.error(f"백테스트 실행 중 오류: {e}")
+                self.logger.info("Fallback 통계 생성 중...")
                 # 실제 주가 변동을 반영한 fallback 통계 생성
                 return self._create_fallback_result(data, request)
             
         except Exception as e:
-            print(f"백테스트 전체 프로세스 오류: {e}")
+            self.logger.error(f"백테스트 전체 프로세스 오류: {e}")
             
             # InvalidSymbolError는 422 에러로 처리
             from app.utils.data_fetcher import InvalidSymbolError
