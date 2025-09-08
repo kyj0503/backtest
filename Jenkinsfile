@@ -76,9 +76,9 @@ pipeline {
                         docker run --rm -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
                           sh -lc "pytest tests/ -v --tb=short --junitxml=/reports/junit.xml"
 
-                        # Frontend JUnit (attempt junit reporter; fallback to no XML)
+                        # Frontend JUnit (Vitest junit reporter)
                         docker run --rm -v "$PWD/reports/frontend:/reports" backtest-frontend-test:${BUILD_NUMBER} \
-                          sh -lc "npx vitest run --reporter=junit --outputFile /reports/junit.xml || echo 'vitest junit reporter not available, skipping XML generation'"
+                          sh -lc "npx vitest run --reporter=junit --outputFile /reports/junit.xml"
                     '''
 
                     junit allowEmptyResults: true, testResults: 'reports/**/junit.xml'
@@ -197,9 +197,16 @@ pipeline {
                             {"ticker":"AAPL","start_date":"2023-01-03","end_date":"2023-01-20","initial_cash":10000,"strategy":"buy_and_hold","strategy_params":{}}
 EOF
                             # Backend direct
-                            curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8001/api/v1/backtest/chart-data | jq -e '.ticker and .ohlc_data and .equity_data and .summary_stats' >/dev/null
+                            curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8001/api/v1/backtest/chart-data | tee /tmp/resp.json >/dev/null
+                            # Required fields
+                            jq -e '.ticker=="AAPL" and (.ohlc_data|length)>0 and (.equity_data|length)>0 and (.summary_stats!=null)' /tmp/resp.json >/dev/null
+                            # Numeric ranges
+                            jq -e '.summary_stats.total_trades>=0 and (.summary_stats.win_rate_pct>=0 and .summary_stats.win_rate_pct<=100) and .summary_stats.max_drawdown_pct>=0' /tmp/resp.json >/dev/null
+
                             # Frontend proxy chain
-                            curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8082/api/v1/backtest/chart-data | jq -e '.ticker and .ohlc_data and .equity_data and .summary_stats' >/dev/null
+                            curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8082/api/v1/backtest/chart-data | tee /tmp/resp2.json >/dev/null
+                            jq -e '.ticker=="AAPL" and (.ohlc_data|length)>0 and (.equity_data|length)>0 and (.summary_stats!=null)' /tmp/resp2.json >/dev/null
+                            jq -e '.summary_stats.total_trades>=0 and (.summary_stats.win_rate_pct>=0 and .summary_stats.win_rate_pct<=100) and .summary_stats.max_drawdown_pct>=0' /tmp/resp2.json >/dev/null
                         '''
                         echo "✅ Integration API checks (direct & via frontend) passed"
                     } catch (Exception e) {
