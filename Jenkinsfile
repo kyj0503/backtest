@@ -67,6 +67,26 @@ pipeline {
             }
         }
 
+        stage('Collect JUnit Reports') {
+            steps {
+                script {
+                    sh '''
+                        mkdir -p reports/backend reports/frontend
+                        # Backend JUnit (run tests inside image to emit JUnit XML)
+                        docker run --rm -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
+                          sh -lc "pytest tests/ -v --tb=short --junitxml=/reports/junit.xml"
+
+                        # Frontend JUnit (attempt junit reporter; fallback to no XML)
+                        docker run --rm -v "$PWD/reports/frontend:/reports" backtest-frontend-test:${BUILD_NUMBER} \
+                          sh -lc "npx vitest run --reporter=junit --outputFile /reports/junit.xml || echo 'vitest junit reporter not available, skipping XML generation'"
+                    '''
+
+                    junit allowEmptyResults: true, testResults: 'reports/**/junit.xml'
+                    archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Build and Push Backend PROD') {
             when {
                 anyOf {
@@ -80,9 +100,13 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                         def fullImageName = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         echo "Building PROD backend image: ${fullImageName}"
-                        sh "cd backend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} -t ${fullImageName} ."
+                        sh "docker buildx create --use --name backtest-builder || true"
+                        sh "docker pull ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
+                        sh "cd backend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest -t ${fullImageName} ."
                         sh "echo \"${GH_TOKEN}\" | docker login ghcr.io -u ${GH_USER} --password-stdin"
                         sh "docker push ${fullImageName}"
+                        sh "docker tag ${fullImageName} ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
+                        sh "docker push ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
                     }
                 }
             }
@@ -101,9 +125,13 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                         def fullImageName = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                         echo "Building PROD frontend image: ${fullImageName}"
-                        sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false -t ${fullImageName} ."
+                        sh "docker buildx create --use --name backtest-builder || true"
+                        sh "docker pull ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
+                        sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest -t ${fullImageName} ."
                         sh "echo \"${GH_TOKEN}\" | docker login ghcr.io -u ${GH_USER} --password-stdin"
                         sh "docker push ${fullImageName}"
+                        sh "docker tag ${fullImageName} ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
+                        sh "docker push ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
                     }
                 }
             }
@@ -162,15 +190,18 @@ pipeline {
                           sleep 1;
                         done
                     '''
-                    // Optional API check (non-blocking)
+                    // Optional API checks (non-blocking): direct backend and via frontend proxy chain
                     try {
                         sh '''
                             cat > /tmp/payload.json <<'EOF'
                             {"ticker":"AAPL","start_date":"2023-01-03","end_date":"2023-01-20","initial_cash":10000,"strategy":"buy_and_hold","strategy_params":{}}
 EOF
+                            # Backend direct
                             curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8001/api/v1/backtest/chart-data | jq -e '.ticker and .ohlc_data and .equity_data and .summary_stats' >/dev/null
+                            # Frontend proxy chain
+                            curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8082/api/v1/backtest/chart-data | jq -e '.ticker and .ohlc_data and .equity_data and .summary_stats' >/dev/null
                         '''
-                        echo "✅ Integration API check passed"
+                        echo "✅ Integration API checks (direct & via frontend) passed"
                     } catch (Exception e) {
                         echo "⚠️ Integration API check failed (non-blocking): ${e.getMessage()}"
                         currentBuild.result = 'UNSTABLE'
