@@ -1,0 +1,17 @@
+site_name: Backtest Docs
+nav:
+  - 소개: docs/GETTING_STARTED.md
+  - 아키텍처:
+    - DDD 개요: docs/DDD_ARCHITECTURE.md
+    - 테스트 아키텍처: docs/TEST_ARCHITECTURE.md
+  - 프론트엔드:
+    - 상태 관리: docs/STATE_MANAGEMENT.md
+    - 컴포넌트 구조: docs/COMPONENTS.md
+    - API(클라이언트): docs/API_CLIENT_GUIDE.md
+  - 운영: docs/RUNBOOK.md
+  - 기타:
+    - 현금 자산: docs/CASH_ASSETS.md
+    - TODO: docs/TODO.md
+theme:
+  name: readthedocs
+docs_dir: docs

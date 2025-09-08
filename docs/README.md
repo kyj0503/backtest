@@ -22,7 +22,7 @@
 
 ## API / 개발 규칙
 
-- API 연동 가이드(프론트 관점): `docs/API_GUIDE.md`
+- API 연동 가이드(클라이언트 관점): `docs/API_CLIENT_GUIDE.md`
 - 커밋 규칙: `COMMIT_CONVENTION.md` (루트)
 - 기여 가이드: `CONTRIBUTING.md` (루트)
 

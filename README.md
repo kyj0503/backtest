@@ -85,7 +85,7 @@ docker compose exec frontend npm test
 - 시작 가이드: `docs/GETTING_STARTED.md`
 - 테스트 아키텍처: `docs/TEST_ARCHITECTURE.md`
 - DDD 개요: `docs/DDD_ARCHITECTURE.md`
-- API 연동: `docs/API_GUIDE.md`
+- API 연동: `docs/API_CLIENT_GUIDE.md`
 - 프론트 구조: `docs/STATE_MANAGEMENT.md`, `docs/COMPONENTS.md`
 - 운영 런북: `docs/RUNBOOK.md`
 - TODO/Roadmap: `docs/TODO.md`
