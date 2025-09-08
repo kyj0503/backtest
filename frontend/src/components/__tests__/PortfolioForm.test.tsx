@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { act } from 'react'
 import userEvent from '@testing-library/user-event'
 import PortfolioForm from '../PortfolioForm'
 
@@ -28,17 +29,22 @@ describe('PortfolioForm', () => {
     )
 
     // 종목 추가 버튼
-    await user.click(screen.getByRole('button', { name: '+ 종목 추가' }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '+ 종목 추가' }))
+    })
     expect(addStock).toHaveBeenCalled()
 
     // 현금 추가 버튼
-    await user.click(screen.getByRole('button', { name: '현금 추가' }))
+    await act(async () => {
+      await user.click(screen.getByRole('button', { name: '현금 추가' }))
+    })
     expect(addCash).toHaveBeenCalled()
 
     // 심볼 드롭다운 변경 (AAPL)
     const symbolSelect = screen.getAllByRole('combobox')[0]
-    await user.selectOptions(symbolSelect, 'AAPL')
+    await act(async () => {
+      await user.selectOptions(symbolSelect, 'AAPL')
+    })
     expect(updateStock).toHaveBeenCalled()
   })
 })
-

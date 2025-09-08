@@ -29,6 +29,58 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
 }))
 
+// Ensure chart containers have non-zero size in JSDOM-based tests
+Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+  configurable: true,
+  get() {
+    return 800
+  },
+})
+
+Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+  configurable: true,
+  get() {
+    return 600
+  },
+})
+
+Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
+  configurable: true,
+  get() {
+    return 800
+  },
+})
+
+Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+  configurable: true,
+  get() {
+    return 600
+  },
+})
+
+// Provide a basic getBoundingClientRect with width/height for components
+// that rely on layout measurements (e.g., Recharts ResponsiveContainer)
+if (!Element.prototype.getBoundingClientRect ||
+    Element.prototype.getBoundingClientRect.toString().includes('[native code]') === false) {
+  // no-op: keep existing implementation if provided by JSDOM
+}
+const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect
+Element.prototype.getBoundingClientRect = function () {
+  const rect = originalGetBoundingClientRect ? originalGetBoundingClientRect.call(this) : undefined
+  const base = {
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    bottom: 600,
+    right: 800,
+    width: 800,
+    height: 600,
+    toJSON: () => {},
+  } as DOMRect
+  return Object.assign(base, rect)
+}
+
 // Set up environment variables for testing
 Object.defineProperty(import.meta, 'env', {
   value: {

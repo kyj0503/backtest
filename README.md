@@ -60,6 +60,12 @@ docker compose exec backend pytest tests/ -v
 docker compose exec frontend npm test
 ```
 
+#### 프론트엔드 테스트 주의사항
+- 환경: Vitest + JSDOM. 전역 셋업 파일은 `frontend/src/test/setup.ts` 입니다.
+- 차트 안정화: 테스트에서 Recharts 컨테이너가 0x0이 되는 문제를 줄이기 위해 `offsetWidth/offsetHeight`, `clientWidth/clientHeight`, `getBoundingClientRect`를 모킹했습니다.
+- 상태 업데이트: 사용자 상호작용으로 상태가 바뀌는 테스트는 React의 `act`로 감싸 경고를 방지합니다.
+- JUnit 리포트: Jenkins 수집용 경로는 `VITEST_JUNIT_FILE` 환경변수로 제어합니다.
+
 ## 기술 스택
 ### 프론트엔드
 - **React 18** + TypeScript - 현대적 웹 UI 개발

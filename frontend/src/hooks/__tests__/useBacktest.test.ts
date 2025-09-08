@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
+import { act } from 'react'
 import { useBacktest } from '../useBacktest'
 
 // Mock the API service to control responses

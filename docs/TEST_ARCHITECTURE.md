@@ -259,6 +259,30 @@ docker compose -f compose.yml -f compose/compose.dev.yml up --build
 docker compose -f compose.yml -f compose/compose.dev.yml --profile test up backend-test
 ```
 
+### 프론트엔드 테스트 (Vitest + JSDOM)
+
+- 러너/환경: Vitest, `jsdom` 환경. 설정은 `frontend/vitest.config.ts`와 `frontend/src/test/setup.ts`에서 관리합니다.
+- JUnit 리포터: Jenkins 수집용 경로는 `VITEST_JUNIT_FILE` 환경변수로 제어합니다.
+  - 예) `VITEST_JUNIT_FILE=reports/frontend/junit.xml npx vitest run`
+- 레이아웃 모킹: Recharts 같은 차트가 컨테이너 크기에 의존하므로, JSDOM에서 다음을 모킹하여 너비/높이 0 경고를 줄입니다.
+  - `ResizeObserver`
+  - `HTMLElement.prototype.offsetWidth/offsetHeight`
+  - `HTMLElement.prototype.clientWidth/clientHeight`
+  - `Element.prototype.getBoundingClientRect`
+  - 위치: `frontend/src/test/setup.ts`
+- React 상태 업데이트: 상호작용으로 상태가 바뀌는 테스트는 React의 `act`로 감쌉니다.
+  - `import { act } from 'react'`
+  - 예) `await act(async () => { await user.click(button) })`
+- CI 기준: Node 18 Alpine에서 `npm ci && npx vitest run`으로 실행합니다.
+
+```bash
+# 프론트엔드 테스트 실행 (로컬)
+(cd frontend && npm ci && npx vitest run)
+
+# JUnit 리포트 포함 실행 (Jenkins 호환)
+(cd frontend && VITEST_JUNIT_FILE=reports/frontend/junit.xml npx vitest run)
+```
+
 ### CI/CD 환경 (Jenkins)
 
 ```bash

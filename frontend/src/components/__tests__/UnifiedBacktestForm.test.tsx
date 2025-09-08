@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import { act } from 'react'
 import userEvent from '@testing-library/user-event'
 import UnifiedBacktestForm from '../UnifiedBacktestForm'
 
@@ -33,7 +34,9 @@ describe('UnifiedBacktestForm (integration)', () => {
 
     // Submit
     const submitBtn = screen.getByRole('button', { name: /백테스트 실행/i })
-    await user.click(submitBtn)
+    await act(async () => {
+      await user.click(submitBtn)
+    })
 
     expect(onSubmit).toHaveBeenCalledTimes(1)
     const req = onSubmit.mock.calls[0][0]
@@ -66,7 +69,9 @@ describe('UnifiedBacktestForm (integration)', () => {
 
     // Submit
     const submitBtn = screen.getByRole('button', { name: /백테스트 실행/i })
-    await user.click(submitBtn)
+    await act(async () => {
+      await user.click(submitBtn)
+    })
 
     // Error banner should render
     expect(await screen.findByText(/입력 오류/)).toBeInTheDocument()
