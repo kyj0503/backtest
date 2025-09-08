@@ -23,10 +23,25 @@ FastAPI 기반 백테스팅 시스템의 백엔드 개발 가이드입니다.
 - **네이버 검색 API** - 뉴스 검색 서비스
 - **Yahoo Finance API** - 실시간 주가 데이터
 
+
 ### 개발 및 테스트
 - **pytest** - 단위 테스트 및 통합 테스트
 - **uvicorn** - ASGI 서버
 - **Docker** - 컨테이너 환경
+- **uv** - Python 패키지 초고속 설치/관리 도구 (pip 대체)
+
+
+## 패키지 관리 및 설치 안내
+
+- 모든 Python 패키지는 requirements.txt로 관리하며, 실제 설치는 pip 대신 uv를 사용합니다.
+- 도커 빌드 시 uv로 패키지가 설치됩니다.
+- 로컬에서 직접 설치가 필요하다면 아래 명령을 사용하세요:
+    ```bash
+    uv pip install --system -r requirements.txt
+    ```
+    (uv가 없다면 pip로도 설치 가능)
+
+> 모든 빌드와 실행은 도커 환경에서 진행하는 것이 표준입니다.
 
 ## 프로젝트 구조
 
