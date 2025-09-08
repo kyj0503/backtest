@@ -98,11 +98,14 @@ class ChartDataService:
             
             return ChartDataResponse(
                 ticker=request.ticker,
+                strategy=request.strategy,
+                start_date=request.start_date.strftime('%Y-%m-%d') if hasattr(request.start_date, 'strftime') else str(request.start_date),
+                end_date=request.end_date.strftime('%Y-%m-%d') if hasattr(request.end_date, 'strftime') else str(request.end_date),
                 ohlc_data=ohlc_data,
                 equity_data=equity_data,
                 trade_markers=trade_markers,
                 indicators=indicators,
-                backtest_stats=backtest_stats
+                summary_stats=backtest_stats
             )
             
         except Exception as e:
@@ -162,9 +165,9 @@ class ChartDataService:
                 timestamp=first_date.isoformat(),
                 date=first_date.strftime('%Y-%m-%d'),
                 price=first_price,
-                type="buy",
-                size=1.0,
-                reason="Buy & Hold 초기 매수"
+                type="entry",  # entry/exit 중 하나
+                side="buy",    # buy/sell 중 하나 (필수 필드)
+                size=1.0
             )]
         else:
             # 다른 전략들은 임시로 빈 리스트 반환 (추후 백테스트 결과에서 추출)
@@ -251,16 +254,20 @@ class ChartDataService:
         initial_price = float(data['Close'].iloc[0])
         final_price = float(data['Close'].iloc[-1])
         
-        total_return = ((final_price / initial_price) - 1) * 100
+        total_return_pct = ((final_price / initial_price) - 1) * 100
         final_equity = initial_cash * (final_price / initial_price)
+        max_drawdown_pct = 0.0  # Buy & Hold 단순화
         
+        # 테스트에서 기대하는 필드명으로 맞춤
         return {
-            "total_trades": 1,  # Buy & Hold은 1번 거래
-            "win_rate": 100.0 if total_return > 0 else 0.0,
-            "total_return": total_return,
-            "final_equity": final_equity,
-            "max_drawdown": 0.0,  # 단순화
+            "total_return_pct": total_return_pct,
             "sharpe_ratio": 0.0,  # 단순화
+            "max_drawdown_pct": max_drawdown_pct,
+            "total_trades": 1,  # Buy & Hold은 1번 거래
+            "win_rate_pct": 100.0 if total_return_pct > 0 else 0.0,
+            "profit_factor": 1.0 if total_return_pct > 0 else 0.0,
+            # 추가 정보
+            "final_equity": final_equity,
             "volatility": float(data['Close'].pct_change().std() * 100) if len(data) > 1 else 0.0
         }
     
