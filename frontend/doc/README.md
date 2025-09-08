@@ -12,6 +12,27 @@ React 18 + TypeScript 기반의 백테스팅 웹 애플리케이션 개발 가�
 - **Testing**: Vitest + Testing Library
 - **Container**: Docker
 
+## 테스트 커버리지 개요 (2025-09)
+
+- 폼 서브컴포넌트 테스트
+  - StrategyForm: 전략 선택 및 파라미터 입력 이벤트 검증
+  - CommissionForm: 리밸런싱 주기, 수수료 변경 이벤트 검증
+  - PortfolioForm: 종목/현금 추가 버튼, 심볼 선택 변경 이벤트 검증
+  - DateRangeForm: 시작/종료 날짜 변경 이벤트 검증
+- 차트 스모크 테스트
+  - EquityChart, OHLCChart, StockPriceChart, TradesChart의 기본 렌더 확인
+  - 메모: JSDOM 환경의 width=0 문제로 ResponsiveContainer가 SVG를 렌더하지 않을 수 있어, 스모크 수준의 렌더 유무만 확인
+- 기존 영역
+  - 유틸(date/number/formatters), 공통 컴포넌트(FormField), 에러 경계(ErrorBoundary)
+  - 훅(useBacktestForm, useBacktest), 서비스(BacktestApiService HTTP 상태→에러 타입 매핑)
+
+### 테스트 실행
+
+```bash
+# 도커 컨테이너에서 실행 예시
+docker run --rm -t -v "$PWD/frontend":/workspace -w /workspace node:20 bash -lc "npm ci && npm test -- --run"
+```
+
 ### 단기 (개발 생산성)
 - **폼 상태 관리**: useReducer를 활용한 복잡한 폼 상태 개선
 - **컴포넌트 분해**: 대형 컴포넌트의 세분화

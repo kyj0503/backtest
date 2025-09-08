@@ -110,6 +110,11 @@ StockVolatilityNews.tsx (133줄, 73% 감소)
     └── StockVolatilityNews.tsx (뉴스 통합)
 ```
 
+## 테스트 커버리지 (요약)
+- 폼 서브컴포넌트: StrategyForm, CommissionForm, PortfolioForm, DateRangeForm 단위 테스트
+- 차트: EquityChart, OHLCChart, StockPriceChart, TradesChart 스모크 테스트(기본 렌더 확인)
+- 공통/유틸/훅/서비스: FormField, ErrorBoundary, numberUtils/dateUtils/formatters, useBacktestForm/useBacktest, BacktestApiService
+
 ## 컴포넌트 설계 원칙
 
 ### 1. 단일 책임 원칙
