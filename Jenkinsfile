@@ -31,7 +31,9 @@ pipeline {
                     echo "GIT_BRANCH: ${env.GIT_BRANCH}"
                     echo "BUILD_NUMBER: ${env.BUILD_NUMBER}"
                     echo "All env vars:"
-                    sh 'env | grep -E "(BRANCH|GIT)" | sort'
+                    sh '''
+                        env | grep -E "(BRANCH|GIT)" | sort || true
+                    '''
                 }
             }
         }
