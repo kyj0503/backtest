@@ -1,1 +1,6 @@
 .env
+# Build artifacts and caches
+frontend/dist/
+**/__pycache__/
+**/*.py[cod]
+*.log
