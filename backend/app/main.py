@@ -4,7 +4,7 @@ FastAPI 애플리케이션 메인 진입점
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, JSONResponse
 import logging
 from datetime import datetime
 
@@ -94,9 +94,9 @@ async def health_check():
 async def global_exception_handler(request, exc):
     """전역 예외 처리"""
     logger.error(f"처리되지 않은 예외: {str(exc)}")
-    return HTTPException(
+    return JSONResponse(
         status_code=500,
-        detail="내부 서버 오류가 발생했습니다."
+        content={"detail": "내부 서버 오류가 발생했습니다."}
     )
 
 
