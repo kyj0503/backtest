@@ -71,19 +71,17 @@ async def health_check():
     서버와 주요 서비스들의 상태를 확인합니다.
     """
     try:
-        # 데이터 소스 연결 확인
-        from .utils.data_fetcher import data_fetcher
-        data_healthy = data_fetcher.validate_ticker("AAPL")
-        
-        if not data_healthy:
-            raise HTTPException(status_code=503, detail="데이터 소스 연결 실패")
-        
+        # 외부 네트워크 호출 없이 경량 자체 점검
+        routes_ok = len(app.routes) > 0
+        if not routes_ok:
+            raise RuntimeError("라우터 초기화 실패")
+
         return HealthResponse(
             status="healthy",
             timestamp=datetime.now(),
             version=settings.version
         )
-        
+
     except Exception as e:
         logger.error(f"헬스체크 실패: {str(e)}")
         raise HTTPException(status_code=503, detail="서비스 상태 불량")
