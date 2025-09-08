@@ -26,13 +26,13 @@ Vite + Tailwind CSS             backtesting.py               yfinance API
 ### 개발 환경 실행
 ```bash
 # 개발 환경 시작 (Windows PowerShell + Docker Desktop)
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+docker compose -f compose.yml -f compose/compose.dev.yml up --build
 
 # 백그라운드 실행
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+docker compose -f compose.yml -f compose/compose.dev.yml up -d
 
 # 시스템 종료
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
+docker compose -f compose.yml -f compose/compose.dev.yml down
 ```
 
 ### 패키지 관리 및 실행환경
@@ -54,10 +54,10 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
 ### 테스트 실행
 ```bash
 # 백엔드 테스트
-docker-compose exec backend pytest tests/ -v
+docker compose exec backend pytest tests/ -v
 
 # 프론트엔드 테스트
-docker-compose exec frontend npm test
+docker compose exec frontend npm test
 ```
 
 ## 기술 스택

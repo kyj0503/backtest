@@ -13,7 +13,7 @@ pipeline {
         DEPLOY_HOST = 'localhost'
         DEPLOY_USER = 'jenkins'
         DEPLOY_PATH_PROD = '/opt/backtest'
-        DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/docker-compose.prod.yml'
+        DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/compose/compose.prod.yml'
         // Extend Docker client timeouts to reduce transient failures
         DOCKER_CLIENT_TIMEOUT = '300'
         COMPOSE_HTTP_TIMEOUT  = '300'
