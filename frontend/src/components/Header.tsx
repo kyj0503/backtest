@@ -10,7 +10,7 @@ const Header: React.FC = () => {
           {/* Brand */}
           <Link to="/" className="text-xl font-bold hover:text-blue-200 transition-colors flex items-center gap-2">
             <FaChartLine className="text-lg" />
-            <span>백테스팅 플랫폼</span>
+            <span>라고할때살걸</span>
           </Link>
           
           {/* Navigation Links */}
