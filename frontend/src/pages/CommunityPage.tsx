@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { listPosts, createPost } from '../services/community';
+import { Link } from 'react-router-dom';
 import { getAuthToken } from '../services/auth';
 
 const CommunityPage: React.FC = () => {
@@ -49,11 +50,11 @@ const CommunityPage: React.FC = () => {
 
       <div className="space-y-4">
         {items.map((it) => (
-          <div key={it.id} className="bg-white border rounded p-4">
+          <Link key={it.id} to={`/community/${it.id}`} className="block bg-white border rounded p-4 hover:bg-gray-50">
             <div className="text-sm text-gray-500 mb-1">{it.username} • {new Date(it.created_at).toLocaleString()}</div>
             <div className="text-lg font-semibold">{it.title}</div>
             <div className="text-gray-700 mt-2 whitespace-pre-wrap">{it.excerpt}</div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
@@ -61,4 +62,3 @@ const CommunityPage: React.FC = () => {
 };
 
 export default CommunityPage;
-

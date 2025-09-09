@@ -91,6 +91,18 @@ def login(req: LoginRequest):
         return AuthResponse(token=token, user_id=user_id, username=username, email=email)
 
 
+@router.post("/logout")
+def logout(authorization: Optional[str] = Header(None)):
+    # delete session token if exists
+    if not authorization or not authorization.lower().startswith('bearer '):
+        raise HTTPException(status_code=401, detail="인증 토큰이 필요합니다.")
+    token = authorization.split(' ', 1)[1]
+    engine = _get_engine()
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM user_sessions WHERE token=:t"), {"t": token})
+    return {"status": "ok"}
+
+
 def require_user(authorization: Optional[str]) -> int:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="인증 토큰이 필요합니다.")
@@ -101,7 +113,12 @@ def require_user(authorization: Optional[str]) -> int:
         if not row:
             raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
         user_id, expires = int(row[0]), row[1]
+        # SQLite에서는 문자열로 반환될 수 있음
+        if isinstance(expires, str):
+            try:
+                expires = datetime.fromisoformat(expires)
+            except Exception:
+                expires = None
         if expires and datetime.utcnow() > expires:
             raise HTTPException(status_code=401, detail="세션이 만료되었습니다.")
         return user_id
-

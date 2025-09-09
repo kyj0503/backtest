@@ -29,7 +29,7 @@ def list_posts(limit: int = 50, offset: int = 0):
     with engine.begin() as conn:
         rows = conn.execute(text(
             """
-            SELECT p.id, p.title, LEFT(p.content, 300) AS excerpt, p.created_at,
+            SELECT p.id, p.title, SUBSTR(p.content, 1, 300) AS excerpt, p.created_at,
                    u.username
             FROM posts p JOIN users u ON u.id = p.user_id
             ORDER BY p.id DESC
@@ -82,4 +82,3 @@ def add_comment(post_id: int, payload: CommentCreate, authorization: Optional[st
             "SELECT c.id, c.content, c.created_at, u.username FROM post_comments c JOIN users u ON u.id=c.user_id WHERE c.post_id=:pid ORDER BY c.id DESC LIMIT 1"
         ), {"pid": post_id}).mappings().first()
         return cmt
-

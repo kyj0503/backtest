@@ -5,6 +5,7 @@ import BacktestPage from './pages/BacktestPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import CommunityPage from './pages/CommunityPage';
+import PostDetailPage from './pages/PostDetailPage';
 import ChatPage from './pages/ChatPage';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -21,6 +22,7 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/community" element={<CommunityPage />} />
+              <Route path="/community/:id" element={<PostDetailPage />} />
               <Route path="/chat" element={<ChatPage />} />
             </Routes>
           </main>

@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaChartLine } from 'react-icons/fa';
+import { useAuth } from '../hooks/useAuth';
 
 const Header: React.FC = () => {
+  const { user, logout } = useAuth();
+
   return (
     <nav className="bg-blue-600 text-white sticky top-0 z-50 shadow-lg">
       <div className="container mx-auto px-4">
@@ -14,7 +17,7 @@ const Header: React.FC = () => {
           </Link>
           
           {/* Navigation Links */}
-          <div className="flex space-x-6">
+          <div className="flex space-x-6 items-center">
             <Link 
               to="/" 
               className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
@@ -39,18 +42,17 @@ const Header: React.FC = () => {
             >
               채팅
             </Link>
-            <Link 
-              to="/login" 
-              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              로그인
-            </Link>
-            <Link 
-              to="/signup" 
-              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              회원가입
-            </Link>
+            {!user ? (
+              <>
+                <Link to="/login" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">로그인</Link>
+                <Link to="/signup" className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">회원가입</Link>
+              </>
+            ) : (
+              <>
+                <span className="text-sm">안녕하세요, <strong>{user.username}</strong>님</span>
+                <button onClick={logout} className="px-3 py-1 rounded-md text-xs font-medium bg-blue-700 hover:bg-blue-800">로그아웃</button>
+              </>
+            )}
             <a 
               href="https://github.com/capstone-backtest/backtest" 
               target="_blank" 

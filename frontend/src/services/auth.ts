@@ -42,7 +42,14 @@ export function getAuthToken(): string | null {
 }
 
 export function logout() {
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('auth_user');
+  const token = getAuthToken();
+  return fetch(`${getApiBase()}/api/v1/auth/logout`, {
+    method: 'POST',
+    headers: {
+      'Authorization': token ? `Bearer ${token}` : ''
+    }
+  }).finally(() => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+  });
 }
-
