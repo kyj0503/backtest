@@ -95,6 +95,28 @@ class ChartDataService:
             
             # 5. 백테스트 통계 계산
             backtest_stats = self._calculate_backtest_stats(data, request.initial_cash)
+
+            # 6. 벤치마크가 지정된 경우 상대 성과 계산
+            benchmark_ticker = getattr(request, 'benchmark_ticker', None)
+            if benchmark_ticker:
+                try:
+                    bm_data = self.data_fetcher.get_stock_data(
+                        ticker=benchmark_ticker,
+                        start_date=request.start_date,
+                        end_date=request.end_date
+                    )
+                    if bm_data is not None and not bm_data.empty:
+                        bm_initial = float(bm_data['Close'].iloc[0])
+                        bm_final = float(bm_data['Close'].iloc[-1])
+                        bm_ret = ((bm_final / bm_initial) - 1) * 100
+                        backtest_stats['benchmark_ticker'] = benchmark_ticker
+                        backtest_stats['benchmark_total_return_pct'] = bm_ret
+                        # 총수익률 대비 초과수익률(알파)
+                        backtest_stats['alpha_vs_benchmark_pct'] = (
+                            backtest_stats.get('total_return_pct', 0.0) - bm_ret
+                        )
+                except Exception as e:
+                    self.logger.warning(f"벤치마크 계산 중 오류({benchmark_ticker}): {e}")
             
             return ChartDataResponse(
                 ticker=request.ticker,

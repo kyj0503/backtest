@@ -33,6 +33,7 @@ class BacktestRequest(BaseModel):
     strategy_params: Optional[Dict[str, Any]] = Field(default=None, description="전략 파라미터")
     commission: float = Field(default=0.002, ge=0, le=0.1, description="거래 수수료 (소수점)")
     spread: float = Field(default=0.0, ge=0, description="스프레드")
+    benchmark_ticker: Optional[str] = Field(default=None, description="비교 벤치마크 티커 (예: MSFT, SPY)")
     
     @field_validator('start_date', 'end_date', mode='before')
     @classmethod
@@ -63,7 +64,8 @@ class BacktestRequest(BaseModel):
                     "short_window": 10,
                     "long_window": 20
                 },
-                "commission": 0.002
+                "commission": 0.002,
+                "benchmark_ticker": "MSFT"
             }
         }
 

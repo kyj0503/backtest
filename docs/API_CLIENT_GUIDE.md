@@ -46,6 +46,7 @@ interface BacktestParams {
   initial_cash: number;     // 초기 투자금 (최소 1000)
   strategy: string;         // 전략명
   strategy_params: object;  // 전략별 파라미터
+  benchmark_ticker?: string; // 선택: 벤치마크 티커 (예: "MSFT", "SPY")
 }
 ```
 
@@ -96,7 +97,8 @@ const chartData = await fetchChartData({
   end_date: '2023-12-31',
   initial_cash: 10000,
   strategy: 'buy_and_hold',
-  strategy_params: {}
+  strategy_params: {},
+  benchmark_ticker: 'MSFT'
 });
 ```
 
@@ -212,6 +214,10 @@ interface SummaryStats {
   max_drawdown_pct: number;    // 최대 손실률 (%)
   sharpe_ratio: number;        // 샤프 비율
   profit_factor: number;       // 수익 팩터
+  // 벤치마크 지정 시 추가 제공
+  benchmark_ticker?: string;           // 벤치마크 티커
+  benchmark_total_return_pct?: number; // 벤치마크 총 수익률 (%)
+  alpha_vs_benchmark_pct?: number;     // 벤치마크 대비 초과수익률 (%)
 }
 
 // 실제 데이터 예시

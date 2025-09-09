@@ -108,6 +108,32 @@ class TestAPIEndpoints:
             if field == 'total_trades':
                 assert isinstance(summary_stats[field], int), f"{field} should be integer"
                 assert summary_stats[field] >= 0, f"{field} should be non-negative"
+
+    def test_chart_data_with_benchmark(self, client):
+        """차트 데이터 엔드포인트 - 벤치마크 포함 시 상대 성과 제공"""
+        payload = {
+            "ticker": "AAPL",
+            "start_date": "2023-01-01",
+            "end_date": "2023-06-30",
+            "initial_cash": 10000,
+            "strategy": "buy_and_hold",
+            "benchmark_ticker": "MSFT"
+        }
+
+        response = client.post("/api/v1/backtest/chart-data", json=payload)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert 'summary_stats' in data
+        stats = data['summary_stats']
+
+        # 추가 필드 확인
+        assert 'benchmark_total_return_pct' in stats
+        assert 'alpha_vs_benchmark_pct' in stats
+
+        # 타입 검증
+        assert isinstance(stats['benchmark_total_return_pct'], (int, float))
+        assert isinstance(stats['alpha_vs_benchmark_pct'], (int, float))
     
     def test_chart_data_endpoint_invalid_ticker(self, client):
         """차트 데이터 엔드포인트 - 잘못된 티커"""
