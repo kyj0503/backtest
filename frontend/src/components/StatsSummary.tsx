@@ -48,6 +48,28 @@ const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
     }
   ];
 
+  // 벤치마크 통계가 있는 경우 추가 카드 구성
+  if (typeof stats.benchmark_total_return_pct === 'number') {
+    const label = stats.benchmark_ticker
+      ? `벤치마크(${String(stats.benchmark_ticker).toUpperCase()}) 수익률`
+      : '벤치마크 수익률';
+    statItems.push({
+      label,
+      value: formatPercent(stats.benchmark_total_return_pct || 0),
+      variant: getStatVariant(stats.benchmark_total_return_pct || 0, 'return') as any,
+      description: '지정한 벤치마크의 총 수익률'
+    });
+  }
+
+  if (typeof stats.alpha_vs_benchmark_pct === 'number') {
+    statItems.push({
+      label: '알파(벤치마크 대비)',
+      value: formatPercent(stats.alpha_vs_benchmark_pct || 0),
+      variant: getStatVariant(stats.alpha_vs_benchmark_pct || 0, 'return') as any,
+      description: '벤치마크 대비 초과수익률'
+    });
+  }
+
   const getVariantClasses = (variant: string) => {
     switch (variant) {
       case 'primary': return 'bg-blue-600 text-white';

@@ -59,6 +59,10 @@ export interface BacktestStats {
   sortino_ratio?: number;
   var_95?: number;
   cvar_95?: number;
+  // 벤치마크 관련 (선택적)
+  benchmark_ticker?: string;
+  benchmark_total_return_pct?: number;
+  alpha_vs_benchmark_pct?: number;
 }
 
 // 포트폴리오 통계 (포트폴리오 백테스트용)

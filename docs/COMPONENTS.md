@@ -104,6 +104,7 @@ StockVolatilityNews.tsx (133줄, 73% 감소)
     └── News Modal Control
 ```
 ├── StatsSummary.tsx (성과 요약)
+    - 백엔드가 제공하는 벤치마크 필드(`benchmark_ticker`, `benchmark_total_return_pct`, `alpha_vs_benchmark_pct`)가 존재하면 추가 카드로 표시
 ├── Chart Components
 │   ├── EquityChart.tsx (수익률 곡선)
 │   ├── OHLCChart.tsx (캔들스틱 차트)
