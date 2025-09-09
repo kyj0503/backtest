@@ -18,12 +18,11 @@
   - 직접 yfinance에서 데이터를 수집(파일 캐시 미사용)
 
 ### 환경 변수
-- `DATABASE_URL`: SQLAlchemy 연결 문자열
-  - 예: `mysql+pymysql://user:pass@host:3306/stock_data_cache?charset=utf8mb4`
+- `DATABASE_URL`: SQLAlchemy 연결 문자열 사용. 운영·개발 환경에 맞는 호스트/포트/스키마를 지정합니다.
 
-### 로컬 개발(도커) 예시
-- `compose.yml` + `compose/compose.dev.yml` 사용 시 백엔드는 8001 포트로 노출됩니다.
-- 별도의 MySQL 컨테이너를 사용하는 경우, `DATABASE_URL`을 컨테이너 호스트:포트로 설정하세요.
+### 로컬 개발(도커)
+- `compose.yml`과 `compose/compose.dev.yml`을 함께 사용합니다. 백엔드는 8001, 프론트는 5174(개발)/8082(프로덕션) 포트를 사용합니다.
+- 별도 DB 사용 시 `DATABASE_URL`을 컨테이너 호스트:포트로 지정합니다.
 
 ## API 베이스 URL 전략(프론트엔드)
 
@@ -40,14 +39,11 @@
 
 ## 트러블슈팅
 
-- DB 연결 불가 시
-  - `DATABASE_URL` 포맷과 네트워크 접근 가능 여부를 확인합니다.
-  - yfinance가 대체 소스로 동작할 수 있으나, 프로덕션에서는 DB 캐시 사용을 권장합니다.
-- yfinance 레이트리밋
-  - 테스트/CI에서는 오프라인 모킹 픽스처 사용을 권장합니다. (`docs/TEST_ARCHITECTURE.md` 참고)
+- DB 연결 불가: `DATABASE_URL` 포맷과 네트워크 접근 가능 여부 확인. 프로덕션은 DB 캐시 사용 권장.
+- yfinance 레이트리밋: 테스트/CI에서는 오프라인 픽스처 사용 권장(테스트 문서 참고).
 
 ## 체크리스트
-- [ ] `DATABASE_URL` 설정 확인
-- [ ] (개발) Vite proxy 타깃 확인(`vite.config.ts`)
-- [ ] (프론트) 필요 시 `VITE_API_BASE_URL` 지정
-- [ ] `/api/v1/docs` 접근 확인
+- `DATABASE_URL` 설정 확인
+- (개발) Vite 프록시 타깃 확인
+- (프론트) 필요 시 `VITE_API_BASE_URL` 지정
+- `/api/v1/docs` 접근 확인
