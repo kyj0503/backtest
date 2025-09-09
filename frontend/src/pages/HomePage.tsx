@@ -8,11 +8,11 @@ const HomePage: React.FC = () => {
       <div className="container mx-auto px-4 max-w-6xl">
         {/* 메인 히어로 섹션 */}
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-blue-600 mb-6">
-            백테스팅을 시작하세요
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            단일 종목 또는 포트폴리오를 선택하고 투자 전략을 설정한 후 백테스트를 실행해보세요.
+          <h1 className="text-5xl font-bold text-blue-600 mb-4">라고할때살걸</h1>
+          <p className="text-xl text-gray-700 mb-3">데이터 기반 투자 전략 백테스팅 플랫폼</p>
+          <p className="text-base text-gray-500 mb-8 max-w-3xl mx-auto">
+            종목/포트폴리오를 구성하고 전략·기간을 설정하면, 수익률·드로우다운·샤프 등 핵심 지표와 함께
+            벤치마크 대비 성과(알파)까지 한눈에 확인할 수 있습니다.
           </p>
           <Link 
             to="/backtest" 
@@ -29,33 +29,27 @@ const HomePage: React.FC = () => {
             <div className="w-20 h-20 bg-blue-100 rounded-full mx-auto mb-6 flex items-center justify-center">
               <FaChartLine className="w-10 h-10 text-blue-600" />
             </div>
-            <h5 className="text-xl font-semibold mb-3">다양한 전략</h5>
-            <p className="text-gray-600 text-sm">
-              Buy & Hold, SMA Crossover, RSI, Bollinger Bands, MACD 등 
-              검증된 투자 전략을 제공합니다.
-            </p>
+            <h5 className="text-xl font-semibold mb-3">전략 · 지표</h5>
+            <p className="text-gray-600 text-sm">Buy & Hold, SMA, RSI, Bollinger, MACD 등을 손쉽게 실험하고
+              이동평균·RSI·볼밴드 등 오버레이 지표로 결과를 함께 확인합니다.</p>
           </div>
           
           <div className="text-center">
             <div className="w-20 h-20 bg-green-100 rounded-full mx-auto mb-6 flex items-center justify-center">
               <FaCalculator className="w-10 h-10 text-green-600" />
             </div>
-            <h5 className="text-xl font-semibold mb-3">포트폴리오 분석</h5>
-            <p className="text-gray-600 text-sm">
-              여러 종목으로 구성된 포트폴리오의 성과를 분석하고 
-              리밸런싱 전략을 테스트할 수 있습니다.
-            </p>
+            <h5 className="text-xl font-semibold mb-3">포트폴리오 · 리밸런싱</h5>
+            <p className="text-gray-600 text-sm">여러 종목과 현금을 섞어 비중을 설정하고, 월간 등 주기적 리밸런싱을 시뮬레이션합니다.
+              벤치마크와 비교해 초과수익(알파)도 함께 확인하세요.</p>
           </div>
           
           <div className="text-center">
             <div className="w-20 h-20 bg-cyan-100 rounded-full mx-auto mb-6 flex items-center justify-center">
               <FaNewspaper className="w-10 h-10 text-cyan-600" />
             </div>
-            <h5 className="text-xl font-semibold mb-3">실시간 시각화</h5>
-            <p className="text-gray-600 text-sm">
-              인터랙티브 차트로 백테스트 결과를 직관적으로 
-              확인하고 분석할 수 있습니다.
-            </p>
+            <h5 className="text-xl font-semibold mb-3">뉴스/환율 · 시각화</h5>
+            <p className="text-gray-600 text-sm">변동성 이벤트별 관련 뉴스와 USD/KRW 환율을 함께 보며 맥락을 파악하고,
+              인터랙티브 차트로 결과를 직관적으로 분석하세요.</p>
           </div>
         </div>
 
@@ -70,15 +64,15 @@ const HomePage: React.FC = () => {
               <ul className="space-y-3">
                 <li className="flex items-center">
                   <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                  실시간 주가 데이터 (Yahoo Finance)
+                  주가 데이터 (Yahoo Finance) + 벤치마크 비교/알파
                 </li>
                 <li className="flex items-center">
                   <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                  커스터마이징 가능한 전략 파라미터
+                  커스터마이징 가능한 전략 파라미터·기간·수수료
                 </li>
                 <li className="flex items-center">
                   <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                  상세한 성과 지표 (샤프 비율, 최대 낙폭 등)
+                  핵심 성과 지표 (총수익률, 드로우다운, 샤프 등)
                 </li>
               </ul>
             </div>
@@ -86,15 +80,15 @@ const HomePage: React.FC = () => {
               <ul className="space-y-3">
                 <li className="flex items-center">
                   <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                  거래 기록 및 진입/청산 포인트 표시
+                  거래 기록과 진입/청산 포인트 표시
                 </li>
                 <li className="flex items-center">
                   <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                  포트폴리오 리밸런싱 시뮬레이션
+                  포트폴리오 리밸런싱/DCA 시뮬레이션, 현금 자산 지원
                 </li>
                 <li className="flex items-center">
                   <FaCheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                  다양한 차트 타입 (캔들스틱, 라인, 거래량)
+                  다양한 차트 (캔들스틱/라인/거래량) + 뉴스/환율 보기
                 </li>
               </ul>
             </div>
@@ -140,12 +134,12 @@ const HomePage: React.FC = () => {
 
         {/* CTA 섹션 */}
         <div className="text-center bg-blue-50 p-8 rounded-lg">
-          <h5 className="text-xl font-semibold text-blue-600 mb-4">지금 바로 백테스팅을 시작해보세요!</h5>
+          <h5 className="text-xl font-semibold text-blue-600 mb-4">지금, 데이터로 확신을 더하세요.</h5>
           <Link 
             to="/backtest" 
             className="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
           >
-            백테스트 페이지로 이동 →
+            백테스트 시작하기 →
           </Link>
         </div>
       </div>
