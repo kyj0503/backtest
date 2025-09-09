@@ -1,6 +1,6 @@
 import React, { ChangeEvent } from 'react';
 import { PREDEFINED_STOCKS, ASSET_TYPES, AssetType } from '../constants/strategies';
-import { Tooltip, Badge } from './common';
+import { Tooltip } from './common';
 
 interface Stock {
   symbol: string;
@@ -125,12 +125,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                       <option value={ASSET_TYPES.STOCK}>주식</option>
                       <option value={ASSET_TYPES.CASH}>현금</option>
                     </select>
-                    <Badge 
-                      variant={stock.assetType === ASSET_TYPES.CASH ? 'success' : 'info'}
-                      size="sm"
-                    >
-                      {stock.assetType === ASSET_TYPES.CASH ? '무위험' : '위험자산'}
-                    </Badge>
+                    {/* 자산 타입 배지(위험자산/무위험) 노출 제거 */}
                   </div>
                 </td>
                 <td className="w-24 px-6 py-4 whitespace-nowrap text-sm">
