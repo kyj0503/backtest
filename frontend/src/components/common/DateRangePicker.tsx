@@ -98,22 +98,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
-          w-full
-          px-3
-          py-2
-          text-left
-          bg-white
-          border
-          border-gray-300
-          rounded-md
-          shadow-sm
-          cursor-pointer
-          focus:outline-none
-          focus:ring-2
-          focus:ring-blue-500
-          focus:border-blue-500
-          ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'hover:border-gray-400'}
+          w-full px-3 py-2 text-left cursor-pointer rounded-md border shadow-sm
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+          ${disabled ? 'bg-gray-50 cursor-not-allowed text-gray-400' : 'bg-white'}
         `}
+        style={{ borderColor: 'hsl(var(--input))' }}
         tabIndex={disabled ? -1 : 0}
       >
         <div className="flex items-center justify-between">
@@ -132,12 +121,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+        <div className="absolute z-50 w-full mt-1 rounded-md border bg-white shadow-md animate-in">
           <div className="p-4">
             {/* Date inputs */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1">
                   시작 날짜
                 </label>
                 <input
@@ -146,12 +135,12 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
                   onChange={(e) => setTempStartDate(e.target.value)}
                   min={minDate}
                   max={maxDate}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="form-control"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1">
                   종료 날짜
                 </label>
                 <input
@@ -160,7 +149,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
                   onChange={(e) => setTempEndDate(e.target.value)}
                   min={minDate || tempStartDate}
                   max={maxDate}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="form-control"
                 />
               </div>
 
@@ -174,8 +163,8 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
             {/* Presets */}
             {showPresets && presets.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="mt-4 pt-4 border-t">
+                <label className="block text-sm font-medium mb-2">
                   빠른 선택
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -183,7 +172,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
                     <button
                       key={index}
                       onClick={() => handlePresetSelect(preset)}
-                      className="px-3 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 rounded-md border border-gray-200 hover:border-gray-300"
+                      className="px-3 py-2 text-sm text-left rounded-md border hover:bg-gray-50"
                     >
                       {preset.label}
                     </button>
@@ -193,17 +182,17 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             )}
 
             {/* Actions */}
-            <div className="flex justify-between mt-4 pt-4 border-t border-gray-200">
+            <div className="flex justify-between mt-4 pt-4 border-t">
               <button
                 onClick={handleClear}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800"
+                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900"
               >
                 지우기
               </button>
               <div className="space-x-2">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm border rounded-md hover:bg-gray-50"
                 >
                   취소
                 </button>

@@ -135,22 +135,11 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         onClick={handleToggle}
         onKeyDown={handleKeyDown}
         className={`
-          w-full
-          px-3
-          py-2
-          text-left
-          bg-white
-          border
-          border-gray-300
-          rounded-md
-          shadow-sm
-          cursor-pointer
-          focus:outline-none
-          focus:ring-2
-          focus:ring-blue-500
-          focus:border-blue-500
-          ${disabled ? 'bg-gray-50 cursor-not-allowed' : 'hover:border-gray-400'}
+          w-full px-3 py-2 text-left rounded-md border shadow-sm cursor-pointer
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+          ${disabled ? 'bg-gray-50 cursor-not-allowed text-gray-400' : 'bg-white'}
         `}
+        style={{ borderColor: 'hsl(var(--input))' }}
         tabIndex={disabled ? -1 : 0}
         role="combobox"
         aria-expanded={isOpen}
@@ -192,25 +181,21 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             z-50
             w-full
             mt-1
-            bg-white
-            border
-            border-gray-300
-            rounded-md
-            shadow-lg
+            rounded-md border bg-white shadow-md animate-in
             max-h-60
             overflow-auto
             ${dropdownClassName}
           `}
         >
           {/* Search input */}
-          <div className="p-2 border-b border-gray-200">
+          <div className="p-2 border-b">
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="form-control"
             />
           </div>
 
@@ -230,12 +215,10 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   key={option.value}
                   onClick={() => handleSelect(option)}
                   className={`
-                    px-3
-                    py-2
-                    cursor-pointer
+                    px-3 py-2 cursor-pointer select-none
                     ${option.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}
-                    ${index === highlightedIndex ? 'bg-blue-50' : 'hover:bg-gray-50'}
-                    ${option.value === value ? 'bg-blue-100 text-blue-900' : ''}
+                    ${index === highlightedIndex ? 'bg-gray-100' : 'hover:bg-gray-50'}
+                    ${option.value === value ? 'bg-blue-50 text-blue-900' : ''}
                   `}
                   role="option"
                   aria-selected={option.value === value}

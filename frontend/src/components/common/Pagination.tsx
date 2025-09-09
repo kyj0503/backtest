@@ -53,50 +53,13 @@ const Pagination: React.FC<PaginationProps> = ({
   const showRightEllipsis = visiblePages[visiblePages.length - 1] < totalPages;
 
   const buttonClass = (isActive = false, isDisabled = false) => {
-    const baseClasses = [
-      'relative',
-      'inline-flex',
-      'items-center',
-      'px-4',
-      'py-2',
-      'text-sm',
-      'font-medium',
-      'border',
-      'focus:z-20',
-      'focus:outline-none',
-      'focus:ring-2',
-      'focus:ring-blue-500',
-      'focus:ring-offset-2',
-    ];
-
-    if (isDisabled) {
-      baseClasses.push(
-        'text-gray-300',
-        'bg-white',
-        'border-gray-300',
-        'cursor-not-allowed'
-      );
-    } else if (isActive) {
-      baseClasses.push(
-        'z-10',
-        'bg-blue-50',
-        'border-blue-500',
-        'text-blue-600'
-      );
-    } else {
-      baseClasses.push(
-        'bg-white',
-        'border-gray-300',
-        'text-gray-500',
-        'hover:bg-gray-50',
-        'cursor-pointer'
-      );
-    }
-
-    return baseClasses.join(' ');
+    const base = 'relative inline-flex items-center px-4 py-2 text-sm font-medium border focus:z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-md';
+    if (isDisabled) return `${base} text-gray-300 bg-white cursor-not-allowed`;
+    if (isActive) return `${base} bg-blue-50 border-blue-500 text-blue-600`;
+    return `${base} bg-white text-gray-600 hover:bg-gray-50 cursor-pointer`;
   };
 
-  const ellipsisClass = 'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700';
+  const ellipsisClass = 'relative inline-flex items-center px-4 py-2 border bg-white text-sm font-medium text-gray-700 rounded-md';
 
   return (
     <nav className={`flex items-center justify-between ${className}`} aria-label="Pagination">
@@ -127,7 +90,7 @@ const Pagination: React.FC<PaginationProps> = ({
         </div>
         
         <div>
-          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+          <nav className="relative z-0 inline-flex gap-1" aria-label="Pagination">
             {/* First page */}
             {showFirstLast && (
               <button
@@ -196,7 +159,7 @@ const Pagination: React.FC<PaginationProps> = ({
               <button
                 onClick={() => handlePageChange(totalPages)}
                 disabled={disabled || currentPage === totalPages}
-                className={`${buttonClass(false, disabled || currentPage === totalPages)} rounded-r-md`}
+                className={buttonClass(false, disabled || currentPage === totalPages)}
                 aria-label="마지막 페이지"
               >
                 마지막 페이지
