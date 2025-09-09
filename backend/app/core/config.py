@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     
     # 외부 API 설정
     yahoo_finance_timeout: int = 30
+    
+    # Redis (chat, pub/sub)
+    redis_url: str = Field(default="redis://redis:6379/0", env="REDIS_URL")
     # pydantic v2 configuration
     model_config = {
         "env_file": ".env",

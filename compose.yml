@@ -5,6 +5,7 @@ services:
       - "8001:8000"
     environment:
       - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
     env_file:
       - ./backend/.env
 
@@ -14,3 +15,7 @@ services:
       - "8082:80"
     depends_on:
       - backend
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"

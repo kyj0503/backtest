@@ -27,6 +27,30 @@ const Header: React.FC = () => {
             >
               백테스트
             </Link>
+            <Link 
+              to="/community" 
+              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              커뮤니티
+            </Link>
+            <Link 
+              to="/chat" 
+              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              채팅
+            </Link>
+            <Link 
+              to="/login" 
+              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              로그인
+            </Link>
+            <Link 
+              to="/signup" 
+              className="px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              회원가입
+            </Link>
             <a 
               href="https://github.com/capstone-backtest/backtest" 
               target="_blank" 
