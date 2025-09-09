@@ -1,6 +1,6 @@
 # Backtest Docs Index
 
-프로젝트 전반 문서의 시작점입니다. 핵심 가이드는 아래 문서를 순서대로 참고하세요.
+프로젝트 전반 문서의 시작점입니다. 본 저장소의 마크다운 문서는 `docs/` 디렉터리 하위에서 일원 관리합니다. 핵심 가이드는 아래 문서를 순서대로 참고하세요.
 
 ## 시작하기
 
@@ -23,8 +23,8 @@
 ## API / 개발 규칙
 
 - API 연동 가이드(클라이언트 관점): `docs/API_CLIENT_GUIDE.md`
-- 커밋 규칙: `COMMIT_CONVENTION.md` (루트)
-- 기여 가이드: `CONTRIBUTING.md` (루트)
+- 커밋 규칙: `docs/COMMIT_CONVENTION.md`
+- 기여 가이드: `docs/CONTRIBUTING.md`
 
 ## 기타
 

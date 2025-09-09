@@ -540,7 +540,7 @@ export default defineConfig({
 
 ```typescript
 // 환경 변수로 API URL 관리
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 // 절대 URL 생성
 const getApiUrl = (endpoint: string) => {

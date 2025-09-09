@@ -1,10 +1,12 @@
 # Domain-Driven Design 아키텍처 가이드
 
+> 상태: 제안/부분 적용 문서. 본 문서는 설계 방향을 설명하며, 예시 경로의 `app/domains/*` 구조는 점진 도입 대상입니다. 현재 구현은 주로 `backend/app/services/*` 계층에 존재합니다.
+
 Phase 3에서 설계된 Domain-Driven Design (DDD) 아키텍처에 대한 가이드입니다.
 
 정합성 메모:
-- 본 도메인 계층은 점진적으로 도입되었으며, 현재 API 경로는 서비스 계층(예: `app/services/backtest/*`, `backtest_engine.py`)이 중심입니다.
-- 문서의 예시 경로와 실제 파일 구조는 아래 표기를 기준으로 최신화했습니다.
+- 본 도메인 계층은 점진적으로 도입되는 중이며, 현재 API 경로는 서비스 계층(예: `backend/app/services/backtest/*`, `backend/app/services/*.py`)이 중심입니다.
+- 문서의 예시 경로와 실제 파일 구조는 상기 상태를 전제로 읽어 주세요.
 
 ## 개요
 

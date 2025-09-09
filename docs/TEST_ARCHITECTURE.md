@@ -164,7 +164,7 @@ git push origin main
 - Jenkins 파이프라인에서 백엔드/프론트엔드 테스트가 Docker 빌드 단계에서 실행되며 안정적으로 통과합니다.
 - JUnit XML을 수집하여 Jenkins Test Result Trend 대시보드에 게시합니다(백엔드 pytest, 프론트는 Vitest JUnit 설정).
 - 배포 후 통합 검증은 백엔드 직접 호출과 프론트 Nginx 프록시 체인을 모두 검사하며, 응답 구조와 주요 지표 범위까지 확인합니다.
-- 10 failed, 51 passed, 3 skipped (84% 실패율)
+- 10 failed, 51 passed, 3 skipped (약 80% 성공률)
 - MySQL 연결 에러로 인한 500 응답
 - Jenkins CI/CD 파이프라인 중단
 

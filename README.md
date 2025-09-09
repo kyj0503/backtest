@@ -96,7 +96,12 @@ docker compose exec frontend npm test
 - 운영 런북: `docs/RUNBOOK.md`
 - TODO/Roadmap: `docs/TODO.md`
 
-커밋/기여 규칙은 루트의 [`COMMIT_CONVENTION.md`](COMMIT_CONVENTION.md), [`CONTRIBUTING.md`](CONTRIBUTING.md)를 참고하세요. 커밋 시 `.githooks/pre-commit`이 `scripts/verify-before-commit.sh`를 실행하여 빌드/테스트/헬스체크를 수행합니다.
+커밋/기여 규칙은 `docs/`의 [`COMMIT_CONVENTION.md`](docs/COMMIT_CONVENTION.md), [`CONTRIBUTING.md`](docs/CONTRIBUTING.md)를 참고하세요.
+Git hooks를 사용하려면 다음을 1회 실행해 `.githooks/pre-commit`을 활성화하세요:
+```bash
+git config core.hooksPath .githooks
+```
+활성화 후 커밋 시 `scripts/verify-before-commit.sh`가 백/프론트 빌드·테스트 및 간단 헬스체크를 수행합니다.
 
 ## 라이선스
 
