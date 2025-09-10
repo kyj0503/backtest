@@ -94,23 +94,23 @@ markers =
 
 ## 테스트 실행 방법
 
-### Makefile을 사용한 간편 실행
+### 간편 실행 (권장: 스크립트 사용)
 ```bash
 # 기본 단위 테스트 (가장 빠름)
-make test
+./scripts/test-runner.sh unit
 
 # 특정 테스트 유형
-make test-unit          # 단위 테스트만
-make test-integration   # 통합 테스트 (DB 포함)
-make test-e2e          # E2E 테스트
-make test-all          # 모든 테스트
+./scripts/test-runner.sh unit          # 단위 테스트만
+./scripts/test-runner.sh integration   # 통합 테스트 (DB 포함)
+./scripts/test-runner.sh e2e           # E2E 테스트
+./scripts/test-runner.sh all           # 모든 테스트
 
 # 품질 관리
-make coverage          # 커버리지 리포트 생성
-make lint             # 코드 품질 검사
+./scripts/test-runner.sh coverage      # 커버리지 리포트 생성
+./scripts/test-runner.sh lint          # 코드 품질 검사
 
 # CI 파이프라인 시뮬레이션
-make ci               # 전체 CI 파이프라인 실행
+./scripts/test-runner.sh ci            # 전체 CI 파이프라인 실행
 ```
 
 ### test-runner.sh 스크립트 직접 사용
@@ -118,7 +118,7 @@ make ci               # 전체 CI 파이프라인 실행
 # 기본 사용법
 ./scripts/test-runner.sh [command]
 
-# 사용 가능한 명령어
+# 사용 가능한 명령어 (예시)
 unit        # 단위 테스트 (빠른 피드백)
 integration # 통합 테스트 (데이터베이스 포함)
 e2e         # E2E 테스트 (전체 시스템)
@@ -261,15 +261,16 @@ events/*: 0%
 
 ### 로컬 CI 시뮬레이션
 ```bash
-# 전체 CI 파이프라인 실행
-make ci
+# 전체 CI 파이프라인 실행 (스크립트 기반)
+./scripts/test-runner.sh ci
 
 # 또는 개별 단계 실행
-make lint
-make test-unit
-make test-integration
-make build
-make test-e2e
+./scripts/test-runner.sh lint
+./scripts/test-runner.sh unit
+./scripts/test-runner.sh integration
+# 개발환경 빌드는 docker compose를 사용합니다
+docker compose -f compose.yml -f compose/compose.dev.yml build
+./scripts/test-runner.sh e2e
 ```
 
 ## 문제 해결
@@ -296,7 +297,7 @@ docker-compose -f compose/compose.test.yml up -d
 **문제**: `Coverage failure: total of XX is less than fail-under=70`
 
 **해결책**:
-1. 누락된 테스트 식별: `make coverage` 실행 후 `backend/htmlcov/index.html` 확인
+1. 누락된 테스트 식별: `./scripts/test-runner.sh coverage` 실행 후 `backend/htmlcov/index.html` 확인
 2. 우선순위 모듈부터 테스트 추가
 3. 임시로 임계값 조정 (권장하지 않음)
 
