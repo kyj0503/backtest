@@ -63,7 +63,6 @@ pipeline {
                             sh '''
                 cd backend
                 docker build --build-arg RUN_TESTS=true \
-                  --build-arg PYTEST_ADDOPTS="-m 'not integration and not e2e'" \
                   -t backtest-backend-test:${BUILD_NUMBER} .
                             '''
                             echo "Backend tests passed"
@@ -80,7 +79,7 @@ pipeline {
                         mkdir -p reports/backend reports/frontend
                         # Backend JUnit (run tests inside image to emit JUnit XML)
                         docker run --rm -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
-                          sh -lc "pytest tests/ -v --tb=short -m 'not integration and not e2e' --junitxml=/reports/junit.xml"
+                          sh -lc "pytest tests/unit/ -v --tb=short --junitxml=/reports/junit.xml"
 
                         # Frontend JUnit (run in Node container using vitest.config.ts)
                         docker run --rm \
