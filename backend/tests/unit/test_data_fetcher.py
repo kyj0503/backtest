@@ -16,6 +16,13 @@ import time
 # 백엔드 앱 경로 추가
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
+from app.utils.data_fetcher import DataFetcher
+from tests.fixtures.mock_data import MockStockDataGenerator
+
+# 단위 테스트 마커 설정
+pytestmark = pytest.mark.unit
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from app.utils.data_fetcher import data_fetcher
 from app.core.custom_exceptions import DataNotFoundError, InvalidSymbolError
 from tests.fixtures.mock_data import MockStockDataGenerator

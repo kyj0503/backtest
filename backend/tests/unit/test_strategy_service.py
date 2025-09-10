@@ -15,6 +15,9 @@ from app.services.strategy_service import strategy_service
 from app.core.custom_exceptions import ValidationError, BacktestValidationError
 from tests.fixtures.expected_results import ExpectedResults
 
+# 단위 테스트 마커 설정
+pytestmark = pytest.mark.unit
+
 
 class TestStrategyService:
     """strategy_service 모듈 단위 테스트"""

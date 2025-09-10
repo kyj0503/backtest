@@ -1,6 +1,9 @@
 # 테스트 의존성 패키지
 # 기본 requirements.txt에 추가로 필요한 테스트 도구들
 
+# 데이터베이스 및 보안
+cryptography>=41.0.0  # MySQL 인증용
+
 # 테스트 프레임워크
 pytest>=7.4.0
 pytest-asyncio>=0.21.0

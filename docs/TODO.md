@@ -2,7 +2,19 @@
 
 간결하고 실행 가능한 작업 목록입니다. 상세 설계/정책은 `docs/` 내 개별 문서를 참고하세요.
 
-### High (다음 스프린트)
+### Test Strategy Implementation (우선순위 High)
+- [x] 테스트 실행 스크립트 표준화: Makefile/scripts로 단위-통합-E2E 실행 체계화
+- [x] 커버리지 기준 설정: pytest.ini에 70%+ 기준 및 파이프라인 게이트 추가
+- [x] Docker 기반 테스트 환경: 격리된 테스트 실행 및 의존성 관리
+- [ ] DB 연결 문제 해결: MySQL caching_sha2_password 인증 이슈 해결
+- [ ] 커버리지 향상: 현재 23% → 목표 70% (API 엔드포인트, CQRS, 도메인 레이어)
+- [ ] CI 파이프라인 개선: 단계별 실행(lint→unit→integration→build→e2e)
+- [ ] Testcontainers 도입: MySQL 격리 환경으로 통합 테스트 안정화
+- [ ] 계약 테스트 구축: OpenAPI 스키마 vs 실제 응답 검증 체계
+- [ ] 결정적 시드 데이터: Alembic + fixtures로 재현 가능한 테스트 데이터
+- [ ] 외부 API 스텁화: yfinance 등 계약 테스트와 라이브 스모크 분리
+
+### High (다음 스프린트) 
 - [ ] 백테스트 결과 지표 확장: 월/연도별 성과, 베타, 연속 손실/이익 기간, CAGR 보정
 - [ ] Open trades 처리: `finalize_trades=True` 적용 검토 또는 자체 마감 로직 도입(현재 경고 다수)
 - [ ] MySQL Repository 구현: `MySQLBacktestRepository` CRUD 구현 및 설정 스위치 지원

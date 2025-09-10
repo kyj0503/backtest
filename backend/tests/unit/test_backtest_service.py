@@ -20,6 +20,9 @@ from app.core.custom_exceptions import DataNotFoundError, BacktestValidationErro
 from tests.fixtures.mock_data import MockStockDataGenerator
 from tests.fixtures.expected_results import ExpectedResults
 
+# 단위 테스트 마커 설정
+pytestmark = pytest.mark.unit
+
 
 class TestBacktestService:
     """backtest_service 모듈 단위 테스트"""

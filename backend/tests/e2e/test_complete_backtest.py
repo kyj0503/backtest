@@ -10,6 +10,8 @@ import time
 from datetime import date
 from fastapi.testclient import TestClient
 
+pytestmark = pytest.mark.e2e
+
 # 백엔드 앱 경로 추가
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 

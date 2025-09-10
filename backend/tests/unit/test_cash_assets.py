@@ -7,6 +7,9 @@ from unittest.mock import AsyncMock, patch
 from app.services.portfolio_service import PortfolioBacktestService
 from app.models.schemas import PortfolioBacktestRequest, PortfolioStock
 
+# 단위 테스트 마커 설정
+pytestmark = pytest.mark.unit
+
 
 class TestCashAssets:
     """현금 자산 처리 관련 테스트"""

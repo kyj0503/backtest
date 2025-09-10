@@ -7,6 +7,8 @@ from sqlalchemy import create_engine, text
 
 from app.main import app
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture(scope="session")
 def sqlite_engine():

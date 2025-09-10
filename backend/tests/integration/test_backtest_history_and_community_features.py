@@ -4,6 +4,8 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
+pytestmark = pytest.mark.integration
+
 
 def test_backtest_history_and_community_features_flow(client: TestClient):
     # register user and get token (use unique email/username to avoid conflicts)
