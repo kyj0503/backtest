@@ -6,8 +6,11 @@
 - [x] 테스트 실행 스크립트 표준화: Makefile/scripts로 단위-통합-E2E 실행 체계화
 - [x] 커버리지 기준 설정: pytest.ini에 70%+ 기준 및 파이프라인 게이트 추가
 - [x] Docker 기반 테스트 환경: 격리된 테스트 실행 및 의존성 관리
-- [ ] DB 연결 문제 해결: MySQL caching_sha2_password 인증 이슈 해결
-- [ ] 커버리지 향상: 현재 23% → 목표 70% (API 엔드포인트, CQRS, 도메인 레이어)
+- [x] 테스트 문서 통합: TESTING_GUIDE.md로 모든 테스트 관련 문서 통합
+- [x] 중복 스크립트 제거: verify-before-commit.sh 기능을 test-runner.sh CI 명령에 통합
+- [x] Makefile 최적화: 간소화된 명령어로 test-runner.sh 스크립트 활용
+- [ ] DB 연결 문제 해결: MySQL 테이블 스키마 초기화 및 인증 이슈 해결
+- [ ] 커버리지 향상: 현재 27% → 목표 70% (API 엔드포인트, CQRS, 도메인 레이어)
 - [ ] CI 파이프라인 개선: 단계별 실행(lint→unit→integration→build→e2e)
 - [ ] Testcontainers 도입: MySQL 격리 환경으로 통합 테스트 안정화
 - [ ] 계약 테스트 구축: OpenAPI 스키마 vs 실제 응답 검증 체계

@@ -1,104 +1,62 @@
 # Backtest Project Makefile
-# Test Strategy Implementation
+# Unified Test Strategy Commands
 
-.PHONY: help install test test-unit test-integration test-e2e test-all lint build clean coverage
+.PHONY: help test test-unit test-integration test-e2e test-all lint build clean coverage
 
 # Default target
 help:
-	@echo "Backtest Project - Test Strategy Commands"
+	@echo "Backtest Project - Test Commands"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  install         - Install dependencies"
-	@echo "  lint           - Run linting and type checks"
-	@echo "  test-unit      - Run unit tests only (fast)"
-	@echo "  test-integration - Run integration tests"
+	@echo "  test           - Run unit tests (default, fast feedback)"
+	@echo "  test-unit      - Run unit tests only"
+	@echo "  test-integration - Run integration tests (with database)"
 	@echo "  test-e2e       - Run end-to-end tests"
-	@echo "  test-all       - Run all tests"
-	@echo "  coverage       - Run tests with coverage report"
-	@echo "  build          - Build Docker images"
+	@echo "  test-all       - Run all test suites"
+	@echo "  coverage       - Generate coverage report"
+	@echo "  lint           - Run code quality checks"
+	@echo "  build          - Build development environment"
+	@echo "  ci             - Run full CI pipeline simulation"
 	@echo "  clean          - Clean up containers and cache"
 
-# Backend targets
-install-backend:
-	docker build -t backtest-backend-dev ./backend
+# Test execution using unified test-runner.sh script
+test:
+	@./scripts/test-runner.sh unit
 
-lint-backend:
-	docker build -t backtest-backend-dev ./backend
-	docker run --rm backtest-backend-dev python -m black --check app/ tests/
-	docker run --rm backtest-backend-dev python -m isort --check-only app/ tests/
+test-unit:
+	@./scripts/test-runner.sh unit
 
-test-unit-backend:
-	docker build -t backtest-backend-test --build-arg RUN_TESTS=false ./backend
-	docker run --rm backtest-backend-test python -m pytest tests/unit/ -v -m unit --tb=short
+test-integration:
+	@./scripts/test-runner.sh integration
 
-test-integration-backend:
-	docker build -t backtest-backend-test --build-arg RUN_TESTS=false ./backend
-	docker run --rm backtest-backend-test python -m pytest tests/integration/ -v -m integration --tb=short
+test-e2e:
+	@./scripts/test-runner.sh e2e
 
-test-e2e-backend:
-	docker build -t backtest-backend-test --build-arg RUN_TESTS=false ./backend
-	docker run --rm backtest-backend-test python -m pytest tests/e2e/ -v -m e2e --tb=short
+test-all:
+	@./scripts/test-runner.sh all
 
-test-all-backend:
-	docker build -t backtest-backend-test --build-arg RUN_TESTS=false ./backend
-	docker run --rm backtest-backend-test python -m pytest tests/ -v --tb=short
+coverage:
+	@./scripts/test-runner.sh coverage
 
-coverage-backend:
-	docker build -t backtest-backend-test --build-arg RUN_TESTS=false ./backend
-	docker run --rm -v $(PWD)/backend/htmlcov:/app/htmlcov backtest-backend-test python -m pytest tests/ --cov=app --cov-report=term-missing --cov-report=html
-
-# Frontend targets
-install-frontend:
-	docker build -t backtest-frontend-dev ./frontend
-
-lint-frontend:
-	docker build -t backtest-frontend-dev ./frontend
-	docker run --rm backtest-frontend-dev npm run lint
-
-test-frontend:
-	docker build -t backtest-frontend-test --build-arg RUN_TESTS=false ./frontend
-	docker run --rm backtest-frontend-test npm test -- --run
-
-# Combined targets
-install: install-backend install-frontend
-
-lint: lint-backend lint-frontend
-
-test-unit: test-unit-backend
-	@echo "Unit tests completed"
-
-test-integration: test-integration-backend
-	@echo "Integration tests completed"
-
-test-e2e: test-e2e-backend
-	@echo "E2E tests completed"
-
-test-all: test-all-backend test-frontend
-	@echo "All tests completed"
-
-coverage: coverage-backend
-	@echo "Coverage report generated in backend/htmlcov/"
-
-# Docker targets
-build:
-	docker compose -f compose.yml -f compose/compose.dev.yml build
-
-build-prod:
-	docker build -t backtest-backend:latest ./backend
-	docker build -t backtest-frontend:latest ./frontend
+lint:
+	@./scripts/test-runner.sh lint
 
 # Development environment
+build:
+	@docker compose -f compose.yml -f compose/compose.dev.yml build
+
 dev-up:
-	docker compose -f compose.yml -f compose/compose.dev.yml up --build
+	@docker compose -f compose.yml -f compose/compose.dev.yml up --build
 
 dev-down:
-	docker compose -f compose.yml -f compose/compose.dev.yml down
+	@docker compose -f compose.yml -f compose/compose.dev.yml down
+
+# CI pipeline simulation (replaces verify-before-commit.sh functionality)
+ci:
+	@./scripts/test-runner.sh ci
 
 # Clean up
 clean:
-	docker system prune -f
-	docker compose -f compose.yml -f compose/compose.dev.yml down --volumes --remove-orphans
-
-# CI pipeline simulation
-ci-test: lint test-unit test-integration build test-e2e
-	@echo "CI pipeline simulation completed"
+	@docker system prune -f
+	@docker compose -f compose.yml -f compose/compose.dev.yml down --volumes --remove-orphans
+	@docker compose -f compose/compose.test.yml down --volumes --remove-orphans

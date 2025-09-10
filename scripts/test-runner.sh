@@ -196,13 +196,35 @@ case "${1:-help}" in
         run_lint
         ;;
     "ci")
-        log_info "Running CI pipeline simulation..."
+        log_info "Running full CI pipeline simulation..."
         run_lint
         run_unit_tests
         run_integration_tests
         run_frontend_tests
+        
+        # Health check similar to verify-before-commit.sh
+        log_info "Building and health-checking backend..."
+        build_backend_image
+        cid=$(docker run -d -p 8001:8000 --rm $BACKEND_IMAGE)
+        cleanup_health_check() { docker stop "$cid" >/dev/null 2>&1 || true; }
+        trap cleanup_health_check EXIT
+        
+        # Wait for server health
+        for i in {1..30}; do
+            if curl -fsS http://localhost:8001/health >/dev/null 2>&1; then
+                log_success "Backend health check passed"
+                break
+            fi
+            sleep 1
+            if [ "$i" -eq 30 ]; then
+                log_error "Backend health check failed - server not responsive"
+                exit 1
+            fi
+        done
+        
+        docker stop "$cid" >/dev/null 2>&1 || true
         run_e2e_tests
-        log_success "CI pipeline completed successfully"
+        log_success "Full CI pipeline completed successfully"
         ;;
     "help"|*)
         echo "Usage: $0 {unit|integration|e2e|frontend|all|coverage|lint|ci|help}"
