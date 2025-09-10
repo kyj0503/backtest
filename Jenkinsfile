@@ -63,7 +63,7 @@ pipeline {
                             sh '''
                 cd backend
                 docker build --build-arg RUN_TESTS=true \
-                  --build-arg PYTEST_ADDOPTS='-m "not integration and not e2e"' \
+                  --build-arg PYTEST_ADDOPTS="-m 'not integration and not e2e'" \
                   -t backtest-backend-test:${BUILD_NUMBER} .
                             '''
                             echo "Backend tests passed"
