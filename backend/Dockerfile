@@ -30,13 +30,14 @@ COPY run_server.py .
 # 빌드 인자들
 ARG RUN_TESTS=false
 ARG IMAGE_TAG=latest
+ARG PYTEST_ADDOPTS=""
 
 # 환경변수로 설정
 ENV IMAGE_TAG=${IMAGE_TAG}
 ENV IMAGE_NAME=backtest-backend
 
 # 테스트 실행 (빌드 인자로 제어 가능)
-RUN if [ "$RUN_TESTS" = "true" ] ; then python -m pytest tests/ -v --tb=short ; fi
+RUN if [ "$RUN_TESTS" = "true" ] ; then python -m pytest tests/ -v --tb=short ${PYTEST_ADDOPTS} ; fi
 
 # 포트 노출
 EXPOSE 8000

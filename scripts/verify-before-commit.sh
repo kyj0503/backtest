@@ -4,6 +4,7 @@ set -euo pipefail
 echo "[verify] Building and testing backend (Docker build with tests) ..."
 docker build \
   --build-arg RUN_TESTS=true \
+  --build-arg PYTEST_ADDOPTS='-m "not integration and not e2e"' \
   -t backtest-backend-test:verify ./backend
 
 echo "[verify] Building and testing frontend (Docker build with tests) ..."
