@@ -4,3 +4,4 @@ frontend/dist/
 **/__pycache__/
 **/*.py[cod]
 *.log
+AGENTS.md
