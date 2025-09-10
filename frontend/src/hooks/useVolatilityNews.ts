@@ -3,8 +3,7 @@ import { backtestApiService } from '../services/api';
 import { 
   VolatilityEvent, 
   NewsItem, 
-  getCompanyName, 
-  getApiBaseUrl 
+  getCompanyName
 } from '../types/volatility-news';
 
 interface UseVolatilityNewsParams {
@@ -93,36 +92,25 @@ export const useVolatilityNews = ({
   };
 
   const openNewsModal = async (date: string, event: VolatilityEvent) => {
+    // date 매개변수는 호환성을 위해 유지하지만, 현재는 회사명만으로 검색
     setCurrentNewsEvent(event);
     setShowNewsModal(true);
     setNewsLoading(true);
     
     try {
       const companyName = getCompanyName(selectedStock);
-      const baseUrl = getApiBaseUrl();
       
-      // 먼저 특정 날짜로 뉴스 검색 시도
-      let apiUrl = `${baseUrl}/api/v1/naver-news/search?query=${encodeURIComponent(companyName)}&start_date=${date}&end_date=${date}`;
+      // backtestApiService를 통해 뉴스 검색 (간단한 검색 사용)
+      console.log(`뉴스 검색 시작: ${companyName} (${selectedStock})`);
       
-      let response = await fetch(apiUrl);
-      let data = await response.json();
+      const response = await backtestApiService.searchNews(companyName, 10);
       
-      // 특정 날짜에 뉴스가 없으면 전체 기간으로 재검색
-      if (data.status === 'success' && data.data && data.data.items && data.data.items.length > 0) {
-        setNewsData(data.data.items);
+      if (response.status === 'success' && response.data && response.data.news_list) {
+        console.log(`${companyName}에 대한 뉴스 ${response.data.news_list.length}개를 찾았습니다.`);
+        setNewsData(response.data.news_list);
       } else {
-        console.log(`${date} 날짜의 뉴스가 없어서 전체 기간으로 재검색합니다.`);
-        
-        // 기간 제한 없이 뉴스 검색
-        apiUrl = `${baseUrl}/api/v1/naver-news/search?query=${encodeURIComponent(companyName)}`;
-        response = await fetch(apiUrl);
-        data = await response.json();
-        
-        if (data.status === 'success' && data.data && data.data.items) {
-          setNewsData(data.data.items);
-        } else {
-          setNewsData([]);
-        }
+        console.warn('뉴스 검색 실패:', response);
+        setNewsData([]);
       }
     } catch (err) {
       console.error('뉴스 데이터 가져오기 실패:', err);

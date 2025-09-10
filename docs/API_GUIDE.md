@@ -2,6 +2,8 @@
 
 이 문서는 백테스팅 시스템의 모든 API 엔드포인트와 사용 방법을 설명합니다.
 
+> 💡 **문제 발생 시**: API 관련 트러블슈팅은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)를 참고하세요.
+
 ## 목차
 
 1. [API 개요](#api-개요)

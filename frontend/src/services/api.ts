@@ -281,6 +281,29 @@ export class BacktestApiService {
       throw this.createApiError(error);
     }
   }
+
+  async searchNews(query: string, display: number = 10) {
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/naver-news/search?query=${encodeURIComponent(query)}&display=${display}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
+    }
+  }
 }
 
 // 싱글톤 인스턴스 export
