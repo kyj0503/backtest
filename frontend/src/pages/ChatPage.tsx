@@ -28,9 +28,16 @@ const ChatPage: React.FC = () => {
   }, []);
 
   const send = () => {
-    if (wsRef.current && input.trim()) {
+    if (
+      wsRef.current &&
+      wsRef.current.readyState === WebSocket.OPEN &&
+      input.trim()
+    ) {
       wsRef.current.send(input.trim());
       setInput('');
+    } else if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
+      // 연결이 아직 안 됐거나 끊어진 경우 사용자에게 안내
+      alert('채팅 서버와의 연결이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
     }
   };
 
