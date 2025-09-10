@@ -4,4 +4,6 @@ frontend/dist/
 **/__pycache__/
 **/*.py[cod]
 *.log
+# AI agent docs (do not commit)
 AGENTS.md
+.github/copilot-instructions.md
