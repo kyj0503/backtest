@@ -148,6 +148,7 @@ class PortfolioStock(BaseModel):
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
     dca_periods: Optional[int] = Field(12, ge=1, le=60, description="분할 매수 기간 (개월)")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
+    custom_name: Optional[str] = Field(None, description="현금 자산의 커스텀 이름")
     
     @field_validator('symbol')
     @classmethod

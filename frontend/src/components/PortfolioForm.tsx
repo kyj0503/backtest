@@ -1,6 +1,7 @@
 import React, { ChangeEvent } from 'react';
 import { PREDEFINED_STOCKS, ASSET_TYPES, AssetType } from '../constants/strategies';
 import { Tooltip } from './common';
+import StockAutocomplete from './common/StockAutocomplete';
 
 interface Stock {
   symbol: string;
@@ -47,33 +48,46 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               <tr key={index} className="hover:bg-gray-50">
                 <td className="w-64 px-6 py-4 whitespace-nowrap">
                   <div className="space-y-2 max-w-full overflow-hidden">
-                    <select
-                      value={stock.symbol === '' ? 'CUSTOM' : stock.symbol}
-                      onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                        if (e.target.value === 'CUSTOM') {
-                          updateStock(index, 'symbol', '');
-                        } else {
-                          updateStock(index, 'symbol', e.target.value);
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="CUSTOM">직접 입력</option>
-                      {PREDEFINED_STOCKS.slice(1).map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    {(stock.symbol === '' || !PREDEFINED_STOCKS.some(opt => opt.value === stock.symbol)) && (
+                    {stock.assetType === ASSET_TYPES.CASH ? (
+                      // 현금 자산인 경우 직접 이름 입력
                       <input
                         type="text"
-                        value={stock.symbol}
+                        value={stock.symbol || ''}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'symbol', e.target.value)}
-                        placeholder="종목 심볼 입력 (예: AAPL)"
-                        maxLength={10}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="현금 자산 이름 입력 (예: USD, KRW)"
+                        maxLength={20}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
                       />
+                    ) : (
+                      // 주식 자산인 경우 기존 로직
+                      <>
+                        <select
+                          value={stock.symbol === '' ? 'CUSTOM' : stock.symbol}
+                          onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                            if (e.target.value === 'CUSTOM') {
+                              updateStock(index, 'symbol', '');
+                            } else {
+                              updateStock(index, 'symbol', e.target.value);
+                            }
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="CUSTOM">직접 입력</option>
+                          {PREDEFINED_STOCKS.slice(1).map(option => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        {(stock.symbol === '' || !PREDEFINED_STOCKS.some(opt => opt.value === stock.symbol)) && (
+                          <StockAutocomplete
+                            value={stock.symbol}
+                            onChange={(value: string) => updateStock(index, 'symbol', value)}
+                            placeholder="종목 심볼 입력 (예: AAPL)"
+                            className=""
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 </td>

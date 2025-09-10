@@ -241,6 +241,10 @@ async def get_chart_data(request: BacktestRequest, authorization: Optional[str] 
             pass
     
     try:
+        # 먼저 실제 백테스트를 실행하여 정확한 통계를 얻습니다
+        backtest_service.validate_backtest_request(request)
+        backtest_result = await backtest_service.run_backtest(request)
+        
         # v2 방식: DB에서 데이터 로드 시도
         df = load_ticker_data(request.ticker, request.start_date, request.end_date)
         
@@ -254,33 +258,24 @@ async def get_chart_data(request: BacktestRequest, authorization: Optional[str] 
             data_fetcher.get_stock_data = _get_stock_data_override
 
             try:
-                chart_data = await backtest_service.generate_chart_data(request)
+                chart_data = await backtest_service.generate_chart_data(request, backtest_result)
                 logger.info(f"차트 데이터 API 완료 (DB 소스): {request.ticker}, 데이터 포인트: {len(chart_data.ohlc_data)}")
                 
-                # 로그인 사용자면 히스토리 저장 (chart_data에서 백테스트 결과 추출)
-                if user_info and hasattr(chart_data, 'summary_stats'):
-                    # chart_data의 summary_stats를 BacktestResult 형태로 변환하여 저장
-                    mock_result = type('MockResult', (), {
-                        'data': type('MockData', (), chart_data.summary_stats)()
-                    })()
-                    _save_backtest_history(user_info["user_id"], request, mock_result)
+                # 로그인 사용자면 히스토리 저장
+                if user_info:
+                    _save_backtest_history(user_info["user_id"], request, backtest_result)
                 
                 return chart_data
             finally:
                 data_fetcher.get_stock_data = original_get
         else:
             # DB에 데이터가 없으면 기존 v1 방식 사용
-            backtest_service.validate_backtest_request(request)
-            chart_data = await backtest_service.generate_chart_data(request)
+            chart_data = await backtest_service.generate_chart_data(request, backtest_result)
             logger.info(f"차트 데이터 API 완료 (yfinance 소스): {request.ticker}, 데이터 포인트: {len(chart_data.ohlc_data)}")
             
             # 로그인 사용자면 히스토리 저장
-            if user_info and hasattr(chart_data, 'summary_stats'):
-                # chart_data의 summary_stats를 BacktestResult 형태로 변환하여 저장
-                mock_result = type('MockResult', (), {
-                    'data': type('MockData', (), chart_data.summary_stats)()
-                })()
-                _save_backtest_history(user_info["user_id"], request, mock_result)
+            if user_info:
+                _save_backtest_history(user_info["user_id"], request, backtest_result)
             
             return chart_data
         

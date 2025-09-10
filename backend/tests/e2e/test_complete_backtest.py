@@ -133,7 +133,7 @@ class TestE2EScenarios:
         assert -100 <= summary_stats['total_return_pct'] <= 1000, "수익률이 비현실적"
         assert 0 <= summary_stats['win_rate_pct'] <= 100, "승률은 0-100% 범위"
         assert summary_stats['total_trades'] >= 0, "거래 횟수는 0 이상"
-        assert summary_stats['max_drawdown_pct'] >= 0, "최대 손실은 양수"
+        assert summary_stats['max_drawdown_pct'] <= 0, "최대 손실은 0 이하 (음수 또는 0)"
         
         # 7. 데이터 일관성 검증
         assert len(ohlc_data) == len(equity_data), "OHLC와 자산 데이터 길이가 일치해야 함"

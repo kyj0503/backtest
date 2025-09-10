@@ -94,7 +94,25 @@ class ChartDataService:
             self.logger.info(f"기술 지표 생성 완료: {len(indicators)} 개")
             
             # 5. 백테스트 통계 계산
-            backtest_stats = self._calculate_backtest_stats(data, request.initial_cash)
+            # 통계 정보 생성
+            if backtest_result:
+                # 실제 백테스트 결과를 사용
+                backtest_stats = {
+                    "total_return_pct": backtest_result.total_return_pct,
+                    "sharpe_ratio": backtest_result.sharpe_ratio,
+                    "max_drawdown_pct": backtest_result.max_drawdown_pct,
+                    "total_trades": backtest_result.total_trades,
+                    "win_rate_pct": backtest_result.win_rate_pct,
+                    "profit_factor": backtest_result.profit_factor,
+                    "final_equity": backtest_result.final_equity,
+                    "volatility_pct": backtest_result.volatility_pct or 0.0,
+                    "annualized_return_pct": backtest_result.annualized_return_pct,
+                    "sortino_ratio": backtest_result.sortino_ratio or 0.0,
+                    "calmar_ratio": backtest_result.calmar_ratio or 0.0
+                }
+            else:
+                # 후보값으로 간단한 Buy & Hold 통계 계산
+                backtest_stats = self._calculate_backtest_stats(data, request.initial_cash)
 
             # 6. 벤치마크가 지정된 경우 상대 성과 계산
             benchmark_ticker = getattr(request, 'benchmark_ticker', None)
