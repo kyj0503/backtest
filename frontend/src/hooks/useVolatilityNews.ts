@@ -91,8 +91,8 @@ export const useVolatilityNews = ({
     }
   };
 
-  const openNewsModal = async (date: string, event: VolatilityEvent) => {
-    // date 매개변수는 호환성을 위해 유지하지만, 현재는 회사명만으로 검색
+  const openNewsModal = async (_date: string, event: VolatilityEvent) => {
+    // _date 매개변수는 호환성을 위해 유지하지만, 현재는 회사명만으로 검색
     setCurrentNewsEvent(event);
     setShowNewsModal(true);
     setNewsLoading(true);
