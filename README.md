@@ -13,19 +13,11 @@ FastAPI + React 기반의 투자 전략 백테스팅 시스템입니다.
 - 종목별 뉴스 검색 기능 (네이버 검색 API)
 - 시각적 차트 및 성과 분석
 
-### 시스템 구조
-```
-Frontend (React + TypeScript) ←→ Backend (FastAPI + Python) ←→ Database (MySQL)
-     ↓                                    ↓                        ↓
-Vite + Tailwind CSS             backtesting.py               yfinance API
-```
-
 ## 빠른 시작
-
 
 ### 개발 환경 실행
 ```bash
-# 개발 환경 시작 (Windows PowerShell + Docker Desktop)
+# 개발 환경 시작
 docker compose -f compose.yml -f compose/compose.dev.yml up --build
 
 # 백그라운드 실행
@@ -35,73 +27,52 @@ docker compose -f compose.yml -f compose/compose.dev.yml up -d
 docker compose -f compose.yml -f compose/compose.dev.yml down
 ```
 
-### 패키지 관리 및 실행환경
-- **백엔드 Python 패키지**는 pip 대신 [uv](https://github.com/astral-sh/uv)로 설치 및 관리합니다.
-- requirements.txt는 그대로 사용하며, 도커 빌드 시 uv로 설치됩니다.
-- 로컬에서 직접 설치가 필요하다면:
-     ```bash
-     uv pip install --system -r requirements.txt
-     ```
-     (uv가 없다면 pip로 설치 가능)
-
-> 모든 빌드와 실행은 Docker 환경에서 진행하는 것이 표준입니다.
-
 ### 접속 정보
-- `frontend`(Vite): http://localhost:5174
-- `backend` API base: http://localhost:8001
-- `OpenAPI Docs`: http://localhost:8001/api/v1/docs
+- **프론트엔드**: http://localhost:5174
+- **백엔드 API**: http://localhost:8001
+- **API 문서**: http://localhost:8001/api/v1/docs
 
 ### 테스트 실행
 ```bash
-# 백엔드 테스트
-docker compose exec backend pytest tests/ -v
+# 단위 테스트 (빠름)
+./scripts/test-runner.sh unit
 
-# 프론트엔드 테스트
-docker compose exec frontend npm test
+# 통합 테스트 (DB 포함)
+./scripts/test-runner.sh integration
+
+# 전체 테스트
+./scripts/test-runner.sh all
 ```
 
-#### 프론트엔드 테스트 주의사항
-- 환경: Vitest + JSDOM. 전역 셋업 파일은 `frontend/src/test/setup.ts` 입니다.
-- 차트 안정화: 테스트에서 Recharts 컨테이너가 0x0이 되는 문제를 줄이기 위해 `offsetWidth/offsetHeight`, `clientWidth/clientHeight`, `getBoundingClientRect`를 모킹했습니다.
-- 상태 업데이트: 사용자 상호작용으로 상태가 바뀌는 테스트는 React의 `act`로 감싸 경고를 방지합니다.
-- JUnit 리포트: Jenkins 수집용 경로는 `VITEST_JUNIT_FILE` 환경변수로 제어합니다.
-
 ## 기술 스택
+
 ### 프론트엔드
-- **React 18** + TypeScript - 현대적 웹 UI 개발
+- **React 18** + TypeScript
 - **Vite** - 고속 빌드 도구
-- **Tailwind CSS** - 유틸리티 기반 CSS 프레임워크
+- **Tailwind CSS** - 유틸리티 기반 스타일링
 - **Recharts** - 데이터 시각화
 
 ### 백엔드
-- **FastAPI** + Python - 고성능 API 서버
-- **Pydantic V2** - 데이터 검증 및 직렬화
+- **FastAPI** + Python
+- **Pydantic V2** - 데이터 검증
 - **MySQL** - 주가 데이터 캐시
 - **backtesting.py** - 백테스트 엔진
-- **uv** - Python 패키지 초고속 설치/관리 도구 (pip 대체)
 
 ### 인프라
-- **Docker** + Docker Compose - 컨테이너 환경
+- **Docker** + Docker Compose
 - **Jenkins** - CI/CD 파이프라인
 - **nginx** - 프로덕션 웹 서버
 
-## 개발 가이드 / 문서
+## 문서
 
-- 문서 인덱스: `docs/README.md`
-- 시작 가이드: `docs/GETTING_STARTED.md`
-- 테스트 아키텍처: `docs/TEST_ARCHITECTURE.md`
-- DDD 개요: `docs/DDD_ARCHITECTURE.md`
-- API 연동: `docs/API_CLIENT_GUIDE.md`
-- 프론트 구조: `docs/STATE_MANAGEMENT.md`, `docs/COMPONENTS.md`
-- 운영 런북: `docs/RUNBOOK.md`
-- TODO/Roadmap: `docs/TODO.md`
+자세한 개발 가이드와 문서는 [`docs/`](docs/) 폴더를 참고하세요:
 
-커밋/기여 규칙은 `docs/`의 [`COMMIT_CONVENTION.md`](docs/COMMIT_CONVENTION.md), [`CONTRIBUTING.md`](docs/CONTRIBUTING.md)를 참고하세요.
-Git hooks를 사용하려면 다음을 1회 실행해 `.githooks/pre-commit`을 활성화하세요:
-```bash
-git config core.hooksPath .githooks
-```
-활성화 후 커밋 시 `scripts/verify-before-commit.sh`가 백/프론트 빌드·테스트 및 간단 헬스체크를 수행합니다.
+- [개발 가이드](docs/DEVELOPMENT_GUIDE.md) - 백엔드/프론트엔드 개발 방법
+- [테스트 가이드](docs/TESTING_GUIDE.md) - 테스트 실행 및 전략
+- [API 가이드](docs/API_GUIDE.md) - API 사용법 및 스키마
+- [운영 가이드](docs/OPERATIONS_GUIDE.md) - 배포 및 운영 방법
+- [아키텍처 가이드](docs/ARCHITECTURE_GUIDE.md) - 시스템 구조 및 설계
+- [기여 가이드](docs/CONTRIBUTING.md) - 기여 방법 및 커밋 규칙
 
 ## 라이선스
 
