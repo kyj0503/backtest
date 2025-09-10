@@ -2,7 +2,7 @@
 
 프로덕션/개발 환경에서 데이터 소스와 API 베이스 URL을 일관되게 운영하기 위한 가이드입니다.
 
-> 💡 **문제 발생 시**: 운영 관련 트러블슈팅은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)를 참고하세요.
+문제 발생 시: 운영 관련 트러블슈팅은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)를 참고하세요.
 
 ## 데이터 소스 전략
 

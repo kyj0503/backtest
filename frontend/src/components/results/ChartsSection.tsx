@@ -68,14 +68,15 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         {/* 백테스트 성과 통계 */}
         <Suspense fallback={<ChartLoading height={300} />}>
           <LazyStatsSummary stats={{
-            '총 수익률': formatPercent(portfolio_statistics.Total_Return || 0),
-            '연간 수익률': formatPercent(portfolio_statistics.Annual_Return || 0),
-            '변동성': formatPercent(portfolio_statistics.Annual_Volatility || 0),
-            '샤프 비율': (portfolio_statistics.Sharpe_Ratio || 0).toFixed(2),
-            '최대 낙폭': formatPercent(portfolio_statistics.Max_Drawdown || 0),
-            '총 거래일': portfolio_statistics.Total_Trading_Days || 0,
-            '승률': formatPercent(portfolio_statistics.Win_Rate || 0),
-            '평균 낙폭': formatPercent(portfolio_statistics.Avg_Drawdown || 0)
+            Total_Return: portfolio_statistics.Total_Return || 0,
+            Annual_Return: portfolio_statistics.Annual_Return || 0,
+            Annual_Volatility: portfolio_statistics.Annual_Volatility || 0,
+            Sharpe_Ratio: portfolio_statistics.Sharpe_Ratio || 0,
+            Max_Drawdown: portfolio_statistics.Max_Drawdown || 0,
+            Total_Trading_Days: portfolio_statistics.Total_Trading_Days || 0,
+            Win_Rate: portfolio_statistics.Win_Rate || 0,
+            Avg_Drawdown: portfolio_statistics.Avg_Drawdown || 0,
+            profit_factor: 1.0 // 포트폴리오에서는 기본값 설정
           }} />
         </Suspense>
 
@@ -347,11 +348,12 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           </div>
         )}
 
-        {/* 거래 내역 차트 (단일 종목) */}
-        {chartData.trade_markers && chartData.trade_markers.length > 0 && (
+        {/* 거래 내역 차트 (단일 종목, Buy and Hold 전략 제외) */}
+        {chartData.trade_markers && chartData.trade_markers.length > 0 && 
+         chartData.strategy !== 'buy_and_hold' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
-              <h5 className="text-lg font-semibold">📋 거래 내역</h5>
+              <h5 className="text-lg font-semibold">거래 내역</h5>
             </div>
             <div className="p-6">
               <Suspense fallback={<ChartLoading height={400} />}>

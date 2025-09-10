@@ -2,7 +2,7 @@
 
 FastAPI + React 기반의 투자 전략 백테스팅 시스템입니다.
 
-> 💡 **문제 발생 시**: 트러블슈팅은 [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)를 참고하세요.
+문제 발생 시: 트러블슈팅은 [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)를 참고하세요.
 
 ## 프로젝트 소개
 

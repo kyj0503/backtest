@@ -103,7 +103,7 @@ export const useVolatilityNews = ({
       // backtestApiService를 통해 뉴스 검색 (간단한 검색 사용)
       console.log(`뉴스 검색 시작: ${companyName} (${selectedStock})`);
       
-      const response = await backtestApiService.searchNews(companyName, 10);
+      const response = await backtestApiService.searchNews(companyName, 15);
       
       if (response.status === 'success' && response.data && response.data.news_list) {
         console.log(`${companyName}에 대한 뉴스 ${response.data.news_list.length}개를 찾았습니다.`);

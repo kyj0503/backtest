@@ -282,7 +282,7 @@ export class BacktestApiService {
     }
   }
 
-  async searchNews(query: string, display: number = 10) {
+  async searchNews(query: string, display: number = 15) {
     try {
       const response = await fetch(`${this.getApiBaseUrl()}/api/v1/naver-news/search?query=${encodeURIComponent(query)}&display=${display}`, {
         method: 'GET',

@@ -2,7 +2,7 @@
 
 이 문서는 백테스팅 시스템의 모든 API 엔드포인트와 사용 방법을 설명합니다.
 
-> 💡 **문제 발생 시**: API 관련 트러블슈팅은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)를 참고하세요.
+문제 발생 시: API 관련 트러블슈팅은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)를 참고하세요.
 
 ## 목차
 
@@ -455,6 +455,8 @@ POST /api/v1/yfinance/fetch-and-cache?ticker=AAPL&start=2023-01-01&end=2023-12-3
 ```http
 GET /api/v1/naver-news/search?query=애플&display=10
 ```
+
+**중요**: 네이버 뉴스 API는 `display` 매개변수가 10 이상이어야 정상 작동합니다.
 
 ```http
 GET /api/v1/naver-news/ticker/AAPL/date?start_date=2023-01-01&end_date=2023-01-31&display=5
