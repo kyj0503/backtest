@@ -1,13 +1,14 @@
 """
 백테스팅 API
 """
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Header
+from typing import Optional
 from ....models.requests import BacktestRequest
 from ....models.responses import BacktestResult, ErrorResponse, ChartDataResponse
 from ....models.schemas import PortfolioBacktestRequest
 from ....services.backtest_service import backtest_service
 from ....services.portfolio_service import PortfolioBacktestService
-from ....services.yfinance_db import load_ticker_data
+from ....services.yfinance_db import load_ticker_data, _get_engine
 from ....utils.data_fetcher import data_fetcher
 from ....core.custom_exceptions import (
     DataNotFoundError, 
@@ -17,13 +18,61 @@ from ....core.custom_exceptions import (
     handle_yfinance_error
 )
 from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
+from .auth import require_user
 import logging
 import traceback
 import pandas as pd
+import json
+from datetime import datetime
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 portfolio_service = PortfolioBacktestService()
+
+
+def _save_backtest_history(user_id: int, request: BacktestRequest, result: BacktestResult):
+    """백테스트 결과를 히스토리에 저장"""
+    try:
+        engine = _get_engine()
+        with engine.begin() as conn:
+            # 결과에서 주요 지표 추출
+            if hasattr(result, 'data') and result.data:
+                final_value = getattr(result.data, 'Equity_Final', None)
+                total_return = getattr(result.data, 'Return', None)
+                sharpe_ratio = getattr(result.data, 'Sharpe_Ratio', None) if hasattr(result.data, 'Sharpe_Ratio') else None
+                max_drawdown = getattr(result.data, 'Max_Drawdown', None)
+                
+                # 결과 데이터를 JSON으로 직렬화
+                result_data = result.model_dump() if hasattr(result, 'model_dump') else None
+            else:
+                final_value = total_return = sharpe_ratio = max_drawdown = result_data = None
+
+            conn.execute(text(
+                """
+                INSERT INTO backtest_history 
+                (user_id, ticker, strategy_name, start_date, end_date, initial_cash, 
+                 final_value, total_return, sharpe_ratio, max_drawdown, strategy_params, result_data)
+                VALUES (:uid, :ticker, :strategy, :start_date, :end_date, :initial_cash,
+                        :final_value, :total_return, :sharpe_ratio, :max_drawdown, :strategy_params, :result_data)
+                """
+            ), {
+                "uid": user_id,
+                "ticker": request.ticker,
+                "strategy": request.strategy,
+                "start_date": request.start_date,
+                "end_date": request.end_date,
+                "initial_cash": request.initial_cash,
+                "final_value": final_value,
+                "total_return": total_return,
+                "sharpe_ratio": sharpe_ratio,
+                "max_drawdown": max_drawdown,
+                "strategy_params": json.dumps(request.strategy_params) if request.strategy_params else None,
+                "result_data": json.dumps(result_data) if result_data else None
+            })
+    except Exception as e:
+        logger.warning(f"백테스트 히스토리 저장 실패: {str(e)}")
+        # 히스토리 저장 실패는 전체 요청을 실패시키지 않음
 
 
 @router.post(
@@ -31,9 +80,9 @@ portfolio_service = PortfolioBacktestService()
     response_model=BacktestResult,
     status_code=status.HTTP_200_OK,
     summary="백테스트 실행",
-    description="주어진 전략과 파라미터로 백테스트를 실행합니다. (DB 소스 우선 사용)"
+    description="주어진 전략과 파라미터로 백테스트를 실행합니다. (DB 소스 우선 사용, 로그인 사용자는 히스토리 저장)"
 )
-async def run_backtest(request: BacktestRequest):
+async def run_backtest(request: BacktestRequest, authorization: Optional[str] = Header(None)):
     """
     백테스트 실행 API (v2 개선사항 적용)
     
@@ -46,7 +95,17 @@ async def run_backtest(request: BacktestRequest):
     - **commission**: 거래 수수료 (기본값: 0.002)
     
     v2 개선사항: DB에서 데이터를 우선 사용하고, 없을 경우 yfinance 사용
+    로그인 사용자는 백테스트 히스토리가 자동으로 저장됩니다.
     """
+    # 사용자 인증 (선택적)
+    user_info = None
+    if authorization:
+        try:
+            user_info = require_user(authorization)
+        except HTTPException:
+            # 인증 실패해도 게스트로 백테스트 실행 허용
+            pass
+    
     try:
         # v2 방식: DB에서 데이터 로드 시도
         df = load_ticker_data(request.ticker, request.start_date, request.end_date)
@@ -63,6 +122,11 @@ async def run_backtest(request: BacktestRequest):
             try:
                 result = await backtest_service.run_backtest(request)
                 logger.info(f"백테스트 API 완료 (DB 소스): {request.ticker}")
+                
+                # 로그인 사용자면 히스토리 저장
+                if user_info:
+                    _save_backtest_history(user_info["user_id"], request, result)
+                
                 return result
             finally:
                 data_fetcher.get_stock_data = original_get
@@ -71,6 +135,11 @@ async def run_backtest(request: BacktestRequest):
             backtest_service.validate_backtest_request(request)
             result = await backtest_service.run_backtest(request)
             logger.info(f"백테스트 API 완료 (yfinance 소스): {request.ticker}")
+            
+            # 로그인 사용자면 히스토리 저장
+            if user_info:
+                _save_backtest_history(user_info["user_id"], request, result)
+            
             return result
         
     except ValueError as e:
@@ -126,9 +195,9 @@ async def backtest_health():
     response_model=ChartDataResponse,
     status_code=status.HTTP_200_OK,
     summary="백테스트 차트 데이터",
-    description="백테스트 결과를 Recharts용 차트 데이터로 반환합니다. (DB 소스 우선 사용)"
+    description="백테스트 결과를 Recharts용 차트 데이터로 반환합니다. (DB 소스 우선 사용, 로그인 사용자는 히스토리 저장)"
 )
-async def get_chart_data(request: BacktestRequest):
+async def get_chart_data(request: BacktestRequest, authorization: Optional[str] = Header(None)):
     """
     백테스트 차트 데이터 API (v2 개선사항 적용)
     
@@ -160,7 +229,17 @@ async def get_chart_data(request: BacktestRequest):
     ```
     
     v2 개선사항: DB에서 데이터를 우선 사용하고, 없을 경우 yfinance 사용
+    로그인 사용자는 백테스트 히스토리가 자동으로 저장됩니다.
     """
+    # 사용자 인증 (선택적)
+    user_info = None
+    if authorization:
+        try:
+            user_info = require_user(authorization)
+        except HTTPException:
+            # 인증 실패해도 게스트로 백테스트 실행 허용
+            pass
+    
     try:
         # v2 방식: DB에서 데이터 로드 시도
         df = load_ticker_data(request.ticker, request.start_date, request.end_date)
@@ -177,6 +256,15 @@ async def get_chart_data(request: BacktestRequest):
             try:
                 chart_data = await backtest_service.generate_chart_data(request)
                 logger.info(f"차트 데이터 API 완료 (DB 소스): {request.ticker}, 데이터 포인트: {len(chart_data.ohlc_data)}")
+                
+                # 로그인 사용자면 히스토리 저장 (chart_data에서 백테스트 결과 추출)
+                if user_info and hasattr(chart_data, 'summary_stats'):
+                    # chart_data의 summary_stats를 BacktestResult 형태로 변환하여 저장
+                    mock_result = type('MockResult', (), {
+                        'data': type('MockData', (), chart_data.summary_stats)()
+                    })()
+                    _save_backtest_history(user_info["user_id"], request, mock_result)
+                
                 return chart_data
             finally:
                 data_fetcher.get_stock_data = original_get
@@ -185,6 +273,15 @@ async def get_chart_data(request: BacktestRequest):
             backtest_service.validate_backtest_request(request)
             chart_data = await backtest_service.generate_chart_data(request)
             logger.info(f"차트 데이터 API 완료 (yfinance 소스): {request.ticker}, 데이터 포인트: {len(chart_data.ohlc_data)}")
+            
+            # 로그인 사용자면 히스토리 저장
+            if user_info and hasattr(chart_data, 'summary_stats'):
+                # chart_data의 summary_stats를 BacktestResult 형태로 변환하여 저장
+                mock_result = type('MockResult', (), {
+                    'data': type('MockData', (), chart_data.summary_stats)()
+                })()
+                _save_backtest_history(user_info["user_id"], request, mock_result)
+            
             return chart_data
         
     except ValueError as e:
@@ -584,4 +681,202 @@ async def get_exchange_rate(
             "status": "error",
             "message": f"환율 데이터 조회 실패: {str(e)}",
             "data": {"exchange_rates": []}
-        } 
+        }
+
+
+@router.get(
+    "/history",
+    status_code=status.HTTP_200_OK,
+    summary="백테스트 히스토리 조회",
+    description="로그인한 사용자의 백테스트 실행 히스토리를 조회합니다."
+)
+async def get_backtest_history(
+    authorization: Optional[str] = Header(None),
+    limit: int = 20,
+    offset: int = 0,
+    ticker: Optional[str] = None,
+    strategy: Optional[str] = None
+):
+    """
+    백테스트 히스토리 조회 API
+    
+    - **limit**: 조회할 항목 수 (기본값: 20)
+    - **offset**: 건너뛸 항목 수 (기본값: 0)
+    - **ticker**: 특정 종목 필터 (선택사항)
+    - **strategy**: 특정 전략 필터 (선택사항)
+    
+    반환값: 사용자의 백테스트 히스토리 목록
+    """
+    user_info = require_user(authorization)
+    user_id = user_info["user_id"]
+    
+    try:
+        engine = _get_engine()
+        with engine.begin() as conn:
+            # 쿼리 조건 구성
+            where_conditions = ["user_id = :uid", "is_deleted = 0"]
+            params = {"uid": user_id, "limit": limit, "offset": offset}
+            
+            if ticker:
+                where_conditions.append("ticker = :ticker")
+                params["ticker"] = ticker
+            
+            if strategy:
+                where_conditions.append("strategy_name = :strategy")
+                params["strategy"] = strategy
+            
+            where_clause = " AND ".join(where_conditions)
+            
+            # 히스토리 조회
+            rows = conn.execute(text(f
+                """
+                SELECT id, ticker, strategy_name, start_date, end_date, initial_cash,
+                       final_value, total_return, sharpe_ratio, max_drawdown, created_at
+                FROM backtest_history 
+                WHERE {where_clause}
+                ORDER BY created_at DESC
+                LIMIT :limit OFFSET :offset
+                """
+            ), params).mappings().all()
+            
+            # 전체 개수 조회
+            total_count = conn.execute(text(f
+                """
+                SELECT COUNT(*) 
+                FROM backtest_history 
+                WHERE {where_clause}
+                """
+            ), {k: v for k, v in params.items() if k not in ['limit', 'offset']}).scalar()
+            
+            return {
+                "status": "success",
+                "data": {
+                    "items": [dict(row) for row in rows],
+                    "total_count": total_count,
+                    "limit": limit,
+                    "offset": offset
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"백테스트 히스토리 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="백테스트 히스토리 조회 실패"
+        )
+
+
+@router.get(
+    "/history/{history_id}",
+    status_code=status.HTTP_200_OK,
+    summary="백테스트 히스토리 상세 조회",
+    description="특정 백테스트 히스토리의 상세 정보를 조회합니다."
+)
+async def get_backtest_history_detail(
+    history_id: int,
+    authorization: Optional[str] = Header(None)
+):
+    """
+    백테스트 히스토리 상세 조회 API
+    
+    - **history_id**: 조회할 히스토리 ID
+    
+    반환값: 백테스트 결과 상세 정보 (전략 파라미터, 결과 데이터 포함)
+    """
+    user_info = require_user(authorization)
+    user_id = user_info["user_id"]
+    
+    try:
+        engine = _get_engine()
+        with engine.begin() as conn:
+            row = conn.execute(text(
+                """
+                SELECT * FROM backtest_history 
+                WHERE id = :hid AND user_id = :uid AND is_deleted = 0
+                """
+            ), {"hid": history_id, "uid": user_id}).mappings().first()
+            
+            if not row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="백테스트 히스토리를 찾을 수 없습니다."
+                )
+            
+            # JSON 필드 파싱
+            result_dict = dict(row)
+            if result_dict.get('strategy_params'):
+                try:
+                    result_dict['strategy_params'] = json.loads(result_dict['strategy_params'])
+                except:
+                    result_dict['strategy_params'] = None
+            
+            if result_dict.get('result_data'):
+                try:
+                    result_dict['result_data'] = json.loads(result_dict['result_data'])
+                except:
+                    result_dict['result_data'] = None
+            
+            return {
+                "status": "success",
+                "data": result_dict
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"백테스트 히스토리 상세 조회 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="백테스트 히스토리 상세 조회 실패"
+        )
+
+
+@router.delete(
+    "/history/{history_id}",
+    status_code=status.HTTP_200_OK,
+    summary="백테스트 히스토리 삭제",
+    description="특정 백테스트 히스토리를 논리적으로 삭제합니다."
+)
+async def delete_backtest_history(
+    history_id: int,
+    authorization: Optional[str] = Header(None)
+):
+    """
+    백테스트 히스토리 삭제 API (논리적 삭제)
+    
+    - **history_id**: 삭제할 히스토리 ID
+    """
+    user_info = require_user(authorization)
+    user_id = user_info["user_id"]
+    
+    try:
+        engine = _get_engine()
+        with engine.begin() as conn:
+            # 소유권 확인 및 삭제
+            result = conn.execute(text(
+                """
+                UPDATE backtest_history 
+                SET is_deleted = 1 
+                WHERE id = :hid AND user_id = :uid AND is_deleted = 0
+                """
+            ), {"hid": history_id, "uid": user_id})
+            
+            if result.rowcount == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="백테스트 히스토리를 찾을 수 없습니다."
+                )
+            
+            return {
+                "status": "success",
+                "message": "백테스트 히스토리가 삭제되었습니다."
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"백테스트 히스토리 삭제 중 오류: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="백테스트 히스토리 삭제 실패"
+        ) 

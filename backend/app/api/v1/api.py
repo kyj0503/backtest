@@ -3,7 +3,7 @@ API v1 라우터 통합
 """
 from fastapi import APIRouter
 from .endpoints import backtest, strategies, optimize, naver_news
-from .endpoints import auth, community, chat
+from .endpoints import auth, community, chat, admin
 from .endpoints import yfinance_cache
 
 api_router = APIRouter()
@@ -55,4 +55,10 @@ api_router.include_router(
     chat.router,
     prefix="/chat",
     tags=["채팅"]
+)
+
+api_router.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["관리자"]
 )

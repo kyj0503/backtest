@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from enum import Enum
 import numpy as np
 import json
 
@@ -13,6 +14,109 @@ class JSONEncoder(json.JSONEncoder):
             if np.isnan(obj):
                 return 0.0
         return super().default(obj)
+
+class InvestmentType(str, Enum):
+    """투자 성향 enum"""
+    CONSERVATIVE = "conservative"
+    MODERATE = "moderate"
+    BALANCED = "balanced"
+    AGGRESSIVE = "aggressive"
+    SPECULATIVE = "speculative"
+
+class ReportType(str, Enum):
+    """신고 대상 타입"""
+    POST = "post"
+    COMMENT = "comment"
+    USER = "user"
+
+class ReportStatus(str, Enum):
+    """신고 처리 상태"""
+    PENDING = "pending"
+    PROCESSED = "processed"
+    REJECTED = "rejected"
+
+class User(BaseModel):
+    """사용자 모델"""
+    id: int
+    username: str
+    email: str
+    profile_image: Optional[str] = None
+    investment_type: InvestmentType = InvestmentType.BALANCED
+    is_admin: bool = False
+    is_deleted: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+class Post(BaseModel):
+    """게시글 모델"""
+    id: int
+    user_id: int
+    title: str
+    content: str
+    view_count: int = 0
+    like_count: int = 0
+    is_deleted: bool = False
+    created_at: datetime
+    updated_at: datetime
+    username: Optional[str] = None  # JOIN 시 포함
+
+class PostComment(BaseModel):
+    """댓글 모델"""
+    id: int
+    post_id: int
+    user_id: int
+    content: str
+    is_deleted: bool = False
+    created_at: datetime
+    username: Optional[str] = None  # JOIN 시 포함
+
+class PostLike(BaseModel):
+    """게시글 좋아요 모델"""
+    id: int
+    post_id: int
+    user_id: int
+    created_at: datetime
+
+class Report(BaseModel):
+    """신고 모델"""
+    id: int
+    reporter_id: int
+    target_type: ReportType
+    target_id: int
+    reason: str
+    status: ReportStatus = ReportStatus.PENDING
+    admin_memo: Optional[str] = None
+    created_at: datetime
+    processed_at: Optional[datetime] = None
+
+class Notice(BaseModel):
+    """공지사항 모델"""
+    id: int
+    admin_id: int
+    title: str
+    content: str
+    is_pinned: bool = False
+    is_deleted: bool = False
+    created_at: datetime
+    updated_at: datetime
+
+class BacktestHistory(BaseModel):
+    """백테스트 히스토리 모델"""
+    id: int
+    user_id: int
+    ticker: str
+    strategy_name: str
+    start_date: str
+    end_date: str
+    initial_cash: float
+    final_value: Optional[float] = None
+    total_return: Optional[float] = None
+    sharpe_ratio: Optional[float] = None
+    max_drawdown: Optional[float] = None
+    strategy_params: Optional[Dict[str, Any]] = None
+    result_data: Optional[Dict[str, Any]] = None
+    is_deleted: bool = False
+    created_at: datetime
 
 class StrategyParams(BaseModel):
     """전략 파라미터 모델"""
