@@ -18,7 +18,7 @@
 정: Pydantic v2, pydantic-settings
 - 실행: Uvicorn
 - 데이터 소스: yfinance + 내부 캐시 DB (MySQL 기반 스키마), KRW 환율
-- 추가 기능: 포트폴리오 백테스트, 전략 최적화, 커뮤니티(게시글/댓글), 인증(간단 토큰), Redis WebSocket 채팅, 네이버 뉴스 검색
+- 추가 기능: 포트폴리오 백테스트, 전략 최적화, 커뮤니티(게시글/댓글/좋아요/신고/공지사항), 인증(토큰 기반, 투자성향 선택), Redis WebSocket 채팅, 네이버 뉴스 검색
 
 ## 디렉터리 구조(요약)
 ```
@@ -113,10 +113,14 @@ backend/
 5) 인증/세션 (`endpoints/auth.py`)
 - POST `/auth/register`, POST `/auth/login`, POST `/auth/logout`
 - 내부 토큰 저장: `user_sessions` (만료 포함). 보호 엔드포인트는 `Authorization: Bearer <token>` 필요.
+- 등록 시 `investment_type`(enum: conservative|balanced|aggressive) 선택 가능. 패스워드는 PBKDF2-HMAC-SHA256(200_000 iterations)으로 해싱됩니다. 세션에는 클라이언트 User-Agent와 접속 IP가 저장됩니다. 추가 엔드포인트 `GET /api/v1/auth/me`로 현재 사용자 정보를 조회할 수 있습니다.
 
 6) 커뮤니티 (`endpoints/community.py`)
 - GET `/community/posts`, GET `/community/posts/{id}`
 - POST `/community/posts`, POST `/community/posts/{id}/comments` (인증 필요)
+- POST `/community/posts/{id}/like` — 게시글 좋아요/언라이크(토글)
+- POST `/community/posts/{id}/report` — 게시글 신고(신고 내역은 `reports` 테이블에 저장)
+- GET `/community/notices` — 공지사항 목록(권한/노출 조건에 따라 다름)
 
 7) 채팅 (`endpoints/chat.py`)
 - WS `/chat/ws/{room}?token=...` — Redis PubSub 기반 채팅

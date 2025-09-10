@@ -14,10 +14,13 @@
 - 최적화: `GET /api/v1/optimize/*` — 포트폴리오 최적화 관련 리소스(확장 중).
 - 데이터 캐시: `POST /api/v1/yfinance/fetch-and-cache` — yfinance 데이터를 DB에 적재/보강.
 - 뉴스: `GET /api/v1/naver-news/*` — 종목/기간 기반 뉴스 조회.
-- 인증: `POST /api/v1/auth/register|login|logout` — 기본 인증 흐름.
-- 커뮤니티: `GET/POST /api/v1/community/*` — 게시글/댓글 CRUD(인메모리 또는 경량 저장소 기반).
+-- 인증: `POST /api/v1/auth/register|login|logout` — 토큰 기반 인증 (등록 시 `investment_type` 선택 가능, 세션에 클라이언트 User-Agent/IP가 저장됨). 추가로 `GET /api/v1/auth/me`로 현재 사용자 정보를 조회할 수 있습니다.
+-- 커뮤니티: `GET/POST /api/v1/community/*` — 게시글/댓글 CRUD, 좋아요/언라이크(`POST /community/posts/{id}/like`), 신고 기능(`POST /community/posts/{id}/report`) 및 공지사항(`GET /community/notices`) 지원(영구 저장소/DB 기반).
 - 채팅: `WS /api/v1/chat/ws/{room}` — 실시간 채팅(WebSocket).
 - 헬스체크: `GET /health` — 서버 상태 확인.
+ - 헬스체크: `GET /health` — 서버 상태 확인.
+ - 백테스트 히스토리: `GET /api/v1/backtest/history` — 인증된 사용자의 백테스트 실행 기록 조회. `POST /api/v1/backtest/run`는 인증 토큰이 포함되면 자동으로 히스토리에 저장합니다.
+ - 관리자 API: `/api/v1/admin/*` — 공지사항 관리, 신고 처리, 사용자 관리 및 통계 대시보드 엔드포인트.
 
 ## 데이터 정책
 - 소스 우선순위: DB 캐시 우선, 부재 구간은 yfinance로 보강 후 upsert.

@@ -116,13 +116,11 @@ def update_notice(
         
         update_fields.append("updated_at = CURRENT_TIMESTAMP")
         
-        conn.execute(text(f
-            """
+        conn.execute(text(f"""
             UPDATE notices 
             SET {', '.join(update_fields)}
             WHERE id = :nid
-            """
-        ), params)
+            """), params)
         
         # 수정된 공지사항 반환
         updated_notice = conn.execute(text(
@@ -177,8 +175,7 @@ def list_reports(
         
         where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
         
-        rows = conn.execute(text(f
-            """
+        rows = conn.execute(text(f"""
             SELECT r.id, r.target_type, r.target_id, r.reason, r.status, 
                    r.created_at, r.processed_at, r.admin_memo,
                    ur.username AS reporter_name
@@ -187,13 +184,12 @@ def list_reports(
             WHERE {where_clause}
             ORDER BY r.created_at DESC
             LIMIT :limit OFFSET :offset
-            """
-        ), params).mappings().all()
+            """), params).mappings().all()
         
         # 전체 개수 조회
-        total_count = conn.execute(text(f
-            "SELECT COUNT(*) FROM reports r WHERE {where_clause}"
-        ), {k: v for k, v in params.items() if k not in ['limit', 'offset']}).scalar()
+        total_count = conn.execute(text(f"""
+            SELECT COUNT(*) FROM reports r WHERE {where_clause}
+            """), {k: v for k, v in params.items() if k not in ['limit', 'offset']}).scalar()
         
         return {
             "items": [dict(row) for row in rows],
@@ -335,8 +331,7 @@ def list_users(
         
         where_clause = " AND ".join(where_conditions)
         
-        rows = conn.execute(text(f
-            """
+        rows = conn.execute(text(f"""
             SELECT id, username, email, investment_type, is_admin, created_at,
                    (SELECT COUNT(*) FROM posts WHERE user_id = users.id AND is_deleted = 0) AS post_count,
                    (SELECT COUNT(*) FROM backtest_history WHERE user_id = users.id AND is_deleted = 0) AS backtest_count
@@ -344,13 +339,12 @@ def list_users(
             WHERE {where_clause}
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
-            """
-        ), params).mappings().all()
+            """), params).mappings().all()
         
         # 전체 개수 조회
-        total_count = conn.execute(text(f
-            "SELECT COUNT(*) FROM users WHERE {where_clause}"
-        ), {k: v for k, v in params.items() if k not in ['limit', 'offset']}).scalar()
+        total_count = conn.execute(text(f"""
+            SELECT COUNT(*) FROM users WHERE {where_clause}
+            """), {k: v for k, v in params.items() if k not in ['limit', 'offset']}).scalar()
         
         return {
             "items": [dict(row) for row in rows],

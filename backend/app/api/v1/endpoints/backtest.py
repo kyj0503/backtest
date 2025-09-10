@@ -728,25 +728,21 @@ async def get_backtest_history(
             where_clause = " AND ".join(where_conditions)
             
             # 히스토리 조회
-            rows = conn.execute(text(f
-                """
+            rows = conn.execute(text(f"""
                 SELECT id, ticker, strategy_name, start_date, end_date, initial_cash,
                        final_value, total_return, sharpe_ratio, max_drawdown, created_at
                 FROM backtest_history 
                 WHERE {where_clause}
                 ORDER BY created_at DESC
                 LIMIT :limit OFFSET :offset
-                """
-            ), params).mappings().all()
+                """), params).mappings().all()
             
             # 전체 개수 조회
-            total_count = conn.execute(text(f
-                """
+            total_count = conn.execute(text(f"""
                 SELECT COUNT(*) 
                 FROM backtest_history 
                 WHERE {where_clause}
-                """
-            ), {k: v for k, v in params.items() if k not in ['limit', 'offset']}).scalar()
+                """), {k: v for k, v in params.items() if k not in ['limit', 'offset']}).scalar()
             
             return {
                 "status": "success",
