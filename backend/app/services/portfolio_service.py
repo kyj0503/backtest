@@ -316,10 +316,13 @@ class PortfolioBacktestService:
         
         # 각 종목의 실제 가격 데이터 로드
         portfolio_data = {}
-        for symbol in portfolio_results.keys():
-            df = load_ticker_data(symbol, request.start_date, request.end_date)
-            if df is not None and not df.empty:
-                portfolio_data[symbol] = df
+        for unique_key, result in portfolio_results.items():
+            # original_symbol을 사용하여 실제 티커로 데이터 로드
+            original_symbol = result.get('original_symbol', result.get('symbol'))
+            if original_symbol and original_symbol not in portfolio_data:
+                df = load_ticker_data(original_symbol, request.start_date, request.end_date)
+                if df is not None and not df.empty:
+                    portfolio_data[unique_key] = df
         
         if not portfolio_data:
             # 데이터가 없으면 기본 선형 계산으로 fallback
@@ -341,9 +344,9 @@ class PortfolioBacktestService:
             portfolio_value = 0
             
             # 각 종목의 해당 날짜 가치 계산
-            for symbol, result in portfolio_results.items():
-                if symbol in portfolio_data:
-                    df = portfolio_data[symbol]
+            for unique_key, result in portfolio_results.items():
+                if unique_key in portfolio_data:
+                    df = portfolio_data[unique_key]
                     try:
                         # 해당 날짜의 가격 찾기
                         price_data = df[df.index.strftime('%Y-%m-%d') == date_str]
@@ -570,6 +573,12 @@ class PortfolioBacktestService:
                 for result in portfolio_results.values()
             )
             
+            # 가중 평균 프로핏 팩터 계산
+            weighted_profit_factor = sum(
+                result['weight'] * result.get('strategy_stats', {}).get('profit_factor', 1.0)
+                for result in portfolio_results.values()
+            )
+            
             # 백테스트 기간 계산
             from datetime import datetime
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
@@ -598,7 +607,8 @@ class PortfolioBacktestService:
                 'Total_Trading_Days': duration_days,
                 'Positive_Days': 0,  # 전략 기반에서는 계산 복잡
                 'Negative_Days': 0,  # 전략 기반에서는 계산 복잡
-                'Win_Rate': weighted_win_rate
+                'Win_Rate': weighted_win_rate,
+                'Profit_Factor': weighted_profit_factor
             }
             
             # 실제 포트폴리오 equity curve 생성

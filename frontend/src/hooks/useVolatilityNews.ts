@@ -100,15 +100,29 @@ export const useVolatilityNews = ({
     try {
       const companyName = getCompanyName(selectedStock);
       const baseUrl = getApiBaseUrl();
-      const apiUrl = `${baseUrl}/api/v1/naver-news/search?query=${encodeURIComponent(companyName)}&start_date=${date}&end_date=${date}`;
       
-      const response = await fetch(apiUrl);
-      const data = await response.json();
+      // 먼저 특정 날짜로 뉴스 검색 시도
+      let apiUrl = `${baseUrl}/api/v1/naver-news/search?query=${encodeURIComponent(companyName)}&start_date=${date}&end_date=${date}`;
       
-      if (data.status === 'success' && data.data && data.data.items) {
+      let response = await fetch(apiUrl);
+      let data = await response.json();
+      
+      // 특정 날짜에 뉴스가 없으면 전체 기간으로 재검색
+      if (data.status === 'success' && data.data && data.data.items && data.data.items.length > 0) {
         setNewsData(data.data.items);
       } else {
-        setNewsData([]);
+        console.log(`${date} 날짜의 뉴스가 없어서 전체 기간으로 재검색합니다.`);
+        
+        // 기간 제한 없이 뉴스 검색
+        apiUrl = `${baseUrl}/api/v1/naver-news/search?query=${encodeURIComponent(companyName)}`;
+        response = await fetch(apiUrl);
+        data = await response.json();
+        
+        if (data.status === 'success' && data.data && data.data.items) {
+          setNewsData(data.data.items);
+        } else {
+          setNewsData([]);
+        }
       }
     } catch (err) {
       console.error('뉴스 데이터 가져오기 실패:', err);
