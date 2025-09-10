@@ -11,11 +11,39 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     const token = getAuthToken();
     if (!token) return;
+    
     const base = getApiBase();
-    const wsUrlBase = base.startsWith('http') ? base.replace('http', 'ws') : '';
+    let wsUrlBase: string;
+    
+    if (base && base.startsWith('http')) {
+      // 명시적 API URL이 설정된 경우
+      wsUrlBase = base.replace('http', 'ws');
+    } else {
+      // 환경변수가 없으면 현재 location 기반으로 WebSocket URL 생성
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      const port = window.location.hostname === 'localhost' ? ':8001' : '';
+      wsUrlBase = `${protocol}//${host}${port}`;
+    }
+    
     const url = `${wsUrlBase}/api/v1/chat/ws/general?token=${token}`;
+    console.log('WebSocket 연결 시도:', url);
+    
     const ws = new WebSocket(url);
     wsRef.current = ws;
+    
+    ws.onopen = () => {
+      console.log('WebSocket 연결 성공');
+    };
+    
+    ws.onclose = (event) => {
+      console.log('WebSocket 연결 종료:', event.code, event.reason);
+    };
+    
+    ws.onerror = (error) => {
+      console.error('WebSocket 연결 오류:', error);
+    };
+    
     ws.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
