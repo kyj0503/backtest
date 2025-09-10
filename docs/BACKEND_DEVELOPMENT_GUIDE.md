@@ -3,8 +3,19 @@
 본 문서는 `backend/` FastAPI 애플리케이션의 구조, 도메인/서비스 계층, 주요 API 명세, 데이터 저장 구조, 에러/로그 처리, 그리고 프론트엔드에서의 활용 방식을 정리합니다.
 
 ## 개요
-- 프레임워크: FastAPI
-- 모델/설정: Pydantic v2, pydantic-settings
+- 프레임워크: FastAPI## 개발 팁
+- API 문서: `http://<host>:<port>/api/v1/docs`
+- 예외 메시지에 포함된 "오류 ID"는 로그 상관관계용. 프론트에서 그대로 사용자에게 노출해도 무방합니다.
+- 포트폴리오 요청에 현금 자산이 포함되면 항상 포트폴리오 엔드포인트를 사용합니다.
+- CORS는 `.env`의 `BACKEND_CORS_ORIGINS`로 관리합니다.
+
+## 관련 문서
+- 데이터베이스 스키마 상세: `docs/DATABASE_SCHEMA.md`
+- API 클라이언트 가이드: `docs/API_CLIENT_GUIDE.md`
+- DDD 아키텍처: `docs/DDD_ARCHITECTURE.md`
+- 테스트 아키텍처: `docs/TEST_ARCHITECTURE.md`
+
+정: Pydantic v2, pydantic-settings
 - 실행: Uvicorn
 - 데이터 소스: yfinance + 내부 캐시 DB (MySQL 기반 스키마), KRW 환율
 - 추가 기능: 포트폴리오 백테스트, 전략 최적화, 커뮤니티(게시글/댓글), 인증(간단 토큰), Redis WebSocket 채팅, 네이버 뉴스 검색
@@ -48,9 +59,10 @@ backend/
 
 ## 데이터베이스
 - 디렉터리: `database/`
-  - `yfinance.sql`: 캐시 DB 스키마 (stocks, prices, dividends 등)
-  - `schema.sql`: 사용자/세션, 커뮤니티(게시글/댓글) 스키마
+  - `yfinance.sql`: 캐시 DB 스키마 (stocks, daily_prices, dividends, stock_splits, financial_statements, exchange_rates, cache_metadata)
+  - `schema.sql`: 사용자/세션, 커뮤니티(게시글/댓글/좋아요/신고/공지사항) 스키마 및 백테스트 히스토리
 - 런타임 접근: `app/services/yfinance_db.py`의 `_get_engine()`을 통해 연결
+- 상세 스키마: `docs/DATABASE_SCHEMA.md` 참조
 
 ## 레이어 개요
 - API 레이어(`app/api/v1/endpoints/*`): 입출력 검증, 에러 매핑, 서비스 호출

@@ -10,6 +10,7 @@
 ## 아키텍처/설계
 
 - 백엔드 DDD 개요: `docs/DDD_ARCHITECTURE.md`
+- 데이터베이스 스키마: `docs/DATABASE_SCHEMA.md`
 - 테스트 아키텍처(오프라인 모킹): `docs/TEST_ARCHITECTURE.md`
 - 현금 자산 처리: `docs/CASH_ASSETS.md`
 - 프론트 상태 관리: `docs/STATE_MANAGEMENT.md`
