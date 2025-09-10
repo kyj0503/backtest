@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Line, Area, ReferenceLine } from 'recharts';
 import CustomTooltip from './CustomTooltip';
+import FinancialTermTooltip from './common/FinancialTermTooltip';
 
 interface EquityChartData {
   date: string;
@@ -34,6 +35,16 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
 
   return (
     <div>
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">
+        <FinancialTermTooltip term="수익률">
+          수익률
+        </FinancialTermTooltip>
+        {' & '}
+        <FinancialTermTooltip term="드로우다운">
+          드로우다운
+        </FinancialTermTooltip>
+        {' 차트'}
+      </h3>
       <ResponsiveContainer width="100%" height={320}>
         <ComposedChart data={safeData} margin={chartConfig.margin}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />

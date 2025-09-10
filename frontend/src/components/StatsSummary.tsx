@@ -1,5 +1,6 @@
 import React from 'react';
 import { formatPercent, getStatVariant } from '../utils/formatters';
+import FinancialTermTooltip from './common/FinancialTermTooltip';
 
 const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
   if (!stats) return null;
@@ -92,7 +93,11 @@ const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center hover:shadow-md transition-shadow"
             title={item.description}
           >
-            <h5 className="text-sm font-medium text-gray-600 mb-3">{item.label}</h5>
+            <h5 className="text-sm font-medium text-gray-600 mb-3">
+              <FinancialTermTooltip term={item.label}>
+                {item.label}
+              </FinancialTermTooltip>
+            </h5>
             <span className={`inline-block px-4 py-2 rounded-lg text-lg font-semibold ${getVariantClasses(item.variant)}`}>
               {item.value}
             </span>
