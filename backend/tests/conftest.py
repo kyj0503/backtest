@@ -159,6 +159,14 @@ def fastapi_client():
     return TestClient(app)
 
 
+@pytest.fixture
+def client():
+    """Legacy name for TestClient used by integration tests"""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    return TestClient(app)
+
+
 # pytest 설정
 def pytest_configure(config):
     """pytest 초기 설정"""

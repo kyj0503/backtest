@@ -37,8 +37,9 @@ async def websocket_endpoint(websocket: WebSocket, room: str, authorization: Opt
         if not token:
             await websocket.close(code=4001)
             return
-        # reuse validate logic
-        user_id = require_user(f"Bearer {token}")
+        # reuse validate logic (require_user returns user info dict)
+        user_info = require_user(f"Bearer {token}")
+        user_id = user_info.get("user_id")
     except HTTPException:
         await websocket.close(code=4001)
         return

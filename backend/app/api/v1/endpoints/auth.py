@@ -204,3 +204,16 @@ def require_user(authorization: Optional[str]) -> dict:
             "is_admin": is_admin,
             "investment_type": investment_type
         }
+
+
+@router.get("/me")
+def get_current_user(authorization: Optional[str] = Header(None)):
+    """현재 인증된 사용자 정보 반환"""
+    user = require_user(authorization)
+    return {
+        "user_id": user["user_id"],
+        "username": user["username"],
+        "email": user["email"],
+        "is_admin": user["is_admin"],
+        "investment_type": user["investment_type"]
+    }
