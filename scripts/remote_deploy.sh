@@ -16,6 +16,7 @@ sed -i "s|image: backtest-frontend:latest|image: ${FRONTEND_IMAGE}|g" "${DEPLOY_
 docker pull "${BACKEND_IMAGE}" || true
 docker pull "${FRONTEND_IMAGE}" || true
 
+
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 LOGFILE="${DEPLOY_PATH}/deploy.log"
 
@@ -26,9 +27,8 @@ echo "Current docker-compose.yml configuration:" | tee -a "${LOGFILE}"
 cat "${DEPLOY_PATH}/docker-compose.yml" | tee -a "${LOGFILE}"
 
 # Attempt deployment with rollback on failure
-BACKUP_COMPOSE="${DEPLOY_PATH}/docker-compose.yml.bak.$(date +%s)"
 if [ -f "${DEPLOY_PATH}/docker-compose.yml" ]; then
-  cp "${DEPLOY_PATH}/docker-compose.yml" "${BACKUP_COMPOSE}" || true
+  cp "${DEPLOY_PATH}/docker-compose.yml" "${DEPLOY_PATH}/docker-compose.yml.bak" || true
 fi
 
 if docker compose -f "${DEPLOY_PATH}/docker-compose.yml" up -d --remove-orphans --no-build; then
@@ -37,11 +37,10 @@ if docker compose -f "${DEPLOY_PATH}/docker-compose.yml" up -d --remove-orphans 
 else
   echo "[${TIMESTAMP}] Deploy failed — attempting rollback" | tee -a "${LOGFILE}"
   STATUS=failure
-  # Find latest backup and restore
-  LATEST_BACKUP=$(ls -1t ${DEPLOY_PATH}/docker-compose.yml.bak.* 2>/dev/null | head -n1 || true)
-  if [ -n "${LATEST_BACKUP}" ]; then
-    echo "Restoring backup compose: ${LATEST_BACKUP}" | tee -a "${LOGFILE}"
-    cp "${LATEST_BACKUP}" "${DEPLOY_PATH}/docker-compose.yml"
+  # Restore single backup if exists
+  if [ -f "${DEPLOY_PATH}/docker-compose.yml.bak" ]; then
+    echo "Restoring backup compose: ${DEPLOY_PATH}/docker-compose.yml.bak" | tee -a "${LOGFILE}"
+    cp "${DEPLOY_PATH}/docker-compose.yml.bak" "${DEPLOY_PATH}/docker-compose.yml"
     docker compose -f "${DEPLOY_PATH}/docker-compose.yml" up -d --remove-orphans --no-build || true
   else
     echo "No backup compose found; manual intervention required" | tee -a "${LOGFILE}"
