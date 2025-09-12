@@ -112,12 +112,12 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
       {labelPosition === 'left' && (
         <div className="mr-3 flex-1">
           {label && (
-            <label className="text-sm font-medium text-gray-900">
+            <label className="text-sm font-medium text-foreground">
               {label}
             </label>
           )}
           {description && (
-            <p className="text-sm text-gray-500">{description}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </div>
       )}
@@ -129,12 +129,12 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
       {labelPosition === 'right' && (
         <div className="ml-3 flex-1">
           {label && (
-            <label className="text-sm font-medium text-gray-900">
+            <label className="text-sm font-medium text-foreground">
               {label}
             </label>
           )}
           {description && (
-            <p className="text-sm text-gray-500">{description}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           )}
         </div>
       )}

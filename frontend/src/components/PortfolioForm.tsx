@@ -19,6 +19,7 @@ import { Tooltip } from './common';
 import StockAutocomplete from './common/StockAutocomplete';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const PortfolioForm: React.FC<PortfolioFormProps> = ({
   portfolio,
@@ -36,32 +37,36 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
     <div className="mb-8">
       <div className="flex flex-col md:flex-row md:items-center md:gap-6 mb-4">
         <h5 className="text-lg font-semibold mb-2 md:mb-0">포트폴리오 구성</h5>
-        <div className="flex items-center gap-3">
-          <label className="font-medium text-gray-700">입력 방식:</label>
-          <div className="flex border border-blue-600 rounded-md overflow-hidden">
+                <div className="mb-6">
+          <label className="font-medium text-foreground">입력 방식:</label>
+          <div className="flex border border-primary rounded-md overflow-hidden">
             <Button
               type="button"
-              variant={portfolioInputMode === 'amount' ? 'default' : 'outline'}
-              className={`rounded-none border-0 ${portfolioInputMode === 'amount' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               onClick={() => setPortfolioInputMode('amount')}
-              disabled={portfolioInputMode === 'amount'}
+              className={`rounded-none border-0 ${portfolioInputMode === 'amount' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-accent'}`}
+              style={{
+                border: 'none',
+                boxShadow: 'none',
+              }}
             >
-              금액 기반
+              금액 기준
             </Button>
             <Button
               type="button"
-              variant={portfolioInputMode === 'weight' ? 'default' : 'outline'}
-              className={`rounded-none border-0 border-l ${portfolioInputMode === 'weight' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
               onClick={() => setPortfolioInputMode('weight')}
-              disabled={portfolioInputMode === 'weight'}
+              className={`rounded-none border-0 border-l ${portfolioInputMode === 'weight' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-accent'}`}
+              style={{
+                border: 'none',
+                boxShadow: 'none',
+              }}
             >
-              비중 기반
+              비중 기준
             </Button>
           </div>
         </div>
         {portfolioInputMode === 'weight' && (
           <div className="flex items-center gap-2 ml-0 md:ml-8 mt-2 md:mt-0">
-            <label className="font-medium text-gray-700">전체 투자금액($):</label>
+            <label className="font-medium text-foreground">전체 투자금액($):</label>
             <Input
               type="number"
               min={1000}
@@ -74,30 +79,30 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
         )}
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full table-fixed divide-y divide-gray-200 border border-gray-200 rounded-lg">
-          <thead className="bg-gray-50">
+        <table className="min-w-full table-fixed divide-y divide-border border border-border rounded-lg">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="w-64 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">종목/자산</th>
-              <th className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">투자 금액 ($)</th>
-              <th className="w-28 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">투자 방식</th>
-              <th className="w-24 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">자산 타입</th>
-              <th className="w-24 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">비중 (%)</th>
-              <th className="w-20 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
+              <th className="w-64 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">종목/자산</th>
+              <th className="w-32 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">투자 금액 ($)</th>
+              <th className="w-28 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">투자 방식</th>
+              <th className="w-24 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">자산 타입</th>
+              <th className="w-24 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">비중 (%)</th>
+              <th className="w-20 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">작업</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-background divide-y divide-border">
             {portfolio.map((stock, index) => (
-              <tr key={index} className="hover:bg-gray-50">
+              <tr key={index} className="hover:bg-muted/50">
                 <td className="w-64 px-6 py-4 whitespace-nowrap">
                   <div className="space-y-2 max-w-full overflow-hidden">
                     {stock.assetType === ASSET_TYPES.CASH ? (
-                      <input
+                      <Input
                         type="text"
                         value={stock.symbol || ''}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'symbol', e.target.value)}
                         placeholder="현금 자산 이름 입력 (예: USD, KRW)"
                         maxLength={20}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
+                        className="w-full bg-accent/50"
                       />
                     ) : (
                       <>
@@ -110,7 +115,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                               updateStock(index, 'symbol', e.target.value);
                             }
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                         >
                           <option value="CUSTOM">직접 입력</option>
                           {PREDEFINED_STOCKS.slice(1).map(option => (
@@ -131,15 +136,15 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     )}
                   </div>
                 </td>
-                <td className="w-32 px-6 py-4 whitespace-nowrap">
-                  <input
+                                <td className="w-32 px-6 py-4 whitespace-nowrap">
+                  <Input
                     type="number"
                     value={stock.amount}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'amount', e.target.value)}
                     min="100"
                     step="100"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={portfolioInputMode === 'weight'}
+                    className="w-full"
                   />
                 </td>
                 <td className="w-28 px-6 py-4 whitespace-nowrap">
@@ -147,25 +152,25 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     <select
                       value={stock.investmentType}
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'investmentType', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                     >
                       <option value="lump_sum">일시불 투자</option>
                       <option value="dca">분할 매수 (DCA)</option>
                     </select>
                     {stock.investmentType === 'dca' && (
-                      <input
+                      <Input
                         type="number"
                         value={stock.dcaPeriods || 12}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'dcaPeriods', e.target.value)}
                         min="1"
                         max="60"
                         placeholder="개월 수"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full"
                       />
                     )}
                   </div>
                   {stock.investmentType === 'dca' && stock.dcaPeriods && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       월 ${Math.round(stock.amount / stock.dcaPeriods)}씩 {stock.dcaPeriods}개월
                     </p>
                   )}
@@ -175,7 +180,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     <select
                       value={stock.assetType || ASSET_TYPES.STOCK}
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'assetType', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                     >
                       <option value={ASSET_TYPES.STOCK}>주식</option>
                       <option value={ASSET_TYPES.CASH}>현금</option>
@@ -186,14 +191,14 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                 <td className="w-24 px-6 py-4 whitespace-nowrap text-sm">
                   {/* 비중(%) 입력: weight 기반 모드면 직접 입력, 금액 기반 모드면 자동 계산 */}
                   {portfolioInputMode === 'weight' ? (
-                    <input
+                    <Input
                       type="number"
                       value={typeof stock.weight === 'number' ? stock.weight : ''}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'weight', Number(e.target.value))}
                       min="0"
                       max="100"
                       step="0.1"
-                      className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-20 px-2 py-1 text-sm"
                     />
                   ) : (
                     <span title="투자 금액 비율로 자동 계산됨. 비중을 직접 입력하려면 비중 기반 모드로 전환하세요.">
@@ -206,7 +211,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     type="button"
                     onClick={() => removeStock(index)}
                     disabled={portfolio.length <= 1}
-                    className="px-3 py-1 text-sm font-medium text-red-600 bg-red-50 border border-red-300 rounded-md hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 py-1 text-sm font-medium text-destructive bg-destructive/10 border border-destructive rounded-md hover:bg-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     삭제
                   </button>
@@ -214,14 +219,14 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               </tr>
             ))}
           </tbody>
-          <tfoot className="bg-blue-50">
+          <tfoot className="bg-accent/50">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">합계</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">${getTotalAmount().toLocaleString()}</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">-</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">-</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">100.0%</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-gray-700"></th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">합계</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">${getTotalAmount().toLocaleString()}</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">-</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">-</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">100.0%</th>
+              <th className="px-6 py-3 text-left text-sm font-medium text-foreground"></th>
             </tr>
           </tfoot>
         </table>
@@ -232,7 +237,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
           type="button"
           onClick={addStock}
           disabled={portfolio.length >= 10}
-          className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-300 rounded-md hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-sm font-medium text-primary bg-accent border border-primary rounded-md hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           + 종목 추가
         </button>

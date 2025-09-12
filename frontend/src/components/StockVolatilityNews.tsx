@@ -3,6 +3,7 @@ import VolatilityTable from './volatility/VolatilityTable';
 import NewsModal from './volatility/NewsModal';
 import { useVolatilityNews } from '../hooks/useVolatilityNews';
 import { StockVolatilityNewsProps } from '../types/volatility-news';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({ 
   symbols, 
@@ -34,31 +35,31 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
   // 로딩 중일 때
   if (loading) {
     return (
-      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
-        <div className="border-b border-gray-200 px-6 py-4">
-          <h5 className="text-lg font-semibold text-gray-900 mb-0">📰 주가 급등/급락 뉴스</h5>
-        </div>
-        <div className="px-6 py-4 text-center">
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="text-lg">📰 주가 급등/급락 뉴스</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center">
           <div className="inline-flex items-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
             변동성 데이터를 불러오는 중...
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // 에러가 있을 때
   if (error) {
     return (
-      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
-        <div className="border-b border-gray-200 px-6 py-4">
-          <h5 className="text-lg font-semibold text-gray-900 mb-0">📰 주가 급등/급락 뉴스</h5>
-        </div>
-        <div className="px-6 py-4">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{error}</div>
-        </div>
-      </div>
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="text-lg">📰 주가 급등/급락 뉴스</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-destructive">{error}</div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -67,14 +68,14 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
 
   return (
     <>
-      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
-        <div className="border-b border-gray-200 px-6 py-4">
-          <h5 className="text-lg font-semibold text-gray-900 mb-0">📰 주가 급등/급락 뉴스 (5% 이상 변동일)</h5>
-        </div>
-        <div className="px-6 py-4">
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="text-lg">📰 주가 급등/급락 뉴스 (5% 이상 변동일)</CardTitle>
+        </CardHeader>
+        <CardContent>
           {!hasSignificantEvents ? (
             <div className="text-center">
-              <p className="text-gray-500">해당 기간 중 5% 이상 급등/급락한 날이 없습니다.</p>
+              <p className="text-muted-foreground">해당 기간 중 5% 이상 급등/급락한 날이 없습니다.</p>
             </div>
           ) : (
             <>
@@ -114,8 +115,8 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
               />
             </>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* 뉴스 모달 */}
       <NewsModal

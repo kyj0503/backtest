@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Props {
   children: ReactNode;
@@ -93,32 +94,33 @@ class ErrorBoundary extends Component<Props, State> {
         <div className="container mx-auto px-4 mt-5">
           <div className="flex justify-center">
             <div className="w-full max-w-2xl">
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                <div className="flex items-center mb-2">
-                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
-                  <h4 className="text-lg font-semibold">오류가 발생했습니다</h4>
-                </div>
-                <p className="mb-4">
-                  예상치 못한 오류로 인해 애플리케이션이 정상적으로 동작하지 않습니다.
-                  페이지를 새로고침하거나 다시 시도해주세요.
-                </p>
+              <Alert variant="destructive">
+                <AlertDescription>
+                  <div className="flex items-center mb-2">
+                    <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                    <h4 className="text-lg font-semibold">오류가 발생했습니다</h4>
+                  </div>
+                  <p className="mb-4">
+                    예상치 못한 오류로 인해 애플리케이션이 정상적으로 동작하지 않습니다.
+                    페이지를 새로고침하거나 다시 시도해주세요.
+                  </p>
                 
                 {import.meta.env.DEV && this.state.error && (
                   <details className="mt-3">
-                    <summary className="text-gray-600 cursor-pointer">개발자 정보 (클릭하여 펼치기)</summary>
-                    <div className="mt-2 p-3 bg-gray-100 rounded">
+                    <summary className="text-muted-foreground cursor-pointer">개발자 정보 (클릭하여 펼치기)</summary>
+                    <div className="mt-2 p-3 bg-muted rounded">
                       <h6 className="font-semibold">오류 메시지:</h6>
                       <code className="text-red-600 block">{this.state.error.message}</code>
                       
                       <h6 className="font-semibold mt-3">스택 트레이스:</h6>
-                      <pre className="text-gray-600 text-sm bg-white p-2 rounded overflow-auto">
+                      <pre className="text-muted-foreground text-sm bg-background p-2 rounded overflow-auto">
                         {this.state.error.stack}
                       </pre>
                       
                       {this.state.errorInfo && (
                         <>
                           <h6 className="font-semibold mt-3">컴포넌트 스택:</h6>
-                          <pre className="text-gray-600 text-sm bg-white p-2 rounded overflow-auto">
+                          <pre className="text-muted-foreground text-sm bg-background p-2 rounded overflow-auto">
                             {this.state.errorInfo.componentStack}
                           </pre>
                         </>
@@ -144,10 +146,11 @@ class ErrorBoundary extends Component<Props, State> {
                   </Button>
                 </div>
                 
-                <div className="mt-3 text-gray-500 text-sm">
+                <div className="mt-3 text-muted-foreground text-sm">
                   오류 ID: {this.state.errorId}
                 </div>
-              </div>
+                </AlertDescription>
+              </Alert>
             </div>
           </div>
         </div>

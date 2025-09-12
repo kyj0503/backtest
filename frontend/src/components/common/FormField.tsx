@@ -1,4 +1,8 @@
 import React from 'react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export interface FormFieldProps {
   label: string;
@@ -33,63 +37,62 @@ export const FormField: React.FC<FormFieldProps> = ({
   max,
   step
 }) => {
-  const baseInputClassName = `
-    block w-full px-3 py-2 border rounded-md shadow-sm
-    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-    disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed
-    ${error ? 'border-destructive text-destructive placeholder-destructive/50 focus:border-destructive focus:ring-destructive' : 'border-input'}
-  `.trim();
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newValue = type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value;
     onChange(newValue);
+  };
+
+  const handleSelectChange = (newValue: string) => {
+    const convertedValue = type === 'number' ? parseFloat(newValue) || 0 : newValue;
+    onChange(convertedValue);
   };
 
   const renderInput = () => {
     switch (type) {
       case 'select':
         return (
-          <select
-            value={value}
-            onChange={handleChange}
+          <Select 
+            value={value.toString()} 
+            onValueChange={handleSelectChange}
             disabled={disabled}
-            required={required}
-            className={baseInputClassName}
           >
-            {options?.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className={error ? 'border-destructive' : ''}>
+              <SelectValue placeholder={placeholder || "선택하세요"} />
+            </SelectTrigger>
+            <SelectContent>
+              {options?.map((option) => (
+                <SelectItem key={option.value} value={option.value.toString()}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         );
       
       case 'textarea':
         return (
-          <textarea
-            value={value}
-            onChange={handleChange}
+          <Textarea
+            value={value.toString()}
+            onChange={handleInputChange}
             placeholder={placeholder}
             disabled={disabled}
-            required={required}
-            className={`${baseInputClassName} resize-vertical min-h-[100px]`}
+            className={error ? 'border-destructive' : ''}
             rows={4}
           />
         );
       
       default:
         return (
-          <input
+          <Input
             type={type}
-            value={value}
-            onChange={handleChange}
+            value={value.toString()}
+            onChange={handleInputChange}
             placeholder={placeholder}
             disabled={disabled}
-            required={required}
             min={min}
             max={max}
             step={step}
-            className={baseInputClassName}
+            className={error ? 'border-destructive' : ''}
           />
         );
     }
@@ -97,15 +100,15 @@ export const FormField: React.FC<FormFieldProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="block text-sm font-medium text-gray-700">
+      <Label className="text-sm font-medium">
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
-      </label>
+      </Label>
       
       {renderInput()}
       
       {helpText && (
-        <p className="text-sm text-gray-500">{helpText}</p>
+        <p className="text-sm text-muted-foreground">{helpText}</p>
       )}
       
       {error && (

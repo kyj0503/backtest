@@ -146,7 +146,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         aria-haspopup="listbox"
       >
         <div className="flex items-center justify-between">
-          <span className={selectedOption ? 'text-gray-900' : 'text-gray-500'}>
+          <span className={selectedOption ? 'text-foreground' : 'text-muted-foreground'}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <div className="flex items-center space-x-1">
@@ -156,13 +156,13 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 className="p-1 hover:bg-accent rounded"
                 aria-label="선택 해제"
               >
-                <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-4 h-4 text-muted-foreground" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
             )}
             <svg
-              className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -202,11 +202,11 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           {/* Options */}
           <div role="listbox">
             {loading ? (
-              <div className="px-3 py-2 text-center text-gray-500">
+              <div className="px-3 py-2 text-center text-muted-foreground">
                 로딩 중...
               </div>
             ) : filteredOptions.length === 0 ? (
-              <div className="px-3 py-2 text-center text-gray-500">
+              <div className="px-3 py-2 text-center text-muted-foreground">
                 {noOptionsMessage}
               </div>
             ) : (

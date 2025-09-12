@@ -55,18 +55,18 @@ export function DataTable<T = any>({
   const getSortIcon = (key: string) => {
     if (sortKey !== key) {
       return (
-        <svg className="w-4 h-4 ml-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-4 h-4 ml-1 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
         </svg>
       );
     }
     
     return sortDirection === 'asc' ? (
-      <svg className="w-4 h-4 ml-1 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-4 h-4 ml-1 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
       </svg>
     ) : (
-      <svg className="w-4 h-4 ml-1 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-4 h-4 ml-1 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
     );
@@ -78,15 +78,15 @@ export function DataTable<T = any>({
 
   const tableClasses = `
     min-w-full 
-    ${bordered ? 'divide-y divide-gray-200 border border-gray-200 rounded-lg' : 'divide-y divide-gray-200'}
+    ${bordered ? 'divide-y divide-border border border-border rounded-lg' : 'divide-y divide-border'}
     ${compact ? 'text-sm' : ''}
     ${className}
   `.trim();
 
   const headerClasses = `
     ${compact ? 'px-3 py-2' : 'px-6 py-3'}
-    text-left text-xs font-medium text-gray-500 uppercase tracking-wider
-    bg-gray-50
+    text-left text-xs font-medium text-muted-foreground uppercase tracking-wider
+    bg-muted/50
   `.trim();
 
   const cellClasses = `
@@ -110,7 +110,7 @@ export function DataTable<T = any>({
                   ${headerClasses}
                   ${column.width ? `w-${column.width}` : ''}
                   ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'}
-                  ${column.sortable ? 'cursor-pointer hover:bg-gray-100' : ''}
+                  ${column.sortable ? 'cursor-pointer hover:bg-muted/80' : ''}
                   ${column.className || ''}
                 `}
                 style={column.width ? { width: column.width } : undefined}
@@ -125,7 +125,7 @@ export function DataTable<T = any>({
           </tr>
         </thead>
         
-        <tbody className={`bg-white ${striped ? 'divide-y divide-gray-200' : 'divide-y divide-gray-200'}`}>
+        <tbody className={`bg-background ${striped ? 'divide-y divide-border' : 'divide-y divide-border'}`}>
           {loading ? (
             <tr>
               <td colSpan={columns.length} className="text-center py-8">
@@ -134,7 +134,7 @@ export function DataTable<T = any>({
             </tr>
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="text-center py-8 text-gray-500">
+              <td colSpan={columns.length} className="text-center py-8 text-muted-foreground">
                 {emptyMessage}
               </td>
             </tr>
@@ -143,8 +143,8 @@ export function DataTable<T = any>({
               <tr
                 key={rowIndex}
                 className={`
-                  ${striped && rowIndex % 2 === 1 ? 'bg-gray-50' : 'bg-white'}
-                  ${hoverable ? 'hover:bg-gray-50' : ''}
+                  ${striped && rowIndex % 2 === 1 ? 'bg-muted/50' : 'bg-background'}
+                  ${hoverable ? 'hover:bg-muted/50' : ''}
                   ${onRowClick ? 'cursor-pointer' : ''}
                 `}
                 onClick={() => onRowClick?.(row, rowIndex)}
@@ -161,7 +161,7 @@ export function DataTable<T = any>({
                       className={`
                         ${cellClasses}
                         ${column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'}
-                        text-gray-900
+                        text-foreground
                       `}
                     >
                       {displayValue}

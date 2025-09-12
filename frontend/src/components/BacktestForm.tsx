@@ -9,6 +9,8 @@ import AdvancedSettingsForm, { AdvancedStockSettings } from './AdvancedSettingsF
 import { useBacktestForm } from '../hooks/useBacktestForm';
 import { useFormValidation } from '../hooks/useFormValidation';
 import { Button } from './ui/button';
+import { Alert, AlertDescription } from './ui/alert';
+import { Card, CardContent, CardHeader } from './ui/card';
 
 interface BacktestFormProps {
   onSubmit: (request: BacktestRequest) => Promise<void>;
@@ -76,32 +78,25 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 rounded-t-lg">
-          <h4 className="text-xl font-semibold text-gray-800 mb-2">포트폴리오 백테스트</h4>
-          <p className="text-sm text-gray-600">
+      <Card>
+        <CardHeader>
+          <h4 className="text-xl font-semibold text-foreground mb-2">포트폴리오 백테스트</h4>
+          <p className="text-sm text-muted-foreground">
             종목/자산별 투자 금액과 방식을 설정하여 포트폴리오 백테스트를 실행합니다.
           </p>
-        </div>
-        <div className="p-6">
+        </CardHeader>
+        <CardContent>
           {(errors.length > 0 || state.ui.errors.length > 0) && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800 mb-2">입력 오류</h3>
-                  <ul className="text-sm text-red-700 space-y-1">
+            <Alert variant="destructive" className="mb-6">
+              <AlertDescription>
+                <h3 className="text-sm font-medium mb-2">입력 오류</h3>
+                <ul className="text-sm space-y-1">
                     {[...errors, ...state.ui.errors].map((error, index) => (
                       <li key={index}>• {error}</li>
                     ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+                </ul>
+              </AlertDescription>
+            </Alert>
           )}
 
           <form onSubmit={handleSubmit}>
@@ -164,7 +159,7 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
                 }
               </Button>
               {state.portfolio.length === 0 ? (
-                <p className="text-xs text-gray-500 mt-1 text-center">
+                <p className="text-xs text-muted-foreground mt-1 text-center">
                   포트폴리오에 종목을 추가한 후 고급 설정을 사용할 수 있습니다.
                 </p>
               ) : advancedSettings.length > 0 && (
@@ -204,8 +199,8 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
             onClose={() => setShowAdvancedSettings(false)}
             onApply={setAdvancedSettings}
           />
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

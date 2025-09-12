@@ -205,7 +205,7 @@ const StockAutocomplete: React.FC<StockAutocompleteProps> = ({
             >
               <div className="flex items-center justify-between">
                 <span className="font-medium text-sm">{stock.symbol}</span>
-                <span className="text-xs text-gray-500 truncate ml-2">{stock.name}</span>
+                <span className="text-xs text-muted-foreground truncate ml-2">{stock.name}</span>
               </div>
             </div>
           ))}

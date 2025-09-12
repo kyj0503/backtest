@@ -98,19 +98,18 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
-          w-full px-3 py-2 text-left cursor-pointer rounded-md border shadow-sm
+          w-full px-3 py-2 text-left cursor-pointer rounded-md border border-input shadow-sm
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-          ${disabled ? 'bg-gray-50 cursor-not-allowed text-gray-400' : 'bg-white'}
+          ${disabled ? 'bg-muted cursor-not-allowed text-muted-foreground' : 'bg-background'}
         `}
-        style={{ borderColor: 'hsl(var(--input))' }}
         tabIndex={disabled ? -1 : 0}
       >
         <div className="flex items-center justify-between">
-          <span className={startDate || endDate ? 'text-gray-900' : 'text-gray-500'}>
+          <span className={startDate || endDate ? 'text-foreground' : 'text-muted-foreground'}>
             {formatDateRange(startDate, endDate) || placeholder}
           </span>
           <svg
-            className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`}
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -121,7 +120,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 rounded-md border bg-white shadow-md animate-in">
+        <div className="absolute z-50 w-full mt-1 rounded-md border bg-background shadow-md animate-in">
           <div className="p-4">
             {/* Date inputs */}
             <div className="space-y-4">
@@ -155,7 +154,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
               {/* Validation message */}
               {tempStartDate && tempEndDate && tempStartDate > tempEndDate && (
-                <p className="text-sm text-red-600">
+                <p className="text-sm text-destructive">
                   시작 날짜는 종료 날짜보다 이전이어야 합니다.
                 </p>
               )}
@@ -172,7 +171,7 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
                     <button
                       key={index}
                       onClick={() => handlePresetSelect(preset)}
-                      className="px-3 py-2 text-sm text-left rounded-md border hover:bg-gray-50"
+                      className="px-3 py-2 text-sm text-left rounded-md border hover:bg-muted"
                     >
                       {preset.label}
                     </button>
@@ -185,21 +184,21 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
             <div className="flex justify-between mt-4 pt-4 border-t">
               <button
                 onClick={handleClear}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900"
+                className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
               >
                 지우기
               </button>
               <div className="space-x-2">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="px-4 py-2 text-sm border rounded-md hover:bg-gray-50"
+                  className="px-4 py-2 text-sm border rounded-md hover:bg-muted"
                 >
                   취소
                 </button>
                 <button
                   onClick={handleApply}
                   disabled={!tempStartDate || !tempEndDate}
-                  className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm text-primary-foreground bg-primary rounded-md hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed"
                 >
                   적용
                 </button>

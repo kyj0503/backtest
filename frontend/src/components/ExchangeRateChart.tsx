@@ -29,7 +29,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
         </CardHeader>
         <CardContent className="text-center">
           <div className="inline-flex items-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
             <span>환율 데이터 로딩 중...</span>
           </div>
         </CardContent>
@@ -57,7 +57,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
           <CardTitle>원달러 환율 변동</CardTitle>
         </CardHeader>
         <CardContent className="text-center">
-          <p className="text-gray-500">표시할 환율 데이터가 없습니다.</p>
+          <p className="text-muted-foreground">표시할 환율 데이터가 없습니다.</p>
         </CardContent>
       </Card>
     );
@@ -73,13 +73,13 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="mb-1">원/달러 환율</CardTitle>
-            <p className="text-sm text-gray-600">백테스트 기간 동안의 원달러 환율 변화</p>
+            <p className="text-sm text-muted-foreground">백테스트 기간 동안의 원달러 환율 변화</p>
           </div>
           <div className="text-right">
             <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${rateChange >= 0 ? 'bg-destructive/10 text-destructive' : 'bg-green-100 text-green-800'}`}>
               {rateChange >= 0 ? '▲' : '▼'} {Math.abs(rateChange).toFixed(2)}%
             </div>
-            <div className="text-xs text-gray-500 mt-1">기간 변동률</div>
+            <div className="text-xs text-muted-foreground mt-1">기간 변동률</div>
           </div>
         </div>
       </CardHeader>
@@ -122,19 +122,19 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
         {/* 환율 요약 정보 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
           <div className="text-center">
-            <div className="text-xs text-gray-500 mb-1">시작 환율</div>
-            <div className="text-sm font-semibold text-gray-800">{formatRate(exchangeData[0]?.rate)}</div>
+            <div className="text-xs text-muted-foreground mb-1">시작 환율</div>
+            <div className="text-sm font-semibold text-foreground">{formatRate(exchangeData[0]?.rate)}</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-gray-500 mb-1">종료 환율</div>
-            <div className="text-sm font-semibold text-gray-800">{formatRate(exchangeData[exchangeData.length - 1]?.rate)}</div>
+            <div className="text-xs text-muted-foreground mb-1">종료 환율</div>
+            <div className="text-sm font-semibold text-foreground">{formatRate(exchangeData[exchangeData.length - 1]?.rate)}</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-gray-500 mb-1">최고점</div>
+            <div className="text-xs text-muted-foreground mb-1">최고점</div>
             <div className="text-sm font-semibold text-destructive">{formatRate(maxRate)}</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-gray-500 mb-1">최저점</div>
+            <div className="text-xs text-muted-foreground mb-1">최저점</div>
             <div className="text-sm font-semibold text-green-600">{formatRate(minRate)}</div>
           </div>
         </div>

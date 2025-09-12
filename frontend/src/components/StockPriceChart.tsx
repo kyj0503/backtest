@@ -41,7 +41,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, clas
     return (
       <div className={`bg-card border border-border rounded-lg shadow-sm ${className}`}>
         <div className="px-6 py-4 text-center">
-          <p className="text-gray-500">표시할 주가 데이터가 없습니다.</p>
+          <p className="text-muted-foreground">표시할 주가 데이터가 없습니다.</p>
         </div>
       </div>
     );
@@ -65,7 +65,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, clas
       {/* 헤더: 종목명과 네비게이션 */}
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h5 className="text-lg font-semibold text-gray-900 mb-1">{currentStock.symbol}</h5>
+          <h5 className="text-lg font-semibold text-foreground mb-1">{currentStock.symbol}</h5>
           <Badge variant="secondary">
             {currentIndex + 1} / {stocksData.length}
           </Badge>
@@ -124,13 +124,13 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, clas
       {/* 차트 하단 정보 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
         <div>
-          <small className="text-gray-500">
+          <small className="text-muted-foreground">
             시작: {currentStock.data[0]?.date} | 
             종료: {currentStock.data[currentStock.data.length - 1]?.date}
           </small>
         </div>
         <div className="text-left md:text-right">
-          <small className="text-gray-500">
+          <small className="text-muted-foreground">
             데이터 포인트: {currentStock.data.length}개
           </small>
         </div>

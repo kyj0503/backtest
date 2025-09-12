@@ -12,35 +12,35 @@ const Header: React.FC = () => {
   const [showThemeSelector, setShowThemeSelector] = useState(false);
 
   return (
-    <nav className="bg-blue-600 text-white sticky top-0 z-50 shadow-lg">
+    <nav className="bg-primary text-primary-foreground sticky top-0 z-50 shadow-lg">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Brand */}
-          <Link to="/" className="text-xl font-bold hover:text-blue-200 transition-colors flex items-center gap-2">
+          <Link to="/" className="text-xl font-bold hover:text-primary-foreground/80 transition-colors flex items-center gap-2">
             <FaChartLine className="text-lg" />
             <span>라고할때살걸</span>
           </Link>
           
           {/* Navigation Links */}
           <div className="flex space-x-2 items-center">
-            <Button asChild variant="ghost" className="text-white hover:bg-blue-700 hover:text-white">
+            <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
               <Link to="/">홈</Link>
             </Button>
-            <Button asChild variant="ghost" className="text-white hover:bg-blue-700 hover:text-white">
+            <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
               <Link to="/backtest">백테스트</Link>
             </Button>
-            <Button asChild variant="ghost" className="text-white hover:bg-blue-700 hover:text-white">
+            <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
               <Link to="/community">커뮤니티</Link>
             </Button>
-            <Button asChild variant="ghost" className="text-white hover:bg-blue-700 hover:text-white">
+            <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
               <Link to="/chat">채팅</Link>
             </Button>
             {!user ? (
               <>
-                <Button asChild variant="ghost" className="text-white hover:bg-blue-700 hover:text-white">
+                <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
                   <Link to="/login">로그인</Link>
                 </Button>
-                <Button asChild variant="ghost" className="text-white hover:bg-blue-700 hover:text-white">
+                <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
                   <Link to="/signup">회원가입</Link>
                 </Button>
               </>
@@ -51,7 +51,7 @@ const Header: React.FC = () => {
                   onClick={logout} 
                   variant="secondary" 
                   size="sm" 
-                  className="bg-blue-700 hover:bg-blue-800 text-white"
+                  className="bg-primary/80 hover:bg-primary/60 text-primary-foreground"
                 >
                   로그아웃
                 </Button>
@@ -64,7 +64,7 @@ const Header: React.FC = () => {
                 onClick={toggleDarkMode}
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-blue-700 hover:text-white p-2"
+                className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground p-2"
                 title={isDarkMode ? '라이트 모드로 변경' : '다크 모드로 변경'}
               >
                 {isDarkMode ? '☀️' : '🌙'}
@@ -73,14 +73,14 @@ const Header: React.FC = () => {
                 onClick={() => setShowThemeSelector(!showThemeSelector)}
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-blue-700 hover:text-white p-2"
+                className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground p-2"
                 title="테마 설정"
               >
                 <FaPalette className="text-sm" />
               </Button>
             </div>
             
-            <Button asChild variant="ghost" className="text-white hover:bg-blue-700 hover:text-white">
+            <Button asChild variant="ghost" className="text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground">
               <a 
                 href="https://github.com/capstone-backtest/backtest" 
                 target="_blank" 

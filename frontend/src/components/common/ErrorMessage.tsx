@@ -37,10 +37,10 @@ const XIcon = ({ className }: { className?: string }) => (
 
 const typeConfig = {
   error: {
-    containerClass: 'bg-red-50 border-red-200 text-red-800',
-    iconClass: 'text-red-400',
-    titleClass: 'text-red-800',
-    messageClass: 'text-red-700',
+    containerClass: 'bg-destructive/10 border-destructive/20 text-destructive',
+    iconClass: 'text-destructive/60',
+    titleClass: 'text-destructive',
+    messageClass: 'text-destructive/90',
     icon: AlertCircleIcon
   },
   warning: {
@@ -51,10 +51,10 @@ const typeConfig = {
     icon: AlertTriangleIcon
   },
   info: {
-    containerClass: 'bg-blue-50 border-blue-200 text-blue-800',
-    iconClass: 'text-blue-400',
-    titleClass: 'text-blue-800',
-    messageClass: 'text-blue-700',
+    containerClass: 'bg-accent/50 border-accent text-accent-foreground',
+    iconClass: 'text-accent-foreground/60',
+    titleClass: 'text-accent-foreground',
+    messageClass: 'text-accent-foreground/90',
     icon: InfoIcon
   },
   success: {
@@ -115,7 +115,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
                 onClick={onClose}
                 className={`
                   inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2
-                  hover:bg-opacity-20 hover:bg-gray-600
+                  hover:bg-muted/20
                   ${config.iconClass}
                 `}
                 aria-label="닫기"
@@ -135,7 +135,7 @@ export const FieldError: React.FC<{ message: string; className?: string }> = ({
   message, 
   className = '' 
 }) => (
-  <div className={`text-sm text-red-600 mt-1 ${className}`} role="alert">
+  <div className={`text-sm text-destructive mt-1 ${className}`} role="alert">
     {message}
   </div>
 );

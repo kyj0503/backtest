@@ -54,12 +54,12 @@ const Pagination: React.FC<PaginationProps> = ({
 
   const buttonClass = (isActive = false, isDisabled = false) => {
     const base = 'relative inline-flex items-center px-4 py-2 text-sm font-medium border focus:z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded-md';
-    if (isDisabled) return `${base} text-gray-300 bg-white cursor-not-allowed`;
-    if (isActive) return `${base} bg-blue-50 border-blue-500 text-blue-600`;
-    return `${base} bg-white text-gray-600 hover:bg-gray-50 cursor-pointer`;
+    if (isDisabled) return `${base} text-muted-foreground bg-background cursor-not-allowed`;
+    if (isActive) return `${base} bg-accent border-primary text-primary`;
+    return `${base} bg-background text-foreground hover:bg-muted cursor-pointer`;
   };
 
-  const ellipsisClass = 'relative inline-flex items-center px-4 py-2 border bg-white text-sm font-medium text-gray-700 rounded-md';
+  const ellipsisClass = 'relative inline-flex items-center px-4 py-2 border bg-background text-sm font-medium text-foreground rounded-md';
 
   return (
     <nav className={`flex items-center justify-between ${className}`} aria-label="Pagination">
@@ -83,7 +83,7 @@ const Pagination: React.FC<PaginationProps> = ({
 
       <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-foreground">
             <span className="font-medium">{currentPage}</span> /{' '}
             <span className="font-medium">{totalPages}</span> 페이지
           </p>

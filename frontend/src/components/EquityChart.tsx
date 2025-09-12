@@ -35,7 +35,7 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">
+      <h3 className="text-lg font-semibold mb-4 text-foreground">
         <FinancialTermTooltip term="수익률">
           수익률
         </FinancialTermTooltip>
