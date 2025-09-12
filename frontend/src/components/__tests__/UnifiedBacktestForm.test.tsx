@@ -2,18 +2,18 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { act } from 'react'
 import userEvent from '@testing-library/user-event'
-import UnifiedBacktestForm from '../UnifiedBacktestForm'
+import BacktestForm from '../BacktestForm'
 
 // Note: This is an integration-style test targeting the composed form.
 // It simulates minimal user interactions to pass validation and verifies
 // the transformed request payload (e.g., symbol uppercasing, commission conversion).
 
-describe('UnifiedBacktestForm (integration)', () => {
+describe('BacktestForm (integration)', () => {
   it('사용자 입력을 변환해 onSubmit에 올바른 요청을 전달해야 함', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     const user = userEvent.setup()
 
-    render(<UnifiedBacktestForm onSubmit={onSubmit} />)
+    render(<BacktestForm onSubmit={onSubmit} />)
 
     // PortfolioForm: select first row symbol to a predefined one (e.g., AAPL)
     // Table first row: first cell contains a select (combobox)
@@ -61,7 +61,7 @@ describe('UnifiedBacktestForm (integration)', () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error('테스트 오류'))
     const user = userEvent.setup()
 
-    render(<UnifiedBacktestForm onSubmit={onSubmit} />)
+    render(<BacktestForm onSubmit={onSubmit} />)
 
     // Select a valid symbol so validation passes
     const selects = screen.getAllByRole('combobox')

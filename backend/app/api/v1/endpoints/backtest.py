@@ -3,9 +3,9 @@
 """
 from fastapi import APIRouter, HTTPException, status, Header
 from typing import Optional
-from ....models.requests import BacktestRequest
+from ....models.requests import BacktestRequest, UnifiedBacktestRequest
 from ....models.responses import BacktestResult, ErrorResponse, ChartDataResponse
-from ....models.schemas import PortfolioBacktestRequest
+from ....models.schemas import PortfolioBacktestRequest, PortfolioStock
 from ....services.backtest_service import backtest_service
 from ....services.portfolio_service import PortfolioBacktestService
 from ....services.yfinance_db import load_ticker_data, _get_engine
@@ -870,4 +870,192 @@ async def delete_backtest_history(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="백테스트 히스토리 삭제 실패"
+        )
+
+
+@router.post(
+    "/execute",
+    status_code=status.HTTP_200_OK,
+    summary="통합 백테스트 실행",
+    description="단일 종목 또는 포트폴리오 백테스트를 자동으로 구분하여 실행합니다."
+)
+async def execute_backtest(request: UnifiedBacktestRequest):
+    """
+    통합 백테스트 실행 API
+    
+    단일 종목과 포트폴리오를 자동으로 구분하여 적절한 백테스트 엔진을 사용합니다.
+    결과는 표준화된 형식으로 반환됩니다.
+    
+    **판별 기준:**
+    - 포트폴리오에 종목이 1개이고 현금 자산이 없으면: 단일 종목 백테스트
+    - 포트폴리오에 종목이 여러개이거나 현금 자산이 있으면: 포트폴리오 백테스트
+    
+    **요청 예시:**
+    ```json
+    {
+        "portfolio": [
+            {"symbol": "AAPL", "amount": 10000, "asset_type": "stock"},
+            {"symbol": "GOOGL", "amount": 5000, "asset_type": "stock"}
+        ],
+        "start_date": "2023-01-01",
+        "end_date": "2023-12-31",
+        "strategy": "buy_and_hold"
+    }
+    ```
+    """
+    try:
+        # 현금 자산 여부 확인
+        has_cash_asset = any(asset.asset_type == 'cash' for asset in request.portfolio)
+        
+        # 단일 종목 vs 포트폴리오 판별
+        if len(request.portfolio) == 1 and not has_cash_asset:
+            # 단일 종목 백테스트 실행
+            asset = request.portfolio[0]
+            single_request = BacktestRequest(
+                ticker=asset.symbol,
+                start_date=str(request.start_date),  # 문자열로 변환
+                end_date=str(request.end_date),      # 문자열로 변환
+                initial_cash=asset.amount,
+                strategy=request.strategy,
+                strategy_params=request.strategy_params or {},
+                commission=request.commission
+            )
+            
+            # 단일 종목 백테스트 실행
+            result = await backtest_service.run_backtest(single_request)
+            
+            # 차트 데이터 생성 (상세 정보 포함)
+            chart_data = await backtest_service.generate_chart_data(single_request, result)
+            
+            # 추가 데이터 수집 (환율, 벤치마크)
+            additional_data = {}
+            
+            try:
+                # 원달러 환율 데이터
+                exchange_data = load_ticker_data("KRW=X", str(request.start_date), str(request.end_date))
+                if exchange_data is not None and not exchange_data.empty:
+                    exchange_rates = []
+                    for date_idx, row in exchange_data.iterrows():
+                        exchange_rates.append({
+                            "date": date_idx.strftime('%Y-%m-%d'),
+                            "rate": float(row['Close']),
+                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                        })
+                    additional_data["exchange_rates"] = exchange_rates
+                
+                # S&P 500 벤치마크 데이터
+                sp500_data = load_ticker_data("^GSPC", str(request.start_date), str(request.end_date))
+                if sp500_data is not None and not sp500_data.empty:
+                    benchmark_data = []
+                    for date_idx, row in sp500_data.iterrows():
+                        benchmark_data.append({
+                            "date": date_idx.strftime('%Y-%m-%d'),
+                            "close": float(row['Close']),
+                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                        })
+                    additional_data["sp500_benchmark"] = benchmark_data
+                
+                # 나스닥 벤치마크 데이터
+                nasdaq_data = load_ticker_data("^IXIC", str(request.start_date), str(request.end_date))
+                if nasdaq_data is not None and not nasdaq_data.empty:
+                    nasdaq_benchmark = []
+                    for date_idx, row in nasdaq_data.iterrows():
+                        nasdaq_benchmark.append({
+                            "date": date_idx.strftime('%Y-%m-%d'),
+                            "close": float(row['Close']),
+                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                        })
+                    additional_data["nasdaq_benchmark"] = nasdaq_benchmark
+                
+            except Exception as e:
+                logger.warning(f"추가 데이터 수집 실패: {str(e)}")
+                # 추가 데이터 수집 실패가 전체 백테스트를 실패시키지 않도록
+            
+            # 응답을 표준화된 형식으로 변환 (포트폴리오와 유사한 구조)
+            return {
+                "status": "success",
+                "backtest_type": "single_stock",
+                "data": {
+                    "ticker": asset.symbol,
+                    "strategy": request.strategy,
+                    "start_date": str(request.start_date),
+                    "end_date": str(request.end_date),
+                    "portfolio_composition": [
+                        {
+                            "symbol": asset.symbol,
+                            "weight": 1.0,
+                            "amount": asset.amount,
+                            "asset_type": asset.asset_type or "stock"
+                        }
+                    ],
+                    "summary_stats": result.data.__dict__ if hasattr(result, 'data') else {},
+                    
+                    # 차트 데이터 추가 (포트폴리오와 호환 가능한 형태)
+                    "ohlc_data": chart_data.ohlc_data if hasattr(chart_data, 'ohlc_data') else [],
+                    "equity_data": chart_data.equity_data if hasattr(chart_data, 'equity_data') else [],
+                    "trade_markers": chart_data.trade_markers if hasattr(chart_data, 'trade_markers') else [],
+                    "indicators": chart_data.indicators if hasattr(chart_data, 'indicators') else [],
+                    
+                    # 포트폴리오 형식과 호환을 위한 추가 데이터
+                    "individual_results": [{
+                        "ticker": asset.symbol,
+                        "final_equity": getattr(result.data, 'Equity_Final', asset.amount) if hasattr(result, 'data') else asset.amount,
+                        "total_return_pct": getattr(result.data, 'Return', 0.0) if hasattr(result, 'data') else 0.0,
+                        "sharpe_ratio": getattr(result.data, 'Sharpe_Ratio', 0.0) if hasattr(result, 'data') else 0.0,
+                        "weight": 1.0,
+                        "amount": asset.amount,
+                        "trades": getattr(result.data, 'Total_Trades', 0) if hasattr(result, 'data') else 0,
+                        "win_rate": getattr(result.data, 'Win_Rate', 0.0) if hasattr(result, 'data') else 0.0
+                    }],
+                    "portfolio_result": {
+                        "total_equity": getattr(result.data, 'Equity_Final', asset.amount) if hasattr(result, 'data') else asset.amount,
+                        "total_return_pct": getattr(result.data, 'Return', 0.0) if hasattr(result, 'data') else 0.0
+                    },
+                    
+                    # 추가 데이터 (환율, 벤치마크 등)
+                    **additional_data
+                }
+            }
+            
+        else:
+            # 포트폴리오 백테스트 실행
+            portfolio_request = PortfolioBacktestRequest(
+                portfolio=[
+                    PortfolioStock(
+                        symbol=asset.symbol,
+                        amount=asset.amount,
+                        investment_type=asset.investment_type or "lump_sum",
+                        dca_periods=asset.dca_periods or 12,
+                        asset_type=asset.asset_type or "stock"
+                    ) for asset in request.portfolio
+                ],
+                start_date=str(request.start_date),  # 문자열로 변환
+                end_date=str(request.end_date),      # 문자열로 변환
+                commission=request.commission,
+                rebalance_frequency=request.rebalance_frequency or "monthly",
+                strategy=request.strategy,
+                strategy_params=request.strategy_params or {}
+            )
+            
+            result = await portfolio_service.run_portfolio_backtest(portfolio_request)
+            
+            # 응답을 표준화된 형식으로 변환
+            return {
+                "status": "success",
+                "backtest_type": "portfolio",
+                "data": result.get("data", result)
+            }
+    
+    except Exception as e:
+        error_id = log_error_for_debugging(e, "execute_backtest", {
+            "portfolio_size": len(request.portfolio),
+            "strategy": request.strategy,
+            "date_range": f"{request.start_date} to {request.end_date}",
+        })
+        
+        logger.error(f"Unified backtest execution failed [ID: {error_id}]: {str(e)}")
+        user_message = get_user_friendly_message("unexpected_error", str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{user_message} (오류 ID: {error_id})"
         ) 

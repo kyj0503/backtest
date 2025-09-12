@@ -33,8 +33,8 @@ export interface PortfolioStock {
   asset_type?: 'stock' | 'cash';
 }
 
-// 통합 백테스트 요청
-export interface UnifiedBacktestRequest {
+// 백테스트 요청 (단일/포트폴리오 통합)
+export interface BacktestRequest {
   portfolio: PortfolioStock[];
   start_date: string;
   end_date: string;
@@ -250,11 +250,26 @@ export interface OptimizationResult {
 // HTTP 메서드 타입
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
+// 통합 백테스트 응답 (새로운 /execute 엔드포인트용)
+export interface UnifiedBacktestResponse {
+  status: 'success' | 'error';
+  backtest_type: 'single_stock' | 'portfolio';
+  data: ChartDataResponse | PortfolioBacktestResponse;
+  message?: string;
+}
+
+// 통합 백테스트 결과 (프론트엔드 처리용)
+export interface UnifiedBacktestResult extends Partial<ChartDataResponse>, Partial<PortfolioBacktestResponse> {
+  backtest_type?: 'single_stock' | 'portfolio';
+  api_version?: 'unified' | 'legacy';
+}
+
 // API 엔드포인트 타입
 export type ApiEndpoint = 
   | '/api/v1/backtest/run'
   | '/api/v1/backtest/chart-data'
   | '/api/v1/backtest/portfolio'
+  | '/api/v1/backtest/execute'  // 새로운 통합 엔드포인트
   | '/api/v1/strategies'
   | '/api/v1/naver-news/search'
   | '/api/v1/yfinance/exchange-rate'

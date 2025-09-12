@@ -1,6 +1,6 @@
 import React from 'react';
-import UnifiedBacktestForm from '../components/UnifiedBacktestForm';
-import UnifiedBacktestResults from '../components/UnifiedBacktestResults';
+import BacktestForm from '../components/BacktestForm';
+import BacktestResults from '../components/BacktestResults';
 import { useBacktest } from '../hooks/useBacktest';
 
 const BacktestPage: React.FC = () => {
@@ -21,7 +21,7 @@ const BacktestPage: React.FC = () => {
 
         {/* 백테스트 폼 */}
         <div className="mb-12">
-          <UnifiedBacktestForm 
+          <BacktestForm 
             onSubmit={runBacktest} 
             loading={loading} 
           />
@@ -76,7 +76,7 @@ const BacktestPage: React.FC = () => {
         {/* 결과 표시 */}
         {results && !loading && (
           <div>
-            <UnifiedBacktestResults 
+            <BacktestResults 
               data={results} 
               isPortfolio={isPortfolio} 
             />

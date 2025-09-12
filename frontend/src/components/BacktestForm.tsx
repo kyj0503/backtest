@@ -1,5 +1,5 @@
 import React from 'react';
-import { UnifiedBacktestRequest } from '../types/api';
+import { BacktestRequest } from '../types/api';
 import { ASSET_TYPES } from '../constants/strategies';
 import DateRangeForm from './DateRangeForm';
 import StrategyForm from './StrategyForm';
@@ -8,12 +8,12 @@ import PortfolioForm from './PortfolioForm';
 import { useBacktestForm } from '../hooks/useBacktestForm';
 import { useFormValidation } from '../hooks/useFormValidation';
 
-interface UnifiedBacktestFormProps {
-  onSubmit: (request: UnifiedBacktestRequest) => Promise<void>;
+interface BacktestFormProps {
+  onSubmit: (request: BacktestRequest) => Promise<void>;
   loading?: boolean;
 }
 
-const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loading = false }) => {
+const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }) => {
   const { state, actions, helpers } = useBacktestForm();
   const { errors, validateForm, setErrors } = useFormValidation();
 
@@ -162,4 +162,4 @@ const UnifiedBacktestForm: React.FC<UnifiedBacktestFormProps> = ({ onSubmit, loa
   );
 };
 
-export default UnifiedBacktestForm;
+export default BacktestForm;

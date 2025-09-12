@@ -1,5 +1,5 @@
 // API 호출을 담당하는 서비스 클래스
-import { UnifiedBacktestRequest } from '../types/api';
+import { BacktestRequest } from '../types/api';
 
 export interface ApiError {
   message: string;
@@ -146,7 +146,62 @@ export class BacktestApiService {
     }
   }
 
-  async runBacktest(request: UnifiedBacktestRequest) {
+  async runBacktest(request: BacktestRequest) {
+    try {
+      // 새로운 통합 엔드포인트 사용 - 백엔드에서 요구하는 형식으로 변환
+      const unifiedRequest = {
+        portfolio: request.portfolio.map(stock => ({
+          symbol: stock.symbol,
+          amount: stock.amount,
+          investment_type: stock.investment_type || 'lump_sum',
+          dca_periods: stock.dca_periods,
+          asset_type: stock.asset_type || 'stock'
+        })),
+        start_date: request.start_date,
+        end_date: request.end_date,
+        strategy: request.strategy,
+        strategy_params: request.strategy_params || {},
+        commission: request.commission || 0.002,
+        rebalance_frequency: request.rebalance_frequency || 'monthly'
+      };
+
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/backtest/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(unifiedRequest),
+      });
+
+      if (!response.ok) {
+        const apiError = await this.handleApiError(response);
+        throw apiError;
+      }
+
+      const result = await response.json();
+      
+      // 통합 API 응답 처리 - 표준화된 형식 반환
+      if (result.status === 'success') {
+        return {
+          ...result.data,
+          backtest_type: result.backtest_type, // 백테스트 유형 정보 포함
+          api_version: 'unified' // 통합 API 사용 표시
+        };
+      }
+      
+      return result;
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        throw error; // 이미 처리된 ApiError
+      }
+      throw this.createApiError(error);
+    }
+  }
+
+
+
+  // 레거시 로직 (필요시 사용)
+  async runBacktestLegacy(request: BacktestRequest) {
     // 현금 자산이 포함된 경우 항상 포트폴리오 API 사용
     const hasCashAsset = request.portfolio.some(stock => stock.asset_type === 'cash');
     

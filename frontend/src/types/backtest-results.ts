@@ -53,7 +53,7 @@ export interface PortfolioData {
   daily_returns: Record<string, number>;
 }
 
-export interface UnifiedBacktestResultsProps {
+export interface BacktestResultsProps {
   data: ChartData | PortfolioData;
   isPortfolio: boolean;
 }

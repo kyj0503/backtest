@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { UnifiedBacktestRequest } from '../types/api';
+import { BacktestRequest } from '../types/api';
 import { backtestApiService, ApiError } from '../services/api';
 
 export interface UseBacktestReturn {
@@ -9,7 +9,7 @@ export interface UseBacktestReturn {
   errorType: string | null;
   errorId: string | null;
   isPortfolio: boolean;
-  runBacktest: (request: UnifiedBacktestRequest) => Promise<void>;
+  runBacktest: (request: BacktestRequest) => Promise<void>;
   clearResults: () => void;
   clearError: () => void;
 }
@@ -22,16 +22,25 @@ export const useBacktest = (): UseBacktestReturn => {
   const [errorId, setErrorId] = useState<string | null>(null);
   const [isPortfolio, setIsPortfolio] = useState(false);
 
-  const runBacktest = async (request: UnifiedBacktestRequest) => {
+  const runBacktest = async (request: BacktestRequest) => {
     setLoading(true);
     setError(null);
     setErrorType(null);
     setErrorId(null);
     setResults(null);
-    setIsPortfolio(request.portfolio.length > 1);
 
     try {
       const result = await backtestApiService.runBacktest(request);
+      
+      // 통합 API 응답 처리
+      if (result.backtest_type) {
+        setIsPortfolio(result.backtest_type === 'portfolio');
+        console.log(`백테스트 유형: ${result.backtest_type}, 통합 API 사용`);
+      } else {
+        // 레거시 API 응답 처리 (fallback)
+        setIsPortfolio(request.portfolio.length > 1 || request.portfolio.some(stock => stock.asset_type === 'cash'));
+      }
+      
       setResults(result);
     } catch (err) {
       if (err && typeof err === 'object' && 'message' in err) {

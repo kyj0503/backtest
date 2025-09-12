@@ -2,9 +2,9 @@ import React from 'react';
 import ResultsHeader from './results/ResultsHeader';
 import ChartsSection from './results/ChartsSection';
 import AdditionalFeatures from './results/AdditionalFeatures';
-import { UnifiedBacktestResultsProps } from '../types/backtest-results';
+import { BacktestResultsProps } from '../types/backtest-results';
 
-const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, isPortfolio }) => {
+const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) => {
   // 데이터 유효성 검사
   if (!data) {
     return (
@@ -49,4 +49,4 @@ const UnifiedBacktestResults: React.FC<UnifiedBacktestResultsProps> = ({ data, i
   );
 };
 
-export default UnifiedBacktestResults;
+export default BacktestResults;

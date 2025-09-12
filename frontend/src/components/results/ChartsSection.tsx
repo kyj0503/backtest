@@ -10,6 +10,7 @@ import {
 import ChartLoading from '../common/ChartLoading';
 import { formatPercent } from '../../utils/formatters';
 import { useStockData } from '../../hooks/useStockData';
+// import EnhancedChartsSection from './EnhancedChartsSection';
 import { 
   ChartData, 
   PortfolioData
@@ -369,6 +370,14 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
   return (
     <>
       {isPortfolio ? renderPortfolioCharts() : renderSingleStockCharts()}
+      
+      {/* 추가 데이터 차트 (환율, 벤치마크 등) - 성능 최적화를 위해 일시적으로 비활성화 */}
+      {/* <EnhancedChartsSection data={data} isPortfolio={isPortfolio} /> */}
+      <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+        <p className="text-blue-800 text-sm">
+          📊 추가 차트 (환율, S&P 500, NASDAQ 벤치마크)는 현재 성능 최적화 중입니다.
+        </p>
+      </div>
     </>
   );
 });
