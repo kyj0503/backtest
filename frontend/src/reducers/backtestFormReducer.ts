@@ -2,6 +2,15 @@ import { ASSET_TYPES } from '../constants/strategies';
 import { BacktestFormState, BacktestFormAction, Stock } from '../types/backtest-form';
 
 export function backtestFormReducer(state: BacktestFormState, action: BacktestFormAction): BacktestFormState {
+  // 비중 기반 모드에서 amount 자동 계산
+  const recalcAmountsByWeight = (portfolio: Stock[], totalInvestment: number) => {
+    return portfolio.map(s =>
+      typeof s.weight === 'number'
+        ? { ...s, amount: Math.round((s.weight / 100) * totalInvestment) }
+        : s
+    );
+  };
+
   switch (action.type) {
     case 'SET_PORTFOLIO':
       return {
@@ -19,25 +28,72 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
       const { index, field, value } = action.payload;
       let updatedPortfolio = state.portfolio.map((stock, i) => {
         if (i !== index) return stock;
-        // amount를 직접 수정하면 weight를 undefined로 초기화(자동계산 모드)
-        if (field === 'amount') {
-          return { ...stock, amount: Number(value), weight: undefined };
+        if (state.portfolioInputMode === 'weight') {
+          // 비중 기반 모드: weight만 수정 가능, amount는 자동 계산
+          if (field === 'weight') {
+            return { ...stock, weight: Number(value) };
+          }
+          // 나머지 필드는 그대로
+          return { ...stock, [field]: value };
+        } else {
+          // 금액 기반 모드: amount 직접 수정, weight는 undefined로 초기화
+          if (field === 'amount') {
+            return { ...stock, amount: Number(value), weight: undefined };
+          }
+          if (field === 'weight') {
+            return { ...stock, weight: Number(value) };
+          }
+          return { ...stock, [field]: value };
         }
-        // weight를 직접 수정하면 amount는 weight에서 계산됨(수동 비중 모드)
-        if (field === 'weight') {
-          return { ...stock, weight: Number(value) };
-        }
-        return { ...stock, [field]: value };
       });
-
-      // weight가 하나라도 있으면 amount를 weight 기준으로 동기화
-      const hasAnyWeight = updatedPortfolio.some(s => typeof s.weight === 'number');
-      if (hasAnyWeight) {
-        const totalBudget = backtestFormHelpers.getTotalAmount(updatedPortfolio);
-        updatedPortfolio = backtestFormHelpers.applyWeightsToAmounts(updatedPortfolio, totalBudget);
+      // 비중 기반 모드면 amount 자동 계산
+      if (state.portfolioInputMode === 'weight') {
+        updatedPortfolio = recalcAmountsByWeight(updatedPortfolio, state.totalInvestment);
+      } else {
+        // 금액 기반 모드에서 weight가 하나라도 있으면 amount를 weight 기준으로 동기화
+        const hasAnyWeight = updatedPortfolio.some(s => typeof s.weight === 'number');
+        if (hasAnyWeight) {
+          const totalBudget = backtestFormHelpers.getTotalAmount(updatedPortfolio);
+          updatedPortfolio = backtestFormHelpers.applyWeightsToAmounts(updatedPortfolio, totalBudget);
+        }
       }
       return {
         ...state,
+        portfolio: updatedPortfolio
+      };
+    }
+    case 'SET_PORTFOLIO_INPUT_MODE': {
+      // 모드 전환 시 상태 변환: 금액→비중, 비중→금액
+      let updatedPortfolio = state.portfolio;
+      if (action.payload === 'weight') {
+        // 금액→비중: 현재 금액 비율로 weight 세팅
+        const total = backtestFormHelpers.getTotalAmount(state.portfolio);
+        updatedPortfolio = state.portfolio.map(s => ({
+          ...s,
+          weight: total > 0 ? Number(((s.amount / total) * 100).toFixed(2)) : 0
+        }));
+        // amount는 totalInvestment 기준으로 재계산
+        updatedPortfolio = recalcAmountsByWeight(updatedPortfolio, state.totalInvestment);
+      } else {
+        // 비중→금액: weight를 undefined로 초기화
+        updatedPortfolio = state.portfolio.map(s => ({ ...s, weight: undefined }));
+      }
+      return {
+        ...state,
+        portfolioInputMode: action.payload,
+        portfolio: updatedPortfolio
+      };
+    }
+
+    case 'SET_TOTAL_INVESTMENT': {
+      // 전체 투자금액 변경 시 비중 기반 모드면 amount 자동 계산
+      let updatedPortfolio = state.portfolio;
+      if (state.portfolioInputMode === 'weight') {
+        updatedPortfolio = recalcAmountsByWeight(state.portfolio, action.payload);
+      }
+      return {
+        ...state,
+        totalInvestment: action.payload,
         portfolio: updatedPortfolio
       };
     }
@@ -155,7 +211,9 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
         ui: {
           errors: [],
           isLoading: false
-        }
+        },
+        portfolioInputMode: 'amount',
+        totalInvestment: 10000
       };
 
     default:

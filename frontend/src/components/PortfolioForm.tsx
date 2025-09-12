@@ -1,16 +1,4 @@
-import React, { ChangeEvent } from 'react';
-import { PREDEFINED_STOCKS, ASSET_TYPES, AssetType } from '../constants/strategies';
-import { Tooltip } from './common';
-import StockAutocomplete from './common/StockAutocomplete';
-
-interface Stock {
-  symbol: string;
-  amount: number;
-  weight?: number;
-  investmentType: 'lump_sum' | 'dca';
-  dcaPeriods?: number;
-  assetType?: AssetType;
-}
+import { Stock, PortfolioInputMode } from '../types/backtest-form';
 
 export interface PortfolioFormProps {
   portfolio: Stock[];
@@ -19,7 +7,16 @@ export interface PortfolioFormProps {
   addCash: () => void;
   removeStock: (index: number) => void;
   getTotalAmount: () => number;
+  portfolioInputMode: PortfolioInputMode;
+  setPortfolioInputMode: (mode: PortfolioInputMode) => void;
+  totalInvestment: number;
+  setTotalInvestment: (amount: number) => void;
 }
+
+import React, { ChangeEvent } from 'react';
+import { PREDEFINED_STOCKS, ASSET_TYPES } from '../constants/strategies';
+import { Tooltip } from './common';
+import StockAutocomplete from './common/StockAutocomplete';
 
 const PortfolioForm: React.FC<PortfolioFormProps> = ({
   portfolio,
@@ -27,11 +24,49 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
   addStock,
   addCash,
   removeStock,
-  getTotalAmount
+  getTotalAmount,
+  portfolioInputMode,
+  setPortfolioInputMode,
+  totalInvestment,
+  setTotalInvestment,
 }) => {
   return (
     <div className="mb-8">
-      <h5 className="text-lg font-semibold mb-4">포트폴리오 구성</h5>
+      <div className="flex flex-col md:flex-row md:items-center md:gap-6 mb-4">
+        <h5 className="text-lg font-semibold mb-2 md:mb-0">포트폴리오 구성</h5>
+        <div className="flex items-center gap-3">
+          <label className="font-medium text-gray-700">입력 방식:</label>
+          <button
+            type="button"
+            className={`px-3 py-1 rounded-l border ${portfolioInputMode === 'amount' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'} border-blue-600`}
+            onClick={() => setPortfolioInputMode('amount')}
+            disabled={portfolioInputMode === 'amount'}
+          >
+            금액 기반
+          </button>
+          <button
+            type="button"
+            className={`px-3 py-1 rounded-r border-l-0 border ${portfolioInputMode === 'weight' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'} border-blue-600`}
+            onClick={() => setPortfolioInputMode('weight')}
+            disabled={portfolioInputMode === 'weight'}
+          >
+            비중 기반
+          </button>
+        </div>
+        {portfolioInputMode === 'weight' && (
+          <div className="flex items-center gap-2 ml-0 md:ml-8 mt-2 md:mt-0">
+            <label className="font-medium text-gray-700">전체 투자금액($):</label>
+            <input
+              type="number"
+              min={1000}
+              step={100}
+              value={totalInvestment}
+              onChange={e => setTotalInvestment(Number(e.target.value))}
+              className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        )}
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full table-fixed divide-y divide-gray-200 border border-gray-200 rounded-lg">
           <thead className="bg-gray-50">
@@ -50,7 +85,6 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                 <td className="w-64 px-6 py-4 whitespace-nowrap">
                   <div className="space-y-2 max-w-full overflow-hidden">
                     {stock.assetType === ASSET_TYPES.CASH ? (
-                      // 현금 자산인 경우 직접 이름 입력
                       <input
                         type="text"
                         value={stock.symbol || ''}
@@ -60,7 +94,6 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50"
                       />
                     ) : (
-                      // 주식 자산인 경우 기존 로직
                       <>
                         <select
                           value={stock.symbol === '' ? 'CUSTOM' : stock.symbol}
@@ -100,6 +133,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     min="100"
                     step="100"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={portfolioInputMode === 'weight'}
                   />
                 </td>
                 <td className="w-28 px-6 py-4 whitespace-nowrap">
@@ -144,11 +178,11 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                   </div>
                 </td>
                 <td className="w-24 px-6 py-4 whitespace-nowrap text-sm">
-                  {/* 비중(%) 입력: weight가 있으면 직접 입력값, 없으면 자동계산 */}
-                  {typeof stock.weight === 'number' ? (
+                  {/* 비중(%) 입력: weight 기반 모드면 직접 입력, 금액 기반 모드면 자동 계산 */}
+                  {portfolioInputMode === 'weight' ? (
                     <input
                       type="number"
-                      value={stock.weight}
+                      value={typeof stock.weight === 'number' ? stock.weight : ''}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'weight', Number(e.target.value))}
                       min="0"
                       max="100"
@@ -156,7 +190,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                       className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   ) : (
-                    <span title="투자 금액 비율로 자동 계산됨. 비중을 직접 입력하려면 여기에 값을 입력하세요.">
+                    <span title="투자 금액 비율로 자동 계산됨. 비중을 직접 입력하려면 비중 기반 모드로 전환하세요.">
                       {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
                     </span>
                   )}

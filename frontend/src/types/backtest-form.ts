@@ -10,6 +10,8 @@ export interface Stock {
   assetType?: AssetType;
 }
 
+export type PortfolioInputMode = 'amount' | 'weight';
+
 export interface BacktestFormState {
   portfolio: Stock[];
   dates: {
@@ -28,6 +30,8 @@ export interface BacktestFormState {
     errors: string[];
     isLoading: boolean;
   };
+  portfolioInputMode: PortfolioInputMode;
+  totalInvestment: number;
 }
 
 export type BacktestFormAction =
@@ -44,6 +48,8 @@ export type BacktestFormAction =
   | { type: 'SET_COMMISSION'; payload: number }
   | { type: 'SET_ERRORS'; payload: string[] }
   | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_PORTFOLIO_INPUT_MODE'; payload: PortfolioInputMode }
+  | { type: 'SET_TOTAL_INVESTMENT'; payload: number }
   | { type: 'RESET_FORM' };
 
 export const initialBacktestFormState: BacktestFormState = {
@@ -68,5 +74,7 @@ export const initialBacktestFormState: BacktestFormState = {
   ui: {
     errors: [],
     isLoading: false
-  }
+  },
+  portfolioInputMode: 'amount',
+  totalInvestment: 10000
 };
