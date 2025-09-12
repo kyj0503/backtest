@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useTheme } from './hooks/useTheme';
 import Header from './components/Header';
 import HomePage from './pages/HomePage';
 import BacktestPage from './pages/BacktestPage';
@@ -10,14 +12,25 @@ import ChatPage from './pages/ChatPage';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
+  // Initialize theme system
+  const { currentTheme, isDarkMode } = useTheme();
+
+  // Apply theme class to root element
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', currentTheme);
+    
+    if (isDarkMode) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [currentTheme, isDarkMode]);
+
   return (
     <ErrorBoundary>
       <Router>
-        <div className="App min-h-screen bg-background text-foreground" style={{ 
-          background: 'var(--background)', 
-          color: 'var(--foreground)',
-          fontFamily: 'var(--font-sans)'
-        }}>
+        <div className="App min-h-screen bg-background text-foreground theme-transition">
           <Header />
           <main>
             <Routes>
