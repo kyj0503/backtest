@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BacktestRequest } from '../types/api';
 import { ASSET_TYPES } from '../constants/strategies';
 import DateRangeForm from './DateRangeForm';
 import StrategyForm from './StrategyForm';
 import CommissionForm from './CommissionForm';
 import PortfolioForm from './PortfolioForm';
+import AdvancedSettingsForm, { AdvancedStockSettings } from './AdvancedSettingsForm';
 import { useBacktestForm } from '../hooks/useBacktestForm';
 import { useFormValidation } from '../hooks/useFormValidation';
 import { Button } from './ui/button';
@@ -17,6 +18,8 @@ interface BacktestFormProps {
 const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }) => {
   const { state, actions, helpers } = useBacktestForm();
   const { errors, validateForm, setErrors } = useFormValidation();
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [advancedSettings, setAdvancedSettings] = useState<AdvancedStockSettings[]>([]);
 
   const generateStrategyParams = () => {
     const strategyParams = state.strategy.strategyParams;
@@ -142,6 +145,35 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
               />
             </div>
 
+            {/* 고급 설정 버튼 */}
+            <div className="mb-4">
+              <Button
+                type="button"
+                variant={advancedSettings.length > 0 ? "default" : "outline"}
+                onClick={() => setShowAdvancedSettings(true)}
+                disabled={state.portfolio.length === 0}
+                className={`w-full py-2 px-4 text-sm font-medium ${
+                  advancedSettings.length > 0 
+                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    : ''
+                }`}
+              >
+                {advancedSettings.length > 0 ? '✓' : '🔧'} 고급 사용자 설정 
+                {advancedSettings.length > 0 && 
+                  ` (${advancedSettings.filter(s => s.startDate || s.endDate || s.strategy !== 'buy_and_hold').length}개 종목 개별 설정됨)`
+                }
+              </Button>
+              {state.portfolio.length === 0 ? (
+                <p className="text-xs text-gray-500 mt-1 text-center">
+                  포트폴리오에 종목을 추가한 후 고급 설정을 사용할 수 있습니다.
+                </p>
+              ) : advancedSettings.length > 0 && (
+                <p className="text-xs text-green-600 mt-1 text-center">
+                  고급 설정이 적용되었습니다. 각 종목별로 개별 날짜와 전략이 설정됩니다.
+                </p>
+              )}
+            </div>
+
             {/* 실행 버튼 */}
             <div>
               <Button
@@ -164,6 +196,14 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
               </Button>
             </div>
           </form>
+
+          {/* 고급 설정 모달 */}
+          <AdvancedSettingsForm
+            portfolio={state.portfolio}
+            isVisible={showAdvancedSettings}
+            onClose={() => setShowAdvancedSettings(false)}
+            onApply={setAdvancedSettings}
+          />
         </div>
       </div>
     </div>

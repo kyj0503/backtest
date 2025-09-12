@@ -93,7 +93,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
               <LazyEquityChart data={equityChartData} />
             </Suspense>
           </CardContent>
-        </Card>        {/* 개별 종목 주가 차트 */}
+        </Card>        {/* 개별 종목 주가 차트 - 단일/다중 종목 동일한 표시 */}
         {loadingStockData ? (
           <Card className="p-8 text-center">
             <div className="flex flex-col items-center">
@@ -105,7 +105,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">
-                개별 종목 주가 변동 ({stocksData.length}개 종목)
+                개별 주가 변동 ({stocksData.length}개 종목)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -295,6 +295,17 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
   const renderSingleStockCharts = () => {
     const chartData = data as ChartData;
     
+    // 단일 종목도 동일한 방식으로 주가 데이터 가져오기
+    const symbols = chartData.ticker ? [chartData.ticker] : [];
+    const { 
+      stocksData, 
+      loading: loadingStockData 
+    } = useStockData({
+      symbols,
+      startDate: chartData.start_date || '',
+      endDate: chartData.end_date || ''
+    });
+    
     return (
       <>
         <Suspense fallback={<ChartLoading height={300} />}>
@@ -328,28 +339,28 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           </CardContent>
         </Card>
 
-        {/* 개별 주가 차트 (단일 종목) */}
-        {chartData.ticker && (
+        {/* 개별 주가 차트 (단일 종목) - 포트폴리오와 동일한 방식 */}
+        {loadingStockData ? (
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+              <p className="text-muted-foreground">개별 종목 주가 데이터를 가져오는 중...</p>
+            </div>
+          </Card>
+        ) : stocksData.length > 0 ? (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">개별 주가 변동</CardTitle>
+              <CardTitle className="text-lg">
+                개별 주가 변동 ({stocksData.length}개 종목)
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <Suspense fallback={<ChartLoading height={400} />}>
-                <LazyStockPriceChart 
-                  stocksData={[{
-                    symbol: chartData.ticker,
-                    data: chartData.ohlc_data?.map(item => ({
-                      date: item.date,
-                      price: item.close,
-                      volume: item.volume
-                    })) || []
-                  }]} 
-                />
+                <LazyStockPriceChart stocksData={stocksData} />
               </Suspense>
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
         {/* 거래 내역 차트 (단일 종목, Buy and Hold 전략 제외) */}
         {chartData.trade_markers && chartData.trade_markers.length > 0 && 

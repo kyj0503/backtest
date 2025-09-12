@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getAuthToken } from '../services/auth';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const getApiBase = () => (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
 
@@ -71,17 +74,30 @@ const ChatPage: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-3xl">
-      <h2 className="text-2xl font-bold mb-6">채팅방</h2>
-      <div className="border rounded p-4 h-80 overflow-auto bg-white mb-4">
-        {messages.map((m, i) => (
-          <div key={i} className="text-sm"><strong>{m.user}</strong>: {m.message}</div>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input className="flex-1 px-3 py-2 border rounded" value={input} onChange={e => setInput(e.target.value)} placeholder="메시지를 입력하세요" />
-        <button className="bg-blue-600 text-white rounded px-4" onClick={send}>전송</button>
-      </div>
-      <p className="text-xs text-gray-500 mt-2">로그인 후 이용 가능합니다.</p>
+      <Card>
+        <CardHeader>
+          <CardTitle>채팅방</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="border rounded p-4 h-80 overflow-auto bg-background">
+            {messages.map((m, i) => (
+              <div key={i} className="text-sm">
+                <strong>{m.user}</strong>: {m.message}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input 
+              className="flex-1" 
+              value={input} 
+              onChange={e => setInput(e.target.value)} 
+              placeholder="메시지를 입력하세요" 
+            />
+            <Button onClick={send}>전송</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">로그인 후 이용 가능합니다.</p>
+        </CardContent>
+      </Card>
     </div>
   );
 };

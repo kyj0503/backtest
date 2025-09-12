@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { addComment, getPost } from '../services/community';
 import { useParams } from 'react-router-dom';
 import { getAuthToken } from '../services/auth';
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 
 const PostDetailPage: React.FC = () => {
   const { id } = useParams();
@@ -35,31 +39,73 @@ const PostDetailPage: React.FC = () => {
 
   const loggedIn = !!getAuthToken();
 
-  if (!data) return (<div className="container mx-auto px-4 py-10 max-w-3xl">불러오는 중...</div>);
+  if (!data) return (
+    <div className="container mx-auto px-4 py-10 max-w-3xl">
+      <Card>
+        <CardContent className="p-6">불러오는 중...</CardContent>
+      </Card>
+    </div>
+  );
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-3xl">
-      <h2 className="text-2xl font-bold mb-2">{data.post?.title}</h2>
-      <div className="text-sm text-gray-500 mb-6">{data.post?.username} • {new Date(data.post?.created_at).toLocaleString()}</div>
-      <div className="bg-white border rounded p-4 whitespace-pre-wrap mb-8">{data.post?.content}</div>
-
-      <h3 className="text-xl font-semibold mb-3">댓글</h3>
-      <div className="space-y-3 mb-6">
-        {(data.comments || []).map((c: any) => (
-          <div key={c.id} className="bg-white border rounded p-3">
-            <div className="text-sm text-gray-500 mb-1">{c.username} • {new Date(c.created_at).toLocaleString()}</div>
-            <div className="whitespace-pre-wrap">{c.content}</div>
+    <div className="container mx-auto px-4 py-10 max-w-3xl space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{data.post?.title}</CardTitle>
+          <div className="text-sm text-muted-foreground">
+            {data.post?.username} • {new Date(data.post?.created_at).toLocaleString()}
           </div>
-        ))}
-      </div>
+        </CardHeader>
+        <CardContent>
+          <div className="whitespace-pre-wrap">{data.post?.content}</div>
+        </CardContent>
+      </Card>
 
-      {loggedIn && (
-        <form onSubmit={onSubmit} className="bg-white border rounded p-4 space-y-3">
-          {error && <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded">{error}</div>}
-          <textarea className="w-full px-3 py-2 border rounded" placeholder="댓글 내용" value={content} onChange={e => setContent(e.target.value)} rows={3} />
-          <button className="bg-blue-600 text-white rounded px-4 py-2">댓글 등록</button>
-        </form>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">댓글</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {(data.comments || []).map((c: any) => (
+            <Card key={c.id}>
+              <CardContent className="p-4">
+                <div className="text-sm text-muted-foreground mb-2">
+                  {c.username} • {new Date(c.created_at).toLocaleString()}
+                </div>
+                <div className="whitespace-pre-wrap">{c.content}</div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {loggedIn && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">댓글 작성</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={onSubmit} className="space-y-4">
+                  {error && (
+                    <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                      {error}
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="comment">댓글 내용</Label>
+                    <Textarea 
+                      id="comment"
+                      placeholder="댓글 내용을 입력하세요" 
+                      value={content} 
+                      onChange={e => setContent(e.target.value)} 
+                      rows={3} 
+                    />
+                  </div>
+                  <Button type="submit">댓글 등록</Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

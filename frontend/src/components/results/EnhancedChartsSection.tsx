@@ -4,6 +4,7 @@ import {
   ChartData, 
   PortfolioData
 } from '../../types/backtest-results';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface EnhancedChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -21,12 +22,12 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
     }
 
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h5 className="text-lg font-semibold">원/달러 환율</h5>
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>원/달러 환율</CardTitle>
           <p className="text-sm text-gray-600">백테스트 기간 동안의 원달러 환율 변화</p>
-        </div>
-        <div className="p-6">
+        </CardHeader>
+        <CardContent className="pt-4">
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={exchangeRates}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -49,14 +50,20 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
               <Line 
                 type="monotone" 
                 dataKey="rate" 
-                stroke="#10b981" 
-                strokeWidth={2}
+                stroke="#fd7e14" 
+                strokeWidth={3}
                 dot={false}
+                activeDot={{ 
+                  r: 5, 
+                  stroke: '#fd7e14', 
+                  strokeWidth: 2, 
+                  fill: '#fff' 
+                }}
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -78,12 +85,12 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
     });
 
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h5 className="text-lg font-semibold">S&P 500 지수</h5>
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>S&P 500 지수</CardTitle>
           <p className="text-sm text-gray-600">동기간 S&P 500 지수 변화 (벤치마크)</p>
-        </div>
-        <div className="p-6">
+        </CardHeader>
+        <CardContent className="pt-4">
           <ResponsiveContainer width="100%" height={350}>
             <ComposedChart data={benchmarkWithReturns}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -123,8 +130,8 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
               />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -146,12 +153,12 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
     });
 
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h5 className="text-lg font-semibold">나스닥 지수</h5>
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>나스닥 지수</CardTitle>
           <p className="text-sm text-gray-600">동기간 나스닥 지수 변화 (벤치마크)</p>
-        </div>
-        <div className="p-6">
+        </CardHeader>
+        <CardContent className="pt-4">
           <ResponsiveContainer width="100%" height={350}>
             <ComposedChart data={benchmarkWithReturns}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -191,8 +198,8 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
               />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   };
 
@@ -225,12 +232,12 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
     });
 
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h5 className="text-lg font-semibold">매매 신호</h5>
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>매매 신호</CardTitle>
           <p className="text-sm text-gray-600">백테스트 전략의 매수/매도 신호 ({tradeMarkers.length}개 거래)</p>
-        </div>
-        <div className="p-6">
+        </CardHeader>
+        <CardContent className="pt-4">
           <ResponsiveContainer width="100%" height={400}>
             <ComposedChart data={dataWithSignals}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -275,8 +282,8 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
               />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   };
 

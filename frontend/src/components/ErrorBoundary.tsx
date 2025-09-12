@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { Button } from "@/components/ui/button";
 
 interface Props {
   children: ReactNode;
@@ -128,18 +129,19 @@ class ErrorBoundary extends Component<Props, State> {
                 
                 <hr className="border-red-300 my-4" />
                 <div className="flex gap-2">
-                  <button 
-                    className="px-4 py-2 border border-red-300 text-red-700 rounded hover:bg-red-100 transition-colors"
+                  <Button 
+                    variant="outline"
+                    className="border-red-300 text-red-700 hover:bg-red-100"
                     onClick={this.handleRestart}
                   >
                     다시 시도
-                  </button>
-                  <button 
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                  </Button>
+                  <Button 
+                    variant="destructive"
                     onClick={this.handleReload}
                   >
                     페이지 새로고침
-                  </button>
+                  </Button>
                 </div>
                 
                 <div className="mt-3 text-gray-500 text-sm">

@@ -1,6 +1,8 @@
 import React, { useState, memo, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useRenderPerformance } from "./common/PerformanceMonitor";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface StockData {
   symbol: string;
@@ -64,25 +66,27 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, clas
       <div className="mb-3 flex items-center justify-between">
         <div>
           <h5 className="text-lg font-semibold text-gray-900 mb-1">{currentStock.symbol}</h5>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          <Badge variant="secondary">
             {currentIndex + 1} / {stocksData.length}
-          </span>
+          </Badge>
         </div>
         <div className="flex gap-2">
-          <button 
-            className="px-3 py-1 text-sm border border-blue-300 text-blue-700 rounded hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          <Button 
+            variant="outline"
+            size="sm"
             onClick={handlePrevious}
             disabled={stocksData.length <= 1}
           >
             ← 이전
-          </button>
-          <button 
-            className="px-3 py-1 text-sm border border-blue-300 text-blue-700 rounded hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          </Button>
+          <Button 
+            variant="outline"
+            size="sm"
             onClick={handleNext}
             disabled={stocksData.length <= 1}
           >
             다음 →
-          </button>
+          </Button>
         </div>
       </div>
 
