@@ -153,6 +153,7 @@ export class BacktestApiService {
         portfolio: request.portfolio.map(stock => ({
           symbol: stock.symbol,
           amount: stock.amount,
+          weight: (stock as any).weight,
           investment_type: stock.investment_type || 'lump_sum',
           dca_periods: stock.dca_periods,
           asset_type: stock.asset_type || 'stock'
@@ -223,6 +224,7 @@ export class BacktestApiService {
         portfolio: request.portfolio.map(stock => ({
           symbol: stock.asset_type === 'cash' ? 'CASH' : stock.symbol, // 백엔드에서는 여전히 CASH 심볼 사용
           amount: stock.amount,
+          weight: (stock as any).weight,
           investment_type: stock.investment_type,
           dca_periods: stock.dca_periods,
           asset_type: stock.asset_type || 'stock'  // 자산 타입 추가

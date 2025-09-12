@@ -41,6 +41,8 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
       const portfolioData = state.portfolio.map(stock => ({
         symbol: stock.symbol.toUpperCase(),
         amount: stock.amount,
+        // include optional weight if user provided it
+        weight: typeof stock.weight === 'number' ? stock.weight : undefined,
         investment_type: stock.investmentType,
         dca_periods: stock.dcaPeriods || 12,
         asset_type: stock.assetType || ASSET_TYPES.STOCK

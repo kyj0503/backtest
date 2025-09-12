@@ -108,6 +108,13 @@ Authorization: Bearer <token>
 단일 종목/포트폴리오 자동 구분, 환율·S&P500·NASDAQ 벤치마크 포함, 표준화된 결과 반환
 
 #### 요청 예시 (비중/금액 모두 지원)
+
+> **프론트엔드 UX 정책**
+> - 포트폴리오 구성 시 각 종목의 "비중(%)" 칸에 값을 직접 입력하면, 해당 종목의 weight 필드가 API로 전송됩니다.
+> - amount(투자금액) 칸을 수정하면 weight 입력이 해제되어 amount만 전송됩니다.
+> - amount와 weight는 동시에 입력 불가, 혼용 불가(동일 포트폴리오 내에서 한 방식만 사용).
+> - weight 입력 시 합계가 100%가 아니면 에러가 표시됩니다.
+> - 모든 종목이 weight 기반이면 amount는 자동 계산되어 API로 전송될 수 있습니다(내부 변환).
 ```bash
 # (1) 금액 기반 입력
 curl -X POST http://localhost:8001/api/v1/backtest/execute \

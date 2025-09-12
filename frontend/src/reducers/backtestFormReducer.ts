@@ -15,15 +15,32 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
         portfolio: [...state.portfolio, action.payload]
       };
 
-    case 'UPDATE_STOCK':
+    case 'UPDATE_STOCK': {
       const { index, field, value } = action.payload;
-      const updatedPortfolio = state.portfolio.map((stock, i) => 
-        i === index ? { ...stock, [field]: value } : stock
-      );
+      let updatedPortfolio = state.portfolio.map((stock, i) => {
+        if (i !== index) return stock;
+        // amount를 직접 수정하면 weight를 undefined로 초기화(자동계산 모드)
+        if (field === 'amount') {
+          return { ...stock, amount: Number(value), weight: undefined };
+        }
+        // weight를 직접 수정하면 amount는 weight에서 계산됨(수동 비중 모드)
+        if (field === 'weight') {
+          return { ...stock, weight: Number(value) };
+        }
+        return { ...stock, [field]: value };
+      });
+
+      // weight가 하나라도 있으면 amount를 weight 기준으로 동기화
+      const hasAnyWeight = updatedPortfolio.some(s => typeof s.weight === 'number');
+      if (hasAnyWeight) {
+        const totalBudget = backtestFormHelpers.getTotalAmount(updatedPortfolio);
+        updatedPortfolio = backtestFormHelpers.applyWeightsToAmounts(updatedPortfolio, totalBudget);
+      }
       return {
         ...state,
         portfolio: updatedPortfolio
       };
+    }
 
     case 'REMOVE_STOCK':
       return {
@@ -151,6 +168,7 @@ export const backtestFormHelpers = {
   addStock: (): Stock => ({
     symbol: '',
     amount: 10000,
+    weight: undefined,
     investmentType: 'lump_sum',
     dcaPeriods: 12,
     assetType: ASSET_TYPES.STOCK
@@ -159,6 +177,7 @@ export const backtestFormHelpers = {
   addCash: (): Stock => ({
     symbol: 'CASH',
     amount: 10000,
+    weight: undefined,
     investmentType: 'lump_sum',
     dcaPeriods: 12,
     assetType: ASSET_TYPES.CASH
@@ -166,6 +185,15 @@ export const backtestFormHelpers = {
 
   getTotalAmount: (portfolio: Stock[]): number => {
     return portfolio.reduce((sum, stock) => sum + stock.amount, 0);
+  },
+
+  // If weights are provided by the user (not undefined), convert them to amounts based on total budget
+  applyWeightsToAmounts: (portfolio: Stock[], totalBudget?: number): Stock[] => {
+    const hasWeights = portfolio.some(s => typeof s.weight === 'number');
+    if (!hasWeights) return portfolio;
+    const budget = typeof totalBudget === 'number' ? totalBudget : backtestFormHelpers.getTotalAmount(portfolio);
+    if (budget <= 0) return portfolio;
+    return portfolio.map(s => ({ ...s, amount: typeof s.weight === 'number' ? Math.round((s.weight! / 100) * budget) : s.amount }));
   },
 
   validatePortfolio: (portfolio: Stock[]): string[] => {
@@ -187,6 +215,16 @@ export const backtestFormHelpers = {
         errors.push(`${index + 1}번째 종목의 DCA 기간을 설정해주세요.`);
       }
     });
+
+    // If user provided weights, validate they sum to ~100
+    const weights = portfolio.map(s => typeof s.weight === 'number' ? s.weight! : 0);
+    const hasAnyWeight = weights.some(w => w > 0);
+    if (hasAnyWeight) {
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      if (Math.abs(totalWeight - 100) > 0.5) {
+        errors.push(`포트폴리오 비중 합계가 100%가 아닙니다 (현재 ${totalWeight.toFixed(1)}%).`);
+      }
+    }
 
     return errors;
   }

@@ -6,6 +6,7 @@ import StockAutocomplete from './common/StockAutocomplete';
 interface Stock {
   symbol: string;
   amount: number;
+  weight?: number;
   investmentType: 'lump_sum' | 'dca';
   dcaPeriods?: number;
   assetType?: AssetType;
@@ -143,7 +144,22 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                   </div>
                 </td>
                 <td className="w-24 px-6 py-4 whitespace-nowrap text-sm">
-                  {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
+                  {/* 비중(%) 입력: weight가 있으면 직접 입력값, 없으면 자동계산 */}
+                  {typeof stock.weight === 'number' ? (
+                    <input
+                      type="number"
+                      value={stock.weight}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'weight', Number(e.target.value))}
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  ) : (
+                    <span title="투자 금액 비율로 자동 계산됨. 비중을 직접 입력하려면 여기에 값을 입력하세요.">
+                      {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
+                    </span>
+                  )}
                 </td>
                 <td className="w-20 px-6 py-4 whitespace-nowrap">
                   <button
