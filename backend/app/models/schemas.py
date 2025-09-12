@@ -144,11 +144,22 @@ class StrategyParams(BaseModel):
 class PortfolioStock(BaseModel):
     """포트폴리오 종목 모델"""
     symbol: str = Field(..., min_length=1, max_length=10, description="주식 심볼")
-    amount: float = Field(..., gt=0, description="투자 금액 (> 0)")
+    amount: Optional[float] = Field(None, gt=0, description="투자 금액 (> 0, weight와 동시 입력 불가)")
+    weight: Optional[float] = Field(None, ge=0, le=100, description="비중(%) (0~100, amount와 동시 입력 불가, 소수점 허용)")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
     dca_periods: Optional[int] = Field(12, ge=1, le=60, description="분할 매수 기간 (개월)")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
     custom_name: Optional[str] = Field(None, description="현금 자산의 커스텀 이름")
+    @field_validator('amount', 'weight')
+    @classmethod
+    def validate_amount_weight_exclusive(cls, v, info):
+        # amount와 weight는 동시에 입력 불가
+        data = info.data
+        amount = data.get('amount')
+        weight = data.get('weight')
+        if amount is not None and weight is not None:
+            raise ValueError('amount와 weight는 동시에 입력할 수 없습니다. 하나만 입력하세요.')
+        return v
     
     @field_validator('symbol')
     @classmethod
@@ -196,11 +207,21 @@ class PortfolioBacktestRequest(BaseModel):
         if not v:
             raise ValueError('포트폴리오는 최소 1개 종목을 포함해야 합니다.')
         
-        # 총 투자 금액 확인
-        total_amount = sum(item.amount for item in v)
-        if total_amount <= 0:
-            raise ValueError('총 투자 금액은 0보다 커야 합니다.')
+        # amount/weight 혼합 입력 불가, 모두 amount만 입력 or 모두 weight만 입력 or 일부만 weight면 amount 자동 환산
+        has_amount = any(item.amount is not None for item in v)
+        has_weight = any(item.weight is not None for item in v)
+        if has_amount and has_weight:
+            raise ValueError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다. 혼합 입력 불가.')
         
+        if has_weight:
+            total_weight = sum(item.weight or 0 for item in v)
+            # 0~100 허용, 100±0.01 이내만 통과
+            if not (99.99 <= total_weight <= 100.01):
+                raise ValueError(f'종목 비중(weight) 합계가 100이 아닙니다. 현재 합계: {total_weight}')
+        else:
+            total_amount = sum(item.amount or 0 for item in v)
+            if total_amount <= 0:
+                raise ValueError('총 투자 금액은 0보다 커야 합니다.')
         return v
     
     @field_validator('start_date', 'end_date')

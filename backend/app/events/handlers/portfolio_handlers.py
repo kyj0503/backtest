@@ -2,7 +2,7 @@
 포트폴리오 이벤트 핸들러들
 """
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from app.events import EventHandler, DomainEvent

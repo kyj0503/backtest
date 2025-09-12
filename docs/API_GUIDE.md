@@ -323,41 +323,17 @@ curl -X DELETE http://localhost:8001/api/v1/backtest/history/1 -H "Authorization
 curl "http://localhost:8001/api/v1/backtest/exchange-rate?start_date=2023-01-01&end_date=2023-12-31"
 ```
 
-#### 8. 주가 데이터 `/stock-data/{ticker}`
-```bash
-curl "http://localhost:8001/api/v1/backtest/stock-data/AAPL?start_date=2023-01-01&end_date=2023-12-31"
-```
-
-#### 9. 변동성 이벤트 뉴스 `/stock-volatility-news/{ticker}`
+#### 8. 변동성 이벤트 뉴스 `/stock-volatility-news/{ticker}`
 ```bash
 curl "http://localhost:8001/api/v1/backtest/stock-volatility-news/AAPL?start_date=2023-01-01&end_date=2023-12-31&threshold=5.0"
 ```
 
-#### 10. 백테스트 서비스 헬스체크 `/health`
+#### 9. 백테스트 서비스 헬스체크 `/health`
 ```bash
 curl http://localhost:8001/api/v1/backtest/health
 ```
 
 ---
-
-### 주가 데이터 조회
-```http
-GET /api/v1/backtest/stock-data/AAPL?start_date=2023-01-01&end_date=2023-12-31
-```
-
-**응답:**
-```json
-{
-  "ticker": "AAPL",
-  "data": [
-    {
-      "date": "2023-01-01",
-      "close": 152.0,
-      "volume": 1000000
-    }
-  ]
-}
-```
 
 ### 환율 데이터 조회
 ```http
@@ -530,7 +506,7 @@ POST /api/v1/yfinance/fetch-and-cache?ticker=AAPL&start=2023-01-01&end=2023-12-3
 GET /api/v1/naver-news/search?query=애플&display=10
 ```
 
-**중요**: 네이버 뉴스 API는 `display` 매개변수가 10 이상이어야 정상 작동합니다.
+참고: 날짜 범위 기반 엔드포인트(`/api/v1/naver-news/search-by-date`, `/api/v1/naver-news/ticker/{ticker}/date`)는 `display` 최소값이 10입니다. 일반 검색(`/search`, `/ticker/{ticker}`)은 1 이상 허용됩니다.
 
 ```http
 GET /api/v1/naver-news/ticker/AAPL/date?start_date=2023-01-01&end_date=2023-01-31&display=5

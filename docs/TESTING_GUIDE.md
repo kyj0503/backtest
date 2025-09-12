@@ -136,7 +136,7 @@ docker build -t backtest-backend-test backend/
 docker run --rm backtest-backend-test python -m pytest tests/unit/ -v
 
 # 통합 테스트 (데이터베이스 필요)
-docker-compose -f compose/compose.test.yml up -d
+docker compose -f compose/compose.test.yml up -d
 docker run --rm --network compose_test_network \
   -e DATABASE_URL="mysql+pymysql://test_user:test_password@mysql-test:3306/stock_data_cache" \
   backtest-backend-test python -m pytest tests/integration/ -v
@@ -283,14 +283,14 @@ docker compose -f compose.yml -f compose/compose.dev.yml build
 **해결책**:
 ```bash
 # 테스트 데이터베이스가 실행 중인지 확인
-docker-compose -f compose/compose.test.yml ps
+docker compose -f compose/compose.test.yml ps
 
 # 네트워크 연결 확인
 docker network ls | grep test
 
 # 컨테이너 재시작
-docker-compose -f compose/compose.test.yml down -v
-docker-compose -f compose/compose.test.yml up -d
+docker compose -f compose/compose.test.yml down -v
+docker compose -f compose/compose.test.yml up -d
 ```
 
 #### 2. 커버리지 임계값 실패

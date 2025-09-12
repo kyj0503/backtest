@@ -1,177 +1,154 @@
 # 트러블슈팅 가이드
 
-이 문서는 백테스팅 시스템에서 발생한 버그 해결, 문제 해결, 패치 내역을 날짜별로 기록합니다.
+프로젝트 실행, 테스트, 배포 과정에서 자주 발생하는 문제와 해결 절차를 체계적으로 정리했습니다. 모든 지침은 현재 코드와 컴포즈 구성(`compose.yml`, `compose/compose.dev.yml`, `compose/compose.prod.yml`, `compose/compose.test.yml`)을 기준으로 합니다.
 
 ## 목차
-
-1. [2025년 9월](#2025년-9월)
-2. [트러블슈팅 가이드라인](#트러블슈팅-가이드라인)
-3. [자주 발생하는 문제](#자주-발생하는-문제)
-
----
-
-## 2025년 9월
-
-### 2025-09-11
-
-#### 뉴스 검색 기능 개선 (2차 수정)
-**문제**: 백테스트 실행 후 "뉴스 보기"를 클릭하면 "이 기간의 뉴스가 없다"고 표시되는 문제 (1차 수정 후에도 여전히 발생)
-
-**해결방법**: backtestApiService.searchNews() 메서드 새로 추가하여 API 호출 방식 개선
-
-**수정 파일**: frontend/src/services/api.ts, frontend/src/hooks/useVolatilityNews.ts
+- 개발 환경 구동 문제
+- 컨테이너/포트 충돌
+- 백엔드 헬스체크 실패
+- 프론트엔드 접속 불가
+- 데이터베이스/Redis 연결 문제
+- yfinance 데이터 이슈
+- 네이버 뉴스 API 오류
+- 테스트 실행 실패
+- 권한/인증 관련 오류
+- 자주 묻는 질문(FAQ)
 
 ---
 
-#### 뉴스 검색 기능 개선
-**문제**: 백테스트 실행 후 "뉴스 보기"를 클릭하면 "이 기간의 뉴스가 없다"고 표시되는 문제
+## 개발 환경 구동 문제
 
-**해결방법**: API 가이드에 명시된 간단한 뉴스 검색 엔드포인트 사용하여 회사명만으로 검색
+증상: `docker compose -f compose.yml -f compose/compose.dev.yml up --build` 실행 실패 또는 컨테이너 즉시 종료
 
-**수정 파일**: frontend/src/hooks/useVolatilityNews.ts
-
----
-
-#### 🎯 6가지 주요 시스템 이슈 해결
-**이전 세션에서 해결된 주요 문제들**:
-
-1. **WebSocket 채팅 서버 연결 문제**
-   - 파일: `frontend/src/pages/ChatPage.tsx`
-   - 해결: URL 생성 로직 개선, localhost:8001 폴백 추가
-
-2. **포트폴리오 백테스트 뉴스 표시 문제**
-   - 파일: `backend/app/services/portfolio_service.py`
-   - 해결: `unique_key` 대신 `original_symbol` 사용
-
-3. **뉴스 검색 fallback 기능 부족**
-   - 파일: `frontend/src/hooks/useVolatilityNews.ts`
-   - 해결: 전체 기간 재검색 로직 추가
-
-4. **중복 종목 처리 오류 (META_0 문제)**
-   - 파일: `backend/app/services/portfolio_service.py`
-   - 해결: 원본 심볼 사용으로 데이터 로딩 수정
-
-5. **포트폴리오 지표 누락 문제**
-   - 파일: `backend/app/services/portfolio_service.py`
-   - 해결: Profit Factor 계산 및 반환 로직 추가
-
-6. **금융 용어 도움말 기능 부재**
-   - 파일: `frontend/src/components/common/FinancialTermTooltip.tsx` (신규)
-   - 해결: 25개 이상 금융 용어 툴팁 시스템 구현
-
----
-
-## 트러블슈팅 가이드라인
-
-### 문제 보고 양식
-새로운 문제를 발견했을 때는 다음 정보를 포함하여 이 문서에 기록해주세요:
-
-```markdown
-#### 문제 제목
-**문제**: 문제 상황 상세 설명
-
-**재현 단계**:
-1. 단계 1
-2. 단계 2
-3. 단계 3
-
-**해결방법**: 적용한 해결책
-**수정 파일**: 변경된 파일 목록
-```
-
-### 우선순위 분류
-- Critical: 시스템 전체 중단
-- High: 주요 기능 장애
-- Medium: 부분 기능 문제
-- Low: 개선 사항
-
-### 테스트 체크리스트
-문제 해결 후 다음 사항들을 확인하세요:
-
-- [ ] 유닛 테스트 통과
-- [ ] 통합 테스트 통과
-- [ ] 수동 테스트 완료
-- [ ] 관련 기능 회귀 테스트
-- [ ] 문서 업데이트
-
----
-
-## 자주 발생하는 문제
-
-### 1. Docker 컨테이너 관련
-**문제**: 컨테이너가 시작되지 않거나 연결 실패
-
-**해결책**:
+확인 및 조치:
+1) Docker/Compose 버전 확인
 ```bash
-# 컨테이너 상태 확인
-docker compose ps
+docker version
 
-# 로그 확인
-docker compose logs [service-name]
-
-# 컨테이너 재시작
-docker compose restart [service-name]
-
-# 완전히 재빌드
-docker compose down && docker compose up --build
 ```
-
-### 2. 프론트엔드 빌드 오류
-**문제**: npm 의존성 또는 TypeScript 컴파일 오류
-
-**해결책**:
+2) 캐시 없이 재빌드
 ```bash
-# 의존성 재설치
-rm -rf node_modules package-lock.json
-npm install
-
-# TypeScript 검사
-npm run type-check
-
-# Lint 검사
-npm run lint
+docker compose -f compose.yml -f compose/compose.dev.yml build --no-cache
 ```
-
-### 3. 백엔드 API 오류
-**문제**: FastAPI 서버 오류 또는 데이터베이스 연결 실패
-
-**해결책**:
+3) 서비스 로그 확인
 ```bash
-# 서버 로그 확인
-docker compose logs backend
-
-# 데이터베이스 연결 테스트
-curl http://localhost:8001/health
-
-# 의존성 재설치
-pip install -r requirements.txt
+docker compose -f compose.yml -f compose/compose.dev.yml logs -f backend
 ```
 
-### 4. 뉴스 API 오류
-**문제**: 네이버 뉴스 검색 실패 또는 응답 없음
+## 컨테이너/포트 충돌
 
-**해결책**:
-- API 키 유효성 확인
-- 요청 제한 확인 (1일 25,000건)
-- 쿼리 형식 검증
-- 네트워크 연결 상태 확인
+증상: 포트 바인딩 실패(`8001`, `5174`, `8082` 등)
 
-### 5. 종목 데이터 오류
-**문제**: yfinance 데이터 조회 실패
+조치:
+```bash
+ss -ltnp | grep -E ":(8001|5174|8082)"
+kill -9 <PID>
+```
+주의: 기본 `compose.yml`은 프런트엔드의 프로덕션 포트(8082)를 더 이상 노출하지 않습니다. 개발 스택은 `compose.yml + compose/compose.dev.yml` 병합으로 프런트엔드 5174만 노출됩니다. 필요 시 해당 오버레이에서 `ports` 매핑을 확인/수정하세요.
 
-**해결책**:
-- 종목 심볼 유효성 확인
-- 날짜 범위 검증
-- yfinance 라이브러리 업데이트
-- 대체 데이터 소스 사용
+## 백엔드 헬스체크 실패
 
----
+증상: `GET http://localhost:8001/health` 503 또는 타임아웃
+
+조치:
+- 백엔드 로그 확인
+```bash
+docker compose -f compose.yml -f compose/compose.dev.yml logs -f backend
+```
+- 환경 변수 확인: `backend/app/core/config.py` 기준(`host`, `port`, `BACKEND_CORS_ORIGINS`, `REDIS_URL` 등)
+- 로컬 빠른 실행으로 재확인
+```bash
+cd backend
+python run_server.py
+```
+성공 기준: 200 OK, `{ "status": "healthy" }` 응답
+
+## 프론트엔드 접속 불가
+
+증상: `http://localhost:5174` 접속 불가
+
+조치:
+```bash
+docker compose -f compose.yml -f compose/compose.dev.yml ps
+docker compose -f compose.yml -f compose/compose.dev.yml logs -f frontend
+```
+환경 변수 `API_PROXY_TARGET=http://backend:8000` 확인 후 재시작:
+```bash
+docker compose -f compose.yml -f compose/compose.dev.yml restart frontend
+```
+
+## 데이터베이스/Redis 연결 문제
+
+증상: 통합/E2E 테스트 중 DB 또는 Redis 연결 실패
+
+조치:
+```bash
+docker compose -f compose/compose.test.yml up -d
+docker compose -f compose/compose.test.yml ps
+```
+기본 네트워크/컨테이너 이름: `test_network`, `mysql-test`, `redis-test`
+
+필요 시 연결 정보 주입:
+```bash
+DATABASE_URL="mysql+pymysql://test_user:test_password@mysql-test:3306/stock_data_cache"
+REDIS_URL="redis://redis-test:6379"
+```
+
+## yfinance 데이터 이슈
+
+증상: 데이터 없음, 심볼 오류, 레이트 리밋
+
+조치:
+- 심볼 형식 확인(미국: 대문자, 한국: `.KS` 접미사 예 `005930.KS`)
+- 기간 내 거래일 없음 여부 확인(휴장 포함), 범위 확대 후 재시도
+- DB 캐시 우선 사용 권장, 필요 시 수동 캐시 적재
+```bash
+POST /api/v1/yfinance/fetch-and-cache?ticker=AAPL&start=2023-01-01&end=2023-12-31&interval=1d
+```
+
+## 네이버 뉴스 API 오류
+
+증상: 401/403, 빈 결과
+
+조치:
+- 환경 변수 설정: `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`
+- 일반 검색(`/search`, `/ticker/{ticker}`): `display` 1~100 허용
+- 날짜 기반(`/search-by-date`, `/ticker/{ticker}/date`): `display` 최소 10
+- 네트워크 오류는 재시도/지수 백오프 적용됨. 반복 실패 시 키/네트워크 점검
+
+## 테스트 실행 실패
+
+증상: `./scripts/test-runner.sh unit|integration|e2e` 실패
+
+조치:
+- 캐시 없이 이미지 재빌드
+- 통합/E2E 전 `compose/compose.test.yml` 구동 확인
+```bash
+docker compose -f compose/compose.test.yml up -d
+```
+- 커버리지 실행
+```bash
+./scripts/test-runner.sh coverage
+```
+
+## 권한/인증 관련 오류
+
+증상: 401/403, WebSocket 연결 실패
+
+조치:
+- `Authorization: Bearer <token>` 헤더 포함
+- WebSocket: `ws://localhost:8001/api/v1/chat/ws/<room>?token=<JWT>`
+- 토큰 만료 시 재로그인
+
+## 자주 묻는 질문(FAQ)
+
+- 포트 요약: 백엔드 8001(외부)→8000(컨테이너), 프론트엔드 5174(개발)/8082(배포)
+- API 문서: `http://localhost:8001/api/v1/docs`
+- 이벤트/메트릭/알림 API는 `app/events` 시스템과 통합되어 별도 설정 없이 사용 가능
 
 ## 관련 문서
-- [API 가이드](./API_GUIDE.md) - API 엔드포인트 및 사용법
-- [개발 가이드](./GUIDE.md) - 개발 환경 설정
-- [실행 가이드](./RUNBOOK.md) - 배포 및 운영
-
----
-
-**문제 발생 시 이 문서에 기록해주세요**
+- [API 가이드](./API_GUIDE.md)
+- [개발 가이드](./DEVELOPMENT_GUIDE.md)
+- [운영 가이드](./OPERATIONS_GUIDE.md)
+- [런북](./RUNBOOK.md)
+- API 키 유효성 확인

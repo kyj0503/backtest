@@ -84,13 +84,12 @@ uv pip install --system -r requirements.txt
 python run_server.py
 ```
 
-### 주요 API 엔드포인트
+#### 주요 API 엔드포인트
 
 #### 백테스트 API
 - `POST /api/v1/backtest/run` - 단일 종목 백테스트 실행
 - `POST /api/v1/backtest/chart-data` - 백테스트 + 차트 데이터
 - `POST /api/v1/backtest/portfolio` - 포트폴리오 백테스트
-- `GET /api/v1/backtest/stock-data/{ticker}` - 주가 데이터 조회
 
 #### 인증 및 커뮤니티 API
 - `POST /api/v1/auth/register` - 회원가입

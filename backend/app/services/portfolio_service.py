@@ -445,16 +445,26 @@ class PortfolioBacktestService:
             portfolio_results = {}
             individual_returns = {}
             total_portfolio_value = 0
-            total_amount = sum(item.amount for item in request.portfolio)
+            # amount/weight 동시 지원: amount가 없고 weight만 있으면 환산
+            if all(item.amount is not None for item in request.portfolio):
+                total_amount = sum(item.amount for item in request.portfolio)
+                amounts = {f"{item.symbol}_{idx}": item.amount for idx, item in enumerate(request.portfolio)}
+            elif all(item.weight is not None for item in request.portfolio):
+                # weight만 입력된 경우, 총 투자금액을 100으로 가정하거나, 프론트에서 별도 입력받을 수도 있음
+                # 여기서는 100 단위로 환산 (실제 투자금액은 프론트에서 amount로 입력 권장)
+                total_amount = 100.0
+                amounts = {f"{item.symbol}_{idx}": total_amount * (item.weight / 100.0) for idx, item in enumerate(request.portfolio)}
+            else:
+                raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             
             logger.info(f"전략 기반 백테스트: {request.strategy}, 총 투자금액: ${total_amount:,.2f}")
             
             # 각 종목별로 전략 백테스트 실행 (중복 종목 지원)
             for idx, item in enumerate(request.portfolio):
                 symbol = item.symbol
-                amount = item.amount
-                weight = amount / total_amount  # 가중치는 투자 금액 비율로 계산
-                
+                # amount/weight 동시 지원
+                amount = amounts[f"{symbol}_{idx}"]
+                weight = amount / total_amount if total_amount > 0 else 0.0
                 # 중복 종목을 위한 고유 키 생성
                 unique_key = f"{symbol}_{idx}"
                 
@@ -676,7 +686,15 @@ class PortfolioBacktestService:
             # 각 종목의 데이터 수집 (중복 종목 지원)
             portfolio_data = {}
             amounts = {}
-            total_amount = sum(item.amount for item in request.portfolio)
+            # amount/weight 동시 지원: amount가 없고 weight만 있으면 환산
+            if all(item.amount is not None for item in request.portfolio):
+                total_amount = sum(item.amount for item in request.portfolio)
+                amounts = {f"{item.symbol}_{idx}": item.amount for idx, item in enumerate(request.portfolio)}
+            elif all(item.weight is not None for item in request.portfolio):
+                total_amount = 100.0
+                amounts = {f"{item.symbol}_{idx}": total_amount * (item.weight / 100.0) for idx, item in enumerate(request.portfolio)}
+            else:
+                raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             cash_amount = 0
             
             # 분할 매수 정보 수집 (중복 종목 지원)
@@ -684,14 +702,12 @@ class PortfolioBacktestService:
             
             for idx, item in enumerate(request.portfolio):
                 symbol = item.symbol
-                amount = item.amount
+                amount = amounts[f"{symbol}_{idx}"]
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_periods = getattr(item, 'dca_periods', 12)
                 asset_type = getattr(item, 'asset_type', 'stock')  # 자산 타입 확인
-                
                 # 중복 종목을 위한 고유 키 생성
                 unique_key = f"{symbol}_{idx}"
-                
                 # 분할 매수 정보 저장
                 dca_info[unique_key] = {
                     'symbol': symbol,
