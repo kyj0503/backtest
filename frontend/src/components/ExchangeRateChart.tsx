@@ -44,7 +44,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
           <CardTitle>원달러 환율 변동</CardTitle>
         </CardHeader>
         <CardContent className="text-center">
-          <p className="text-red-600">{error}</p>
+          <p className="text-destructive">{error}</p>
         </CardContent>
       </Card>
     );
@@ -76,7 +76,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
             <p className="text-sm text-gray-600">백테스트 기간 동안의 원달러 환율 변화</p>
           </div>
           <div className="text-right">
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${rateChange >= 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${rateChange >= 0 ? 'bg-destructive/10 text-destructive' : 'bg-green-100 text-green-800'}`}>
               {rateChange >= 0 ? '▲' : '▼'} {Math.abs(rateChange).toFixed(2)}%
             </div>
             <div className="text-xs text-gray-500 mt-1">기간 변동률</div>
@@ -120,7 +120,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
         </ResponsiveContainer>
 
         {/* 환율 요약 정보 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
           <div className="text-center">
             <div className="text-xs text-gray-500 mb-1">시작 환율</div>
             <div className="text-sm font-semibold text-gray-800">{formatRate(exchangeData[0]?.rate)}</div>
@@ -131,7 +131,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
           </div>
           <div className="text-center">
             <div className="text-xs text-gray-500 mb-1">최고점</div>
-            <div className="text-sm font-semibold text-red-600">{formatRate(maxRate)}</div>
+            <div className="text-sm font-semibold text-destructive">{formatRate(maxRate)}</div>
           </div>
           <div className="text-center">
             <div className="text-xs text-gray-500 mb-1">최저점</div>

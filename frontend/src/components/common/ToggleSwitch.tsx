@@ -59,13 +59,13 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
     'focus-visible:ring-blue-500',
     sizeClasses.switch,
     disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
-    checked ? 'bg-blue-600' : 'bg-gray-200',
+    checked ? 'bg-primary' : 'bg-input',
   ].join(' ');
 
   const thumbClasses = [
     'inline-block',
     'rounded-full',
-    'bg-white',
+    'bg-background',
     'shadow',
     'transform',
     'ring-0',

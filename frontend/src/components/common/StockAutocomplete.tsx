@@ -188,18 +188,18 @@ const StockAutocomplete: React.FC<StockAutocompleteProps> = ({
         onFocus={handleFocus}
         placeholder={placeholder}
         maxLength={10}
-        className={`w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${className}`}
+        className={`w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground ${className}`}
         autoComplete="off"
       />
       
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 z-50 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
           {suggestions.map((stock, index) => (
             <div
               key={stock.symbol}
               ref={el => suggestionRefs.current[index] = el}
-              className={`px-3 py-2 cursor-pointer hover:bg-blue-50 ${
-                index === activeSuggestion ? 'bg-blue-100' : ''
+              className={`px-3 py-2 cursor-pointer hover:bg-accent text-popover-foreground ${
+                index === activeSuggestion ? 'bg-accent text-accent-foreground' : ''
               }`}
               onClick={() => handleSuggestionClick(stock)}
             >

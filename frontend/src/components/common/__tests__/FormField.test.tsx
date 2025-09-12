@@ -78,7 +78,7 @@ describe('FormField', () => {
       );
 
       const input = screen.getByRole('textbox');
-      expect(input.className).toContain('border-red');
+      expect(input.className).toContain('border-destructive');
     });
   });
 

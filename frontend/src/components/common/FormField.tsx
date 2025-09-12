@@ -36,8 +36,8 @@ export const FormField: React.FC<FormFieldProps> = ({
   const baseInputClassName = `
     block w-full px-3 py-2 border rounded-md shadow-sm
     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-    disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed
-    ${error ? 'border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'}
+    disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed
+    ${error ? 'border-destructive text-destructive placeholder-destructive/50 focus:border-destructive focus:ring-destructive' : 'border-input'}
   `.trim();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -99,7 +99,7 @@ export const FormField: React.FC<FormFieldProps> = ({
     <div className={`space-y-2 ${className}`}>
       <label className="block text-sm font-medium text-gray-700">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="text-destructive ml-1">*</span>}
       </label>
       
       {renderInput()}
@@ -109,7 +109,7 @@ export const FormField: React.FC<FormFieldProps> = ({
       )}
       
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       )}

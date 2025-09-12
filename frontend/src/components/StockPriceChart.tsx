@@ -39,7 +39,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, clas
 
   if (!stocksData || stocksData.length === 0) {
     return (
-      <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
+      <div className={`bg-card border border-border rounded-lg shadow-sm ${className}`}>
         <div className="px-6 py-4 text-center">
           <p className="text-gray-500">표시할 주가 데이터가 없습니다.</p>
         </div>

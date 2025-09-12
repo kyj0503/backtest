@@ -48,28 +48,22 @@ export const useTheme = () => {
     const colors = theme.cssVars[colorMode];
     const themeVars = theme.cssVars.theme;
 
-    // Clear existing theme variables
-    const existingVars = Array.from(root.style).filter(prop => prop.startsWith('--'));
-    existingVars.forEach(prop => {
-      root.style.removeProperty(prop);
-    });
-
-    // Apply theme variables
-    Object.entries(themeVars).forEach(([key, value]) => {
-      root.style.setProperty(`--${key}`, value);
-    });
-
-    // Apply color variables
-    Object.entries(colors).forEach(([key, value]) => {
-      root.style.setProperty(`--${key}`, value);
-    });
-
-    // Apply dark mode class
+    // Apply dark mode class first
     if (darkMode) {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
+
+    // Apply theme variables (fonts, radius, etc.)
+    Object.entries(themeVars).forEach(([key, value]) => {
+      root.style.setProperty(`--${key}`, value);
+    });
+
+    // Apply color variables - these override the CSS defaults
+    Object.entries(colors).forEach(([key, value]) => {
+      root.style.setProperty(`--${key}`, value);
+    });
 
     // Store preferences
     localStorage.setItem(THEME_STORAGE_KEY, themeName);

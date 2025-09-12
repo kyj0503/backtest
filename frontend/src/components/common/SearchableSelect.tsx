@@ -137,7 +137,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         className={`
           w-full px-3 py-2 text-left rounded-md border shadow-sm cursor-pointer
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-          ${disabled ? 'bg-gray-50 cursor-not-allowed text-gray-400' : 'bg-white'}
+          ${disabled ? 'bg-muted cursor-not-allowed text-muted-foreground' : 'bg-background'}
         `}
         style={{ borderColor: 'hsl(var(--input))' }}
         tabIndex={disabled ? -1 : 0}
@@ -153,7 +153,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             {clearable && selectedOption && !disabled && (
               <button
                 onClick={handleClear}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-1 hover:bg-accent rounded"
                 aria-label="선택 해제"
               >
                 <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
@@ -181,7 +181,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             z-50
             w-full
             mt-1
-            rounded-md border bg-white shadow-md animate-in
+            rounded-md border bg-popover shadow-md animate-in
             max-h-60
             overflow-auto
             ${dropdownClassName}
@@ -217,8 +217,8 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   className={`
                     px-3 py-2 cursor-pointer select-none
                     ${option.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'}
-                    ${index === highlightedIndex ? 'bg-gray-100' : 'hover:bg-gray-50'}
-                    ${option.value === value ? 'bg-blue-50 text-blue-900' : ''}
+                    ${index === highlightedIndex ? 'bg-accent' : 'hover:bg-accent/50'}
+                    ${option.value === value ? 'bg-primary text-primary-foreground' : ''}
                   `}
                   role="option"
                   aria-selected={option.value === value}

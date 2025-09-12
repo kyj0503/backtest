@@ -11,7 +11,7 @@ const ChartLoading: React.FC<ChartLoadingProps> = ({
 }) => {
   return (
     <div 
-      className="flex items-center justify-center bg-gray-50 rounded-lg border"
+      className="flex items-center justify-center bg-muted rounded-lg border border-border"
       style={{ height }}
     >
       <div className="text-center">
