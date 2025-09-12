@@ -1,5 +1,6 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vitest/config'
+import path from 'path'
 
 // Determine reporters dynamically for CI environments
 const isCI = process.env.CI === '1' || process.env.CI === 'true'
@@ -9,6 +10,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

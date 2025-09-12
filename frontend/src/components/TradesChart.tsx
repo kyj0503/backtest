@@ -1,5 +1,6 @@
 import React, { memo, useMemo, useCallback } from 'react';
 import { ScatterChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Scatter, Cell, ReferenceLine } from 'recharts';
+import { TrendingUp } from 'lucide-react';
 
 interface Trade {
   date: string;
@@ -58,8 +59,9 @@ const TradesChart: React.FC<TradesChartProps> = memo(({ trades }) => {
   // 빈 데이터 처리
   if (exitTrades.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
-        표시할 거래 데이터가 없습니다.
+      <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+        <TrendingUp className="h-8 w-8 mb-2 opacity-50" />
+        <p>표시할 거래 데이터가 없습니다.</p>
       </div>
     );
   }

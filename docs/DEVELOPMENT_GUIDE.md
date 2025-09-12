@@ -127,6 +127,7 @@ python run_server.py
 - **TypeScript**: 정적 타입 검사
 - **Vite**: 빠른 개발 서버 및 빌드
 - **Tailwind CSS**: 유틸리티 기반 스타일링
+- **shadcn/ui**: 재사용 가능한 UI 컴포넌트 라이브러리
 - **Recharts**: 데이터 시각화
 - **React Router v6**: 라우팅
 
@@ -135,6 +136,7 @@ python run_server.py
 frontend/src/
 ├── pages/                   # 페이지 컴포넌트
 ├── components/              # 재사용 가능한 UI 컴포넌트
+│   ├── ui/                  # shadcn/ui 컴포넌트
 │   ├── common/              # 공통 컴포넌트
 │   ├── results/             # 백테스트 결과 컴포넌트
 │   └── volatility/          # 변동성/뉴스 컴포넌트
@@ -143,6 +145,7 @@ frontend/src/
 ├── services/                # API 클라이언트
 ├── types/                   # TypeScript 타입 정의
 ├── utils/                   # 유틸리티 함수
+├── lib/                     # shadcn/ui 유틸리티
 └── constants/               # 상수 정의
 ```
 
@@ -182,6 +185,51 @@ npm run dev
 - 로컬 상태 우선: 컴포넌트 및 훅 단위로 관리
 - 커스텀 훅으로 로직 분리 및 재사용
 - Context API는 최소한으로 사용
+
+### UI 컴포넌트 (shadcn/ui)
+
+프로젝트는 일관성 있는 디자인과 접근성을 위해 shadcn/ui를 사용합니다.
+
+#### 설치된 컴포넌트
+- **Button**: 기본 버튼 컴포넌트
+- **Input**: 입력 필드
+- **Card**: 카드 레이아웃 (Header, Content, Title, Description)
+- **Badge**: 상태 표시 뱃지
+- **Select**: 드롭다운 선택
+- **Dialog**: 모달 창 (Modal 대체)
+- **Tooltip**: 툴팁 (FinancialTermTooltip 등에 사용)
+- **Popover**: 팝오버
+
+#### 사용 예시
+```typescript
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+
+export function ExampleComponent() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>백테스트 설정</CardTitle>
+        <CardDescription>투자 전략을 설정하세요</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Input placeholder="종목 심볼 입력" />
+        <Button onClick={handleSubmit}>백테스트 실행</Button>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+#### 새 컴포넌트 추가
+```bash
+# 도커 컨테이너 내에서 shadcn/ui 컴포넌트 추가
+docker compose exec frontend npx shadcn-ui@latest add [컴포넌트명]
+
+# 예: Table 컴포넌트 추가
+docker compose exec frontend npx shadcn-ui@latest add table
+```
 
 ### API 연동
 ```typescript

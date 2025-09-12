@@ -1,4 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 interface FinancialTermTooltipProps {
   term: string;
@@ -43,8 +49,6 @@ const FinancialTermTooltip: React.FC<FinancialTermTooltipProps> = ({
   children, 
   className = "" 
 }) => {
-  const [isVisible, setIsVisible] = useState(false);
-
   const explanation = financialTerms[term];
   
   if (!explanation) {
@@ -52,24 +56,21 @@ const FinancialTermTooltip: React.FC<FinancialTermTooltipProps> = ({
   }
 
   return (
-    <div 
-      className={`relative inline-block ${className}`}
-      onMouseEnter={() => setIsVisible(true)}
-      onMouseLeave={() => setIsVisible(false)}
-    >
-      <span className="cursor-help border-b border-dotted border-blue-400 text-blue-600">
-        {children}
-      </span>
-      
-      {isVisible && (
-        <div className="absolute z-50 p-3 text-sm text-white bg-gray-800 rounded-lg shadow-lg max-w-xs min-w-48 bottom-full left-1/2 transform -translate-x-1/2 mb-2">
-          <div className="font-medium mb-1">{term}</div>
-          <div className="text-gray-200">{explanation}</div>
-          {/* 화살표 */}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800"></div>
-        </div>
-      )}
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`cursor-help border-b border-dotted border-primary text-primary hover:text-primary/80 ${className}`}>
+            {children}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-1">
+            <div className="font-medium">{term}</div>
+            <div className="text-sm text-muted-foreground">{explanation}</div>
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

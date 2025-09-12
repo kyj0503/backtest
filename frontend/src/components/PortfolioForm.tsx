@@ -17,6 +17,8 @@ import React, { ChangeEvent } from 'react';
 import { PREDEFINED_STOCKS, ASSET_TYPES } from '../constants/strategies';
 import { Tooltip } from './common';
 import StockAutocomplete from './common/StockAutocomplete';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 const PortfolioForm: React.FC<PortfolioFormProps> = ({
   portfolio,
@@ -36,33 +38,37 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
         <h5 className="text-lg font-semibold mb-2 md:mb-0">포트폴리오 구성</h5>
         <div className="flex items-center gap-3">
           <label className="font-medium text-gray-700">입력 방식:</label>
-          <button
-            type="button"
-            className={`px-3 py-1 rounded-l border ${portfolioInputMode === 'amount' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'} border-blue-600`}
-            onClick={() => setPortfolioInputMode('amount')}
-            disabled={portfolioInputMode === 'amount'}
-          >
-            금액 기반
-          </button>
-          <button
-            type="button"
-            className={`px-3 py-1 rounded-r border-l-0 border ${portfolioInputMode === 'weight' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'} border-blue-600`}
-            onClick={() => setPortfolioInputMode('weight')}
-            disabled={portfolioInputMode === 'weight'}
-          >
-            비중 기반
-          </button>
+          <div className="flex border border-blue-600 rounded-md overflow-hidden">
+            <Button
+              type="button"
+              variant={portfolioInputMode === 'amount' ? 'default' : 'outline'}
+              className={`rounded-none border-0 ${portfolioInputMode === 'amount' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              onClick={() => setPortfolioInputMode('amount')}
+              disabled={portfolioInputMode === 'amount'}
+            >
+              금액 기반
+            </Button>
+            <Button
+              type="button"
+              variant={portfolioInputMode === 'weight' ? 'default' : 'outline'}
+              className={`rounded-none border-0 border-l ${portfolioInputMode === 'weight' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              onClick={() => setPortfolioInputMode('weight')}
+              disabled={portfolioInputMode === 'weight'}
+            >
+              비중 기반
+            </Button>
+          </div>
         </div>
         {portfolioInputMode === 'weight' && (
           <div className="flex items-center gap-2 ml-0 md:ml-8 mt-2 md:mt-0">
             <label className="font-medium text-gray-700">전체 투자금액($):</label>
-            <input
+            <Input
               type="number"
               min={1000}
               step={100}
               value={totalInvestment}
               onChange={e => setTotalInvestment(Number(e.target.value))}
-              className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-32"
             />
           </div>
         )}

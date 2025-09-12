@@ -1,6 +1,8 @@
 import React from 'react';
 import { formatPercent, getStatVariant } from '../utils/formatters';
 import FinancialTermTooltip from './common/FinancialTermTooltip';
+import { Card, CardContent } from './ui/card';
+import { Badge } from './ui/badge';
 
 const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
   if (!stats) return null;
@@ -71,37 +73,25 @@ const StatsSummary: React.FC<{ stats: any }> = ({ stats }) => {
     });
   }
 
-  const getVariantClasses = (variant: string) => {
-    switch (variant) {
-      case 'primary': return 'bg-blue-600 text-white';
-      case 'success': return 'bg-green-600 text-white';
-      case 'danger': return 'bg-red-600 text-white';
-      case 'warning': return 'bg-yellow-600 text-white';
-      case 'info': return 'bg-cyan-600 text-white';
-      case 'secondary': return 'bg-gray-600 text-white';
-      default: return 'bg-blue-600 text-white';
-    }
-  };
+
 
   return (
     <div className="mb-8">
       <h4 className="text-xl font-semibold mb-6">백테스트 성과</h4>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {statItems.map((item, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center hover:shadow-md transition-shadow"
-            title={item.description}
-          >
-            <h5 className="text-sm font-medium text-gray-600 mb-3">
-              <FinancialTermTooltip term={item.label}>
-                {item.label}
-              </FinancialTermTooltip>
-            </h5>
-            <span className={`inline-block px-4 py-2 rounded-lg text-lg font-semibold ${getVariantClasses(item.variant)}`}>
-              {item.value}
-            </span>
-          </div>
+          <Card key={index} className="text-center hover:shadow-md transition-shadow" title={item.description}>
+            <CardContent className="p-6">
+              <h5 className="text-sm font-medium text-muted-foreground mb-3">
+                <FinancialTermTooltip term={item.label}>
+                  {item.label}
+                </FinancialTermTooltip>
+              </h5>
+              <Badge variant={item.variant === 'success' ? 'default' : item.variant === 'danger' ? 'destructive' : 'secondary'} className="text-lg font-semibold px-4 py-2">
+                {item.value}
+              </Badge>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>

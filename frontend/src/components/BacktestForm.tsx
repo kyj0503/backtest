@@ -7,6 +7,7 @@ import CommissionForm from './CommissionForm';
 import PortfolioForm from './PortfolioForm';
 import { useBacktestForm } from '../hooks/useBacktestForm';
 import { useFormValidation } from '../hooks/useFormValidation';
+import { Button } from './ui/button';
 
 interface BacktestFormProps {
   onSubmit: (request: BacktestRequest) => Promise<void>;
@@ -143,10 +144,11 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
 
             {/* 실행 버튼 */}
             <div>
-              <button
+              <Button
                 type="submit"
                 disabled={loading || state.ui.isLoading}
-                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg text-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full py-3 px-6 text-lg font-semibold"
+                size="lg"
               >
                 {loading || state.ui.isLoading ? (
                   <span className="flex items-center justify-center">
@@ -159,7 +161,7 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
                 ) : (
                   '포트폴리오 백테스트 실행'
                 )}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
