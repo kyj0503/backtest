@@ -109,6 +109,10 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
               addCash={actions.addCash}
               removeStock={actions.removeStock}
               getTotalAmount={helpers.getTotalAmount}
+              portfolioInputMode={state.portfolioInputMode}
+              setPortfolioInputMode={actions.setPortfolioInputMode}
+              totalInvestment={state.totalInvestment}
+              setTotalInvestment={actions.setTotalInvestment}
             />
 
             {/* 백테스트 설정 */}

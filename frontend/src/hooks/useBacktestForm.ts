@@ -1,39 +1,32 @@
-import { useReducer, useEffect } from 'react';
-import { STRATEGY_CONFIGS } from '../constants/strategies';
-import { BacktestFormState, Stock, initialBacktestFormState } from '../types/backtest-form';
-import { backtestFormReducer, backtestFormHelpers } from '../reducers/backtestFormReducer';
-
 export interface UseBacktestFormReturn {
   state: BacktestFormState;
   actions: {
-    // 포트폴리오 관련
     updateStock: (index: number, field: keyof Stock, value: string | number) => void;
     addStock: () => void;
     addCash: () => void;
     removeStock: (index: number) => void;
-    
-    // 날짜 관련
     setStartDate: (date: string) => void;
     setEndDate: (date: string) => void;
-    
-    // 전략 관련
     setSelectedStrategy: (strategy: string) => void;
     updateStrategyParam: (key: string, value: string) => void;
-    
-    // 설정 관련
     setRebalanceFrequency: (frequency: string) => void;
     setCommission: (commission: number) => void;
-    
-    // UI 관련
     setErrors: (errors: string[]) => void;
     setLoading: (loading: boolean) => void;
     resetForm: () => void;
+    setPortfolioInputMode: (mode: 'amount' | 'weight') => void;
+    setTotalInvestment: (amount: number) => void;
   };
   helpers: {
     getTotalAmount: () => number;
     validateForm: () => string[];
   };
 }
+import { useReducer, useEffect } from 'react';
+import { STRATEGY_CONFIGS } from '../constants/strategies';
+import { BacktestFormState, Stock, initialBacktestFormState } from '../types/backtest-form';
+import { backtestFormReducer, backtestFormHelpers } from '../reducers/backtestFormReducer';
+
 
 export const useBacktestForm = (initialState?: Partial<BacktestFormState>): UseBacktestFormReturn => {
   const [state, dispatch] = useReducer(
@@ -56,7 +49,12 @@ export const useBacktestForm = (initialState?: Partial<BacktestFormState>): UseB
   }, [state.strategy.selectedStrategy]);
 
   const actions = {
-    // 포트폴리오 관련
+    setPortfolioInputMode: (mode: 'amount' | 'weight') => {
+      dispatch({ type: 'SET_PORTFOLIO_INPUT_MODE', payload: mode });
+    },
+    setTotalInvestment: (amount: number) => {
+      dispatch({ type: 'SET_TOTAL_INVESTMENT', payload: amount });
+    },
     updateStock: (index: number, field: keyof Stock, value: string | number) => {
       dispatch({ type: 'UPDATE_STOCK', payload: { index, field, value } });
     },
@@ -79,7 +77,6 @@ export const useBacktestForm = (initialState?: Partial<BacktestFormState>): UseB
     setStartDate: (date: string) => {
       dispatch({ type: 'SET_START_DATE', payload: date });
     },
-
     setEndDate: (date: string) => {
       dispatch({ type: 'SET_END_DATE', payload: date });
     },

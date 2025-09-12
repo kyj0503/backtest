@@ -25,6 +25,10 @@ describe('PortfolioForm', () => {
         addCash={addCash}
         removeStock={removeStock}
         getTotalAmount={getTotalAmount}
+        portfolioInputMode={"amount"}
+  setPortfolioInputMode={vi.fn()}
+  totalInvestment={10000}
+  setTotalInvestment={vi.fn()}
       />
     )
 
