@@ -107,8 +107,9 @@ Authorization: Bearer <token>
 
 단일 종목/포트폴리오 자동 구분, 환율·S&P500·NASDAQ 벤치마크 포함, 표준화된 결과 반환
 
-#### 요청 예시
+#### 요청 예시 (비중/금액 모두 지원)
 ```bash
+# (1) 금액 기반 입력
 curl -X POST http://localhost:8001/api/v1/backtest/execute \
   -H "Content-Type: application/json" \
   -d '{
@@ -120,7 +121,37 @@ curl -X POST http://localhost:8001/api/v1/backtest/execute \
     "end_date": "2023-12-31",
     "strategy": "buy_and_hold"
   }'
+
+# (2) 비중(%) 기반 입력 (amount 대신 weight 사용, 합계 100)
+curl -X POST http://localhost:8001/api/v1/backtest/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "portfolio": [
+      {"symbol": "AAPL", "weight": 60, "asset_type": "stock"},
+      {"symbol": "GOOGL", "weight": 40, "asset_type": "stock"}
+    ],
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31",
+    "strategy": "buy_and_hold"
+  }'
+
 ```
+* amount와 weight는 동시에 입력 불가, 둘 중 하나만 입력 (weight는 0~100, 합계 100±0.01 허용)
+* 포트폴리오 내 모든 종목이 동일 방식(amount 또는 weight)으로 입력되어야 함
+* weight 입력 시 내부적으로 금액으로 자동 환산
+
+#### PortfolioStock 필드
+| 필드명         | 타입    | 설명                                 |
+| -------------- | ------- | ------------------------------------ |
+| symbol         | string  | 주식 심볼                            |
+| amount         | float   | 투자 금액 (weight와 동시 입력 불가)   |
+| weight         | float   | 비중(%) (amount와 동시 입력 불가)     |
+| asset_type     | string  | 자산 타입 (stock, cash)              |
+| investment_type| string  | 투자 방식 (lump_sum, dca)            |
+| dca_periods    | int     | 분할 매수 기간 (개월, 옵션)           |
+| custom_name    | string  | 현금 자산 커스텀명 (옵션)             |
+
+#### 응답 예시 (요약)
 
 #### 응답 예시 (요약)
 ```json
@@ -166,6 +197,7 @@ curl -X POST http://localhost:8001/api/v1/backtest/run \
 
 #### 2. 포트폴리오 백테스트 `/portfolio`
 ```bash
+# (1) 금액 기반 입력
 curl -X POST http://localhost:8001/api/v1/backtest/portfolio \
   -H "Content-Type: application/json" \
   -d '{
@@ -177,6 +209,91 @@ curl -X POST http://localhost:8001/api/v1/backtest/portfolio \
     "start_date": "2023-01-01",
     "end_date": "2023-12-31"
   }'
+
+# (2) 비중(%) 기반 입력
+curl -X POST http://localhost:8001/api/v1/backtest/portfolio \
+  -H "Content-Type: application/json" \
+  -d '{
+    "portfolio": [
+      {"symbol": "AAPL", "weight": 50},
+      {"symbol": "GOOGL", "weight": 30},
+      {"symbol": "MSFT", "weight": 20}
+    ],
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31"
+  }'
+```
+* amount/weight 동시 입력 불가, 혼합 입력 불가, weight 합계 100±0.01
+
+### 이벤트/메트릭/알림/분석/경고 API
+
+#### 1. 백테스트 메트릭 요약 `/api/v1/backtest/metrics`
+```http
+GET /api/v1/backtest/metrics
+```
+* 전체 백테스트 실행/성공/실패/전략별/심볼별 성과 등 집계
+
+#### 2. 백테스트 알림 조회 `/api/v1/backtest/notifications`
+```http
+GET /api/v1/backtest/notifications?limit=20
+```
+* 최근 백테스트 성공/실패/최적화 등 주요 알림 목록
+
+#### 3. 포트폴리오 분석 통계 `/api/v1/backtest/portfolio-analytics`
+```http
+GET /api/v1/backtest/portfolio-analytics
+GET /api/v1/backtest/portfolio-analytics?portfolio_id=abc123
+```
+* 전체/특정 포트폴리오의 생성, 리밸런싱, 최적화, 인기 자산 등 통계
+
+#### 4. 포트폴리오 경고/알림 `/api/v1/backtest/portfolio-alerts`
+```http
+GET /api/v1/backtest/portfolio-alerts?limit=20
+GET /api/v1/backtest/portfolio-alerts?portfolio_id=abc123&limit=10
+```
+* 거래비용 급증, 다변화 악화, 대규모 가중치 변화, 리스크 허용도 급변 등 경고/알림
+
+#### 응답 예시 (메트릭)
+```json
+{
+  "total_backtests": 12,
+  "success_rate": 0.83,
+  "failure_rate": 0.17,
+  "avg_execution_time": 2.1,
+  "strategy_performance": {
+    "buy_and_hold": {"count": 7, "avg_annual_return": 0.12, "avg_sharpe_ratio": 1.1, "avg_trade_count": 2.3}
+  },
+  "symbol_performance": {
+    "AAPL": {"count": 5, "avg_annual_return": 0.15, "best_strategy": "buy_and_hold", "best_return": 0.22}
+  }
+}
+```
+
+#### 응답 예시 (알림)
+```json
+[
+  {"type": "high_return", "title": "높은 수익률 달성", "message": "AAPL (buy_and_hold): 32.00% 연간 수익률", "severity": "success", "timestamp": "2024-06-01T12:00:00"},
+  {"type": "backtest_failed", "title": "백테스트 실패", "message": "AAPL (buy_and_hold): 데이터 없음", "severity": "error", "timestamp": "2024-06-01T12:01:00"}
+]
+```
+
+#### 응답 예시 (포트폴리오 분석)
+```json
+{
+  "total_portfolios": 3,
+  "avg_rebalancing_per_portfolio": 1.7,
+  "avg_optimization_per_portfolio": 0.3,
+  "popular_assets": [["AAPL", 3], ["GOOGL", 2]],
+  "total_rebalancing_events": 5
+}
+```
+
+#### 응답 예시 (경고)
+```json
+[
+  {"type": "high_transaction_cost", "title": "높은 거래비용 발생", "message": "포트폴리오 abc123: $1,200.00 거래비용", "severity": "warning", "portfolio_id": "abc123", "timestamp": "2024-06-01T12:00:00"},
+  {"type": "diversification_decline", "title": "다변화 효과 악화", "message": "포트폴리오 abc123: 다변화 점수 -0.120", "severity": "warning", "portfolio_id": "abc123", "timestamp": "2024-06-01T12:01:00"}
+]
 ```
 
 #### 3. 차트 데이터 `/chart-data`
