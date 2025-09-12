@@ -270,6 +270,14 @@ class PortfolioBacktestService:
         consecutive_gains = PortfolioBacktestService._get_max_consecutive(daily_changes, True)
         consecutive_losses = PortfolioBacktestService._get_max_consecutive(daily_changes, False)
         
+        # Profit Factor 계산 (이익일 수익률의 합 / 손실일 손실률의 절댓값 합)
+        positive_returns = daily_returns[daily_returns > 0]
+        negative_returns = daily_returns[daily_returns < 0]
+        
+        gross_profit = positive_returns.sum() if len(positive_returns) > 0 else 0
+        gross_loss = abs(negative_returns.sum()) if len(negative_returns) > 0 else 0
+        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (2.0 if gross_profit > 0 else 1.0)
+        
         return {
             'Start': start_date.strftime('%Y-%m-%d'),
             'End': end_date.strftime('%Y-%m-%d'),
@@ -288,7 +296,8 @@ class PortfolioBacktestService:
             'Total_Trading_Days': len(portfolio_data),
             'Positive_Days': len(daily_returns[daily_returns > 0]),
             'Negative_Days': len(daily_returns[daily_returns < 0]),
-            'Win_Rate': len(daily_returns[daily_returns > 0]) / len(daily_returns) * 100 if len(daily_returns) > 0 else 0
+            'Win_Rate': len(daily_returns[daily_returns > 0]) / len(daily_returns) * 100 if len(daily_returns) > 0 else 0,
+            'Profit_Factor': profit_factor
         }
     
     @staticmethod

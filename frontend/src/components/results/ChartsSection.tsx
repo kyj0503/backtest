@@ -10,7 +10,7 @@ import {
 import ChartLoading from '../common/ChartLoading';
 import { formatPercent } from '../../utils/formatters';
 import { useStockData } from '../../hooks/useStockData';
-// import EnhancedChartsSection from './EnhancedChartsSection';
+import EnhancedChartsSection from './EnhancedChartsSection';
 import { 
   ChartData, 
   PortfolioData
@@ -77,7 +77,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             Total_Trading_Days: portfolio_statistics.Total_Trading_Days || 0,
             Win_Rate: portfolio_statistics.Win_Rate || 0,
             Avg_Drawdown: portfolio_statistics.Avg_Drawdown || 0,
-            profit_factor: 1.0 // 포트폴리오에서는 기본값 설정
+            profit_factor: portfolio_statistics.Profit_Factor || 1.0
           }} />
         </Suspense>
 
@@ -371,13 +371,8 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     <>
       {isPortfolio ? renderPortfolioCharts() : renderSingleStockCharts()}
       
-      {/* 추가 데이터 차트 (환율, 벤치마크 등) - 성능 최적화를 위해 일시적으로 비활성화 */}
-      {/* <EnhancedChartsSection data={data} isPortfolio={isPortfolio} /> */}
-      <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-        <p className="text-blue-800 text-sm">
-          📊 추가 차트 (환율, S&P 500, NASDAQ 벤치마크)는 현재 성능 최적화 중입니다.
-        </p>
-      </div>
+      {/* 추가 데이터 차트 (환율, 벤치마크 등) - 다시 활성화 */}
+      <EnhancedChartsSection data={data} isPortfolio={isPortfolio} />
     </>
   );
 });

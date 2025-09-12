@@ -30,7 +30,10 @@ const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
 
         {/* 주가 급등/급락 뉴스 */}
         <StockVolatilityNews
-          symbols={portfolio_composition.map(item => item.symbol)}
+          symbols={portfolio_composition.map(item => {
+            // 포트폴리오에서 심볼 뒤의 인덱스(_0, _1 등)를 제거
+            return item.symbol.replace(/_\d+$/, '');
+          })}
           startDate={portfolio_statistics.Start}
           endDate={portfolio_statistics.End}
           className="mb-8"

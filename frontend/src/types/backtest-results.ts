@@ -31,6 +31,7 @@ export interface PortfolioStatistics {
   Positive_Days: number;
   Negative_Days: number;
   Win_Rate: number;
+  Profit_Factor: number;
 }
 
 export interface ChartData {

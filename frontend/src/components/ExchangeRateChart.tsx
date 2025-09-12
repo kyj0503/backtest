@@ -23,7 +23,15 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
 
   // 환율 포맷팅 함수
   const formatRate = (value: number) => {
-    return `₩${value.toLocaleString()}`;
+    return `₩${value.toFixed(0)}`;
+  };
+
+  // Y축용 환율 포맷팅 함수 (더 간결하게)
+  const formatRateAxis = (value: number) => {
+    if (value >= 1000) {
+      return `₩${(value/1000).toFixed(1)}K`;
+    }
+    return `₩${value.toFixed(0)}`;
   };
 
   if (loading) {
@@ -77,59 +85,83 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
       <div className="border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h5 className="text-lg font-semibold text-gray-900 mb-0">원달러 환율 변동</h5>
+            <h5 className="text-lg font-semibold text-gray-900 mb-1">원달러 환율 변동</h5>
+            <p className="text-sm text-gray-600">백테스트 기간 동안의 USD/KRW 환율 추이</p>
           </div>
-          <div>
-            <small className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${rateChange >= 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-              {rateChange >= 0 ? '+' : ''}{rateChange.toFixed(2)}%
-            </small>
+          <div className="text-right">
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${rateChange >= 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+              {rateChange >= 0 ? '▲' : '▼'} {Math.abs(rateChange).toFixed(2)}%
+            </div>
+            <div className="text-xs text-gray-500 mt-1">기간 변동률</div>
           </div>
         </div>
       </div>
       <div className="px-6 py-4">
         {/* 환율 차트 */}
-        <div style={{ width: '100%', height: '300px' }}>
-          <ResponsiveContainer>
-            <LineChart data={exchangeData}>
-              <CartesianGrid strokeDasharray="3 3" />
+        <div style={{ width: '100%', height: '400px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart 
+              data={exchangeData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis 
                 dataKey="date" 
                 tickFormatter={formatDate}
                 interval="preserveStartEnd"
+                tick={{ fontSize: 12 }}
+                height={50}
               />
               <YAxis 
-                tickFormatter={formatRate}
-                domain={[minRate * 0.995, maxRate * 1.005]}
+                tickFormatter={formatRateAxis}
+                domain={[minRate * 0.998, maxRate * 1.002]}
+                tick={{ fontSize: 12 }}
+                width={70}
               />
               <Tooltip 
                 labelFormatter={(label: any) => `날짜: ${label}`}
                 formatter={(value: number) => [formatRate(value), 'USD/KRW']}
+                contentStyle={{
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '6px',
+                  fontSize: '13px'
+                }}
               />
               <Line 
                 type="monotone" 
                 dataKey="rate" 
                 stroke="#fd7e14" 
-                strokeWidth={2}
+                strokeWidth={3}
                 dot={false}
-                activeDot={{ r: 4 }}
+                activeDot={{ 
+                  r: 5, 
+                  stroke: '#fd7e14', 
+                  strokeWidth: 2, 
+                  fill: '#fff' 
+                }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* 환율 요약 정보 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-          <div>
-            <small className="text-gray-500 block">시작 환율</small>
-            <strong>{formatRate(exchangeData[0]?.rate)}</strong>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-100">
+          <div className="text-center">
+            <div className="text-xs text-gray-500 mb-1">시작 환율</div>
+            <div className="text-sm font-semibold text-gray-800">{formatRate(exchangeData[0]?.rate)}</div>
           </div>
-          <div>
-            <small className="text-gray-500 block">종료 환율</small>
-            <strong>{formatRate(exchangeData[exchangeData.length - 1]?.rate)}</strong>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 mb-1">종료 환율</div>
+            <div className="text-sm font-semibold text-gray-800">{formatRate(exchangeData[exchangeData.length - 1]?.rate)}</div>
           </div>
-          <div>
-            <small className="text-gray-500 block">기간 중 변동폭</small>
-            <strong>{formatRate(maxRate - minRate)}</strong>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 mb-1">최고점</div>
+            <div className="text-sm font-semibold text-red-600">{formatRate(maxRate)}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 mb-1">최저점</div>
+            <div className="text-sm font-semibold text-green-600">{formatRate(minRate)}</div>
           </div>
         </div>
       </div>

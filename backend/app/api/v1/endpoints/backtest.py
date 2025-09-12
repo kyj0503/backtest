@@ -1029,7 +1029,18 @@ async def execute_backtest(request: UnifiedBacktestRequest):
                             "asset_type": asset.asset_type or "stock"
                         }
                     ],
-                    "summary_stats": result.data.__dict__ if hasattr(result, 'data') else {},
+                    "summary_stats": {
+                        "total_return_pct": result.total_return_pct,
+                        "annualized_return_pct": result.annualized_return_pct,
+                        "buy_and_hold_return_pct": result.buy_and_hold_return_pct,
+                        "sharpe_ratio": result.sharpe_ratio,
+                        "sortino_ratio": result.sortino_ratio,
+                        "max_drawdown_pct": result.max_drawdown_pct,
+                        "volatility_pct": result.volatility_pct,
+                        "total_trades": result.total_trades,
+                        "win_rate_pct": result.win_rate_pct,
+                        "profit_factor": result.profit_factor
+                    },
                     
                     # 차트 데이터 추가 (포트폴리오와 호환 가능한 형태)
                     "ohlc_data": chart_data.ohlc_data if hasattr(chart_data, 'ohlc_data') else [],
@@ -1040,17 +1051,17 @@ async def execute_backtest(request: UnifiedBacktestRequest):
                     # 포트폴리오 형식과 호환을 위한 추가 데이터
                     "individual_results": [{
                         "ticker": asset.symbol,
-                        "final_equity": getattr(result.data, 'Equity_Final', asset.amount) if hasattr(result, 'data') else asset.amount,
-                        "total_return_pct": getattr(result.data, 'Return', 0.0) if hasattr(result, 'data') else 0.0,
-                        "sharpe_ratio": getattr(result.data, 'Sharpe_Ratio', 0.0) if hasattr(result, 'data') else 0.0,
+                        "final_equity": result.final_equity,
+                        "total_return_pct": result.total_return_pct,
+                        "sharpe_ratio": result.sharpe_ratio,
                         "weight": 1.0,
                         "amount": asset.amount,
-                        "trades": getattr(result.data, 'Total_Trades', 0) if hasattr(result, 'data') else 0,
-                        "win_rate": getattr(result.data, 'Win_Rate', 0.0) if hasattr(result, 'data') else 0.0
+                        "trades": result.total_trades,
+                        "win_rate": result.win_rate_pct
                     }],
                     "portfolio_result": {
-                        "total_equity": getattr(result.data, 'Equity_Final', asset.amount) if hasattr(result, 'data') else asset.amount,
-                        "total_return_pct": getattr(result.data, 'Return', 0.0) if hasattr(result, 'data') else 0.0
+                        "total_equity": result.final_equity,
+                        "total_return_pct": result.total_return_pct
                     },
                     
                     # 추가 데이터 (환율, 벤치마크 등)
