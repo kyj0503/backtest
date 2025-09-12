@@ -1,14 +1,17 @@
-# API 가이드
 
-이 문서는 백테스팅 시스템의 모든 API 엔드포인트와 사용 방법을 설명합니다.
+# API 가이드 (2025-09 최신)
 
-문제 발생 시: API 관련 트러블슈팅은 [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)를 참고하세요.
+이 문서는 백테스팅 시스템의 모든 백엔드 API 엔드포인트, 기능, 입출력 예시, curl 예제, 도커 환경 기준 사용법을 체계적으로 설명합니다.
+
+문제 발생 시: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) 참고
 
 ## 목차
 
 1. [API 개요](#api-개요)
 2. [인증](#인증)
 3. [백테스트 API](#백테스트-api)
+  - [통합 백테스트](#통합-백테스트-execute)
+  - [단일/포트폴리오/차트/히스토리/환율/뉴스/헬스체크](#기타-주요-api)
 4. [전략 API](#전략-api)
 5. [커뮤니티 API](#커뮤니티-api)
 6. [기타 API](#기타-api)
@@ -97,174 +100,128 @@ GET /api/v1/auth/me
 Authorization: Bearer <token>
 ```
 
+
 ## 백테스트 API
 
-### 단일 종목 백테스트 실행
-```http
-POST /api/v1/backtest/run
-Content-Type: application/json
+### [통합 백테스트] `/api/v1/backtest/execute`
 
-{
-  "ticker": "AAPL",
-  "start_date": "2023-01-01",
-  "end_date": "2023-12-31",
-  "initial_cash": 100000,
-  "strategy": "buy_and_hold",
-  "strategy_params": {},
-  "commission": 0.001,
-  "spread": 0.0,
-  "benchmark_ticker": "SPY"
-}
+단일 종목/포트폴리오 자동 구분, 환율·S&P500·NASDAQ 벤치마크 포함, 표준화된 결과 반환
+
+#### 요청 예시
+```bash
+curl -X POST http://localhost:8001/api/v1/backtest/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "portfolio": [
+      {"symbol": "AAPL", "amount": 10000, "asset_type": "stock"},
+      {"symbol": "GOOGL", "amount": 5000, "asset_type": "stock"}
+    ],
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31",
+    "strategy": "buy_and_hold"
+  }'
 ```
 
-**응답:**
+#### 응답 예시 (요약)
 ```json
 {
   "status": "success",
+  "backtest_type": "portfolio", // 또는 "single_stock"
   "data": {
+    "portfolio_composition": [ ... ],
+    "summary_stats": { ... },
+    "ohlc_data": [ ... ],
+    "equity_data": [ ... ],
+    "trade_markers": [ ... ],
+    "indicators": [ ... ],
+    "exchange_rates": [ ... ],
+    "sp500_benchmark": [ ... ],
+    "nasdaq_benchmark": [ ... ]
+  }
+}
+```
+
+#### 주요 특징
+- 단일 종목: `portfolio`에 1개 종목, 현금 없음 → 단일 백테스트
+- 포트폴리오: 2개 이상 종목 또는 현금 포함 → 포트폴리오 백테스트
+- 환율(`exchange_rates`), S&P500(`sp500_benchmark`), NASDAQ(`nasdaq_benchmark`) 데이터 포함
+- 모든 결과는 표준화된 구조로 반환
+
+---
+
+### 기타 주요 API
+
+#### 1. 단일 종목 백테스트 `/run`
+```bash
+curl -X POST http://localhost:8001/api/v1/backtest/run \
+  -H "Content-Type: application/json" \
+  -d '{
     "ticker": "AAPL",
-    "strategy": "buy_and_hold",
-    "summary_stats": {
-      "start": "2023-01-01T00:00:00",
-      "end": "2023-12-31T00:00:00",
-      "duration": "365 days 00:00:00",
-      "total_return_pct": 48.15,
-      "annual_return_pct": 48.15,
-      "volatility_pct": 25.32,
-      "sharpe_ratio": 1.89,
-      "max_drawdown_pct": 12.45,
-      "total_trades": 2,
-      "win_rate_pct": 100.0
-    }
-  }
-}
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31",
+    "initial_cash": 10000,
+    "strategy": "buy_and_hold"
+  }'
 ```
 
-### 백테스트 차트 데이터
-```http
-POST /api/v1/backtest/chart-data
-Content-Type: application/json
-
-{
-  "ticker": "AAPL",
-  "start_date": "2023-01-01",
-  "end_date": "2023-12-31",
-  "initial_cash": 100000,
-  "strategy": "sma_crossover",
-  "strategy_params": {
-    "short_window": 10,
-    "long_window": 30
-  }
-}
-```
-
-**응답:**
-```json
-{
-  "status": "success",
-  "data": {
-    "ticker": "AAPL",
-    "ohlc_data": [
-      {
-        "date": "2023-01-01",
-        "open": 150.0,
-        "high": 155.0,
-        "low": 148.0,
-        "close": 152.0,
-        "volume": 1000000
-      }
+#### 2. 포트폴리오 백테스트 `/portfolio`
+```bash
+curl -X POST http://localhost:8001/api/v1/backtest/portfolio \
+  -H "Content-Type: application/json" \
+  -d '{
+    "portfolio": [
+      {"symbol": "AAPL", "amount": 4000},
+      {"symbol": "GOOGL", "amount": 3000},
+      {"symbol": "MSFT", "amount": 3000}
     ],
-    "equity_data": [
-      {
-        "date": "2023-01-01",
-        "equity": 100000,
-        "drawdown": 0
-      }
-    ],
-    "trades": [
-      {
-        "entry_date": "2023-01-15",
-        "exit_date": "2023-02-10",
-        "entry_price": 160.0,
-        "exit_price": 170.0,
-        "size": 625,
-        "pnl": 6250.0,
-        "return_pct": 6.25
-      }
-    ],
-    "indicators": {
-      "sma_short": [150.0, 151.0, 152.0],
-      "sma_long": [148.0, 149.0, 150.0]
-    },
-    "summary_stats": {
-      // ... 동일한 구조
-    }
-  }
-}
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31"
+  }'
 ```
 
-### 포트폴리오 백테스트
-```http
-POST /api/v1/backtest/portfolio
-Content-Type: application/json
-
-{
-  "portfolio": [
-    {
-      "symbol": "AAPL",
-      "amount": 50000,
-      "investment_type": "lump_sum",
-      "asset_type": "stock"
-    },
-    {
-      "symbol": "GOOGL",
-      "amount": 30000,
-      "investment_type": "dca",
-      "dca_periods": 12,
-      "asset_type": "stock"
-    },
-    {
-      "symbol": "현금",
-      "amount": 20000,
-      "investment_type": "lump_sum",
-      "asset_type": "cash"
-    }
-  ],
-  "start_date": "2023-01-01",
-  "end_date": "2023-12-31",
-  "commission": 0.001,
-  "rebalance_frequency": "quarterly"
-}
+#### 3. 차트 데이터 `/chart-data`
+```bash
+curl -X POST http://localhost:8001/api/v1/backtest/chart-data \
+  -H "Content-Type: application/json" \
+  -d '{ ... }'
 ```
 
-**응답:**
-```json
-{
-  "status": "success",
-  "data": {
-    "portfolio_statistics": {
-      "total_return_pct": 25.8,
-      "annual_return_pct": 25.8,
-      "volatility_pct": 18.5,
-      "sharpe_ratio": 1.4,
-      "max_drawdown_pct": 8.2
-    },
-    "equity_curve": [
-      {
-        "date": "2023-01-01",
-        "value": 100000
-      }
-    ],
-    "portfolio_composition": [
-      {
-        "symbol": "AAPL",
-        "weight": 0.5,
-        "value": 50000
-      }
-    ]
-  }
-}
+#### 4. 백테스트 히스토리 목록 `/history`
+```bash
+curl -X GET "http://localhost:8001/api/v1/backtest/history?limit=10&offset=0" -H "Authorization: Bearer <token>"
 ```
+
+#### 5. 백테스트 히스토리 상세 `/history/{history_id}`
+```bash
+curl -X GET http://localhost:8001/api/v1/backtest/history/1 -H "Authorization: Bearer <token>"
+```
+
+#### 6. 백테스트 히스토리 삭제 `DELETE /history/{history_id}`
+```bash
+curl -X DELETE http://localhost:8001/api/v1/backtest/history/1 -H "Authorization: Bearer <token>"
+```
+
+#### 7. 환율 데이터 `/exchange-rate`
+```bash
+curl "http://localhost:8001/api/v1/backtest/exchange-rate?start_date=2023-01-01&end_date=2023-12-31"
+```
+
+#### 8. 주가 데이터 `/stock-data/{ticker}`
+```bash
+curl "http://localhost:8001/api/v1/backtest/stock-data/AAPL?start_date=2023-01-01&end_date=2023-12-31"
+```
+
+#### 9. 변동성 이벤트 뉴스 `/stock-volatility-news/{ticker}`
+```bash
+curl "http://localhost:8001/api/v1/backtest/stock-volatility-news/AAPL?start_date=2023-01-01&end_date=2023-12-31&threshold=5.0"
+```
+
+#### 10. 백테스트 서비스 헬스체크 `/health`
+```bash
+curl http://localhost:8001/api/v1/backtest/health
+```
+
+---
 
 ### 주가 데이터 조회
 ```http
@@ -490,7 +447,8 @@ GET /health
 }
 ```
 
-## 에러 처리
+
+## 에러 처리 및 정책
 
 ### 에러 응답 형식
 ```json
@@ -523,8 +481,9 @@ GET /health
 }
 ```
 
+
 ### 데이터 소스 정책
-- **DB 캐시 우선**: MySQL에 저장된 데이터를 우선 사용
+- **DB 캐시 우선**: MySQL에 저장된 데이터 우선 사용
 - **외부 API 보강**: 누락된 데이터는 yfinance에서 조회 후 자동 저장
 - **에러 분류**: 404(데이터 없음), 422(검증 실패), 429(레이트 제한), 0(네트워크 오류)
 
@@ -532,3 +491,31 @@ GET /health
 - 심볼: `CASH` 또는 한글 `현금`
 - 특성: 0% 수익률, 무변동성
 - 주가/뉴스 조회 시 빈 배열 반환
+
+---
+
+## 도커 환경에서의 빌드/실행/테스트
+
+### 빌드 및 실행
+```bash
+# 전체 개발 환경 빌드 및 실행
+docker compose -f compose.yml -f compose/compose.dev.yml up --build
+
+# 백엔드만 재시작
+docker compose -f compose.yml -f compose/compose.dev.yml restart backend
+```
+
+### 테스트
+```bash
+# 백엔드 단위/통합 테스트 (컨테이너 내부)
+docker compose exec backend pytest -q
+
+# 커버리지 포함
+docker compose exec backend pytest --cov=app --cov-report=term-missing
+```
+
+---
+
+## 문서 개선/기여
+
+문서 개선, API 예시 추가, 신규 기능 반영은 PR 또는 이슈로 언제든 환영합니다.

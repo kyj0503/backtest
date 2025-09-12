@@ -17,6 +17,7 @@ from ....core.custom_exceptions import (
     ValidationError,
     handle_yfinance_error
 )
+from ....events.event_system import event_system_manager
 from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
 from .auth import require_user
 import logging
@@ -73,6 +74,46 @@ def _save_backtest_history(user_id: int, request: BacktestRequest, result: Backt
     except Exception as e:
         logger.warning(f"백테스트 히스토리 저장 실패: {str(e)}")
         # 히스토리 저장 실패는 전체 요청을 실패시키지 않음
+
+
+@router.get(
+    "/metrics",
+    summary="백테스트 메트릭 요약",
+    description="이벤트 시스템에서 집계된 백테스트 메트릭(성공률, 전략별 성과 등)을 반환합니다."
+)
+async def get_backtest_metrics():
+    """백테스트 메트릭 요약 반환 API"""
+    return event_system_manager.get_backtest_metrics()
+
+
+@router.get(
+    "/notifications",
+    summary="백테스트 알림 조회",
+    description="이벤트 시스템에서 수집된 백테스트 알림(성과, 실패 등)을 반환합니다."
+)
+async def get_backtest_notifications(limit: int = 20):
+    """백테스트 알림 반환 API"""
+    return event_system_manager.get_backtest_notifications(limit)
+
+
+@router.get(
+    "/portfolio-analytics",
+    summary="포트폴리오 분석 통계 조회",
+    description="이벤트 시스템에서 집계된 포트폴리오 분석/통계 데이터를 반환합니다. portfolio_id로 특정 포트폴리오만 조회 가능."
+)
+async def get_portfolio_analytics(portfolio_id: str = None):
+    """포트폴리오 분석 결과 반환 API"""
+    return event_system_manager.get_portfolio_analytics(portfolio_id)
+
+
+@router.get(
+    "/portfolio-alerts",
+    summary="포트폴리오 경고/알림 조회",
+    description="이벤트 시스템에서 수집된 포트폴리오 경고/알림을 반환합니다. portfolio_id로 특정 포트폴리오만 조회 가능."
+)
+async def get_portfolio_alerts(portfolio_id: str = None, limit: int = 20):
+    """포트폴리오 경고 반환 API"""
+    return event_system_manager.get_portfolio_alerts(portfolio_id, limit)
 
 
 @router.post(
