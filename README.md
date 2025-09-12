@@ -20,7 +20,7 @@ FastAPI + React 기반의 투자 전략 백테스팅 시스템입니다.
 ### 개발 환경 실행
 ```bash
 # 개발 환경 시작
-docker compose -f compose.yml -f compose/compose.dev.yml up --build
+docker compose -f compose.yml -f compose/compose.dev.yml up --build -d
 
 # 백그라운드 실행
 docker compose -f compose.yml -f compose/compose.dev.yml up -d
