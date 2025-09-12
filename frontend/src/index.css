@@ -152,21 +152,106 @@
 }
 
 @layer base {
-  body {
-    margin: 0;
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: var(--background);
-    color: var(--foreground);
-  }
-
   * {
     border-color: var(--border);
   }
+  
+  html {
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+    font-family: var(--font-sans) !important;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans) !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+  }
 
   code {
-    font-family: var(--font-mono);
+    font-family: var(--font-mono) !important;
+  }
+  
+  /* Force application of design system */
+  #root {
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+    min-height: 100vh;
+    font-family: var(--font-sans) !important;
+  }
+}
+
+@layer components {
+  /* Override all button colors */
+  .bg-primary, 
+  [class*="bg-primary"] {
+    background-color: var(--primary) !important;
+  }
+  
+  .text-primary-foreground,
+  [class*="text-primary-foreground"] {
+    color: var(--primary-foreground) !important;
+  }
+  
+  .bg-card,
+  [class*="bg-card"] {
+    background-color: var(--card) !important;
+  }
+  
+  .text-card-foreground,
+  [class*="text-card-foreground"] {
+    color: var(--card-foreground) !important;
+  }
+  
+  .bg-secondary,
+  [class*="bg-secondary"] {
+    background-color: var(--secondary) !important;
+  }
+  
+  .text-secondary-foreground,
+  [class*="text-secondary-foreground"] {
+    color: var(--secondary-foreground) !important;
+  }
+  
+  .bg-background,
+  [class*="bg-background"] {
+    background-color: var(--background) !important;
+  }
+  
+  .text-foreground,
+  [class*="text-foreground"] {
+    color: var(--foreground) !important;
+  }
+  
+  /* Force Poppins font everywhere */
+  *, *::before, *::after {
+    font-family: var(--font-sans) !important;
+  }
+  
+  /* Global background override */
+  body, #root, .App {
+    background: var(--background) !important;
+    color: var(--foreground) !important;
+  }
+  
+  /* Button overrides */
+  button {
+    font-family: var(--font-sans) !important;
+  }
+  
+  /* Header and navigation overrides */
+  header, nav {
+    background: var(--card) !important;
+    color: var(--card-foreground) !important;
+  }
+  
+  /* Card component overrides */
+  .card, [class*="card"] {
+    background: var(--card) !important;
+    color: var(--card-foreground) !important;
   }
 }
 

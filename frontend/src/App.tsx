@@ -13,7 +13,11 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <div className="App">
+        <div className="App min-h-screen bg-background text-foreground" style={{ 
+          background: 'var(--background)', 
+          color: 'var(--foreground)',
+          fontFamily: 'var(--font-sans)'
+        }}>
           <Header />
           <main>
             <Routes>
