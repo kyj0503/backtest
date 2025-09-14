@@ -21,7 +21,8 @@ describe('StrategyForm', () => {
     const label = screen.getByText('투자 전략')
     const select = within(label.closest('div') as HTMLElement).getByRole('combobox')
     // 실제 <select>라면 selectOptions 사용
-    await user.selectOptions(select, 'rsi_strategy')
+    await user.click(select)
+    await user.click(screen.getByRole('option', { name: 'RSI 전략' }))
     expect(setSelectedStrategy).toHaveBeenCalledWith('rsi_strategy')
   })
 

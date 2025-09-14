@@ -83,7 +83,7 @@ describe('FormField', () => {
   });
 
   describe('입력 타입별 렌더링', () => {
-    it('select 타입이 올바르게 렌더링되어야 함', () => {
+  it('select 타입이 올바르게 렌더링되어야 함', async () => {
       const options = [
         { value: 'option1', label: '옵션 1' },
         { value: 'option2', label: '옵션 2' }
@@ -102,8 +102,9 @@ describe('FormField', () => {
   const select = screen.getByRole('combobox');
   expect(select).toBeInTheDocument();
   // <option>은 getByRole('option', { name })로 접근
-  expect(screen.getByRole('option', { name: '옵션 1' })).toBeInTheDocument();
-  expect(screen.getByRole('option', { name: '옵션 2' })).toBeInTheDocument();
+    await userEvent.click(select)
+    expect(screen.getByRole('option', { name: '옵션 1' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: '옵션 2' })).toBeInTheDocument();
     });
 
     it('textarea 타입이 올바르게 렌더링되어야 함', () => {
@@ -194,7 +195,8 @@ describe('FormField', () => {
       );
 
     const select = screen.getByRole('combobox');
-    await user.selectOptions(select, 'option1');
+      await user.click(select)
+      await user.click(screen.getByRole('option', { name: '옵션 1' }))
     expect(handleChange).toHaveBeenCalledWith('option1');
     });
 

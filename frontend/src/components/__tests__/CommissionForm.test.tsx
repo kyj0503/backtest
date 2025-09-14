@@ -21,7 +21,8 @@ describe('CommissionForm', () => {
   const rLabel = screen.getByText('리밸런싱 주기')
   const rebalance = within(rLabel.closest('div') as HTMLElement).getByRole('combobox')
   // 기본 <select>라면 selectOptions 사용
-  await user.selectOptions(rebalance, 'yearly')
+    await user.click(rebalance)
+    await user.click(screen.getByRole('option', { name: '연간' }))
   expect(setRebalanceFrequency).toHaveBeenCalledWith('yearly')
 
     const cLabel = screen.getByText('거래 수수료')
