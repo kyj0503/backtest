@@ -19,7 +19,6 @@ import { Tooltip } from './common';
 import StockAutocomplete from './common/StockAutocomplete';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const PortfolioForm: React.FC<PortfolioFormProps> = ({
   portfolio,

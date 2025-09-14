@@ -2,7 +2,7 @@ export { Button } from "./button"
 export type { ButtonProps } from "./button"
 
 export { Input } from "./input"
-export type { InputProps } from "./input"
+// export type { InputProps } from "./input" // InputProps not exported from input component
 
 export { Textarea } from "./textarea"
 
