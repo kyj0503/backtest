@@ -191,10 +191,12 @@ describe('FormField', () => {
         />
       );
 
-      const select = screen.getByRole('combobox');
-      await user.selectOptions(select, 'option1');
+  const selectTrigger = screen.getByRole('combobox');
+  await user.click(selectTrigger);
+  const option = await screen.findByText('옵션 1', {}, { timeout: 1000 });
+  await user.click(option);
 
-      expect(handleChange).toHaveBeenCalledWith('option1');
+  expect(handleChange).toHaveBeenCalledWith('option1');
     });
 
     it('숫자 입력 시 올바른 값이 전달되어야 함', async () => {

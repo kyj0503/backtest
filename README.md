@@ -49,6 +49,24 @@ docker compose -f compose.yml -f compose/compose.dev.yml build --no-cache
 ./scripts/test-runner.sh all
 ```
 
+### Radix UI 등 커스텀 Select/Dropdown 테스트 가이드
+
+Radix UI 등 커스텀 셀렉트(Select/Dropdown) 컴포넌트는 실제 `<select>` 엘리먼트를 사용하지 않으므로, Testing Library의 `user.selectOptions` 대신 드롭다운 트리거를 클릭하고 옵션을 클릭하는 방식으로 테스트해야 합니다.
+
+#### 예시 (user-event 기반)
+
+```tsx
+// 드롭다운 트리거(보통 combobox role)를 클릭
+await user.click(screen.getByRole('combobox'));
+// 원하는 옵션이 나타날 때까지 대기 후 클릭
+const option = await screen.findByText('옵션명', {}, { timeout: 1000 });
+await user.click(option);
+// 이후 onChange 등 콜백 호출 여부 검증
+expect(handleChange).toHaveBeenCalledWith('optionValue');
+```
+
+> ⚠️ 기존의 `user.selectOptions` 방식은 Radix UI 등 커스텀 셀렉트에는 동작하지 않습니다. 반드시 위와 같이 사용자 인터랙션을 모방해야 합니다.
+
 ## 기술 스택
 
 ### 프론트엔드
