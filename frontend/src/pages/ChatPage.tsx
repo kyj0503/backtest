@@ -4,49 +4,62 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 
-const getApiBase = () => (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
-
 const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<Array<{user:string; message:string; type:string}>>([]);
   const [input, setInput] = useState('');
   const wsRef = useRef<WebSocket | null>(null);
 
+  const alertedRef = useRef(false);
   useEffect(() => {
     const token = getAuthToken();
-    if (!token) return;
-    
-    const base = getApiBase();
-    let wsUrlBase: string;
-    
-    if (base && base.startsWith('http')) {
-      // 명시적 API URL이 설정된 경우
-      wsUrlBase = base.replace('http', 'ws');
-    } else {
-      // 환경변수가 없으면 현재 location 기반으로 WebSocket URL 생성
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname;
-      const port = window.location.hostname === 'localhost' ? ':8001' : '';
-      wsUrlBase = `${protocol}//${host}${port}`;
+    if (!token) {
+      // StrictMode 등에서 중복 실행 방지
+      if (!alertedRef.current) {
+        alertedRef.current = true;
+        alert('로그인 후 이용 가능합니다.');
+        window.location.href = '/login';
+      }
+      return undefined;
     }
-    
+
+    let wsUrlBase: string;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    if (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    ) {
+      wsUrlBase = `${protocol}//localhost:8001`;
+    } else {
+      wsUrlBase = `${protocol}//${window.location.host}`;
+    }
     const url = `${wsUrlBase}/api/v1/chat/ws/general?token=${token}`;
     console.log('WebSocket 연결 시도:', url);
-    
+
     const ws = new WebSocket(url);
     wsRef.current = ws;
-    
+
+    let opened = false;
     ws.onopen = () => {
+      opened = true;
       console.log('WebSocket 연결 성공');
     };
-    
+
     ws.onclose = (event) => {
       console.log('WebSocket 연결 종료:', event.code, event.reason);
+      if (event.code === 4001) {
+        alert('인증 정보가 유효하지 않거나 세션이 만료되었습니다. 다시 로그인 해주세요.');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        window.location.href = '/login';
+      } else if (opened && event.code !== 1000 && event.code !== 1005) {
+        alert('채팅 서버와의 연결이 끊어졌습니다. 잠시 후 다시 시도해 주세요.');
+      }
     };
-    
+
     ws.onerror = (error) => {
       console.error('WebSocket 연결 오류:', error);
     };
-    
+
     ws.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
@@ -55,7 +68,12 @@ const ChatPage: React.FC = () => {
         // ignore non-JSON
       }
     };
-    return () => { ws.close(); };
+    // StrictMode에서 cleanup이 두 번 호출되는 것을 방지: ws가 이미 닫혔으면 close하지 않음
+    return () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
   }, []);
 
   const send = () => {
@@ -67,8 +85,7 @@ const ChatPage: React.FC = () => {
       wsRef.current.send(input.trim());
       setInput('');
     } else if (wsRef.current && wsRef.current.readyState !== WebSocket.OPEN) {
-      // 연결이 아직 안 됐거나 끊어진 경우 사용자에게 안내
-      alert('채팅 서버와의 연결이 아직 완료되지 않았습니다. 잠시 후 다시 시도해 주세요.');
+      alert('채팅 서버와의 연결이 아직 완료되지 않았거나 인증에 실패했습니다. 다시 로그인 후 시도해 주세요.');
     }
   };
 

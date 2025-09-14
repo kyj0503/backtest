@@ -18,7 +18,7 @@ const THEME_STORAGE_KEY = 'selected-theme';
 const DARK_MODE_STORAGE_KEY = 'dark-mode';
 
 export const useTheme = () => {
-  const [currentTheme, setCurrentTheme] = useState<ThemeName>('bubblegum');
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>('claymorphism');
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
   // Initialize theme from localStorage
