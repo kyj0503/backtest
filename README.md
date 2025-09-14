@@ -27,6 +27,9 @@ docker compose -f compose.yml -f compose/compose.dev.yml up -d
 
 # 시스템 종료
 docker compose -f compose.yml -f compose/compose.dev.yml down
+
+# 프론트엔드 npm 패키지 추가/수정 후에는 반드시 아래 명령어로 강제 재빌드 (캐시 무시, 백그라운드 실행 아님)
+docker compose -f compose.yml -f compose/compose.dev.yml build --no-cache
 ```
 
 ### 접속 정보
