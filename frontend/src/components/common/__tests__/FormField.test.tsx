@@ -99,9 +99,11 @@ describe('FormField', () => {
         />
       );
 
-      expect(screen.getByRole('combobox')).toBeInTheDocument();
-      expect(screen.getByText('옵션 1')).toBeInTheDocument();
-      expect(screen.getByText('옵션 2')).toBeInTheDocument();
+  const select = screen.getByRole('combobox');
+  expect(select).toBeInTheDocument();
+  // <option>은 getByRole('option', { name })로 접근
+  expect(screen.getByRole('option', { name: '옵션 1' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '옵션 2' })).toBeInTheDocument();
     });
 
     it('textarea 타입이 올바르게 렌더링되어야 함', () => {
@@ -191,12 +193,9 @@ describe('FormField', () => {
         />
       );
 
-  const selectTrigger = screen.getByRole('combobox');
-  await user.click(selectTrigger);
-  const option = await screen.findByText('옵션 1', {}, { timeout: 1000 });
-  await user.click(option);
-
-  expect(handleChange).toHaveBeenCalledWith('option1');
+    const select = screen.getByRole('combobox');
+    await user.selectOptions(select, 'option1');
+    expect(handleChange).toHaveBeenCalledWith('option1');
     });
 
     it('숫자 입력 시 올바른 값이 전달되어야 함', async () => {
@@ -310,8 +309,8 @@ describe('FormField', () => {
         />
       );
 
-      expect(screen.getByText('옵션 1')).toBeInTheDocument();
-      expect(screen.getByText('옵션 2')).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '옵션 1' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '옵션 2' })).toBeInTheDocument();
     });
   });
 

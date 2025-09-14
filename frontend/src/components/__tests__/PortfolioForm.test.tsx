@@ -45,11 +45,10 @@ describe('PortfolioForm', () => {
     expect(addCash).toHaveBeenCalled()
 
     // 심볼 드롭다운 변경 (AAPL)
-    const symbolSelectTrigger = screen.getAllByRole('combobox')[0]
+    const symbolSelect = screen.getAllByRole('combobox')[0]
+    // 실제 <select>라면 selectOptions 사용
     await act(async () => {
-      await user.click(symbolSelectTrigger)
-      const option = await screen.findByText('AAPL', {}, { timeout: 1000 })
-      await user.click(option)
+      await user.selectOptions(symbolSelect, 'AAPL')
     })
     expect(updateStock).toHaveBeenCalled()
   })

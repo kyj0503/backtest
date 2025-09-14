@@ -18,12 +18,11 @@ describe('StrategyForm', () => {
       />
     )
 
-  const label = screen.getByText('투자 전략')
-  const selectTrigger = within(label.closest('div') as HTMLElement).getByRole('combobox')
-  await user.click(selectTrigger)
-  const option = await screen.findByText('rsi_strategy', {}, { timeout: 1000 })
-  await user.click(option)
-  expect(setSelectedStrategy).toHaveBeenCalledWith('rsi_strategy')
+    const label = screen.getByText('투자 전략')
+    const select = within(label.closest('div') as HTMLElement).getByRole('combobox')
+    // 실제 <select>라면 selectOptions 사용
+    await user.selectOptions(select, 'rsi_strategy')
+    expect(setSelectedStrategy).toHaveBeenCalledWith('rsi_strategy')
   })
 
   it('sma_crossover 선택 시 파라미터 입력 필드를 표시하고 변경 이벤트를 전파', async () => {

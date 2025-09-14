@@ -18,10 +18,11 @@ describe('CommissionForm', () => {
       />
     )
 
-    const rLabel = screen.getByText('리밸런싱 주기')
-    const rebalance = within(rLabel.closest('div') as HTMLElement).getByRole('combobox')
-    await user.selectOptions(rebalance, 'yearly')
-    expect(setRebalanceFrequency).toHaveBeenCalledWith('yearly')
+  const rLabel = screen.getByText('리밸런싱 주기')
+  const rebalance = within(rLabel.closest('div') as HTMLElement).getByRole('combobox')
+  // 기본 <select>라면 selectOptions 사용
+  await user.selectOptions(rebalance, 'yearly')
+  expect(setRebalanceFrequency).toHaveBeenCalledWith('yearly')
 
     const cLabel = screen.getByText('거래 수수료')
     const commissionInput = within(cLabel.closest('div') as HTMLElement).getByRole('spinbutton') as HTMLInputElement
