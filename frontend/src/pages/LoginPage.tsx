@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { login } from '../services/auth';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,14 +11,16 @@ const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
+  const navigate = useNavigate();
+  const { setUser } = useAuth();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     try {
-      await login({ email, password });
-      setDone(true);
+      const data = await login({ email, password });
+      setUser({ id: data.user_id, username: data.username, email: data.email });
+      navigate('/'); // 로그인 후 메인으로 이동
     } catch (err: any) {
       setError(err?.message || '로그인에 실패했습니다.');
     }
@@ -29,42 +33,36 @@ const LoginPage: React.FC = () => {
           <CardTitle>로그인</CardTitle>
         </CardHeader>
         <CardContent>
-          {done ? (
-            <div className="p-4 bg-green-50 border border-green-200 rounded text-green-800">
-              로그인되었습니다. 상단 메뉴로 이동하세요.
+          <form onSubmit={onSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                {error}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="email">이메일</Label>
+              <Input 
+                id="email"
+                type="email" 
+                placeholder="이메일을 입력하세요" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+              />
             </div>
-          ) : (
-            <form onSubmit={onSubmit} className="space-y-4">
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-                  {error}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label htmlFor="email">이메일</Label>
-                <Input 
-                  id="email"
-                  type="email" 
-                  placeholder="이메일을 입력하세요" 
-                  value={email} 
-                  onChange={e => setEmail(e.target.value)} 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">비밀번호</Label>
-                <Input 
-                  id="password"
-                  type="password" 
-                  placeholder="비밀번호를 입력하세요" 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                로그인
-              </Button>
-            </form>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="password">비밀번호</Label>
+              <Input 
+                id="password"
+                type="password" 
+                placeholder="비밀번호를 입력하세요" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              로그인
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
