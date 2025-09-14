@@ -16,11 +16,13 @@ describe('BacktestForm (integration)', () => {
     render(<BacktestForm onSubmit={onSubmit} />)
 
     // PortfolioForm: select first row symbol to a predefined one (e.g., AAPL)
-    // Table first row: first cell contains a select (combobox)
-    const selects = screen.getAllByRole('combobox')
-    // The very first select in the page should be the stock picker for portfolio
-    const portfolioSymbolSelect = selects[0]
-    await user.selectOptions(portfolioSymbolSelect, 'AAPL')
+    // Find HTML select elements in the portfolio table
+    const portfolioSelects = screen.getAllByDisplayValue('직접 입력')
+    const portfolioSymbolSelect = portfolioSelects[0] // First select should be for symbol selection
+    
+    await act(async () => {
+      await user.selectOptions(portfolioSymbolSelect, 'AAPL')
+    })
 
     // CommissionForm: set commission to 0.3 (%)
     // Find the label then query within its container for the input
@@ -64,8 +66,10 @@ describe('BacktestForm (integration)', () => {
     render(<BacktestForm onSubmit={onSubmit} />)
 
     // Select a valid symbol so validation passes
-    const selects = screen.getAllByRole('combobox')
-    await user.selectOptions(selects[0], 'AAPL')
+    const portfolioSelects = screen.getAllByDisplayValue('직접 입력')
+    await act(async () => {
+      await user.selectOptions(portfolioSelects[0], 'AAPL')
+    })
 
     // Submit
     const submitBtn = screen.getByRole('button', { name: /백테스트 실행/i })
