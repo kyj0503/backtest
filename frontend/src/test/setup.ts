@@ -110,3 +110,73 @@ Object.defineProperty(import.meta, 'env', {
   },
   writable: true,
 })
+
+// Suppress or filter noisy console messages in test environment
+const _origWarn = console.warn.bind(console)
+console.warn = (...args: any[]) => {
+  try {
+    const message = args.map(a => String(a)).join(' ')
+    // Known noisy warnings we can safely ignore in CI tests
+    if (
+      message.includes('ReactDOMTestUtils.act is deprecated') ||
+      message.includes('React Router Future Flag Warning') ||
+      message.includes('Relative route resolution within Splat routes is changing') ||
+      message.includes('The width(0) and height(0) of chart should be greater than 0')
+    ) {
+      return
+    }
+  } catch (e) {
+    // fallthrough to original warn
+  }
+  _origWarn(...args)
+}
+
+const _origError = console.error.bind(console)
+console.error = (...args: any[]) => {
+  try {
+    const message = args.map(a => String(a)).join(' ')
+    // Suppress noisy or expected test-time errors that are logged in tests
+    if (
+      message.includes('ReactDOMTestUtils.act is deprecated') ||
+      message.includes('The width(0) and height(0) of chart should be greater than 0')
+    ) {
+      return
+    }
+  } catch (e) {
+    // fallthrough
+  }
+  _origError(...args)
+}
+
+const _origLog = console.log.bind(console)
+console.log = (...args: any[]) => {
+  try {
+    const message = args.map(a => String(a)).join(' ')
+    // Tests print helpful debug lines like "Portfolio data being sent"; suppress to reduce CI noise
+    if (message.includes('Portfolio data being sent') || message.includes('Strategy params being sent')) {
+      return
+    }
+  } catch (e) {
+    // fallthrough
+  }
+  _origLog(...args)
+}
+
+// Additionally filter certain messages written directly to stderr (some libs write warnings directly)
+const _origStderrWrite = (process.stderr as any).write.bind(process.stderr)
+;(process.stderr as any).write = (chunk: any, encoding?: any, cb?: any) => {
+  try {
+    const message = typeof chunk === 'string' ? chunk : String(chunk)
+    if (
+      message.includes('ReactDOMTestUtils.act is deprecated') ||
+      message.includes('React Router Future Flag Warning') ||
+      message.includes('Relative route resolution within Splat routes is changing') ||
+      message.includes('The width(0) and height(0) of chart should be greater than 0')
+    ) {
+      return true
+    }
+  } catch (e) {
+    // fallthrough
+  }
+  return _origStderrWrite(chunk, encoding, cb)
+}
