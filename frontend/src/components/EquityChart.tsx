@@ -2,6 +2,7 @@ import React, { memo, useMemo } from 'react';
 import { ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Line, Area, ReferenceLine } from 'recharts';
 import CustomTooltip from './CustomTooltip';
 import FinancialTermTooltip from './common/FinancialTermTooltip';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 interface EquityChartData {
   date: string;
@@ -34,47 +35,51 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
   }), []);
 
   return (
-    <div>
-      <h3 className="text-lg font-semibold mb-4 text-foreground">
-        <FinancialTermTooltip term="수익률">
-          수익률
-        </FinancialTermTooltip>
-        {' & '}
-        <FinancialTermTooltip term="드로우다운">
-          드로우다운
-        </FinancialTermTooltip>
-        {' 차트'}
-      </h3>
-      <ResponsiveContainer width="100%" height={320}>
-        <ComposedChart data={safeData} margin={chartConfig.margin}>
-          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-          <YAxis yAxisId="return" orientation="left" />
-          <YAxis yAxisId="drawdown" orientation="right" />
-          <RechartsTooltip content={<CustomTooltip />} />
-          <Legend />
-          <Line 
-            yAxisId="return" 
-            type="monotone" 
-            dataKey="return_pct" 
-            stroke="#198754" 
-            strokeWidth={chartConfig.strokeWidth} 
-            dot={false} 
-            name="수익률 (%)" 
-          />
-          <Area 
-            yAxisId="drawdown" 
-            type="monotone" 
-            dataKey="drawdown_pct" 
-            stroke="#dc3545" 
-            fill="#dc3545" 
-            fillOpacity={chartConfig.fillOpacity} 
-            name="드로우다운 (%)" 
-          />
-          <ReferenceLine yAxisId="return" y={0} stroke="#6c757d" strokeDasharray="2 2" />
-        </ComposedChart>
-      </ResponsiveContainer>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">
+          <FinancialTermTooltip term="수익률">
+            수익률
+          </FinancialTermTooltip>
+          {' & '}
+          <FinancialTermTooltip term="드로우다운">
+            드로우다운
+          </FinancialTermTooltip>
+          {' 차트'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={320}>
+          <ComposedChart data={safeData} margin={chartConfig.margin}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+            <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+            <YAxis yAxisId="return" orientation="left" />
+            <YAxis yAxisId="drawdown" orientation="right" />
+            <RechartsTooltip content={<CustomTooltip />} />
+            <Legend />
+            <Line 
+              yAxisId="return" 
+              type="monotone" 
+              dataKey="return_pct" 
+              stroke="#198754" 
+              strokeWidth={chartConfig.strokeWidth} 
+              dot={false} 
+              name="수익률 (%)" 
+            />
+            <Area 
+              yAxisId="drawdown" 
+              type="monotone" 
+              dataKey="drawdown_pct" 
+              stroke="#dc3545" 
+              fill="#dc3545" 
+              fillOpacity={chartConfig.fillOpacity} 
+              name="드로우다운 (%)" 
+            />
+            <ReferenceLine yAxisId="return" y={0} stroke="#6c757d" strokeDasharray="2 2" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
   );
 });
 

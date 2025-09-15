@@ -19,6 +19,8 @@ import { Tooltip } from './common';
 import StockAutocomplete from './common/StockAutocomplete';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from './ui/table';
 
 const PortfolioForm: React.FC<PortfolioFormProps> = ({
   portfolio,
@@ -42,22 +44,16 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
             <Button
               type="button"
               onClick={() => setPortfolioInputMode('amount')}
-              className={`rounded-none border-0 ${portfolioInputMode === 'amount' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-accent'}`}
-              style={{
-                border: 'none',
-                boxShadow: 'none',
-              }}
+              variant={portfolioInputMode === 'amount' ? 'default' : 'ghost'}
+              className="rounded-none flex-1"
             >
               금액 기준
             </Button>
             <Button
               type="button"
               onClick={() => setPortfolioInputMode('weight')}
-              className={`rounded-none border-0 border-l ${portfolioInputMode === 'weight' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-accent'}`}
-              style={{
-                border: 'none',
-                boxShadow: 'none',
-              }}
+              variant={portfolioInputMode === 'weight' ? 'default' : 'ghost'}
+              className="rounded-none flex-1"
             >
               비중 기준
             </Button>
@@ -78,21 +74,21 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
         )}
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full table-fixed divide-y divide-border border border-border rounded-lg">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="w-64 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">종목/자산</th>
-              <th className="w-32 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">투자 금액 ($)</th>
-              <th className="w-28 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">투자 방식</th>
-              <th className="w-24 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">자산 타입</th>
-              <th className="w-24 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">비중 (%)</th>
-              <th className="w-20 px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">작업</th>
-            </tr>
-          </thead>
-          <tbody className="bg-background divide-y divide-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-64">종목/자산</TableHead>
+              <TableHead className="w-32">투자 금액 ($)</TableHead>
+              <TableHead className="w-28">투자 방식</TableHead>
+              <TableHead className="w-24">자산 타입</TableHead>
+              <TableHead className="w-24">비중 (%)</TableHead>
+              <TableHead className="w-20">작업</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {portfolio.map((stock, index) => (
-              <tr key={index} className="hover:bg-muted/50">
-                <td className="w-64 px-6 py-4 whitespace-nowrap">
+              <TableRow key={index}>
+                <TableCell className="w-64">
                   <div className="space-y-2 max-w-full overflow-hidden">
                     {stock.assetType === ASSET_TYPES.CASH ? (
                       <Input
@@ -105,24 +101,28 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                       />
                     ) : (
                       <>
-                        <select
+                        <Select
                           value={stock.symbol === '' ? 'CUSTOM' : stock.symbol}
-                          onChange={(e: ChangeEvent<HTMLSelectElement>) => {
-                            if (e.target.value === 'CUSTOM') {
+                          onValueChange={(value) => {
+                            if (value === 'CUSTOM') {
                               updateStock(index, 'symbol', '');
                             } else {
-                              updateStock(index, 'symbol', e.target.value);
+                              updateStock(index, 'symbol', value);
                             }
                           }}
-                          className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
                         >
-                          <option value="CUSTOM">직접 입력</option>
-                          {PREDEFINED_STOCKS.slice(1).map(option => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="종목 선택" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CUSTOM">직접 입력</SelectItem>
+                            {PREDEFINED_STOCKS.slice(1).map(option => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         {(stock.symbol === '' || !PREDEFINED_STOCKS.some(opt => opt.value === stock.symbol)) && (
                           <StockAutocomplete
                             value={stock.symbol}
@@ -134,8 +134,8 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                       </>
                     )}
                   </div>
-                </td>
-                                <td className="w-32 px-6 py-4 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="w-32">
                   <Input
                     type="number"
                     value={stock.amount}
@@ -145,17 +145,21 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     disabled={portfolioInputMode === 'weight'}
                     className="w-full"
                   />
-                </td>
-                <td className="w-28 px-6 py-4 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="w-28">
                   <div className="space-y-2">
-                    <select
+                    <Select
                       value={stock.investmentType}
-                      onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'investmentType', e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
+                      onValueChange={(value) => updateStock(index, 'investmentType', value)}
                     >
-                      <option value="lump_sum">일시불 투자</option>
-                      <option value="dca">분할 매수 (DCA)</option>
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lump_sum">일시불 투자</SelectItem>
+                        <SelectItem value="dca">분할 매수 (DCA)</SelectItem>
+                      </SelectContent>
+                    </Select>
                     {stock.investmentType === 'dca' && (
                       <Input
                         type="number"
@@ -173,21 +177,25 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                       월 ${Math.round(stock.amount / stock.dcaPeriods)}씩 {stock.dcaPeriods}개월
                     </p>
                   )}
-                </td>
-                <td className="w-24 px-6 py-4 whitespace-nowrap">
+                </TableCell>
+                <TableCell className="w-24">
                   <div className="space-y-2">
-                    <select
+                    <Select
                       value={stock.assetType || ASSET_TYPES.STOCK}
-                      onChange={(e: ChangeEvent<HTMLSelectElement>) => updateStock(index, 'assetType', e.target.value)}
-                      className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground"
+                      onValueChange={(value) => updateStock(index, 'assetType', value)}
                     >
-                      <option value={ASSET_TYPES.STOCK}>주식</option>
-                      <option value={ASSET_TYPES.CASH}>현금</option>
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ASSET_TYPES.STOCK}>주식</SelectItem>
+                        <SelectItem value={ASSET_TYPES.CASH}>현금</SelectItem>
+                      </SelectContent>
+                    </Select>
                     {/* 자산 타입 배지(위험자산/무위험) 노출 제거 */}
                   </div>
-                </td>
-                <td className="w-24 px-6 py-4 whitespace-nowrap text-sm">
+                </TableCell>
+                <TableCell className="w-24">
                   {/* 비중(%) 입력: weight 기반 모드면 직접 입력, 금액 기반 모드면 자동 계산 */}
                   {portfolioInputMode === 'weight' ? (
                     <Input
@@ -204,51 +212,53 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                       {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
                     </span>
                   )}
-                </td>
-                <td className="w-20 px-6 py-4 whitespace-nowrap">
-                  <button
+                </TableCell>
+                <TableCell className="w-20">
+                  <Button
                     type="button"
                     onClick={() => removeStock(index)}
                     disabled={portfolio.length <= 1}
-                    className="px-3 py-1 text-sm font-medium text-destructive bg-destructive/10 border border-destructive rounded-md hover:bg-destructive/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    variant="destructive"
+                    size="sm"
                   >
                     삭제
-                  </button>
-                </td>
-              </tr>
+                  </Button>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-          <tfoot className="bg-accent/50">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">합계</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">${getTotalAmount().toLocaleString()}</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">-</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">-</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-foreground">100.0%</th>
-              <th className="px-6 py-3 text-left text-sm font-medium text-foreground"></th>
-            </tr>
-          </tfoot>
-        </table>
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableHead className="text-left font-medium">합계</TableHead>
+              <TableHead className="text-left font-medium">${getTotalAmount().toLocaleString()}</TableHead>
+              <TableHead className="text-left font-medium">-</TableHead>
+              <TableHead className="text-left font-medium">-</TableHead>
+              <TableHead className="text-left font-medium">100.0%</TableHead>
+              <TableHead className="text-left font-medium"></TableHead>
+            </TableRow>
+          </TableFooter>
+        </Table>
       </div>
 
       <div className="flex gap-3 mt-4">
-        <button
+        <Button
           type="button"
           onClick={addStock}
           disabled={portfolio.length >= 10}
-          className="px-4 py-2 text-sm font-medium text-primary bg-accent border border-primary rounded-md hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
+          variant="outline"
         >
           + 종목 추가
-        </button>
+        </Button>
         <Tooltip content="현금을 포트폴리오에 추가 (무위험 자산)">
-          <button
+          <Button
             type="button"
             onClick={addCash}
             disabled={portfolio.length >= 10}
-            className="px-4 py-2 text-sm font-medium text-green-600 bg-green-50 border border-green-300 rounded-md hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="outline"
+            className="text-green-600 border-green-300 hover:bg-green-50"
           >
             현금 추가
-          </button>
+          </Button>
         </Tooltip>
       </div>
     </div>
