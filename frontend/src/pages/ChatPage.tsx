@@ -8,9 +8,14 @@ const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<Array<{user:string; message:string; type:string}>>([]);
   const [input, setInput] = useState('');
   const wsRef = useRef<WebSocket | null>(null);
+  const connectedRef = useRef(false);
 
   const alertedRef = useRef(false);
   useEffect(() => {
+    // StrictMode에서 중복 연결 방지
+    if (connectedRef.current) {
+      return;
+    }
     const token = getAuthToken();
     if (!token) {
       // StrictMode 등에서 중복 실행 방지
@@ -37,6 +42,7 @@ const ChatPage: React.FC = () => {
 
     const ws = new WebSocket(url);
     wsRef.current = ws;
+    connectedRef.current = true;
 
     let opened = false;
     ws.onopen = () => {
@@ -63,13 +69,26 @@ const ChatPage: React.FC = () => {
     ws.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
-        setMessages(prev => [...prev, { user: data.user, message: data.message, type: data.type }]);
+        const newMessage = { user: data.user, message: data.message, type: data.type };
+        
+        // 중복 메시지 방지: 같은 내용의 메시지가 연속으로 오는 경우 무시
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && 
+              lastMessage.user === newMessage.user && 
+              lastMessage.message === newMessage.message &&
+              lastMessage.type === newMessage.type) {
+            return prev; // 중복 메시지 무시
+          }
+          return [...prev, newMessage];
+        });
       } catch {
         // ignore non-JSON
       }
     };
     // StrictMode에서 cleanup이 두 번 호출되는 것을 방지: ws가 이미 닫혔으면 close하지 않음
     return () => {
+      connectedRef.current = false;
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close();
       }
@@ -112,7 +131,6 @@ const ChatPage: React.FC = () => {
             />
             <Button onClick={send}>전송</Button>
           </div>
-          <p className="text-xs text-muted-foreground">로그인 후 이용 가능합니다.</p>
         </CardContent>
       </Card>
     </div>
