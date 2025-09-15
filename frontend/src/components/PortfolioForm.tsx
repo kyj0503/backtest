@@ -87,7 +87,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
           </TableHeader>
           <TableBody>
             {portfolio.map((stock, index) => (
-              <TableRow key={index}>
+              <TableRow key={`${stock.symbol || 'empty'}_${index}`}>
                 <TableCell className="w-64">
                   <div className="space-y-2 max-w-full overflow-hidden">
                     {stock.assetType === ASSET_TYPES.CASH ? (
