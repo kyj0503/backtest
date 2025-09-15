@@ -1,16 +1,22 @@
 pipeline {
-    agent any
+  // 파이프라인 최상위 설정
+  // - agent any: 가능한 어떤 에이전트(node)에서든 실행
+  // - options: 동시 빌드 방지, 타임스탬프 출력, 기본체크아웃 건너뛰기 등
+  agent any
 
-    options {
-    skipDefaultCheckout(true)
-    timestamps()
-    disableConcurrentBuilds()
-    }
+  options {
+  // 기본 체크아웃을 수동으로 제어하여 불필요한 작업을 줄입니다.
+  skipDefaultCheckout(true)
+  // 로그 타임스탬프를 활성화하여 문제 조사 시 시간을 쉽게 추적합니다.
+  timestamps()
+  // 동일한 잡의 동시 실행을 막아 워크스페이스 충돌을 예방합니다.
+  disableConcurrentBuilds()
+  }
 
-  // NOTE: Credentials and Docker auth
-  // - Ensure Docker registry credentials (GHCR) are stored in Jenkins Credentials (id: 'github-token')
-  // - Avoid committing ~/.docker/config.json to the build agents. Use `withCredentials` to inject secrets at runtime.
-  // - Limit access to agent filesystem and rotate GHCR tokens periodically.
+  // 자격증명 및 Docker 관련 주의사항
+  // - GHCR 접근용 토큰은 Jenkins Credentials에 'github-token'으로 등록해 사용합니다.
+  // - 에이전트의 ~/.docker/config.json을 커밋하지 말고 런타임에 credentials로 주입하세요.
+  // - 빌드 에이전트의 파일시스템 접근을 제한하고 토큰은 주기적으로 교체하세요.
 
     environment {
         GHCR_OWNER = 'kyj0503'
@@ -20,43 +26,59 @@ pipeline {
         DEPLOY_USER = 'jenkins'
         DEPLOY_PATH_PROD = '/opt/backtest'
         DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/compose/compose.prod.yml'
-    // If true, integration API check failures will fail the build
-    FAIL_ON_INTEGRATION_CHECK = 'true'
-    // Retry/backoff parameters for flaky network ops
-    NETWORK_RETRY_COUNT = '3'
-    NETWORK_RETRY_BASE_DELAY = '5'
-        // Extend Docker client timeouts to reduce transient failures
-        DOCKER_CLIENT_TIMEOUT = '300'
-        COMPOSE_HTTP_TIMEOUT  = '300'
+  // 통합 검사 실패 시 빌드를 실패로 처리할지 여부
+  FAIL_ON_INTEGRATION_CHECK = 'true'
+  // 네트워크 불안정성에 대비한 재시도/백오프 파라미터
+  NETWORK_RETRY_COUNT = '3'
+  NETWORK_RETRY_BASE_DELAY = '5'
+    // Docker 클라이언트 타임아웃을 늘려 일시적 실패를 완화
+    DOCKER_CLIENT_TIMEOUT = '300'
+    COMPOSE_HTTP_TIMEOUT  = '300'
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+    // 1) 소스 코드 체크아웃 단계
+    //    - SCM(예: GitHub)에서 현재 레포를 체크아웃합니다.
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
 
-        stage('Debug Environment') {
+  // 2) 빌드 환경 디버그 출력
+  //    - Jenkins에서 사용 가능한 Git/빌드 환경 정보를 캡처하여 로그에 출력합니다.
+  //    - UID/GID를 캡처해 도커 컨테이너 실행 시 권한 문제를 방지합니다.
+  stage('Debug Environment') {
             steps {
                 script {
                     echo "Debug Information:"
+                    // Git 메타데이터를 캡처하여 BRANCH_NAME/GIT_BRANCH가 비어있을 때 대체값으로 사용
+                    env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD || echo ''", returnStdout: true).trim()
+                    env.GIT_BRANCH_NAME = sh(script: "git rev-parse --abbrev-ref HEAD || echo ''", returnStdout: true).trim()
+                    // Jenkins 환경변수가 비어있으면 감지한 브랜치명을 대신 사용
+                    if (!env.BRANCH_NAME || env.BRANCH_NAME == 'null') { env.BRANCH_NAME = env.GIT_BRANCH_NAME }
+                    if (!env.GIT_BRANCH || env.GIT_BRANCH == 'null') { env.GIT_BRANCH = env.GIT_BRANCH_NAME }
+
                     echo "BRANCH_NAME: ${env.BRANCH_NAME}"
                     echo "GIT_BRANCH: ${env.GIT_BRANCH}"
+                    echo "GIT_BRANCH_NAME: ${env.GIT_BRANCH_NAME}"
+                    echo "GIT_COMMIT_SHORT: ${env.GIT_COMMIT_SHORT}"
                     echo "BUILD_NUMBER: ${env.BUILD_NUMBER}"
                     echo "All env vars:"
-          // capture jenkins UID/GID to run containers as the same user
+          // Jenkins의 UID/GID를 캡처하여 컨테이너를 동일 사용자 권한으로 실행
           env.UID_J = sh(script: 'id -u', returnStdout: true).trim()
           env.GID_J = sh(script: 'id -g', returnStdout: true).trim()
           sh '''
-            env | grep -E "(BRANCH|GIT)" | sort || true
+            env | grep -E "(BRANCH|GIT|BUILD)" | sort || true
             echo "UID_J=${UID_J} GID_J=${GID_J}"
           '''
                 }
             }
         }
 
-        stage('Tests') {
+  // 3) 테스트 단계 (프론트엔드/백엔드 병렬 실행)
+  //    - Docker 이미지 빌드 내에서 테스트를 실행하여 테스트 환경을 격리합니다.
+  stage('Tests') {
             parallel {
                 stage('Frontend Tests') {
                     steps {
@@ -87,21 +109,24 @@ pipeline {
             }
         }
 
-        stage('Collect JUnit Reports') {
+  // 4) JUnit 리포트 수집
+  //    - 각 테스트 결과를 JUnit XML로 수집하고 Jenkins에 보고합니다.
+  //    - 프론트엔드의 경우 호스트의 npm 캐시를 마운트하여 권한 문제를 방지합니다.
+  stage('Collect JUnit Reports') {
             steps {
                 script {
                     sh '''
                         mkdir -p reports/backend reports/frontend
-                        # Ensure host-side npm cache directory exists and is owned by the Jenkins user
+                        # 호스트측 npm 캐시 디렉터리가 존재하고 Jenkins 사용자가 소유하도록 보장
                         mkdir -p frontend/.npm || true
                         chown ${UID_J}:${GID_J} frontend/.npm || true
 
-                        # Backend JUnit (run tests inside image to emit JUnit XML) as jenkins user
+                        # 백엔드 JUnit: 이미지 내부에서 테스트를 실행해 JUnit XML을 생성 (Jenkins 사용자 권한)
                         docker run --rm -u ${UID_J}:${GID_J} -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
                           sh -lc "pytest tests/unit/ -v --tb=short --junitxml=/reports/junit.xml"
 
-                        # Frontend JUnit (run in Node 20 container using vitest.config.ts)
-                        # Mount host-side npm cache into /app/.npm and set NPM_CONFIG_CACHE to avoid writing to root-owned /.npm
+                        # 프론트엔드 JUnit: Node 컨테이너에서 vitest를 실행
+                        # 호스트의 npm 캐시를 /app/.npm에 마운트하고 NPM_CONFIG_CACHE를 설정해 루트 권한 문제 방지
                         docker run --rm -u ${UID_J}:${GID_J} \
                           -e CI=1 -e VITEST_JUNIT_FILE=/reports/junit.xml -e NPM_CONFIG_CACHE=/app/.npm \
                           -v "$PWD/frontend:/app" -v "$PWD/frontend/.npm:/app/.npm" -v "$PWD/reports/frontend:/reports" -w /app \
@@ -115,7 +140,10 @@ pipeline {
         }
 
 
-        stage('Build and Push PROD') {
+  // 5) 프로덕션 이미지 빌드 및 레지스트리로 푸시
+  //    - 빌더(backtest-builder)를 사용해 BuildKit으로 빌드합니다.
+  //    - GHCR에 로그인 후 이미지 푸시(재시도 로직 포함).
+  stage('Build and Push PROD') {
             parallel {
                 stage('Backend PROD') {
                     steps {
@@ -123,7 +151,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                                 def fullImageName = "ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                                 echo "Building PROD backend image: ${fullImageName}"
-                                // Ensure a usable buildx builder exists without noisy errors
+                                // 빌드 중 불필요한 오류를 줄이기 위해 buildx 빌더 존재 여부 확인
                                 sh '''
                                   if ! docker buildx inspect backtest-builder >/dev/null 2>&1; then
                                     docker buildx create --use --name backtest-builder || true
@@ -133,7 +161,7 @@ pipeline {
                                 '''
                                 sh "docker pull ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest || true"
                                 sh "cd backend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.BACKEND_PROD_IMAGE}:latest -t ${fullImageName} ."
-                                // Robust GHCR login with retries (handles intermittent network timeouts)
+                                // GHCR 로그인: 일시적 네트워크 실패를 고려한 재시도 로직
                                 sh '''
                                   set -eu
                                   export DOCKER_CLIENT_TIMEOUT=${DOCKER_CLIENT_TIMEOUT:-300}
@@ -154,7 +182,7 @@ pipeline {
                                     exit 1
                                   fi
                                 '''
-                                // Push with retries to mitigate transient network hiccups
+                                // 네트워크 문제에 대비한 푸시 재시도 로직
                                 withEnv(["FULL_IMAGE_NAME=${fullImageName}"]) {
                                   sh '''
                                     set -eu
@@ -182,7 +210,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
                                 def fullImageName = "ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:${env.BUILD_NUMBER}"
                                 echo "Building PROD frontend image: ${fullImageName}"
-                                // Ensure a usable buildx builder exists without noisy errors
+                                // 빌드 중 불필요한 오류를 줄이기 위해 buildx 빌더 존재 여부 확인
                                 sh '''
                                   if ! docker buildx inspect backtest-builder >/dev/null 2>&1; then
                                     docker buildx create --use --name backtest-builder || true
@@ -192,7 +220,7 @@ pipeline {
                                 '''
                                 sh "docker pull ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
                                 sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest -t ${fullImageName} ."
-                                // Robust GHCR login with retries (handles intermittent network timeouts)
+                                // GHCR 로그인: 일시적 네트워크 실패를 고려한 재시도 로직
                                 sh '''
                                   set -eu
                                   export DOCKER_CLIENT_TIMEOUT=${DOCKER_CLIENT_TIMEOUT:-300}
@@ -213,7 +241,7 @@ pipeline {
                                       exit 1
                                     fi
                                 '''
-                                // Push with retries to mitigate transient network hiccups
+                                // 네트워크 문제에 대비한 푸시 재시도 로직
                                 withEnv(["FULL_IMAGE_NAME=${fullImageName}"]) {
                                   sh '''
                                     set -eu
@@ -238,7 +266,9 @@ pipeline {
             }
         }
 
-        stage('Deploy to Production (Local)') {
+  // 6) 배포 (로컬 목적지)
+  //    - SSH로 원격 호스트에 도커 컴포즈 파일과 배포 스크립트를 전달하고 실행합니다.
+  stage('Deploy to Production (Local)') {
             steps {
                 script {
                     withCredentials([
@@ -262,7 +292,9 @@ pipeline {
             }
         }
 
-        stage('Integration Tests') {
+  // 7) 통합 테스트
+  //    - 배포된 서비스(백엔드/프론트엔드)에 대해 간단한 API 검증을 수행합니다.
+  stage('Integration Tests') {
             steps {
                 script {
                     echo 'Running integration tests against deployed environment...'
@@ -277,7 +309,7 @@ pipeline {
                           sleep 1;
                         done
                     '''
-                    // Optional API checks (non-blocking): direct backend and via frontend proxy chain
+                    // 선택적 API 검사(비차단): 백엔드 직접호출 및 프론트엔드 프록시 체인을 통해 검사
                     try {
                         sh '''
                             cat > /tmp/payload.json <<'EOF'
@@ -325,9 +357,9 @@ EOF
                             done
                             if [ $SUCCESS -ne 1 ]; then echo "[integration] frontend checks failed after $MAX_TRIES attempts"; exit 1; fi
                         '''
-                        echo "Integration API checks (direct & via frontend) passed"
+            echo "Integration API checks (direct & via frontend) passed"
                     } catch (Exception e) {
-                        echo "Integration API check failed: ${e.getMessage()}"
+            echo "Integration API check failed: ${e.getMessage()}"
                         // Dump and archive response snapshots for debugging
                         sh 'echo "--- /tmp/resp.json ---"; cat /tmp/resp.json || true'
                         sh 'echo "--- /tmp/resp2.json ---"; cat /tmp/resp2.json || true'
@@ -346,6 +378,7 @@ EOF
         }
     }
 
+  // 8) 파이프라인 종료 후 처리 (성공/실패/항상 실행할 작업)
   post {
     success {
       echo 'Pipeline succeeded!'
