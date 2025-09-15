@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useContext, createContext, ReactNode } from 'react';
+import { useEffect, useState, useCallback, useContext, createContext, ReactNode } from 'react';
 import { logout as apiLogout } from '../services/auth';
 
 export interface AuthUser {
