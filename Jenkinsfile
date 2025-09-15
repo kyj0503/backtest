@@ -72,6 +72,13 @@ pipeline {
             env | grep -E "(BRANCH|GIT|BUILD)" | sort || true
             echo "UID_J=${UID_J} GID_J=${GID_J}"
           '''
+          // Hypothesis DB 디렉터리(호스트)에 대한 안전한 생성/권한 설정
+          // 여러 에이전트에서 동작할 수 있도록 Debug 단계에서 보장합니다.
+          sh '''
+            mkdir -p /var/lib/jenkins/.hypothesis/examples || true
+            chown ${UID_J}:${GID_J} /var/lib/jenkins/.hypothesis /var/lib/jenkins/.hypothesis/examples || true
+            chmod 700 /var/lib/jenkins/.hypothesis || true
+          '''
                 }
             }
         }
@@ -122,7 +129,11 @@ pipeline {
                         chown ${UID_J}:${GID_J} frontend/.npm || true
 
                         # 백엔드 JUnit: 이미지 내부에서 테스트를 실행해 JUnit XML을 생성 (Jenkins 사용자 권한)
-                        docker run --rm -u ${UID_J}:${GID_J} -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
+                        # Hypothesis DB 호스트 디렉터리를 마운트하고 HYPOTHESIS_DATABASE 환경변수를 설정
+                        docker run --rm -u ${UID_J}:${GID_J} \
+                          -v /var/lib/jenkins/.hypothesis:/home/jenkins/.hypothesis \
+                          -e HYPOTHESIS_DATABASE=/home/jenkins/.hypothesis/examples \
+                          -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
                           sh -lc "pytest tests/unit/ -v --tb=short --junitxml=/reports/junit.xml"
 
                         # 프론트엔드 JUnit: Node 컨테이너에서 vitest를 실행
