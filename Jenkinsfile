@@ -6,6 +6,11 @@ pipeline {
         timestamps()
     }
 
+  // NOTE: Credentials and Docker auth
+  // - Ensure Docker registry credentials (GHCR) are stored in Jenkins Credentials (id: 'github-token')
+  // - Avoid committing ~/.docker/config.json to the build agents. Use `withCredentials` to inject secrets at runtime.
+  // - Limit access to agent filesystem and rotate GHCR tokens periodically.
+
     environment {
         GHCR_OWNER = 'kyj0503'
         BACKEND_PROD_IMAGE = 'backtest-backend'
@@ -16,6 +21,9 @@ pipeline {
         DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/compose/compose.prod.yml'
     // If true, integration API check failures will fail the build
     FAIL_ON_INTEGRATION_CHECK = 'true'
+    // Retry/backoff parameters for flaky network ops
+    NETWORK_RETRY_COUNT = '3'
+    NETWORK_RETRY_BASE_DELAY = '5'
         // Extend Docker client timeouts to reduce transient failures
         DOCKER_CLIENT_TIMEOUT = '300'
         COMPOSE_HTTP_TIMEOUT  = '300'
@@ -120,15 +128,16 @@ pipeline {
                                   set -eu
                                   export DOCKER_CLIENT_TIMEOUT=${DOCKER_CLIENT_TIMEOUT:-300}
                                   export COMPOSE_HTTP_TIMEOUT=${COMPOSE_HTTP_TIMEOUT:-300}
+                                  # Probe GHCR then login with retries using configured backoff
                                   curl -fsSLI --connect-timeout 10 --max-time 20 https://ghcr.io/v2/ >/dev/null 2>&1 || echo 'Warning: GHCR probe failed; continuing'
                                   docker logout ghcr.io >/dev/null 2>&1 || true
                                   ok=''
-                                  for i in 1 2 3; do
+                                  for i in $(seq 1 ${NETWORK_RETRY_COUNT}); do
                                     if printf "%s" "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin; then
                                       ok=1; break
                                     fi
                                     echo "docker login to ghcr.io failed (attempt $i), retrying..."
-                                    sleep $((i*5))
+                                    sleep $((i * ${NETWORK_RETRY_BASE_DELAY}))
                                   done
                                   if [ -z "$ok" ]; then
                                     echo 'ERROR: docker login to ghcr.io failed after retries' >&2
@@ -140,12 +149,12 @@ pipeline {
                                   sh '''
                                     set -eu
                                     ok=''
-                                    for i in 1 2 3; do
+                                    for i in $(seq 1 ${NETWORK_RETRY_COUNT}); do
                                       if docker push "$FULL_IMAGE_NAME"; then
                                         ok=1; break
                                       fi
                                       echo "docker push failed (attempt $i), retrying..."
-                                      sleep $((i*5))
+                                      sleep $((i * ${NETWORK_RETRY_BASE_DELAY}))
                                     done
                                     if [ -z "$ok" ]; then
                                       echo 'ERROR: docker push failed after retries' >&2
@@ -178,32 +187,33 @@ pipeline {
                                   set -eu
                                   export DOCKER_CLIENT_TIMEOUT=${DOCKER_CLIENT_TIMEOUT:-300}
                                   export COMPOSE_HTTP_TIMEOUT=${COMPOSE_HTTP_TIMEOUT:-300}
-                                  curl -fsSLI --connect-timeout 10 --max-time 20 https://ghcr.io/v2/ >/dev/null 2>&1 || echo 'Warning: GHCR probe failed; continuing'
-                                  docker logout ghcr.io >/dev/null 2>&1 || true
-                                  ok=''
-                                  for i in 1 2 3; do
-                                    if printf "%s" "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin; then
-                                      ok=1; break
+                                    # Probe GHCR then login with retries using configured backoff
+                                    curl -fsSLI --connect-timeout 10 --max-time 20 https://ghcr.io/v2/ >/dev/null 2>&1 || echo 'Warning: GHCR probe failed; continuing'
+                                    docker logout ghcr.io >/dev/null 2>&1 || true
+                                    ok=''
+                                    for i in $(seq 1 ${NETWORK_RETRY_COUNT}); do
+                                      if printf "%s" "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin; then
+                                        ok=1; break
+                                      fi
+                                      echo "docker login to ghcr.io failed (attempt $i), retrying..."
+                                      sleep $((i * ${NETWORK_RETRY_BASE_DELAY}))
+                                    done
+                                    if [ -z "$ok" ]; then
+                                      echo 'ERROR: docker login to ghcr.io failed after retries' >&2
+                                      exit 1
                                     fi
-                                    echo "docker login to ghcr.io failed (attempt $i), retrying..."
-                                    sleep $((i*5))
-                                  done
-                                  if [ -z "$ok" ]; then
-                                    echo 'ERROR: docker login to ghcr.io failed after retries' >&2
-                                    exit 1
-                                  fi
                                 '''
                                 // Push with retries to mitigate transient network hiccups
                                 withEnv(["FULL_IMAGE_NAME=${fullImageName}"]) {
                                   sh '''
                                     set -eu
                                     ok=''
-                                    for i in 1 2 3; do
+                                    for i in $(seq 1 ${NETWORK_RETRY_COUNT}); do
                                       if docker push "$FULL_IMAGE_NAME"; then
                                         ok=1; break
                                       fi
                                       echo "docker push failed (attempt $i), retrying..."
-                                      sleep $((i*5))
+                                      sleep $((i * ${NETWORK_RETRY_BASE_DELAY}))
                                     done
                                     if [ -z "$ok" ]; then
                                       echo 'ERROR: docker push failed after retries' >&2
@@ -299,12 +309,16 @@ EOF
         }
     }
 
-    post {
-        success { echo 'Pipeline succeeded!' }
-        failure { echo 'Pipeline failed!' }
-        always {
-            sh 'docker system prune -f'
-            cleanWs()
-        }
+  post {
+    success {
+      echo 'Pipeline succeeded!'
     }
+    failure {
+      echo 'Pipeline failed! (see console log for details)'
+    }
+    always {
+      sh 'docker system prune -f'
+      cleanWs()
+    }
+  }
 }
