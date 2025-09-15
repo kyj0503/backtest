@@ -136,7 +136,7 @@ const BacktestPage: React.FC = () => {
               </CardTitle>
               <CardDescription className="text-base">
                 포트폴리오 구성, 투자 전략, 백테스트 기간을 설정한 후<br />
-                <Badge variant="outline" className="mx-1">백테스트 실행</Badge> 
+                <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold mx-1">백테스트 실행</span> 
                 버튼을 클릭하면 결과를 확인할 수 있습니다.
               </CardDescription>
             </CardContent>
