@@ -82,11 +82,11 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
               {/* 종목 선택 버튼들 */}
               <div className="mb-6">
                 <div className="flex flex-wrap gap-2">
-                  {validSymbols.map(symbol => {
+                  {validSymbols.map((symbol, idx) => {
                     const eventCount = volatilityData[symbol]?.length || 0;
                     return (
                       <button
-                        key={symbol}
+                        key={`${symbol}_${idx}`}
                         className={`px-3 py-1 text-sm rounded transition-colors ${
                           selectedStock === symbol
                             ? 'bg-blue-600 text-white'
