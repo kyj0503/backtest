@@ -382,9 +382,47 @@ EOF
   post {
     success {
       echo 'Pipeline succeeded!'
+      // GitHub Checks에 결과를 게시하려고 시도합니다. 설치된 플러그인에 따라
+      // publishChecks 또는 githubChecks 스텝을 시도하고, 없으면 실패해도 무시합니다.
+      script {
+        withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+          try {
+            publishChecks name: 'Backtest CI', conclusion: 'SUCCESS', detailsURL: env.BUILD_URL,
+                          output: [title: '빌드 성공', summary: "모든 단계 통과 — ${env.BUILD_URL}"]
+            echo 'publishChecks 호출 성공'
+          } catch (MissingMethodException | Exception e1) {
+            echo "publishChecks 호출 실패: ${e1}. githubChecks로 시도합니다."
+            try {
+              githubChecks name: 'Backtest CI', status: 'COMPLETED', conclusion: 'SUCCESS', detailsURL: env.BUILD_URL,
+                           output: [title: '빌드 성공', summary: "모든 단계 통과 — ${env.BUILD_URL}"]
+              echo 'githubChecks 호출 성공'
+            } catch (MissingMethodException | Exception e2) {
+              echo "Checks 게시 스텝을 찾지 못했습니다 (publishChecks/githubChecks). 오류: ${e2}. 계속 진행합니다."
+            }
+          }
+        }
+      }
     }
     failure {
       echo 'Pipeline failed! (see console log for details)'
+      script {
+        withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
+          try {
+            publishChecks name: 'Backtest CI', conclusion: 'FAILURE', detailsURL: env.BUILD_URL,
+                          output: [title: '빌드 실패', summary: "빌드 또는 테스트 실패 — 콘솔 로그 확인: ${env.BUILD_URL}"]
+            echo 'publishChecks 호출 성공'
+          } catch (MissingMethodException | Exception e1) {
+            echo "publishChecks 호출 실패: ${e1}. githubChecks로 시도합니다."
+            try {
+              githubChecks name: 'Backtest CI', status: 'COMPLETED', conclusion: 'FAILURE', detailsURL: env.BUILD_URL,
+                           output: [title: '빌드 실패', summary: "빌드 또는 테스트 실패 — 콘솔 로그 확인: ${env.BUILD_URL}"]
+              echo 'githubChecks 호출 성공'
+            } catch (MissingMethodException | Exception e2) {
+              echo "Checks 게시 스텝을 찾지 못했습니다 (publishChecks/githubChecks). 오류: ${e2}. 계속 진행합니다."
+            }
+          }
+        }
+      }
     }
     always {
       sh 'docker system prune -f'
