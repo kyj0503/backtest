@@ -2,8 +2,9 @@ pipeline {
     agent any
 
     options {
-        skipDefaultCheckout(true)
-        timestamps()
+    skipDefaultCheckout(true)
+    timestamps()
+    disableConcurrentBuilds()
     }
 
   // NOTE: Credentials and Docker auth
@@ -44,9 +45,13 @@ pipeline {
                     echo "GIT_BRANCH: ${env.GIT_BRANCH}"
                     echo "BUILD_NUMBER: ${env.BUILD_NUMBER}"
                     echo "All env vars:"
-                    sh '''
-                        env | grep -E "(BRANCH|GIT)" | sort || true
-                    '''
+          // capture jenkins UID/GID to run containers as the same user
+          env.UID_J = sh(script: 'id -u', returnStdout: true).trim()
+          env.GID_J = sh(script: 'id -g', returnStdout: true).trim()
+          sh '''
+            env | grep -E "(BRANCH|GIT)" | sort || true
+            echo "UID_J=${UID_J} GID_J=${GID_J}"
+          '''
                 }
             }
         }
@@ -87,12 +92,12 @@ pipeline {
                 script {
                     sh '''
                         mkdir -p reports/backend reports/frontend
-                        # Backend JUnit (run tests inside image to emit JUnit XML)
-                        docker run --rm -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
+                        # Backend JUnit (run tests inside image to emit JUnit XML) as jenkins user
+                        docker run --rm -u ${UID_J}:${GID_J} -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
                           sh -lc "pytest tests/unit/ -v --tb=short --junitxml=/reports/junit.xml"
 
                         # Frontend JUnit (run in Node container using vitest.config.ts)
-                        docker run --rm \
+                        docker run --rm -u ${UID_J}:${GID_J} \
                           -e CI=1 -e VITEST_JUNIT_FILE=/reports/junit.xml \
                           -v "$PWD/frontend:/app" -v "$PWD/reports/frontend:/reports" -w /app \
                           node:18-alpine sh -lc "npm ci && npx vitest run"
@@ -318,7 +323,7 @@ EOF
     }
     always {
       sh 'docker system prune -f'
-      cleanWs()
+      cleanWs(deleteDirs: true, disableDeferredWipeout: true)
     }
   }
 }
