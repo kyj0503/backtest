@@ -1,21 +1,24 @@
 # Stage 1: Build the React application
 FROM node:20.8.1-alpine AS build
 
-# 빌드 인자들
+# Build args
 ARG RUN_TESTS=false
 
 WORKDIR /app
 
-COPY package.json ./
-COPY package-lock.json ./
+# Copy only package manifests first to leverage Docker layer caching
+COPY package.json package-lock.json ./
 
-RUN npm ci
+# Install dependencies in CI-friendly mode and avoid optional installations to improve determinism
+RUN npm ci --no-audit --prefer-offline --no-fund
 
+# Copy rest of sources
 COPY . .
 
-# Run tests before building (controlled by build arg)
+# Run tests optionally during build when RUN_TESTS=true
 RUN if [ "$RUN_TESTS" = "true" ] ; then npm test -- --run ; fi
 
+# Build production assets
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx
