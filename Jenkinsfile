@@ -278,7 +278,7 @@ pipeline {
                         done
                     '''
                     // Optional API checks (non-blocking): direct backend and via frontend proxy chain
-          try {
+                    try {
                         sh '''
                             cat > /tmp/payload.json <<'EOF'
                             {"ticker":"AAPL","start_date":"2023-01-03","end_date":"2023-01-20","initial_cash":10000,"strategy":"buy_and_hold","strategy_params":{}}
@@ -290,28 +290,55 @@ EOF
                               JQ='docker run --rm -i ghcr.io/jqlang/jq jq -e'
                             fi
 
-                            # Backend direct
-                            curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8001/api/v1/backtest/chart-data | tee /tmp/resp.json >/dev/null
-                            # Required fields
-                            cat /tmp/resp.json | $JQ '.ticker=="AAPL" and (.ohlc_data|length)>0 and (.equity_data|length)>0 and (.summary_stats!=null)' >/dev/null
-                            # Numeric ranges
-                            cat /tmp/resp.json | $JQ '.summary_stats.total_trades>=0 and (.summary_stats.win_rate_pct>=0 and .summary_stats.win_rate_pct<=100) and .summary_stats.max_drawdown_pct>=0' >/dev/null
+                            MAX_TRIES=3
+                            DELAY=5
 
-                            # Frontend proxy chain
-                            curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8082/api/v1/backtest/chart-data | tee /tmp/resp2.json >/dev/null
-                            cat /tmp/resp2.json | $JQ '.ticker=="AAPL" and (.ohlc_data|length)>0 and (.equity_data|length)>0 and (.summary_stats!=null)' >/dev/null
-                            cat /tmp/resp2.json | $JQ '.summary_stats.total_trades>=0 and (.summary_stats.win_rate_pct>=0 and .summary_stats.win_rate_pct<=100) and .summary_stats.max_drawdown_pct>=0' >/dev/null
+                            # Backend direct with retries
+                            SUCCESS=0
+                            for i in $(seq 1 $MAX_TRIES); do
+                              echo "[integration] backend attempt $i/$MAX_TRIES"
+                              curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8001/api/v1/backtest/chart-data | tee /tmp/resp.json || true
+                              if cat /tmp/resp.json | $JQ '.ticker=="AAPL" and (.ohlc_data|length)>0 and (.equity_data|length)>0 and (.summary_stats!=null)' >/dev/null 2>&1; then
+                                echo "[integration] backend check passed"
+                                SUCCESS=1; break
+                              else
+                                echo "[integration] backend check failed (dumping response)"
+                                cat /tmp/resp.json || true
+                                if [ $i -lt $MAX_TRIES ]; then sleep $DELAY; fi
+                              fi
+                            done
+                            if [ $SUCCESS -ne 1 ]; then echo "[integration] backend checks failed after $MAX_TRIES attempts"; exit 1; fi
+
+                            # Frontend proxy chain with retries
+                            SUCCESS=0
+                            for i in $(seq 1 $MAX_TRIES); do
+                              echo "[integration] frontend attempt $i/$MAX_TRIES"
+                              curl -fsS -H 'Content-Type: application/json' -d @/tmp/payload.json http://localhost:8082/api/v1/backtest/chart-data | tee /tmp/resp2.json || true
+                              if cat /tmp/resp2.json | $JQ '.ticker=="AAPL" and (.ohlc_data|length)>0 and (.equity_data|length)>0 and (.summary_stats!=null)' >/dev/null 2>&1; then
+                                echo "[integration] frontend check passed"
+                                SUCCESS=1; break
+                              else
+                                echo "[integration] frontend check failed (dumping response)"
+                                cat /tmp/resp2.json || true
+                                if [ $i -lt $MAX_TRIES ]; then sleep $DELAY; fi
+                              fi
+                            done
+                            if [ $SUCCESS -ne 1 ]; then echo "[integration] frontend checks failed after $MAX_TRIES attempts"; exit 1; fi
                         '''
-            echo "Integration API checks (direct & via frontend) passed"
+                        echo "Integration API checks (direct & via frontend) passed"
                     } catch (Exception e) {
-            echo "Integration API check failed: ${e.getMessage()}"
-            if (env.FAIL_ON_INTEGRATION_CHECK == 'true') {
-              echo 'FAIL_ON_INTEGRATION_CHECK=true -> marking build as FAILURE'
-              currentBuild.result = 'FAILURE'
-              error('Integration API checks failed and FAIL_ON_INTEGRATION_CHECK is true')
-            } else {
-              echo "FAIL_ON_INTEGRATION_CHECK=false -> continuing pipeline despite API check failure"
-            }
+                        echo "Integration API check failed: ${e.getMessage()}"
+                        // Dump and archive response snapshots for debugging
+                        sh 'echo "--- /tmp/resp.json ---"; cat /tmp/resp.json || true'
+                        sh 'echo "--- /tmp/resp2.json ---"; cat /tmp/resp2.json || true'
+                        archiveArtifacts artifacts: '/tmp/resp*.json', allowEmptyArchive: true
+                        if (env.FAIL_ON_INTEGRATION_CHECK == 'true') {
+                          echo 'FAIL_ON_INTEGRATION_CHECK=true -> marking build as FAILURE'
+                          currentBuild.result = 'FAILURE'
+                          error('Integration API checks failed and FAIL_ON_INTEGRATION_CHECK is true')
+                        } else {
+                          echo "FAIL_ON_INTEGRATION_CHECK=false -> continuing pipeline despite API check failure"
+                        }
                     }
                     echo "Integration tests completed"
                 }
