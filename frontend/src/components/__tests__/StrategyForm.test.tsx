@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { act } from 'react'
 import StrategyForm from '../StrategyForm'
 
 describe('StrategyForm', () => {
@@ -24,8 +25,10 @@ describe('StrategyForm', () => {
     // 단기 이동평균 기간 필드 존재 확인 후 입력 시 콜백 발생
     const shortLabel = screen.getByText('단기 이동평균 기간')
     const shortField = within(shortLabel.closest('div') as HTMLElement).getByRole('spinbutton') as HTMLInputElement
-    await user.clear(shortField)
-    await user.type(shortField, '15')
+    await act(async () => {
+      await user.clear(shortField)
+      await user.type(shortField, '15')
+    })
     expect(updateStrategyParam).toHaveBeenCalled()
     expect(updateStrategyParam.mock.calls[0][0]).toBe('short_window')
   })

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within, waitFor } from '@testing-library/react'
+import { act } from 'react'
 import userEvent from '@testing-library/user-event'
 import BacktestForm from '../BacktestForm'
 
@@ -19,21 +20,21 @@ describe('BacktestForm (integration)', () => {
     const portfolioSelects = screen.getAllByDisplayValue('직접 입력')
     const portfolioSymbolSelect = portfolioSelects[0] // First select should be for symbol selection
     
-    await user.selectOptions(portfolioSymbolSelect, 'AAPL')
-
     // CommissionForm: set commission to 0.3 (%)
     // Find the label then query within its container for the input
     const commissionLabel = screen.getByText('거래 수수료')
     const commissionContainer = commissionLabel.closest('div') as HTMLElement
     const commissionNumber = within(commissionContainer).getByRole('spinbutton') as HTMLInputElement
-    await user.clear(commissionNumber)
-    await user.type(commissionNumber, '0.3')
 
-    // StrategyForm: leave default (buy_and_hold) – no params required
-
-    // Submit
+    // Perform user interactions inside act to avoid async state update warnings
     const submitBtn = screen.getByRole('button', { name: /백테스트 실행/i })
-    await user.click(submitBtn)
+    await act(async () => {
+      await user.selectOptions(portfolioSymbolSelect, 'AAPL')
+      await user.clear(commissionNumber)
+      await user.type(commissionNumber, '0.3')
+      await user.click(submitBtn)
+    })
+
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
     const req = onSubmit.mock.calls[0][0]
 
@@ -61,11 +62,12 @@ describe('BacktestForm (integration)', () => {
 
     // Select a valid symbol so validation passes
     const portfolioSelects = screen.getAllByDisplayValue('직접 입력')
-    await user.selectOptions(portfolioSelects[0], 'AAPL')
-
-    // Submit
     const submitBtn = screen.getByRole('button', { name: /백테스트 실행/i })
-    await user.click(submitBtn)
+
+    await act(async () => {
+      await user.selectOptions(portfolioSelects[0], 'AAPL')
+      await user.click(submitBtn)
+    })
 
     // Error banner should render
     expect(await screen.findByText(/입력 오류/)).toBeInTheDocument()

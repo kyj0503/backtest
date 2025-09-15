@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { act } from 'react'
 import DateRangeForm from '../DateRangeForm'
 
 describe('DateRangeForm', () => {
@@ -21,15 +22,19 @@ describe('DateRangeForm', () => {
     const sLabel = screen.getByText('시작 날짜')
     const startWrap = sLabel.closest('div') as HTMLElement
     const startInput = startWrap.querySelector('input[type="date"]') as HTMLInputElement
-    await user.clear(startInput)
-    await user.type(startInput, '2023-02-01')
+    await act(async () => {
+      await user.clear(startInput)
+      await user.type(startInput, '2023-02-01')
+    })
     expect(setStartDate).toHaveBeenCalled()
 
     const eLabel = screen.getByText('종료 날짜')
     const endWrap = eLabel.closest('div') as HTMLElement
     const endInput = endWrap.querySelector('input[type="date"]') as HTMLInputElement
-    await user.clear(endInput)
-    await user.type(endInput, '2023-11-30')
+    await act(async () => {
+      await user.clear(endInput)
+      await user.type(endInput, '2023-11-30')
+    })
     expect(setEndDate).toHaveBeenCalled()
   })
 })

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import CommissionForm from '../CommissionForm';
 
 describe('CommissionForm', () => {
@@ -32,8 +33,10 @@ describe('CommissionForm', () => {
     );
 
     const input = screen.getByDisplayValue('0.2');
-    await user.clear(input);
-    await user.type(input, '0.5');
+    await act(async () => {
+      await user.clear(input);
+      await user.type(input, '0.5');
+    });
 
     expect(mockSetCommission).toHaveBeenCalled();
   });

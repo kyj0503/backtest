@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import { FormField } from '../FormField';
 
 describe('FormField', () => {
@@ -149,7 +150,9 @@ describe('FormField', () => {
       );
 
       const input = screen.getByRole('textbox');
-      await user.type(input, 'test');
+      await act(async () => {
+        await user.type(input, 'test');
+      });
 
       expect(handleChange).toHaveBeenCalled();
     });
@@ -190,8 +193,10 @@ describe('FormField', () => {
       );
 
       const input = screen.getByRole('spinbutton');
-      await user.clear(input);
-      await user.type(input, '123');
+      await act(async () => {
+        await user.clear(input);
+        await user.type(input, '123');
+      });
 
       // 숫자 타입에서 문자별로 parseFloat 처리되므로 마지막 문자인 '3'이 3으로 변환됨
       expect(handleChange).toHaveBeenLastCalledWith(3);

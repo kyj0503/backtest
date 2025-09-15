@@ -14,6 +14,8 @@ pipeline {
         DEPLOY_USER = 'jenkins'
         DEPLOY_PATH_PROD = '/opt/backtest'
         DOCKER_COMPOSE_PROD_FILE = '${WORKSPACE}/compose/compose.prod.yml'
+    // If true, integration API check failures will fail the build
+    FAIL_ON_INTEGRATION_CHECK = 'true'
         // Extend Docker client timeouts to reduce transient failures
         DOCKER_CLIENT_TIMEOUT = '300'
         COMPOSE_HTTP_TIMEOUT  = '300'
@@ -256,7 +258,7 @@ pipeline {
                         done
                     '''
                     // Optional API checks (non-blocking): direct backend and via frontend proxy chain
-                    try {
+          try {
                         sh '''
                             cat > /tmp/payload.json <<'EOF'
                             {"ticker":"AAPL","start_date":"2023-01-03","end_date":"2023-01-20","initial_cash":10000,"strategy":"buy_and_hold","strategy_params":{}}
@@ -280,11 +282,16 @@ EOF
                             cat /tmp/resp2.json | $JQ '.ticker=="AAPL" and (.ohlc_data|length)>0 and (.equity_data|length)>0 and (.summary_stats!=null)' >/dev/null
                             cat /tmp/resp2.json | $JQ '.summary_stats.total_trades>=0 and (.summary_stats.win_rate_pct>=0 and .summary_stats.win_rate_pct<=100) and .summary_stats.max_drawdown_pct>=0' >/dev/null
                         '''
-                        echo "Integration API checks (direct & via frontend) passed"
+            echo "Integration API checks (direct & via frontend) passed"
                     } catch (Exception e) {
-                        echo "Integration API check failed (non-blocking): ${e.getMessage()}"
-                        echo "Continuing pipeline as successful despite API check failure"
-                        // Removed: currentBuild.result = 'UNSTABLE'
+            echo "Integration API check failed: ${e.getMessage()}"
+            if (env.FAIL_ON_INTEGRATION_CHECK == 'true') {
+              echo 'FAIL_ON_INTEGRATION_CHECK=true -> marking build as FAILURE'
+              currentBuild.result = 'FAILURE'
+              error('Integration API checks failed and FAIL_ON_INTEGRATION_CHECK is true')
+            } else {
+              echo "FAIL_ON_INTEGRATION_CHECK=false -> continuing pipeline despite API check failure"
+            }
                     }
                     echo "Integration tests completed"
                 }
