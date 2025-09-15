@@ -1,5 +1,5 @@
 # Stage 1: Build the React application
-FROM node:18-alpine@sha256:929b04d7c782f04f615cf785488fed452b6569f87c73ff666ad553a7554f0006 AS build
+FROM node:20.8.1-alpine AS build
 
 # 빌드 인자들
 ARG RUN_TESTS=false
