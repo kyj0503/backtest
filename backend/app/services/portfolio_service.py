@@ -930,13 +930,13 @@ class PortfolioBacktestService:
                     },
                     'portfolio_composition': [
                         {
-                            'symbol': symbol, 
+                            'symbol': dca_info[unique_key]['symbol'],  # unique_key에서 실제 symbol 추출
                             'weight': amount / total_amount, 
                             'amount': amount,
-                            'investment_type': dca_info[symbol]['investment_type'],
-                            'dca_periods': dca_info[symbol]['dca_periods'] if dca_info[symbol]['investment_type'] == 'dca' else None
+                            'investment_type': dca_info[unique_key]['investment_type'],
+                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None
                         }
-                        for symbol, amount in amounts.items()
+                        for unique_key, amount in amounts.items()
                     ],
                     'equity_curve': {
                         date.strftime('%Y-%m-%d'): value * total_amount
