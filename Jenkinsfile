@@ -92,15 +92,20 @@ pipeline {
                 script {
                     sh '''
                         mkdir -p reports/backend reports/frontend
+                        # Ensure host-side npm cache directory exists and is owned by the Jenkins user
+                        mkdir -p frontend/.npm || true
+                        chown ${UID_J}:${GID_J} frontend/.npm || true
+
                         # Backend JUnit (run tests inside image to emit JUnit XML) as jenkins user
                         docker run --rm -u ${UID_J}:${GID_J} -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
                           sh -lc "pytest tests/unit/ -v --tb=short --junitxml=/reports/junit.xml"
 
-                        # Frontend JUnit (run in Node container using vitest.config.ts)
+                        # Frontend JUnit (run in Node 20 container using vitest.config.ts)
+                        # Mount host-side npm cache into /app/.npm and set NPM_CONFIG_CACHE to avoid writing to root-owned /.npm
                         docker run --rm -u ${UID_J}:${GID_J} \
-                          -e CI=1 -e VITEST_JUNIT_FILE=/reports/junit.xml \
-                          -v "$PWD/frontend:/app" -v "$PWD/reports/frontend:/reports" -w /app \
-                          node:18-alpine sh -lc "npm ci && npx vitest run"
+                          -e CI=1 -e VITEST_JUNIT_FILE=/reports/junit.xml -e NPM_CONFIG_CACHE=/app/.npm \
+                          -v "$PWD/frontend:/app" -v "$PWD/frontend/.npm:/app/.npm" -v "$PWD/reports/frontend:/reports" -w /app \
+                          node:20-alpine sh -lc "npm ci --prefer-offline --no-audit && npx vitest run"
                     '''
 
                     junit allowEmptyResults: true, testResults: 'reports/**/junit.xml'
