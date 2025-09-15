@@ -59,27 +59,51 @@ pipeline {
         stage('Tests') {
             parallel {
                 stage('Frontend Tests') {
+                    agent { 
+                        label 'docker'  // 전용 라벨로 리소스 분리
+                    }
                     steps {
                         script {
-                            echo 'Running frontend tests...'
+                            echo 'Running frontend tests with JUnit generation...'
                             sh '''
                                 cd frontend
+                                mkdir -p reports
+                                # 테스트 실행과 동시에 JUnit 생성
                                 docker build --build-arg RUN_TESTS=true \
+                                    --build-arg GENERATE_JUNIT=true \
                                     -t backtest-frontend-test:${BUILD_NUMBER} .
+                                # JUnit 파일 추출
+                                docker run --rm -v "$PWD/reports:/reports" \
+                                    backtest-frontend-test:${BUILD_NUMBER} \
+                                    sh -c "cp /app/reports/junit.xml /reports/frontend-junit.xml || true"
                             '''
+                            // JUnit 결과 즉시 보고
+                            junit allowEmptyResults: true, testResults: 'frontend/reports/frontend-junit.xml'
                             echo "Frontend tests passed"
                         }
                     }
                 }
                 stage('Backend Tests') {
+                    agent { 
+                        label 'docker'  // 전용 라벨로 리소스 분리
+                    }
                     steps {
                         script {
-                            echo 'Running backend tests with controlled environment...'
+                            echo 'Running backend tests with JUnit generation...'
                             sh '''
-                cd backend
-                docker build --build-arg RUN_TESTS=true \
-                  -t backtest-backend-test:${BUILD_NUMBER} .
+                                cd backend
+                                mkdir -p reports
+                                # 테스트 실행과 동시에 JUnit 생성
+                                docker build --build-arg RUN_TESTS=true \
+                                    --build-arg GENERATE_JUNIT=true \
+                                    -t backtest-backend-test:${BUILD_NUMBER} .
+                                # JUnit 파일 추출
+                                docker run --rm -v "$PWD/reports:/reports" \
+                                    backtest-backend-test:${BUILD_NUMBER} \
+                                    sh -c "cp /app/reports/junit.xml /reports/backend-junit.xml || true"
                             '''
+                            // JUnit 결과 즉시 보고
+                            junit allowEmptyResults: true, testResults: 'backend/reports/backend-junit.xml'
                             echo "Backend tests passed"
                         }
                     }
@@ -87,29 +111,23 @@ pipeline {
             }
         }
 
-        stage('Collect JUnit Reports') {
+        stage('Collect Test Reports') {
             steps {
                 script {
+                    echo 'Collecting and archiving test reports...'
+                    // 테스트 리포트 수집 (중복 테스트 실행 제거)
                     sh '''
-                        mkdir -p reports/backend reports/frontend
-                        # Ensure host-side npm cache directory exists and is owned by the Jenkins user
-                        mkdir -p frontend/.npm || true
-                        chown ${UID_J}:${GID_J} frontend/.npm || true
-
-                        # Backend JUnit (run tests inside image to emit JUnit XML) as jenkins user
-                        docker run --rm -u ${UID_J}:${GID_J} -v "$PWD/reports/backend:/reports" backtest-backend-test:${BUILD_NUMBER} \
-                          sh -lc "pytest tests/unit/ -v --tb=short --junitxml=/reports/junit.xml"
-
-                        # Frontend JUnit (run in Node 20 container using vitest.config.ts)
-                        # Mount host-side npm cache into /app/.npm and set NPM_CONFIG_CACHE to avoid writing to root-owned /.npm
-                        docker run --rm -u ${UID_J}:${GID_J} \
-                          -e CI=1 -e VITEST_JUNIT_FILE=/reports/junit.xml -e NPM_CONFIG_CACHE=/app/.npm \
-                          -v "$PWD/frontend:/app" -v "$PWD/frontend/.npm:/app/.npm" -v "$PWD/reports/frontend:/reports" -w /app \
-                          node:20-alpine sh -lc "npm ci --prefer-offline --no-audit && npx vitest run"
+                        mkdir -p reports/aggregated
+                        # 각 테스트 단계에서 생성된 JUnit 파일들을 취합
+                        find . -name "*junit.xml" -type f -exec cp {} reports/aggregated/ \\; || true
+                        ls -la reports/aggregated/ || true
                     '''
-
-                    junit allowEmptyResults: true, testResults: 'reports/**/junit.xml'
+                    
+                    // 통합 JUnit 보고
+                    junit allowEmptyResults: true, testResults: 'reports/aggregated/*.xml'
                     archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
+                    
+                    echo "Test reports collected successfully"
                 }
             }
         }
@@ -118,6 +136,9 @@ pipeline {
         stage('Build and Push PROD') {
             parallel {
                 stage('Backend PROD') {
+                    agent { 
+                        label 'docker-build'  // 전용 빌드 에이전트
+                    }
                     steps {
                         script {
                             withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
@@ -177,6 +198,9 @@ pipeline {
                     }
                 }
                 stage('Frontend PROD') {
+                    agent { 
+                        label 'docker-build'  // 전용 빌드 에이전트
+                    }
                     steps {
                         script {
                             withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GH_USER', passwordVariable: 'GH_TOKEN')]) {
