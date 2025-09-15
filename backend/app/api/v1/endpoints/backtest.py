@@ -586,6 +586,14 @@ async def get_exchange_rate(
             "message": f"환율 데이터 조회 실패: {str(e)}",
             "data": {"exchange_rates": []}
         }
+
+
+@router.get(
+    "/stock-data/{ticker}",
+    status_code=status.HTTP_200_OK,
+    summary="주가 데이터 조회",
+    description="지정된 기간의 주가 데이터를 조회합니다."
+)
 async def get_stock_data(
     ticker: str,
     start_date: str,
