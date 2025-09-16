@@ -7,8 +7,6 @@ export type { FormSectionProps } from './FormSection';
 
 export { FormLegend } from './FormLegend';
 
-export { SectionCard } from './SectionCard';
-
 export { LoadingSpinner, InlineSpinner, ButtonSpinner } from './LoadingSpinner';
 export type { LoadingSpinnerProps } from './LoadingSpinner';
 

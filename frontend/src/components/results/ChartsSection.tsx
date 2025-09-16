@@ -21,7 +21,6 @@ import ChartLoading from '../common/ChartLoading';
 import { useStockData } from '../../hooks/useStockData';
 import EnhancedChartsSection from './EnhancedChartsSection';
 import { ChartData, PortfolioData, EquityPoint } from '../../types/backtest-results';
-import { SectionCard } from '../common';
 import { FormLegend } from '../common';
 import { Loader2 } from 'lucide-react';
 
@@ -29,6 +28,24 @@ interface ChartsSectionProps {
   data: ChartData | PortfolioData;
   isPortfolio: boolean;
 }
+
+const ResultBlock: React.FC<{
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ title, description, actions, children }) => (
+  <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-1">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      </div>
+      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+    </div>
+    <div>{children}</div>
+  </div>
+);
 
 const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio }) => {
   const portfolioData = useMemo<PortfolioData | null>(
@@ -91,7 +108,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
     const cards: React.ReactNode[] = [
       (
-        <SectionCard
+        <ResultBlock
           title="누적 자산 가치"
           description="기간 동안 누적 자산 가치 변화를 확인하세요"
           key="portfolio-equity"
@@ -120,10 +137,10 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
               <Area type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2} fill="url(#portfolioValue)" />
             </AreaChart>
           </ResponsiveContainer>
-        </SectionCard>
+        </ResultBlock>
       ),
       (
-        <SectionCard
+        <ResultBlock
           title="일일 수익률"
           description="일별 수익률 변동을 살펴보며 변동성을 파악하세요"
           key="portfolio-daily"
@@ -146,10 +163,10 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
               <Line type="monotone" dataKey="return_pct" stroke="#f97316" strokeWidth={1.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
-        </SectionCard>
+        </ResultBlock>
       ),
       (
-        <SectionCard
+        <ResultBlock
           title="개별 자산 주가"
           description="포트폴리오 구성 자산들의 가격 흐름"
           actions={
@@ -158,7 +175,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
                 { label: `${portfolio_composition.length}개 구성 자산`, tone: 'accent' },
                 { label: '동일 축으로 비교', tone: 'muted' },
               ]}
-
             />
           }
           key="portfolio-prices"
@@ -175,7 +191,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           ) : (
             <p className="text-sm text-muted-foreground">표시할 자산 데이터가 없습니다.</p>
           )}
-        </SectionCard>
+        </ResultBlock>
       ),
     ];
 
@@ -186,7 +202,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     if (!chartData) return null;
     const cards: React.ReactNode[] = [
       (
-        <SectionCard title="OHLC 차트" description="가격 변동과 거래 시그널을 확인하세요" key="single-ohlc">
+        <ResultBlock title="OHLC 차트" description="가격 변동과 거래 시그널을 확인하세요" key="single-ohlc">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyOHLCChart
               data={chartData.ohlc_data ?? []}
@@ -194,17 +210,17 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
               trades={chartData.trade_markers ?? []}
             />
           </Suspense>
-        </SectionCard>
+        </ResultBlock>
       ),
       (
-        <SectionCard title="누적 수익률" description="전략의 누적 수익률을 확인하세요" key="single-equity">
+        <ResultBlock title="누적 수익률" description="전략의 누적 수익률을 확인하세요" key="single-equity">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyEquityChart data={chartData.equity_data ?? []} />
           </Suspense>
-        </SectionCard>
+        </ResultBlock>
       ),
       (
-        <SectionCard
+        <ResultBlock
           title="개별 주가"
           description="백테스트 기간 동안의 주가 흐름"
           key="single-prices"
@@ -221,17 +237,17 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           ) : (
             <p className="text-sm text-muted-foreground">표시할 주가 데이터가 없습니다.</p>
           )}
-        </SectionCard>
+        </ResultBlock>
       ),
     ];
 
     if (chartData.trade_markers && chartData.trade_markers.length > 0 && chartData.strategy !== 'buy_and_hold') {
       cards.push(
-        <SectionCard title="거래 내역" description="전략이 실행한 체결 신호" key="single-trades">
+        <ResultBlock title="거래 내역" description="전략이 실행한 체결 신호" key="single-trades">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyTradesChart trades={chartData.trade_markers} />
           </Suspense>
-        </SectionCard>,
+        </ResultBlock>,
       );
     }
 

@@ -12,7 +12,6 @@ import { useFormValidation } from '../hooks/useFormValidation';
 import { FormSection } from './common';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
-import { Card, CardContent, CardHeader } from './ui/card';
 
 interface BacktestFormProps {
   onSubmit: (request: BacktestRequest) => Promise<void>;
@@ -76,29 +75,29 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <Card className="border-border/70 bg-card/80 shadow-sm">
-        <CardHeader>
-          <h4 className="text-xl font-semibold text-foreground">포트폴리오 백테스트</h4>
+    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
+      <section className="space-y-6 rounded-[32px] border border-border/40 bg-card/40 p-8 shadow-sm">
+        <div className="space-y-2">
+          <h4 className="text-2xl font-semibold text-foreground">포트폴리오 백테스트</h4>
           <p className="text-sm text-muted-foreground">
-            자산 구성과 전략, 리밸런싱 정책을 선택해 포트폴리오 백테스트를 실행하세요.
+            자산 구성과 전략, 리밸런싱 정책을 선택해 백테스트를 실행하세요.
           </p>
-        </CardHeader>
-        <CardContent>
-          {(errors.length > 0 || state.ui.errors.length > 0) && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>
-                <h3 className="text-sm font-semibold">입력 오류</h3>
-                <ul className="mt-2 space-y-1 text-sm">
-                  {[...errors, ...state.ui.errors].map((error, index) => (
-                    <li key={index}>• {error}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
+        {(errors.length > 0 || state.ui.errors.length > 0) && (
+          <Alert variant="destructive" className="mb-2">
+            <AlertDescription>
+              <h3 className="text-sm font-semibold">입력 오류</h3>
+              <ul className="mt-2 space-y-1 text-sm">
+                {[...errors, ...state.ui.errors].map((error, index) => (
+                  <li key={index}>• {error}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-8">
             <PortfolioForm
               portfolio={state.portfolio}
               updateStock={actions.updateStock}
@@ -194,16 +193,15 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
                 )}
               </Button>
             </div>
-          </form>
+        </form>
 
-          <AdvancedSettingsForm
-            portfolio={state.portfolio}
-            isVisible={showAdvancedSettings}
-            onClose={() => setShowAdvancedSettings(false)}
-            onApply={setAdvancedSettings}
-          />
-        </CardContent>
-      </Card>
+        <AdvancedSettingsForm
+          portfolio={state.portfolio}
+          isVisible={showAdvancedSettings}
+          onClose={() => setShowAdvancedSettings(false)}
+          onApply={setAdvancedSettings}
+        />
+      </section>
     </div>
   );
 };

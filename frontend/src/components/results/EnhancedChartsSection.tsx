@@ -18,7 +18,7 @@ import {
   TradeMarker,
   OhlcPoint,
 } from '../../types/backtest-results';
-import { SectionCard, FormLegend } from '../common';
+import { FormLegend } from '../common';
 
 interface EnhancedChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -66,13 +66,31 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
       return { ...point, return_pct: returnPct };
     }) ?? [];
 
+  const FeatureBlock: React.FC<{
+    title: string;
+    description?: string;
+    actions?: React.ReactNode;
+    children: React.ReactNode;
+  }> = ({ title, description, actions, children }) => (
+    <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+        </div>
+        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+
   const sections: Array<{ key: string; node: React.ReactNode; fullWidth?: boolean }> = [];
 
   if (exchangeRates && exchangeRates.length > 0) {
     sections.push({
       key: 'exchange',
       node: (
-        <SectionCard
+        <FeatureBlock
           title="환율 추이"
           description="백테스트 기간 동안의 원/달러 변동"
           actions={<FormLegend items={[{ label: `${exchangeRates.length}포인트`, tone: 'muted' }]} />}
@@ -89,7 +107,7 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
               <Line type="monotone" dataKey="rate" stroke="#f97316" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
-        </SectionCard>
+        </FeatureBlock>
       ),
     });
   }
@@ -99,7 +117,7 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
     sections.push({
       key,
       node: (
-        <SectionCard
+        <FeatureBlock
           title={title}
           description="지수 수준과 일일 수익률을 함께 확인하세요"
           actions={<FormLegend items={[{ label: '좌측: 지수 · 우측: 일일 수익률', tone: 'muted' }]} />}
@@ -122,7 +140,7 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
               <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
             </ComposedChart>
           </ResponsiveContainer>
-        </SectionCard>
+        </FeatureBlock>
       ),
     });
   };
@@ -145,7 +163,7 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
       key: 'trade-signals',
       fullWidth: true,
       node: (
-        <SectionCard
+        <FeatureBlock
           title="매매 신호"
           description="전략이 실행한 매수/매도 시점을 확인하세요"
           actions={<FormLegend items={[{ label: `${tradeMarkers.length}개 거래`, tone: 'accent' }]} />}
@@ -169,7 +187,7 @@ const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data
               <Line type="monotone" dataKey="sellSignal" stroke="#ef4444" strokeWidth={0} dot={{ r: 5, fill: '#ef4444' }} />
             </ComposedChart>
           </ResponsiveContainer>
-        </SectionCard>
+        </FeatureBlock>
       ),
     });
   }

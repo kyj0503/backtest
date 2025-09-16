@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChartData, PortfolioData } from '../../types/backtest-results';
-import { SectionCard, FormLegend } from '../common';
+import { FormLegend } from '../common';
 import { cn } from '../../lib/utils';
 import {
   LazyExchangeRateChart,
@@ -15,17 +15,35 @@ interface AdditionalFeaturesProps {
   className?: string;
 }
 
-const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({ 
-  data, 
-  isPortfolio, 
-  className = "" 
+const FeatureBlock: React.FC<{ title: string; description?: string; actions?: React.ReactNode; children: React.ReactNode }> = ({
+  title,
+  description,
+  actions,
+  children,
+}) => (
+  <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-1">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      </div>
+      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+    </div>
+    <div>{children}</div>
+  </div>
+);
+
+const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
+  data,
+  isPortfolio,
+  className = '',
 }) => {
   // 포트폴리오 결과인 경우
   const sections = [];
 
   const addExchangeRateCard = (start: string, end: string) => {
     sections.push(
-      <SectionCard
+      <FeatureBlock
         key="exchange"
         title="환율 추이"
         description="동일 기간의 원/달러 환율 변동"
@@ -33,13 +51,13 @@ const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
         <Suspense fallback={<ChartLoading height={260} />}>
           <LazyExchangeRateChart startDate={start} endDate={end} />
         </Suspense>
-      </SectionCard>,
+      </FeatureBlock>,
     );
   };
 
   const addNewsCard = (symbols: string[], start: string, end: string) => {
     sections.push(
-      <SectionCard
+      <FeatureBlock
         key="news"
         title="주가 급등락 뉴스"
         description="백테스트 기간 중 주요 뉴스 흐름"
@@ -48,7 +66,7 @@ const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
         <Suspense fallback={<ChartLoading height={260} />}>
           <LazyStockVolatilityNews symbols={symbols} startDate={start} endDate={end} />
         </Suspense>
-      </SectionCard>,
+      </FeatureBlock>,
     );
   };
 
