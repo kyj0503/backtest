@@ -76,28 +76,24 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
-      <section className="space-y-6 rounded-[32px] border border-border/40 bg-card/40 p-8 shadow-sm">
-        <div className="space-y-2">
-          <h4 className="text-2xl font-semibold text-foreground">포트폴리오 백테스트</h4>
-          <p className="text-sm text-muted-foreground">
-            자산 구성과 전략, 리밸런싱 정책을 선택해 백테스트를 실행하세요.
-          </p>
-        </div>
+      <div className="space-y-2">
+        {/* Title and helper text removed as requested */}
+      </div>
 
-        {(errors.length > 0 || state.ui.errors.length > 0) && (
-          <Alert variant="destructive" className="mb-2">
-            <AlertDescription>
-              <h3 className="text-sm font-semibold">입력 오류</h3>
-              <ul className="mt-2 space-y-1 text-sm">
-                {[...errors, ...state.ui.errors].map((error, index) => (
-                  <li key={index}>• {error}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+      {(errors.length > 0 || state.ui.errors.length > 0) && (
+        <Alert variant="destructive" className="mb-2">
+          <AlertDescription>
+            <h3 className="text-sm font-semibold">입력 오류</h3>
+            <ul className="mt-2 space-y-1 text-sm">
+              {[...errors, ...state.ui.errors].map((error, index) => (
+                <li key={index}>• {error}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8">
             <PortfolioForm
               portfolio={state.portfolio}
               updateStock={actions.updateStock}
@@ -193,15 +189,14 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
                 )}
               </Button>
             </div>
-        </form>
+      </form>
 
-        <AdvancedSettingsForm
-          portfolio={state.portfolio}
-          isVisible={showAdvancedSettings}
-          onClose={() => setShowAdvancedSettings(false)}
-          onApply={setAdvancedSettings}
-        />
-      </section>
+      <AdvancedSettingsForm
+        portfolio={state.portfolio}
+        isVisible={showAdvancedSettings}
+        onClose={() => setShowAdvancedSettings(false)}
+        onApply={setAdvancedSettings}
+      />
     </div>
   );
 };
