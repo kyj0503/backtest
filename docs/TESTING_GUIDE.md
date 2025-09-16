@@ -160,8 +160,6 @@ docker run --rm --network compose_test_network \
 
 **실행 방법**:
 ```bash
-make test-unit
-# 또는
 ./scripts/test-runner.sh unit
 ```
 
@@ -180,8 +178,6 @@ make test-unit
 
 **실행 방법**:
 ```bash
-make test-integration
-# 또는
 ./scripts/test-runner.sh integration
 ```
 
@@ -198,8 +194,6 @@ make test-integration
 
 **실행 방법**:
 ```bash
-make test-e2e
-# 또는
 ./scripts/test-runner.sh e2e
 ```
 

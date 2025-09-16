@@ -111,14 +111,11 @@ ORDER BY records DESC;
 
 ### 데이터베이스 초기화
 ```bash
-# Community DB 초기화
+# Community DB 초기화 (세션/커뮤니티/히스토리)
 mysql -u root -p < database/schema.sql
 
-# Stock Data Cache DB 초기화  
+# Stock Data Cache DB 초기화 (시세/환율)
 mysql -u root -p < database/yfinance.sql
-
-# 마이그레이션 실행 (멱등성 보장)
-mysql -u root -p < database/yfinance_migration_001.sql
 ```
 
 ### 데이터 백업

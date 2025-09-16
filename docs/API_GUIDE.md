@@ -1,621 +1,158 @@
+# API 가이드 (2025-09 기준)
 
-# API 가이드 (2025-09 최신)
+이 문서는 `backend/app/api/v1`의 실제 구현을 기준으로 주요 REST/WS 엔드포인트를 정리합니다. 모든 예시는 Docker 개발 환경(`http://localhost:8001`)을 기준으로 합니다.
 
-이 문서는 백테스팅 시스템의 모든 백엔드 API 엔드포인트, 기능, 입출력 예시, curl 예제, 도커 환경 기준 사용법을 체계적으로 설명합니다.
+## 공통 정보
 
-문제 발생 시: [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) 참고
+- **베이스 URL**: `http://localhost:8001/api/v1`
+- **인증 헤더**: `Authorization: Bearer <세션 토큰>` (필요한 엔드포인트에만)
+- **문서**: `/api/v1/docs` (Swagger), `/api/v1/redoc`
 
-## 목차
+## 인증 (`/auth`)
 
-1. [API 개요](#api-개요)
-2. [인증](#인증)
-3. [백테스트 API](#백테스트-api)
-  - [통합 백테스트](#통합-백테스트-execute)
-  - [단일/포트폴리오/차트/히스토리/환율/뉴스/헬스체크](#기타-주요-api)
-4. [전략 API](#전략-api)
-5. [커뮤니티 API](#커뮤니티-api)
-6. [기타 API](#기타-api)
-7. [에러 처리](#에러-처리)
+| 메서드 | 경로 | 설명 |
+| --- | --- | --- |
+| POST | `/auth/register` | 회원가입 및 자동 로그인 |
+| POST | `/auth/login` | 이메일/비밀번호 로그인 |
+| POST | `/auth/logout` | 세션 토큰 폐기 |
+| GET | `/auth/me` | 현재 사용자 정보 조회 |
 
-## API 개요
+### 회원가입/로그인 요청
 
-### 베이스 URL
-- **개발**: `http://localhost:8001/api/v1`
-- **프로덕션**: 환경변수 `VITE_API_BASE_URL` 또는 상대 경로 `/api/v1`
-
-### 공통 헤더
-```
-Content-Type: application/json
-Authorization: Bearer <token>  // 인증이 필요한 엔드포인트
-```
-
-### API 문서
-- **Swagger UI**: `/api/v1/docs`
-- **ReDoc**: `/api/v1/redoc`
-
-## 인증
-
-토큰 기반 인증을 사용합니다. 로그인 후 받은 토큰을 `Authorization` 헤더에 포함하여 요청하세요.
-
-### 회원가입
 ```http
 POST /api/v1/auth/register
 Content-Type: application/json
 
 {
-  "username": "testuser",
-  "email": "test@example.com",
-  "password": "password123",
-  "investment_type": "moderate"  // conservative, moderate, aggressive
+  "username": "backtest-user",
+  "email": "user@example.com",
+  "password": "pass1234",
+  "investment_type": "balanced"
 }
 ```
 
-**응답:**
+### 응답 (`AuthResponse`)
+
 ```json
 {
-  "message": "회원가입이 완료되었습니다.",
-  "user": {
-    "id": 1,
-    "username": "testuser",
-    "email": "test@example.com",
-    "investment_type": "moderate"
-  }
+  "token": "<세션 토큰>",
+  "user_id": 1,
+  "username": "backtest-user",
+  "email": "user@example.com",
+  "investment_type": "balanced",
+  "is_admin": false
 }
 ```
 
-### 로그인
+세션 토큰은 `user_sessions.token`에 저장되며 기본 만료는 7일입니다. `/auth/me`는 동일한 사용자 메타데이터를 반환합니다.
+
+## 백테스트 (`/backtest`)
+
+| 메서드 | 경로 | 설명 |
+| --- | --- | --- |
+| POST | `/backtest/run` | 단일 종목 백테스트 (`BacktestResult` 반환) |
+| POST | `/backtest/portfolio` | 포트폴리오 백테스트 (딕셔너리 응답) |
+| POST | `/backtest/execute` | 통합 백테스트 (단일/포트폴리오 자동 판별) |
+| POST | `/backtest/chart-data` | Recharts용 차트 데이터 (`ChartDataResponse`) |
+| GET | `/backtest/metrics` | 이벤트 시스템 메트릭 요약 |
+| GET | `/backtest/notifications` | 백테스트 알림 목록 |
+| GET | `/backtest/portfolio-analytics` | 포트폴리오 분석 통계 |
+| GET | `/backtest/portfolio-alerts` | 포트폴리오 경고/알림 |
+| GET | `/backtest/history` | 로그인 사용자의 백테스트 히스토리 |
+| GET | `/backtest/history/{id}` | 히스토리 상세 |
+| DELETE | `/backtest/history/{id}` | 히스토리 논리 삭제 |
+| GET | `/backtest/stock-volatility-news/{ticker}` | 급등락 뉴스 + yfinance 데이터 |
+| GET | `/backtest/exchange-rate` | 원/달러 환율 시계열 |
+
+`/backtest/history*`와 `/backtest/portfolio-*` 엔드포인트는 세션 토큰 인증이 필요합니다.
+
+### 단일 종목 백테스트 (`/backtest/run`)
+
 ```http
-POST /api/v1/auth/login
-Content-Type: application/json
-
-{
-  "email": "test@example.com",
-  "password": "password123"
-}
-```
-
-**응답:**
-```json
-{
-  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-  "token_type": "bearer",
-  "user": {
-    "id": 1,
-    "username": "testuser",
-    "email": "test@example.com",
-    "investment_type": "moderate"
-  }
-}
-```
-
-### 로그아웃
-```http
-POST /api/v1/auth/logout
-Authorization: Bearer <token>
-```
-
-### 사용자 정보 조회
-```http
-GET /api/v1/auth/me
-Authorization: Bearer <token>
-```
-
-
-## 백테스트 API
-
-### [통합 백테스트] `/api/v1/backtest/execute`
-
-단일 종목/포트폴리오 자동 구분, 환율·S&P500·NASDAQ 벤치마크 포함, 표준화된 결과 반환
-
-#### 요청 예시 (비중/금액 모두 지원)
-
-> **프론트엔드 UX 정책**
-> - 포트폴리오 구성 시 각 종목의 "비중(%)" 칸에 값을 직접 입력하면, 해당 종목의 weight 필드가 API로 전송됩니다.
-> - amount(투자금액) 칸을 수정하면 weight 입력이 해제되어 amount만 전송됩니다.
-> - amount와 weight는 동시에 입력 불가, 혼용 불가(동일 포트폴리오 내에서 한 방식만 사용).
-> - weight 입력 시 합계가 100%가 아니면 에러가 표시됩니다.
-> - 모든 종목이 weight 기반이면 amount는 자동 계산되어 API로 전송될 수 있습니다(내부 변환).
-```bash
-# (1) 금액 기반 입력
-curl -X POST http://localhost:8001/api/v1/backtest/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "portfolio": [
-      {"symbol": "AAPL", "amount": 10000, "asset_type": "stock"},
-      {"symbol": "GOOGL", "amount": 5000, "asset_type": "stock"}
-    ],
-    "start_date": "2023-01-01",
-    "end_date": "2023-12-31",
-    "strategy": "buy_and_hold"
-  }'
-
-# (2) 비중(%) 기반 입력 (amount 대신 weight 사용, 합계 100)
-curl -X POST http://localhost:8001/api/v1/backtest/execute \
-  -H "Content-Type: application/json" \
-  -d '{
-    "portfolio": [
-      {"symbol": "AAPL", "weight": 60, "asset_type": "stock"},
-      {"symbol": "GOOGL", "weight": 40, "asset_type": "stock"}
-    ],
-    "start_date": "2023-01-01",
-    "end_date": "2023-12-31",
-    "strategy": "buy_and_hold"
-  }'
-
-```
-* amount와 weight는 동시에 입력 불가, 둘 중 하나만 입력 (weight는 0~100, 합계 100±0.01 허용)
-* 포트폴리오 내 모든 종목이 동일 방식(amount 또는 weight)으로 입력되어야 함
-* weight 입력 시 내부적으로 금액으로 자동 환산
-
-#### PortfolioStock 필드
-| 필드명         | 타입    | 설명                                 |
-| -------------- | ------- | ------------------------------------ |
-| symbol         | string  | 주식 심볼                            |
-| amount         | float   | 투자 금액 (weight와 동시 입력 불가)   |
-| weight         | float   | 비중(%) (amount와 동시 입력 불가)     |
-| asset_type     | string  | 자산 타입 (stock, cash)              |
-| investment_type| string  | 투자 방식 (lump_sum, dca)            |
-| dca_periods    | int     | 분할 매수 기간 (개월, 옵션)           |
-| custom_name    | string  | 현금 자산 커스텀명 (옵션)             |
-
-#### 응답 예시 (요약)
-
-#### 응답 예시 (요약)
-```json
-{
-  "status": "success",
-  "backtest_type": "portfolio", // 또는 "single_stock"
-  "data": {
-    "portfolio_composition": [ ... ],
-    "summary_stats": { ... },
-    "ohlc_data": [ ... ],
-    "equity_data": [ ... ],
-    "trade_markers": [ ... ],
-    "indicators": [ ... ],
-    "exchange_rates": [ ... ],
-    "sp500_benchmark": [ ... ],
-    "nasdaq_benchmark": [ ... ]
-  }
-}
-```
-
-#### 주요 특징
-- 단일 종목: `portfolio`에 1개 종목, 현금 없음 → 단일 백테스트
-- 포트폴리오: 2개 이상 종목 또는 현금 포함 → 포트폴리오 백테스트
-- 환율(`exchange_rates`), S&P500(`sp500_benchmark`), NASDAQ(`nasdaq_benchmark`) 데이터 포함
-- 모든 결과는 표준화된 구조로 반환
-
----
-
-### 기타 주요 API
-
-#### 1. 단일 종목 백테스트 `/run`
-```bash
-curl -X POST http://localhost:8001/api/v1/backtest/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ticker": "AAPL",
-    "start_date": "2023-01-01",
-    "end_date": "2023-12-31",
-    "initial_cash": 10000,
-    "strategy": "buy_and_hold"
-  }'
-```
-
-#### 2. 포트폴리오 백테스트 `/portfolio`
-```bash
-# (1) 금액 기반 입력
-curl -X POST http://localhost:8001/api/v1/backtest/portfolio \
-  -H "Content-Type: application/json" \
-  -d '{
-    "portfolio": [
-      {"symbol": "AAPL", "amount": 4000},
-      {"symbol": "GOOGL", "amount": 3000},
-      {"symbol": "MSFT", "amount": 3000}
-    ],
-    "start_date": "2023-01-01",
-    "end_date": "2023-12-31"
-  }'
-
-# (2) 비중(%) 기반 입력
-curl -X POST http://localhost:8001/api/v1/backtest/portfolio \
-  -H "Content-Type: application/json" \
-  -d '{
-    "portfolio": [
-      {"symbol": "AAPL", "weight": 50},
-      {"symbol": "GOOGL", "weight": 30},
-      {"symbol": "MSFT", "weight": 20}
-    ],
-    "start_date": "2023-01-01",
-    "end_date": "2023-12-31"
-  }'
-```
-* amount/weight 동시 입력 불가, 혼합 입력 불가, weight 합계 100±0.01
-
-### 이벤트/메트릭/알림/분석/경고 API
-
-#### 1. 백테스트 메트릭 요약 `/api/v1/backtest/metrics`
-```http
-GET /api/v1/backtest/metrics
-```
-* 전체 백테스트 실행/성공/실패/전략별/심볼별 성과 등 집계
-
-#### 2. 백테스트 알림 조회 `/api/v1/backtest/notifications`
-```http
-GET /api/v1/backtest/notifications?limit=20
-```
-* 최근 백테스트 성공/실패/최적화 등 주요 알림 목록
-
-#### 3. 포트폴리오 분석 통계 `/api/v1/backtest/portfolio-analytics`
-```http
-GET /api/v1/backtest/portfolio-analytics
-GET /api/v1/backtest/portfolio-analytics?portfolio_id=abc123
-```
-* 전체/특정 포트폴리오의 생성, 리밸런싱, 최적화, 인기 자산 등 통계
-
-#### 4. 포트폴리오 경고/알림 `/api/v1/backtest/portfolio-alerts`
-```http
-GET /api/v1/backtest/portfolio-alerts?limit=20
-GET /api/v1/backtest/portfolio-alerts?portfolio_id=abc123&limit=10
-```
-* 거래비용 급증, 다변화 악화, 대규모 가중치 변화, 리스크 허용도 급변 등 경고/알림
-
-#### 응답 예시 (메트릭)
-```json
-{
-  "total_backtests": 12,
-  "success_rate": 0.83,
-  "failure_rate": 0.17,
-  "avg_execution_time": 2.1,
-  "strategy_performance": {
-    "buy_and_hold": {"count": 7, "avg_annual_return": 0.12, "avg_sharpe_ratio": 1.1, "avg_trade_count": 2.3}
-  },
-  "symbol_performance": {
-    "AAPL": {"count": 5, "avg_annual_return": 0.15, "best_strategy": "buy_and_hold", "best_return": 0.22}
-  }
-}
-```
-
-#### 응답 예시 (알림)
-```json
-[
-  {"type": "high_return", "title": "높은 수익률 달성", "message": "AAPL (buy_and_hold): 32.00% 연간 수익률", "severity": "success", "timestamp": "2024-06-01T12:00:00"},
-  {"type": "backtest_failed", "title": "백테스트 실패", "message": "AAPL (buy_and_hold): 데이터 없음", "severity": "error", "timestamp": "2024-06-01T12:01:00"}
-]
-```
-
-#### 응답 예시 (포트폴리오 분석)
-```json
-{
-  "total_portfolios": 3,
-  "avg_rebalancing_per_portfolio": 1.7,
-  "avg_optimization_per_portfolio": 0.3,
-  "popular_assets": [["AAPL", 3], ["GOOGL", 2]],
-  "total_rebalancing_events": 5
-}
-```
-
-#### 응답 예시 (경고)
-```json
-[
-  {"type": "high_transaction_cost", "title": "높은 거래비용 발생", "message": "포트폴리오 abc123: $1,200.00 거래비용", "severity": "warning", "portfolio_id": "abc123", "timestamp": "2024-06-01T12:00:00"},
-  {"type": "diversification_decline", "title": "다변화 효과 악화", "message": "포트폴리오 abc123: 다변화 점수 -0.120", "severity": "warning", "portfolio_id": "abc123", "timestamp": "2024-06-01T12:01:00"}
-]
-```
-
-#### 3. 차트 데이터 `/chart-data`
-```bash
-curl -X POST http://localhost:8001/api/v1/backtest/chart-data \
-  -H "Content-Type: application/json" \
-  -d '{ ... }'
-```
-
-#### 4. 백테스트 히스토리 목록 `/history`
-```bash
-curl -X GET "http://localhost:8001/api/v1/backtest/history?limit=10&offset=0" -H "Authorization: Bearer <token>"
-```
-
-#### 5. 백테스트 히스토리 상세 `/history/{history_id}`
-```bash
-curl -X GET http://localhost:8001/api/v1/backtest/history/1 -H "Authorization: Bearer <token>"
-```
-
-#### 6. 백테스트 히스토리 삭제 `DELETE /history/{history_id}`
-```bash
-curl -X DELETE http://localhost:8001/api/v1/backtest/history/1 -H "Authorization: Bearer <token>"
-```
-
-#### 7. 환율 데이터 `/exchange-rate`
-```bash
-curl "http://localhost:8001/api/v1/backtest/exchange-rate?start_date=2023-01-01&end_date=2023-12-31"
-```
-
-#### 8. 변동성 이벤트 뉴스 `/stock-volatility-news/{ticker}`
-```bash
-curl "http://localhost:8001/api/v1/backtest/stock-volatility-news/AAPL?start_date=2023-01-01&end_date=2023-12-31&threshold=5.0"
-```
-
-#### 9. 백테스트 서비스 헬스체크 `/health`
-```bash
-curl http://localhost:8001/api/v1/backtest/health
-```
-
----
-
-### 환율 데이터 조회
-```http
-GET /api/v1/backtest/exchange-rate?start_date=2023-01-01&end_date=2023-12-31
-```
-
-### 변동성 이벤트 조회
-```http
-GET /api/v1/backtest/stock-volatility-news/AAPL?start_date=2023-01-01&end_date=2023-12-31&threshold=5.0
-```
-
-## 전략 API
-
-### 전략 목록 조회
-```http
-GET /api/v1/strategies/
-```
-
-**응답:**
-```json
-[
-  {
-    "name": "buy_and_hold",
-    "display_name": "Buy and Hold",
-    "description": "매수 후 보유 전략",
-    "parameters": {}
-  },
-  {
-    "name": "sma_crossover",
-    "display_name": "SMA Crossover",
-    "description": "단순이동평균 교차 전략",
-    "parameters": {
-      "short_window": {
-        "type": "int",
-        "default": 10,
-        "min": 5,
-        "max": 50
-      },
-      "long_window": {
-        "type": "int", 
-        "default": 30,
-        "min": 20,
-        "max": 200
-      }
-    }
-  }
-]
-```
-
-### 특정 전략 정보 조회
-```http
-GET /api/v1/strategies/sma_crossover
-```
-
-### 전략 파라미터 검증
-```http
-GET /api/v1/strategies/sma_crossover/validate?short_window=10&long_window=30
-```
-
-## 커뮤니티 API
-
-### 게시글 목록 조회
-```http
-GET /api/v1/community/posts?page=1&limit=20
-```
-
-**응답:**
-```json
-{
-  "posts": [
-    {
-      "id": 1,
-      "title": "AAPL 백테스트 결과 공유",
-      "content": "애플 주식으로 백테스트를 해봤는데...",
-      "author": {
-        "username": "testuser",
-        "profile_image": null
-      },
-      "view_count": 15,
-      "like_count": 3,
-      "created_at": "2023-01-01T10:00:00",
-      "updated_at": "2023-01-01T10:00:00"
-    }
-  ],
-  "total": 50,
-  "page": 1,
-  "limit": 20
-}
-```
-
-### 게시글 상세 조회
-```http
-GET /api/v1/community/posts/1
-```
-
-### 게시글 작성 (인증 필요)
-```http
-POST /api/v1/community/posts
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "백테스트 결과 공유",
-  "content": "오늘 백테스트를 해본 결과입니다..."
-}
-```
-
-### 댓글 작성 (인증 필요)
-```http
-POST /api/v1/community/posts/1/comments
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "content": "좋은 결과네요!"
-}
-```
-
-### 게시글 좋아요/취소 (인증 필요)
-```http
-POST /api/v1/community/posts/1/like
-Authorization: Bearer <token>
-```
-
-### 게시글 신고 (인증 필요)
-```http
-POST /api/v1/community/posts/1/report
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "report_type": "spam",
-  "reason": "스팸성 게시글입니다."
-}
-```
-
-### 공지사항 조회
-```http
-GET /api/v1/community/notices
-```
-
-## 기타 API
-
-### 최적화 API
-```http
-POST /api/v1/optimize/run
+POST /api/v1/backtest/run
 Content-Type: application/json
 
 {
   "ticker": "AAPL",
-  "start_date": "2023-01-01", 
+  "start_date": "2023-01-01",
   "end_date": "2023-12-31",
-  "strategy": "sma_crossover",
-  "parameter_ranges": {
-    "short_window": [5, 20],
-    "long_window": [25, 50]
-  },
-  "optimization_target": "sharpe_ratio",
-  "method": "grid"
+  "initial_cash": 10000,
+  "strategy": "buy_and_hold"
 }
 ```
 
-### 데이터 캐시 API
-```http
-POST /api/v1/yfinance/fetch-and-cache?ticker=AAPL&start=2023-01-01&end=2023-12-31&interval=1d
-```
+응답은 `BacktestResult` 모델(`backend/app/models/responses.py`)이며 총 수익률, 샤프 비율, 거래 통계 등 약 25개 필드를 포함합니다.
 
-### 뉴스 검색 API
-```http
-GET /api/v1/naver-news/search?query=애플&display=10
-```
+### 통합 백테스트 (`/backtest/execute`)
 
-참고: 날짜 범위 기반 엔드포인트(`/api/v1/naver-news/search-by-date`, `/api/v1/naver-news/ticker/{ticker}/date`)는 `display` 최소값이 10입니다. 일반 검색(`/search`, `/ticker/{ticker}`)은 1 이상 허용됩니다.
+요청 페이로드는 `UnifiedBacktestRequest`를 따르며 단일 종목 또는 다중 종목 포트폴리오를 전송할 수 있습니다. 응답은 포트폴리오의 경우 메트릭·차트·거래 내역을 포함하는 딕셔너리이고, 단일 종목일 경우 `BacktestResult`와 동일한 구조입니다. 프론트엔드는 이 응답을 `BacktestResults.tsx`에서 소비합니다.
 
-```http
-GET /api/v1/naver-news/ticker/AAPL/date?start_date=2023-01-01&end_date=2023-01-31&display=5
-```
+### 이벤트 API
 
-### 채팅 WebSocket
-```javascript
-const ws = new WebSocket(`ws://localhost:8001/api/v1/chat/ws/general?token=${token}`);
+- `/metrics`, `/notifications`, `/portfolio-analytics`, `/portfolio-alerts`는 메모리 내 이벤트 버퍼(`events/event_system.py`)에서 집계된 JSON을 그대로 반환합니다.
+- 응답 필드는 코드와 동일한 키(`total_backtests`, `alerts`, `popular_assets` 등)를 사용합니다. 필요한 필드는 Swagger 문서를 참고하세요.
 
-ws.onmessage = function(event) {
-  const message = JSON.parse(event.data);
-  console.log('받은 메시지:', message);
-};
+### 차트 데이터
 
-ws.send(JSON.stringify({
-  type: 'message',
-  content: '안녕하세요!'
-}));
-```
+`/backtest/chart-data`는 차트용 시계열과 거래 지표를 포함한 구조화된 데이터를 반환합니다. 모델은 `ChartDataResponse`를 참고합니다.
 
-### 헬스체크
-```http
-GET /health
-```
+## 전략 (`/strategies`)
 
-**응답:**
-```json
-{
-  "status": "healthy",
-  "timestamp": "2023-01-01T10:00:00Z"
-}
-```
+| 메서드 | 경로 | 설명 |
+| --- | --- | --- |
+| GET | `/strategies` | 사용 가능한 전략 목록 (`StrategyListResponse`) |
 
+응답은 전략 이름, 설명, 파라미터 메타데이터를 포함합니다. 프론트엔드 `constants/strategies.ts`와 동기화되어야 합니다.
 
-## 에러 처리 및 정책
+## 최적화 (`/optimize`)
 
-### 에러 응답 형식
-```json
-{
-  "detail": "사용자 친화적 에러 메시지",
-  "error_id": "uuid-for-debugging"
-}
-```
+| 메서드 | 경로 | 설명 |
+| --- | --- | --- |
+| POST | `/optimize/run` | 전략 파라미터 최적화 (`OptimizationResult` 반환) |
+| GET | `/optimize/targets` | 최적화 가능 지표 목록 |
 
-### 주요 HTTP 상태 코드
-- **200**: 성공
-- **400**: 잘못된 요청
-- **401**: 인증 필요
-- **403**: 권한 없음
-- **404**: 리소스 없음
-- **422**: 유효성 검사 실패
-- **429**: 요청 한도 초과
-- **500**: 서버 내부 오류
+`OptimizationRequest`는 ticker, 날짜 범위, 전략, `param_ranges`(예: `{ "short_window": [5, 20] }`), `method`(`grid` 또는 `sambo`) 등을 포함합니다. 응답에는 최적 파라미터와 해당 백테스트 결과가 포함됩니다.
 
-### 유효성 검사 오류 예시
-```json
-{
-  "detail": [
-    {
-      "loc": ["body", "start_date"],
-      "msg": "시작 날짜는 YYYY-MM-DD 형식이어야 합니다",
-      "type": "value_error"
-    }
-  ]
-}
-```
+## 데이터 캐시 (`/yfinance-cache`)
 
+| 메서드 | 경로 | 설명 |
+| --- | --- | --- |
+| POST | `/yfinance-cache/fetch-and-cache` | 지정 기간의 yfinance 데이터를 강제로 가져와 DB에 저장 |
 
-### 데이터 소스 정책
-- **DB 캐시 우선**: MySQL에 저장된 데이터 우선 사용
-- **외부 API 보강**: 누락된 데이터는 yfinance에서 조회 후 자동 저장
-- **에러 분류**: 404(데이터 없음), 422(검증 실패), 429(레이트 제한), 0(네트워크 오류)
+`start`, `end`(YYYY-MM-DD) 파라미터가 필요하며, 내부적으로 `data_fetcher.get_stock_data(..., use_cache=False)`를 호출합니다.
 
-### 현금 자산 처리
-- 심볼: `CASH` 또는 한글 `현금`
-- 특성: 0% 수익률, 무변동성
-- 주가/뉴스 조회 시 빈 배열 반환
+## 커뮤니티 (`/community`)
 
----
+| 메서드 | 경로 | 설명 |
+| --- | --- | --- |
+| GET | `/community/posts` | 게시글 목록 |
+| POST | `/community/posts` | 게시글 작성 (인증 필요) |
+| GET | `/community/posts/{post_id}` | 게시글 상세 + 댓글 |
+| POST | `/community/posts/{post_id}/comments` | 댓글 작성 (인증 필요) |
+| POST | `/community/posts/{post_id}/like` | 좋아요 토글 (인증 필요) |
+| POST | `/community/reports` | 신고 생성 (인증 필요) |
 
-## 도커 환경에서의 빌드/실행/테스트
+모든 쓰기 작업은 `Authorization` 헤더가 필요합니다. 응답은 SQLAlchemy `mappings()` 결과(dict)이며 Swagger 예제를 참고하세요.
 
-### 빌드 및 실행
-```bash
-# 전체 개발 환경 빌드 및 실행
-docker compose -f compose.yml -f compose/compose.dev.yml up --build
+## 채팅 (`/chat`)
 
-# 백엔드만 재시작
-docker compose -f compose.yml -f compose/compose.dev.yml restart backend
-```
+- `GET /chat/rooms`: 현재 활성 채팅방 목록
+- `WebSocket /chat/ws/{room}`: Redis pub/sub 기반 실시간 채팅. 연결 시 `Authorization` 헤더를 전달하면 사용자명으로 메시지가 브로드캐스트됩니다.
 
-### 테스트
-```bash
-# 백엔드 단위/통합 테스트 (컨테이너 내부)
-docker compose exec backend pytest -q
+## 뉴스 (`/naver-news`)
 
-# 커버리지 포함
-docker compose exec backend pytest --cov=app --cov-report=term-missing
-```
+네이버 뉴스 OpenAPI를 래핑한 엔드포인트가 다수 존재합니다. 주요 규칙은 다음과 같습니다.
 
----
+- 기본 검색: `/naver-news/search?query=삼성전자&display=20` (`display` 1-100)
+- 날짜 범위 검색: `/naver-news/search-by-date` (`display` 하한 10)
+- 응답은 필터링된 기사 배열과 메타 정보를 포함합니다.
+- NAVER API 키를 `.env`에 설정해야 정상 응답이 반환됩니다.
 
-## 문서 개선/기여
+## 에러 처리
 
-문서 개선, API 예시 추가, 신규 기능 반영은 PR 또는 이슈로 언제든 환영합니다.
+공통 에러 응답은 `ErrorResponse` 모델을 기준으로 하며, `error`, `message`, `detail`, `timestamp` 필드를 포함합니다. yfinance 오류는 `utils/user_messages.py`의 사용자 친화 메시지로 매핑됩니다.
+
+## 테스트 및 참고
+
+- 전체 엔드포인트 스펙은 `backend/app/api/v1/api.py`와 각 엔드포인트 모듈을 확인하세요.
+- 변경 시 Swagger 문서(`/api/v1/docs`)를 통해 실제 응답과 비교하고, 필요하면 Pydantic 모델을 먼저 업데이트하십시오.

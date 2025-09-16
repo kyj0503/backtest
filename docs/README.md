@@ -11,7 +11,7 @@
 - **[OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md)**: 배포, 운영, 환경 변수, 인프라
 - **[DATABASE_SCHEMA.md](DATABASE_SCHEMA.md)**: DB 테이블/ERD/스키마
 - **[THEME_SYSTEM.md](THEME_SYSTEM.md)**: 프론트 테마 시스템 구조
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: 자주 발생하는 문제/해결법
+- **[jenkins_troubleshooting.md](jenkins_troubleshooting.md)**: Jenkins 관련 운영 이슈 사례
 - **[CONTRIBUTING.md](CONTRIBUTING.md)**: 기여 방법, 커밋 규칙, PR 가이드
 
 ## 문서 활용법
@@ -20,7 +20,7 @@
 - **개발 환경/구조/규칙**: `DEVELOPMENT_GUIDE.md`
 - **아키텍처/계층/데이터 흐름**: `ARCHITECTURE_GUIDE.md`
 - **API 연동/테스트/운영/배포**: 각 주제별 md 참고
-- **문제 해결**: `TROUBLESHOOTING.md` 및 각 가이드 내 트러블슈팅 섹션
+- **문제 해결**: `jenkins_troubleshooting.md` 및 각 가이드 내 트러블슈팅 섹션
 
 ## 문서 유지보수
 

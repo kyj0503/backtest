@@ -33,18 +33,25 @@ git commit -m "feat: 기능 설명
 ### API 개발 가이드
 
 #### 네이버 뉴스 API 사용 시 주의사항
-- `display` 매개변수는 반드시 10 이상으로 설정해야 정상 작동
-- 10 미만으로 설정할 경우 빈 결과 또는 오류 발생 가능
+- 기본 검색 엔드포인트는 `display` 범위 1-100을 지원합니다.
+- 날짜 범위 검색 엔드포인트(`/naver-news/search-by-date` 등)는 `display` 하한이 10이며 기본값 50입니다.
+- 응답 구조는 `backend/app/api/v1/endpoints/naver_news.py`의 Pydantic 모델을 따릅니다.
 
-#### 백엔드 API 응답 형식
-모든 API는 다음 형식을 따라야 합니다:
+#### 인증 API 응답 형식
+`/api/v1/auth/login` 및 `/api/v1/auth/register`는 다음과 같은 JSON 응답을 반환합니다.
+
 ```json
 {
-  "status": "success" | "error",
-  "message": "사용자 친화적 메시지",
-  "data": { /* 실제 데이터 */ }
+  "token": "<세션 토큰>",
+  "user_id": 1,
+  "username": "testuser",
+  "email": "test@example.com",
+  "investment_type": "balanced",
+  "is_admin": false
 }
 ```
+
+응답은 `AuthResponse` 모델(`backend/app/api/v1/endpoints/auth.py`)을 기준으로 유지되며, 추가 필드를 도입할 때는 해당 모델과 DB 스키마를 함께 업데이트해야 합니다.
 
 
 ### 포트폴리오 비중(%) 직접 입력 UX
@@ -70,17 +77,16 @@ git commit -m "feat: 기능 설명
 - 수동 테스트: 브라우저에서 사용자 시나리오 검증
 
 ### 코드 정리
-로컬 개발 시 불필요한 캐시 파일 정리:
+모든 빌드와 실행은 도커 환경에서 수행합니다. 로컬 환경에서 의존성을 설치한 경우 아래 명령으로 정리할 수 있습니다.
 ```bash
-# npm 캐시 정리
+# npm 캐시/설치본 정리 (필요한 경우에만)
 rm -rf frontend/node_modules frontend/.npm frontend/package-lock.json
 
 # Python 캐시 정리  
 find backend -name "__pycache__" -type d -exec rm -rf {} +
 find backend -name "*.pyc" -delete
 
-# 기타 캐시 파일
-rm -rf .pytest_cache .coverage
+# 테스트 산출물 정리
+rm -rf .pytest_cache .coverage backend/htmlcov
 ```
-
-모든 빌드와 실행은 도커 환경에서 수행하므로 로컬 의존성은 제거해도 됩니다.
+정리 후에는 `docker compose` 기반 빌드로 필요한 의존성을 다시 설치하세요.
