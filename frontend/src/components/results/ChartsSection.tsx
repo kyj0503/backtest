@@ -20,7 +20,7 @@ import {
 import ChartLoading from '../common/ChartLoading';
 import { useStockData } from '../../hooks/useStockData';
 import EnhancedChartsSection from './EnhancedChartsSection';
-import { ChartData, PortfolioData, EquityPoint } from '../../types/backtest-results';
+import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint } from '../../types/backtest-results';
 import { FormLegend } from '../common';
 import { Loader2 } from 'lucide-react';
 
@@ -91,15 +91,48 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     [],
   );
 
-  const equityChartData = useMemo<EquityPoint[]>(() => {
+  const portfolioEquityData = useMemo<EquityPoint[]>(() => {
     if (!portfolioData) return [];
     return Object.entries(portfolioData.equity_curve).map(([date, value]) => ({
       date,
       value,
-      return_pct: portfolioData.daily_returns[date] ?? 0,
+      return_pct: Number(portfolioData.daily_returns[date] ?? 0),
       drawdown_pct: 0,
     }));
   }, [portfolioData]);
+
+  const singleEquityData = useMemo<EquityPoint[]>(() => {
+    if (!chartData?.equity_data) return [];
+    return chartData.equity_data.map(point => ({
+      date: point.date,
+      value: point.value,
+      return_pct: Number(point.return_pct ?? (point as Record<string, unknown>).return ?? 0),
+      drawdown_pct: Number(point.drawdown_pct ?? (point as Record<string, unknown>).drawdown ?? 0),
+    }));
+  }, [chartData?.equity_data]);
+
+  const singleTrades = useMemo<TradeMarker[]>(() => {
+    if (!chartData?.trade_markers) return [];
+    return chartData.trade_markers.map(marker => ({
+      ...marker,
+      type: marker.type === 'entry' ? 'entry' : 'exit',
+    }));
+  }, [chartData?.trade_markers]);
+
+  const singleOhlcData = useMemo<OhlcPoint[]>(() => {
+    if (!chartData?.ohlc_data) return [];
+    return chartData.ohlc_data.map(point => ({
+      ...point,
+      volume: Number(point.volume ?? 0),
+    }));
+  }, [chartData?.ohlc_data]);
+
+  const statsPayload = useMemo<Record<string, unknown>>(() => {
+    if (portfolioData) {
+      return { ...portfolioData.portfolio_statistics } as Record<string, unknown>;
+    }
+    return chartData?.summary_stats ?? {};
+  }, [portfolioData, chartData?.summary_stats]);
 
   const renderPortfolioCharts = (): React.ReactNode[] | null => {
     if (!portfolioData) return null;
@@ -114,7 +147,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           key="portfolio-equity"
         >
           <ResponsiveContainer width="100%" height={360}>
-            <AreaChart data={equityChartData}>
+            <AreaChart data={portfolioEquityData}>
               <defs>
                 <linearGradient id="portfolioValue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -146,7 +179,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           key="portfolio-daily"
         >
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={equityChartData}>
+            <LineChart data={portfolioEquityData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
@@ -205,9 +238,9 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         <ResultBlock title="OHLC 차트" description="가격 변동과 거래 시그널을 확인하세요" key="single-ohlc">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyOHLCChart
-              data={chartData.ohlc_data ?? []}
-              indicators={chartData.indicators ?? []}
-              trades={chartData.trade_markers ?? []}
+              data={singleOhlcData as any}
+              indicators={(chartData.indicators ?? []) as any}
+              trades={singleTrades as any}
             />
           </Suspense>
         </ResultBlock>
@@ -215,7 +248,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       (
         <ResultBlock title="누적 수익률" description="전략의 누적 수익률을 확인하세요" key="single-equity">
           <Suspense fallback={<ChartLoading height={360} />}>
-            <LazyEquityChart data={chartData.equity_data ?? []} />
+            <LazyEquityChart data={singleEquityData as any} />
           </Suspense>
         </ResultBlock>
       ),
@@ -241,11 +274,11 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       ),
     ];
 
-    if (chartData.trade_markers && chartData.trade_markers.length > 0 && chartData.strategy !== 'buy_and_hold') {
+    if (singleTrades.length > 0 && chartData.strategy !== 'buy_and_hold') {
       cards.push(
         <ResultBlock title="거래 내역" description="전략이 실행한 체결 신호" key="single-trades">
           <Suspense fallback={<ChartLoading height={360} />}>
-            <LazyTradesChart trades={chartData.trade_markers} />
+            <LazyTradesChart trades={singleTrades as any} />
           </Suspense>
         </ResultBlock>,
       );
@@ -259,13 +292,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
   return (
     <div className="space-y-6">
       <Suspense fallback={<ChartLoading height={260} />}>
-        <LazyStatsSummary
-          stats={
-            portfolioData
-              ? portfolioData.portfolio_statistics
-              : chartData?.summary_stats ?? {}
-          }
-        />
+        <LazyStatsSummary stats={statsPayload} />
       </Suspense>
 
       <div className="grid gap-6 xl:grid-cols-2">

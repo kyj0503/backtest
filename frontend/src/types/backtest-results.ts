@@ -18,27 +18,26 @@ export interface OhlcPoint {
   high: number;
   low: number;
   close: number;
-  volume?: number;
+  volume: number;
+  [key: string]: unknown;
 }
 
 export interface EquityPoint {
   date: string;
-  value: number;
-  return_pct?: number;
-  drawdown_pct?: number;
+  value?: number;
+  return_pct: number;
+  drawdown_pct: number;
+  [key: string]: unknown;
 }
 
 export interface TradeMarker {
   date: string;
-  type: string;
-  price: number;
+  type: 'entry' | 'exit';
+  price?: number;
   quantity?: number;
 }
 
-export interface IndicatorPoint {
-  date: string;
-  [series: string]: number | string;
-}
+export type IndicatorPoint = Record<string, unknown>;
 
 export interface ExchangeRatePoint {
   date: string;

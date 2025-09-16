@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { ChartData, PortfolioData } from '../../types/backtest-results';
 import { FormLegend } from '../common';
 import { cn } from '../../lib/utils';
@@ -15,7 +15,7 @@ interface AdditionalFeaturesProps {
   className?: string;
 }
 
-const FeatureBlock: React.FC<{ title: string; description?: string; actions?: React.ReactNode; children: React.ReactNode }> = ({
+const FeatureBlock: React.FC<{ title: string; description?: string; actions?: ReactNode; children: ReactNode }> = ({
   title,
   description,
   actions,
@@ -39,35 +39,39 @@ const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
   className = '',
 }) => {
   // 포트폴리오 결과인 경우
-  const sections = [];
+  const sections: Array<{ key: string; node: ReactNode }> = [];
 
   const addExchangeRateCard = (start: string, end: string) => {
-    sections.push(
-      <FeatureBlock
-        key="exchange"
-        title="환율 추이"
-        description="동일 기간의 원/달러 환율 변동"
-      >
-        <Suspense fallback={<ChartLoading height={260} />}>
-          <LazyExchangeRateChart startDate={start} endDate={end} />
-        </Suspense>
-      </FeatureBlock>,
-    );
+    sections.push({
+      key: 'exchange',
+      node: (
+        <FeatureBlock
+          title="환율 추이"
+          description="동일 기간의 원/달러 환율 변동"
+        >
+          <Suspense fallback={<ChartLoading height={260} />}>
+            <LazyExchangeRateChart startDate={start} endDate={end} />
+          </Suspense>
+        </FeatureBlock>
+      ),
+    });
   };
 
   const addNewsCard = (symbols: string[], start: string, end: string) => {
-    sections.push(
-      <FeatureBlock
-        key="news"
-        title="주가 급등락 뉴스"
-        description="백테스트 기간 중 주요 뉴스 흐름"
-        actions={<FormLegend items={[{ label: symbols.join(' · '), tone: 'muted' }]} />}
-      >
-        <Suspense fallback={<ChartLoading height={260} />}>
-          <LazyStockVolatilityNews symbols={symbols} startDate={start} endDate={end} />
-        </Suspense>
-      </FeatureBlock>,
-    );
+    sections.push({
+      key: 'news',
+      node: (
+        <FeatureBlock
+          title="주가 급등락 뉴스"
+          description="백테스트 기간 중 주요 뉴스 흐름"
+          actions={<FormLegend items={[{ label: symbols.join(' · '), tone: 'muted' }]} />}
+        >
+          <Suspense fallback={<ChartLoading height={260} />}>
+            <LazyStockVolatilityNews symbols={symbols} startDate={start} endDate={end} />
+          </Suspense>
+        </FeatureBlock>
+      ),
+    });
   };
 
   if (isPortfolio && 'portfolio_composition' in data) {
@@ -87,7 +91,13 @@ const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
     addNewsCard([chartData.ticker], chartData.start_date, chartData.end_date);
   }
 
-  return <div className={cn('grid gap-6 xl:grid-cols-2', className)}>{sections}</div>;
+  return (
+    <div className={cn('grid gap-6 xl:grid-cols-2', className)}>
+      {sections.map(({ key, node }) => (
+        <div key={key}>{node}</div>
+      ))}
+    </div>
+  );
 };
 
 export default AdditionalFeatures;
