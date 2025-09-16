@@ -12,6 +12,45 @@ export interface IndividualReturn {
   end_price: number;
 }
 
+export interface OhlcPoint {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+}
+
+export interface EquityPoint {
+  date: string;
+  value: number;
+  return_pct?: number;
+  drawdown_pct?: number;
+}
+
+export interface TradeMarker {
+  date: string;
+  type: string;
+  price: number;
+  quantity?: number;
+}
+
+export interface IndicatorPoint {
+  date: string;
+  [series: string]: number | string;
+}
+
+export interface ExchangeRatePoint {
+  date: string;
+  rate: number;
+}
+
+export interface BenchmarkPoint {
+  date: string;
+  close: number;
+  volume?: number;
+}
+
 export interface PortfolioStatistics {
   Start: string;
   End: string;
@@ -39,11 +78,14 @@ export interface ChartData {
   strategy?: string;
   start_date?: string;
   end_date?: string;
-  ohlc_data?: any[];
-  equity_data?: any[];
-  trade_markers?: any[];
-  indicators?: any[];
-  summary_stats?: any;
+  ohlc_data?: OhlcPoint[];
+  equity_data?: EquityPoint[];
+  trade_markers?: TradeMarker[];
+  indicators?: IndicatorPoint[];
+  summary_stats?: Record<string, unknown>;
+  exchange_rates?: ExchangeRatePoint[];
+  sp500_benchmark?: BenchmarkPoint[];
+  nasdaq_benchmark?: BenchmarkPoint[];
 }
 
 export interface PortfolioData {
@@ -52,6 +94,9 @@ export interface PortfolioData {
   portfolio_composition: Stock[];
   equity_curve: Record<string, number>;
   daily_returns: Record<string, number>;
+  exchange_rates?: ExchangeRatePoint[];
+  sp500_benchmark?: BenchmarkPoint[];
+  nasdaq_benchmark?: BenchmarkPoint[];
 }
 
 export interface BacktestResultsProps {

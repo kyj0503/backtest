@@ -1,10 +1,24 @@
-import React, { memo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, ComposedChart } from 'recharts';
-import { 
-  ChartData, 
-  PortfolioData
+import React, { memo, useMemo } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Area,
+  ComposedChart,
+} from 'recharts';
+import {
+  BenchmarkPoint,
+  ChartData,
+  ExchangeRatePoint,
+  PortfolioData,
+  TradeMarker,
+  OhlcPoint,
 } from '../../types/backtest-results';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { SectionCard, FormLegend } from '../common';
 
 interface EnhancedChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -12,292 +26,179 @@ interface EnhancedChartsSectionProps {
 }
 
 const EnhancedChartsSection: React.FC<EnhancedChartsSectionProps> = memo(({ data, isPortfolio }) => {
+  const exchangeRates = useMemo<ExchangeRatePoint[] | undefined>(
+    () => (data as ChartData).exchange_rates ?? (data as PortfolioData).exchange_rates,
+    [data],
+  );
 
+  const sp500Benchmark = useMemo<BenchmarkPoint[] | undefined>(
+    () => (data as ChartData).sp500_benchmark ?? (data as PortfolioData).sp500_benchmark,
+    [data],
+  );
 
-  // 환율 데이터 차트
-  const renderExchangeRateChart = () => {
-    const exchangeRates = (data as any).exchange_rates;
-    if (!exchangeRates || exchangeRates.length === 0) {
-      return null;
-    }
+  const nasdaqBenchmark = useMemo<BenchmarkPoint[] | undefined>(
+    () => (data as ChartData).nasdaq_benchmark ?? (data as PortfolioData).nasdaq_benchmark,
+    [data],
+  );
 
-    return (
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle>원/달러 환율</CardTitle>
-          <p className="text-sm text-gray-600">백테스트 기간 동안의 원달러 환율 변화</p>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={exchangeRates}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value: any) => {
-                  const date = new Date(value);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                }}
-              />
-              <YAxis 
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value: number) => `₩${value.toFixed(0)}`}
-              />
-              <Tooltip 
-                formatter={(value: number) => [`₩${value.toFixed(2)}`, '환율']}
-                labelFormatter={(label: any) => `날짜: ${label}`}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="rate" 
-                stroke="#fd7e14" 
-                strokeWidth={3}
-                dot={false}
-                activeDot={{ 
-                  r: 5, 
-                  stroke: '#fd7e14', 
-                  strokeWidth: 2, 
-                  fill: '#fff' 
-                }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-    );
+  const tradeMarkers = useMemo<TradeMarker[] | undefined>(
+    () => (!isPortfolio ? (data as ChartData).trade_markers : undefined),
+    [data, isPortfolio],
+  );
+
+  const ohlcData = useMemo<OhlcPoint[] | undefined>(
+    () => (!isPortfolio ? (data as ChartData).ohlc_data : undefined),
+    [data, isPortfolio],
+  );
+
+  const formatDateTick = (value: string) => {
+    const date = new Date(value);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  // S&P 500 벤치마크 차트
-  const renderSP500BenchmarkChart = () => {
-    const sp500Data = (data as any).sp500_benchmark;
-    if (!sp500Data || sp500Data.length === 0) {
-      return null;
-    }
-
-    // 수익률 계산
-    const benchmarkWithReturns = sp500Data.map((item: any, index: number) => {
+  const withBenchmarkReturn = (points?: BenchmarkPoint[]) =>
+    points?.map((point, index) => {
       if (index === 0) {
-        return { ...item, return_pct: 0 };
+        return { ...point, return_pct: 0 };
       }
-      const prevClose = sp500Data[index - 1].close;
-      const returnPct = ((item.close - prevClose) / prevClose) * 100;
-      return { ...item, return_pct: returnPct };
-    });
+      const prev = points[index - 1];
+      const returnPct = ((point.close - prev.close) / prev.close) * 100;
+      return { ...point, return_pct: returnPct };
+    }) ?? [];
 
-    return (
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle>S&P 500 지수</CardTitle>
-          <p className="text-sm text-gray-600">동기간 S&P 500 지수 변화 (벤치마크)</p>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <ResponsiveContainer width="100%" height={350}>
-            <ComposedChart data={benchmarkWithReturns}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value: any) => {
-                  const date = new Date(value);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                }}
-              />
-              <YAxis yAxisId="left" orientation="left" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-              <Tooltip 
-                formatter={(value: number, name: string) => {
-                  if (name === 'close') return [value.toFixed(2), 'S&P 500'];
-                  if (name === 'return_pct') return [`${value.toFixed(2)}%`, '일일 수익률'];
-                  return [value, name];
-                }}
-                labelFormatter={(label: any) => `날짜: ${label}`}
-              />
-              <Area 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="close" 
-                stroke="#3b82f6" 
-                fill="#3b82f6"
-                fillOpacity={0.1}
-              />
-              <Line 
-                yAxisId="right"
-                type="monotone" 
-                dataKey="return_pct" 
-                stroke="#ef4444" 
-                strokeWidth={1}
-                dot={false}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-    );
-  };
+  const renderTradeSignals = () => {
+    if (isPortfolio || !tradeMarkers?.length || !ohlcData?.length) return null;
 
-  // 나스닥 벤치마크 차트
-  const renderNasdaqBenchmarkChart = () => {
-    const nasdaqData = (data as any).nasdaq_benchmark;
-    if (!nasdaqData || nasdaqData.length === 0) {
-      return null;
-    }
-
-    // 수익률 계산
-    const benchmarkWithReturns = nasdaqData.map((item: any, index: number) => {
-      if (index === 0) {
-        return { ...item, return_pct: 0 };
-      }
-      const prevClose = nasdaqData[index - 1].close;
-      const returnPct = ((item.close - prevClose) / prevClose) * 100;
-      return { ...item, return_pct: returnPct };
-    });
-
-    return (
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle>나스닥 지수</CardTitle>
-          <p className="text-sm text-gray-600">동기간 나스닥 지수 변화 (벤치마크)</p>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <ResponsiveContainer width="100%" height={350}>
-            <ComposedChart data={benchmarkWithReturns}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value: any) => {
-                  const date = new Date(value);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                }}
-              />
-              <YAxis yAxisId="left" orientation="left" tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
-              <Tooltip 
-                formatter={(value: number, name: string) => {
-                  if (name === 'close') return [value.toFixed(2), '나스닥'];
-                  if (name === 'return_pct') return [`${value.toFixed(2)}%`, '일일 수익률'];
-                  return [value, name];
-                }}
-                labelFormatter={(label: any) => `날짜: ${label}`}
-              />
-              <Area 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="close" 
-                stroke="#8b5cf6" 
-                fill="#8b5cf6"
-                fillOpacity={0.1}
-              />
-              <Line 
-                yAxisId="right"
-                type="monotone" 
-                dataKey="return_pct" 
-                stroke="#f59e0b" 
-                strokeWidth={1}
-                dot={false}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // 거래 신호 차트 (단일 종목용)
-  const renderTradeSignalsChart = () => {
-    if (isPortfolio) return null;
-    
-    const chartData = data as ChartData;
-    const tradeMarkers = chartData.trade_markers || [];
-    const ohlcData = chartData.ohlc_data || [];
-
-    if (tradeMarkers.length === 0 || ohlcData.length === 0) {
-      return null;
-    }
-
-    // OHLC 데이터에 거래 신호 추가
     const dataWithSignals = ohlcData.map(item => {
-      const buySignal = tradeMarkers.find(trade => 
-        trade.date === item.date && trade.type === 'entry'
-      );
-      const sellSignal = tradeMarkers.find(trade => 
-        trade.date === item.date && trade.type === 'exit'
-      );
+      const buySignal = tradeMarkers.find(trade => trade.date === item.date && trade.type === 'entry');
+      const sellSignal = tradeMarkers.find(trade => trade.date === item.date && trade.type === 'exit');
 
       return {
         ...item,
-        buySignal: buySignal ? buySignal.price : null,
-        sellSignal: sellSignal ? sellSignal.price : null
+        buySignal: buySignal ? buySignal.price : undefined,
+        sellSignal: sellSignal ? sellSignal.price : undefined,
       };
     });
 
     return (
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle>매매 신호</CardTitle>
-          <p className="text-sm text-gray-600">백테스트 전략의 매수/매도 신호 ({tradeMarkers.length}개 거래)</p>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <ResponsiveContainer width="100%" height={400}>
-            <ComposedChart data={dataWithSignals}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value: any) => {
-                  const date = new Date(value);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
-                }}
-              />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip 
-                formatter={(value: number, name: string) => {
-                  if (name === 'close') return [`$${value.toFixed(2)}`, '종가'];
-                  if (name === 'buySignal') return [`$${value.toFixed(2)}`, '매수 신호'];
-                  if (name === 'sellSignal') return [`$${value.toFixed(2)}`, '매도 신호'];
-                  return [value, name];
-                }}
-                labelFormatter={(label: any) => `날짜: ${label}`}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="close" 
-                stroke="#6b7280" 
-                strokeWidth={1}
-                dot={false}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="buySignal" 
-                stroke="#10b981" 
-                strokeWidth={0}
-                dot={{ r: 6, fill: '#10b981' }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="sellSignal" 
-                stroke="#ef4444" 
-                strokeWidth={0}
-                dot={{ r: 6, fill: '#ef4444' }}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
+      <SectionCard
+        title="매매 신호"
+        description="전략이 실행한 매수/매도 시점을 확인하세요"
+        actions={<FormLegend items={[{ label: `${tradeMarkers.length}개 거래`, tone: 'accent' }]} />}
+      >
+        <ResponsiveContainer width="100%" height={360}>
+          <ComposedChart data={dataWithSignals}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" tickFormatter={formatDateTick} />
+            <YAxis />
+            <Tooltip
+              formatter={(value: number, name: string) => {
+                if (name === 'close') return [`$${value.toFixed(2)}`, '종가'];
+                if (name === 'buySignal') return [`$${value?.toFixed(2)}`, '매수 신호'];
+                if (name === 'sellSignal') return [`$${value?.toFixed(2)}`, '매도 신호'];
+                return [value, name];
+              }}
+              labelFormatter={(label: string) => `날짜: ${label}`}
+            />
+            <Line type="monotone" dataKey="close" stroke="#6b7280" strokeWidth={1.5} dot={false} />
+            <Line
+              type="monotone"
+              dataKey="buySignal"
+              stroke="#10b981"
+              strokeWidth={0}
+              dot={{ r: 5, fill: '#10b981' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="sellSignal"
+              stroke="#ef4444"
+              strokeWidth={0}
+              dot={{ r: 5, fill: '#ef4444' }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </SectionCard>
     );
   };
 
   return (
-    <div className="space-y-8">
-      {/* 환율 데이터 */}
-      {renderExchangeRateChart()}
+    <div className="space-y-6">
+      {exchangeRates && exchangeRates.length > 0 && (
+        <SectionCard
+          title="환율 추이"
+          description="백테스트 기간 동안의 원/달러 변동"
+          actions={<FormLegend items={[{ label: `${exchangeRates.length}포인트`, tone: 'muted' }]} />}
+        >
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={exchangeRates}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tickFormatter={formatDateTick} />
+              <YAxis tickFormatter={(value: number) => `₩${value.toFixed(0)}`} />
+              <Tooltip
+                formatter={(value: number) => [`₩${value.toFixed(2)}`, '환율']}
+                labelFormatter={(label: string) => `날짜: ${label}`}
+              />
+              <Line type="monotone" dataKey="rate" stroke="#f97316" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </SectionCard>
+      )}
 
-      {/* 벤치마크 데이터 */}
-      {renderSP500BenchmarkChart()}
-      {renderNasdaqBenchmarkChart()}
+      {sp500Benchmark && sp500Benchmark.length > 0 && (
+        <SectionCard
+          title="S&P 500 벤치마크"
+          description="동일 기간 S&P 500 지수 흐름"
+          actions={<FormLegend items={[{ label: '좌측: 지수 · 우측: 일일 수익률', tone: 'muted' }]} />}
+        >
+          <ResponsiveContainer width="100%" height={320}>
+            <ComposedChart data={withBenchmarkReturn(sp500Benchmark)}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tickFormatter={formatDateTick} />
+              <YAxis yAxisId="left" orientation="left" />
+              <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip
+                formatter={(value: number, name: string) => {
+                  if (name === 'close') return [value.toFixed(2), '지수'];
+                  if (name === 'return_pct') return [`${value.toFixed(2)}%`, '일일 수익률'];
+                  return [value, name];
+                }}
+                labelFormatter={(label: string) => `날짜: ${label}`}
+              />
+              <Area yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.15} />
+              <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </SectionCard>
+      )}
 
-      {/* 매매 신호 차트 (단일 종목만) */}
-      {renderTradeSignalsChart()}
+      {nasdaqBenchmark && nasdaqBenchmark.length > 0 && (
+        <SectionCard
+          title="NASDAQ 벤치마크"
+          description="동일 기간 나스닥 지수 흐름"
+          actions={<FormLegend items={[{ label: '좌측: 지수 · 우측: 일일 수익률', tone: 'muted' }]} />}
+        >
+          <ResponsiveContainer width="100%" height={320}>
+            <ComposedChart data={withBenchmarkReturn(nasdaqBenchmark)}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tickFormatter={formatDateTick} />
+              <YAxis yAxisId="left" orientation="left" />
+              <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip
+                formatter={(value: number, name: string) => {
+                  if (name === 'close') return [value.toFixed(2), '지수'];
+                  if (name === 'return_pct') return [`${value.toFixed(2)}%`, '일일 수익률'];
+                  return [value, name];
+                }}
+                labelFormatter={(label: string) => `날짜: ${label}`}
+              />
+              <Area yAxisId="left" type="monotone" dataKey="close" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.15} />
+              <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#f59e0b" strokeWidth={1.5} dot={false} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </SectionCard>
+      )}
+
+      {renderTradeSignals()}
     </div>
   );
 });
