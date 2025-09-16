@@ -18,7 +18,6 @@ import {
   LazyStockPriceChart,
 } from '../lazy/LazyChartComponents';
 import ChartLoading from '../common/ChartLoading';
-import { formatPercent } from '../../utils/formatters';
 import { useStockData } from '../../hooks/useStockData';
 import EnhancedChartsSection from './EnhancedChartsSection';
 import { ChartData, PortfolioData, EquityPoint } from '../../types/backtest-results';
@@ -85,20 +84,17 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     }));
   }, [portfolioData]);
 
-  const renderPortfolioCharts = () => {
+  const renderPortfolioCharts = (): React.ReactNode[] | null => {
     if (!portfolioData) return null;
-    const { portfolio_statistics, portfolio_composition } = portfolioData;
+    const { portfolio_composition } = portfolioData;
     const isMultipleStocks = portfolio_composition.length > 1;
 
-    return (
-      <>
-        <Suspense fallback={<ChartLoading height={260} />}>
-          <LazyStatsSummary stats={portfolio_statistics} />
-        </Suspense>
-
+    const cards: React.ReactNode[] = [
+      (
         <SectionCard
           title="누적 자산 가치"
-          description="기간 동안의 누적 자산曲선을 확인하세요"
+          description="기간 동안 누적 자산 가치 변화를 확인하세요"
+          key="portfolio-equity"
         >
           <ResponsiveContainer width="100%" height={360}>
             <AreaChart data={equityChartData}>
@@ -125,10 +121,12 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             </AreaChart>
           </ResponsiveContainer>
         </SectionCard>
-
+      ),
+      (
         <SectionCard
           title="일일 수익률"
           description="일별 수익률 변동을 살펴보며 변동성을 파악하세요"
+          key="portfolio-daily"
         >
           <ResponsiveContainer width="100%" height={280}>
             <LineChart data={equityChartData}>
@@ -149,7 +147,8 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             </LineChart>
           </ResponsiveContainer>
         </SectionCard>
-
+      ),
+      (
         <SectionCard
           title="개별 자산 주가"
           description="포트폴리오 구성 자산들의 가격 흐름"
@@ -159,8 +158,10 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
                 { label: `${portfolio_composition.length}개 구성 자산`, tone: 'accent' },
                 { label: '동일 축으로 비교', tone: 'muted' },
               ]}
+
             />
           }
+          key="portfolio-prices"
         >
           {loadingStockData ? (
             <div className="flex flex-col items-center gap-3 py-12">
@@ -175,19 +176,17 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <p className="text-sm text-muted-foreground">표시할 자산 데이터가 없습니다.</p>
           )}
         </SectionCard>
-      </>
-    );
+      ),
+    ];
+
+    return cards;
   };
 
-  const renderSingleStockCharts = () => {
+  const renderSingleStockCharts = (): React.ReactNode[] | null => {
     if (!chartData) return null;
-    return (
-      <>
-        <Suspense fallback={<ChartLoading height={260} />}>
-          <LazyStatsSummary stats={chartData.summary_stats || {}} />
-        </Suspense>
-
-        <SectionCard title="OHLC 차트" description="가격 변동과 거래 시그널을 확인하세요">
+    const cards: React.ReactNode[] = [
+      (
+        <SectionCard title="OHLC 차트" description="가격 변동과 거래 시그널을 확인하세요" key="single-ohlc">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyOHLCChart
               data={chartData.ohlc_data ?? []}
@@ -196,16 +195,19 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             />
           </Suspense>
         </SectionCard>
-
-        <SectionCard title="수익률 곡선" description="전략의 누적 수익률을 확인하세요">
+      ),
+      (
+        <SectionCard title="누적 수익률" description="전략의 누적 수익률을 확인하세요" key="single-equity">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyEquityChart data={chartData.equity_data ?? []} />
           </Suspense>
         </SectionCard>
-
+      ),
+      (
         <SectionCard
           title="개별 주가"
           description="백테스트 기간 동안의 주가 흐름"
+          key="single-prices"
         >
           {loadingStockData ? (
             <div className="flex flex-col items-center gap-3 py-12">
@@ -220,21 +222,43 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <p className="text-sm text-muted-foreground">표시할 주가 데이터가 없습니다.</p>
           )}
         </SectionCard>
+      ),
+    ];
 
-        {chartData.trade_markers && chartData.trade_markers.length > 0 && chartData.strategy !== 'buy_and_hold' && (
-          <SectionCard title="거래 내역" description="전략이 실행한 체결 신호">
-            <Suspense fallback={<ChartLoading height={360} />}>
-              <LazyTradesChart trades={chartData.trade_markers} />
-            </Suspense>
-          </SectionCard>
-        )}
-      </>
-    );
+    if (chartData.trade_markers && chartData.trade_markers.length > 0 && chartData.strategy !== 'buy_and_hold') {
+      cards.push(
+        <SectionCard title="거래 내역" description="전략이 실행한 체결 신호" key="single-trades">
+          <Suspense fallback={<ChartLoading height={360} />}>
+            <LazyTradesChart trades={chartData.trade_markers} />
+          </Suspense>
+        </SectionCard>,
+      );
+    }
+
+    return cards;
   };
+
+  const chartCards = portfolioData ? renderPortfolioCharts() : renderSingleStockCharts();
 
   return (
     <div className="space-y-6">
-      {portfolioData ? renderPortfolioCharts() : renderSingleStockCharts()}
+      <Suspense fallback={<ChartLoading height={260} />}>
+        <LazyStatsSummary
+          stats={
+            portfolioData
+              ? portfolioData.portfolio_statistics
+              : chartData?.summary_stats ?? {}
+          }
+        />
+      </Suspense>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        {chartCards?.map((card, index) => (
+          <div key={index} className="flex flex-col">
+            {card}
+          </div>
+        ))}
+      </div>
 
       <EnhancedChartsSection data={data} isPortfolio={isPortfolio} />
     </div>

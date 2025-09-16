@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChartData, PortfolioData } from '../../types/backtest-results';
 import { SectionCard, FormLegend } from '../common';
+import { cn } from '../../lib/utils';
 import {
   LazyExchangeRateChart,
   LazyStockVolatilityNews,
@@ -68,7 +69,7 @@ const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
     addNewsCard([chartData.ticker], chartData.start_date, chartData.end_date);
   }
 
-  return <div className={`space-y-6 ${className}`.trim()}>{sections}</div>;
+  return <div className={cn('grid gap-6 xl:grid-cols-2', className)}>{sections}</div>;
 };
 
 export default AdditionalFeatures;
