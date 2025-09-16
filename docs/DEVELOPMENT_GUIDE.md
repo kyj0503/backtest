@@ -14,7 +14,7 @@
 ### 필수 요구사항
 - Docker Desktop
 - Git
-- 선택사항: Node.js 18+, Python 3.11+ (로컬 개발용)
+- 선택사항: Node.js 20+, Python 3.11+ (로컬 개발용)
 
 ### 개발 환경 실행
 ```bash

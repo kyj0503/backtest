@@ -334,7 +334,7 @@ const MemoizedChart = memo(Chart);
 #### Docker 최적화
 ```dockerfile
 # 멀티스테이지 빌드
-FROM node:18-alpine as builder
+FROM node:20-alpine as builder
 # ... 빌드 단계
 
 FROM nginx:alpine as production
