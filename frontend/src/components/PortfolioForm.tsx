@@ -107,7 +107,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
       <ScrollArea className="w-full">
         <div className="min-w-[820px]">
           <Table className="text-sm">
-          <TableHeader>
+            <TableHeader>
             <TableRow>
               <TableHead className="w-64">종목/자산</TableHead>
               <TableHead className="w-32">투자 금액 ($)</TableHead>
@@ -259,16 +259,16 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               </TableRow>
             ))}
           </TableBody>
-          <TableFooter>
-            <TableRow>
-              <TableHead className="text-left font-medium">합계</TableHead>
-              <TableHead className="text-left font-medium">${getTotalAmount().toLocaleString()}</TableHead>
-              <TableHead className="text-left font-medium">-</TableHead>
-              <TableHead className="text-left font-medium">-</TableHead>
-              <TableHead className="text-left font-medium">100.0%</TableHead>
-              <TableHead className="text-left font-medium"></TableHead>
-            </TableRow>
-          </TableFooter>
+            <TableFooter>
+              <TableRow>
+                <TableHead className="text-left font-medium">합계</TableHead>
+                <TableHead className="text-left font-medium">${getTotalAmount().toLocaleString()}</TableHead>
+                <TableHead className="text-left font-medium">-</TableHead>
+                <TableHead className="text-left font-medium">-</TableHead>
+                <TableHead className="text-left font-medium">100.0%</TableHead>
+                <TableHead className="text-left font-medium"></TableHead>
+              </TableRow>
+            </TableFooter>
           </Table>
         </div>
       </ScrollArea>

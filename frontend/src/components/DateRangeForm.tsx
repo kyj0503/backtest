@@ -1,5 +1,6 @@
 import React from 'react';
-import { FormField } from './common';
+import { CalendarRange } from 'lucide-react';
+import { FormField, FormLegend } from './common';
 
 export interface DateRangeFormProps {
   startDate: string;
@@ -15,19 +16,28 @@ const DateRangeForm: React.FC<DateRangeFormProps> = ({
   setEndDate
 }) => {
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      <FormField
-        label="시작 날짜"
-        type="date"
-        value={startDate}
-        onChange={(value) => setStartDate(value.toString())}
+    <div className="space-y-4">
+      <FormLegend
+        icon={<CalendarRange className="h-3.5 w-3.5" />}
+        items={[
+          { label: 'YYYY-MM-DD 형식', tone: 'muted' },
+          { label: '시작은 종료보다 이전이어야 합니다', tone: 'accent' },
+        ]}
       />
-      <FormField
-        label="종료 날짜"
-        type="date"
-        value={endDate}
-        onChange={(value) => setEndDate(value.toString())}
-      />
+      <div className="grid gap-6 md:grid-cols-2">
+        <FormField
+          label="시작 날짜"
+          type="date"
+          value={startDate}
+          onChange={(value) => setStartDate(value.toString())}
+        />
+        <FormField
+          label="종료 날짜"
+          type="date"
+          value={endDate}
+          onChange={(value) => setEndDate(value.toString())}
+        />
+      </div>
     </div>
   );
 };

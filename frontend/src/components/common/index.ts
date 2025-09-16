@@ -5,6 +5,8 @@ export type { FormFieldProps } from './FormField';
 export { FormSection } from './FormSection';
 export type { FormSectionProps } from './FormSection';
 
+export { FormLegend } from './FormLegend';
+
 export { LoadingSpinner, InlineSpinner, ButtonSpinner } from './LoadingSpinner';
 export type { LoadingSpinnerProps } from './LoadingSpinner';
 

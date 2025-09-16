@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
+import React, { useMemo, useState } from 'react';
+import { RotateCcw, Settings2 } from 'lucide-react';
 import { Stock } from '../types/backtest-form';
 import { STRATEGY_CONFIGS, StrategyParameter } from '../constants/strategies';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Button } from './ui/button';
+import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
+import { FormField, FormLegend } from './common';
 
 interface AdvancedSettingsFormProps {
   portfolio: Stock[];
@@ -20,7 +22,7 @@ export interface AdvancedStockSettings {
   startDate?: string;
   endDate?: string;
   strategy?: string;
-  strategyParams?: Record<string, any>;
+  strategyParams?: Partial<Record<string, number>>;
 }
 
 const AdvancedSettingsForm: React.FC<AdvancedSettingsFormProps> = ({
@@ -40,26 +42,71 @@ const AdvancedSettingsForm: React.FC<AdvancedSettingsFormProps> = ({
     }))
   );
 
-  const updateStockSetting = (stockIndex: number, field: keyof AdvancedStockSettings, value: any) => {
-    setSettings(prev => prev.map(setting => 
-      setting.stockIndex === stockIndex 
-        ? { ...setting, [field]: value }
-        : setting
-    ));
+  const strategyOptions = useMemo(
+    () =>
+      Object.entries(STRATEGY_CONFIGS).map(([id, config]) => ({
+        value: id,
+        label: config.name,
+        description: config.description,
+      })),
+    [],
+  );
+
+  const updateStockSetting = (
+    stockIndex: number,
+    field: keyof AdvancedStockSettings,
+    value: string | number | undefined,
+  ) => {
+    setSettings(prev =>
+      prev.map(setting =>
+        setting.stockIndex === stockIndex ? { ...setting, [field]: value } : setting,
+      ),
+    );
   };
 
-  const updateStrategyParam = (stockIndex: number, paramName: string, value: any) => {
-    setSettings(prev => prev.map(setting => 
-      setting.stockIndex === stockIndex 
-        ? { 
-            ...setting, 
-            strategyParams: { 
-              ...(setting.strategyParams || {}), 
-              [paramName]: value 
-            }
-          }
-        : setting
-    ));
+  const applyStrategyDefaults = (strategyId: string) => {
+    const config = STRATEGY_CONFIGS[strategyId as keyof typeof STRATEGY_CONFIGS];
+    if (!config?.parameters) return {};
+    return Object.fromEntries(
+      Object.entries(config.parameters).map(([key, param]) => [key, param.default]),
+    );
+  };
+
+  const updateStrategy = (stockIndex: number, strategyId: string) => {
+    const defaultParams = applyStrategyDefaults(strategyId);
+    setSettings(prev =>
+      prev.map(setting =>
+        setting.stockIndex === stockIndex
+          ? { ...setting, strategy: strategyId, strategyParams: defaultParams }
+          : setting,
+      ),
+    );
+  };
+
+  const updateStrategyParam = (stockIndex: number, paramName: string, value: string) => {
+    setSettings(prev =>
+      prev.map(setting => {
+        if (setting.stockIndex !== stockIndex) return setting;
+        const strategyId = setting.strategy ?? 'buy_and_hold';
+        const strategyConfig = STRATEGY_CONFIGS[strategyId as keyof typeof STRATEGY_CONFIGS];
+        const paramConfig = strategyConfig?.parameters?.[paramName];
+        if (!paramConfig) return setting;
+
+        const parsedValue =
+          paramConfig.type === 'float' ? parseFloat(value) : parseInt(value, 10);
+        if (Number.isNaN(parsedValue)) {
+          return setting;
+        }
+
+        return {
+          ...setting,
+          strategyParams: {
+            ...(setting.strategyParams ?? {}),
+            [paramName]: parsedValue,
+          },
+        };
+      }),
+    );
   };
 
   const handleApply = () => {
@@ -78,158 +125,132 @@ const AdvancedSettingsForm: React.FC<AdvancedSettingsFormProps> = ({
     })));
   };
 
-  if (!isVisible) return null;
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      onClose();
+    }
+  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <Card>
-          <CardHeader className="border-b">
-            <div className="flex items-center justify-between">
-              <CardTitle>고급 사용자 설정</CardTitle>
-              <Button variant="ghost" onClick={onClose} className="h-8 w-8 p-0">
-                <span className="sr-only">닫기</span>
-                ✕
-              </Button>
-            </div>
-            <p className="text-sm text-gray-600">
-              각 종목별로 개별 날짜 범위와 전략을 설정할 수 있습니다.
-            </p>
-          </CardHeader>
-          <CardContent className="p-6 max-h-[70vh] overflow-y-auto">
-            <Tabs defaultValue="stock-0" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1 h-auto mb-6">
-                {portfolio.map((stock, index) => (
-                  <TabsTrigger 
-                    key={index} 
-                    value={`stock-${index}`}
-                    className="text-xs px-2 py-2 truncate"
-                    title={stock.symbol}
-                  >
-                    {stock.symbol}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+    <Dialog open={isVisible} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-5xl overflow-hidden p-0">
+        <DialogHeader className="space-y-2 border-b border-border/60 px-6 py-4 text-left">
+          <DialogTitle className="text-xl font-semibold">고급 사용자 설정</DialogTitle>
+          <DialogDescription>
+            종목별로 백테스트 기간과 전략을 세밀하게 조정합니다. 비워두면 기본 설정을
+            따릅니다.
+          </DialogDescription>
+        </DialogHeader>
 
-              {portfolio.map((stock, index) => {
-                const currentSetting = settings.find(s => s.stockIndex === index);
-                const selectedStrategy = currentSetting?.strategy || 'buy_and_hold';
-                const strategyConfig = STRATEGY_CONFIGS[selectedStrategy];
-                
-                return (
-                  <TabsContent key={index} value={`stock-${index}`} className="space-y-6 mt-0">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      {/* 날짜 설정 */}
-                      <Card>
-                        <CardHeader className="pb-4">
-                          <CardTitle className="text-lg">개별 날짜 범위</CardTitle>
-                          <p className="text-sm text-gray-600">
-                            {stock.symbol}에 대한 개별 백테스트 기간을 설정합니다. 
-                            비워두면 전체 설정을 따릅니다.
-                          </p>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div>
-                            <Label htmlFor={`start-${index}`}>시작일</Label>
-                            <Input
-                              id={`start-${index}`}
-                              type="date"
-                              value={currentSetting?.startDate || ''}
-                              onChange={e => updateStockSetting(index, 'startDate', e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`end-${index}`}>종료일</Label>
-                            <Input
-                              id={`end-${index}`}
-                              type="date"
-                              value={currentSetting?.endDate || ''}
-                              onChange={e => updateStockSetting(index, 'endDate', e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                        </CardContent>
-                      </Card>
+        <div className="px-6 py-4">
+          <FormLegend
+            items={[
+              { label: '개별 기간 & 전략 지정', tone: 'accent' },
+              { label: '설정 미입력 시 기본값 사용', tone: 'muted' },
+            ]}
+          />
+        </div>
 
-                      {/* 전략 설정 */}
-                      <Card>
-                        <CardHeader className="pb-4">
-                          <CardTitle className="text-lg">개별 전략</CardTitle>
-                          <p className="text-sm text-gray-600">
-                            {stock.symbol}에 대한 개별 투자 전략을 설정합니다.
-                          </p>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div>
-                            <Label htmlFor={`strategy-${index}`}>전략 선택</Label>
-                            <select
-                              id={`strategy-${index}`}
-                              value={selectedStrategy}
-                              onChange={e => updateStockSetting(index, 'strategy', e.target.value)}
-                              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                              {Object.entries(STRATEGY_CONFIGS).map(([strategyId, strategyConfig]) => (
-                                <option key={strategyId} value={strategyId}>
-                                  {strategyConfig.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
+        <ScrollArea className="max-h-[60vh] px-6 pb-6">
+          <Tabs defaultValue="stock-0" className="w-full">
+            <TabsList className="grid h-auto w-full grid-cols-3 gap-2 rounded-2xl bg-muted/40 p-2 text-xs md:grid-cols-4 xl:grid-cols-5">
+              {portfolio.map((stock, index) => (
+                <TabsTrigger
+                  key={stock.symbol + index}
+                  value={`stock-${index}`}
+                  className="rounded-xl px-3 py-2"
+                >
+                  {stock.symbol || `자산 ${index + 1}`}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-                          {/* 전략 파라미터 */}
-                          {strategyConfig?.parameters && Object.entries(strategyConfig.parameters).map(([key, param]: [string, StrategyParameter]) => (
-                            <div key={key}>
-                              <Label htmlFor={`${key}-${index}`}>
-                                {key}
-                                {param.description && (
-                                  <span className="ml-1 text-xs text-gray-500">
-                                    ({param.description})
-                                  </span>
-                                )}
-                              </Label>
-                              <Input
-                                id={`${key}-${index}`}
-                                type="number"
-                                min={param.min}
-                                max={param.max}
-                                step={param.step || (param.type === 'int' ? 1 : 0.1)}
-                                value={currentSetting?.strategyParams?.[key] || param.default}
-                                onChange={e => {
-                                  const value = param.type === 'int' ? 
-                                    parseInt(e.target.value) : parseFloat(e.target.value);
-                                  updateStrategyParam(index, key, value);
-                                }}
-                                className="mt-1"
-                              />
-                            </div>
-                          ))}
-                        </CardContent>
-                      </Card>
+            {portfolio.map((stock, index) => {
+              const currentSetting = settings.find(s => s.stockIndex === index);
+              const selectedStrategy = currentSetting?.strategy ?? 'buy_and_hold';
+              const strategyConfig = STRATEGY_CONFIGS[selectedStrategy as keyof typeof STRATEGY_CONFIGS];
+              const parameterEntries = Object.entries(strategyConfig?.parameters ?? {}) as Array<
+                [string, StrategyParameter]
+              >;
+
+              return (
+                <TabsContent
+                  key={`content-${stock.symbol}-${index}`}
+                  value={`stock-${index}`}
+                  className="mt-4 space-y-6"
+                >
+                  <FormLegend
+                    items={[
+                      { label: stock.symbol || `자산 ${index + 1}`, tone: 'accent' },
+                      { label: '전체 설정으로 복귀하려면 비워두세요', tone: 'muted' },
+                    ]}
+                  />
+
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <FormField
+                      label="개별 시작일"
+                      type="date"
+                      value={currentSetting?.startDate ?? ''}
+                      onChange={value => updateStockSetting(index, 'startDate', value.toString())}
+                    />
+                    <FormField
+                      label="개별 종료일"
+                      type="date"
+                      value={currentSetting?.endDate ?? ''}
+                      onChange={value => updateStockSetting(index, 'endDate', value.toString())}
+                    />
+                  </div>
+
+                  <FormField
+                    label="개별 전략"
+                    type="select"
+                    value={selectedStrategy}
+                    onChange={value => updateStrategy(index, value.toString())}
+                    options={strategyOptions}
+                    helpText={strategyConfig?.description}
+                  />
+
+                  {parameterEntries.length > 0 && (
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {parameterEntries.map(([key, param]) => (
+                        <FormField
+                          key={key}
+                          label={param.description || key}
+                          type="number"
+                          value={
+                            currentSetting?.strategyParams?.[key] ?? param.default
+                          }
+                          onChange={value => updateStrategyParam(index, key, value.toString())}
+                          min={param.min}
+                          max={param.max}
+                          step={param.step}
+                          helpText={`기본값 ${param.default} · 범위 ${param.min}~${param.max}`}
+                        />
+                      ))}
                     </div>
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
+                  )}
+                </TabsContent>
+              );
+            })}
+          </Tabs>
+        </ScrollArea>
 
-            {/* 액션 버튼 */}
-            <div className="flex justify-between pt-6 border-t mt-6">
-              <Button variant="outline" onClick={handleReset}>
-                초기화
-              </Button>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={onClose}>
-                  취소
-                </Button>
-                <Button onClick={handleApply}>
-                  설정 적용
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <Separator />
+        <div className="flex items-center justify-between gap-3 px-6 py-4">
+          <Button variant="ghost" onClick={handleReset} className="gap-2">
+            <RotateCcw className="h-4 w-4" /> 초기화
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>
+              취소
+            </Button>
+            <Button onClick={handleApply} className="gap-2">
+              <Settings2 className="h-4 w-4" /> 설정 적용
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
