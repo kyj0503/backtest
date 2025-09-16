@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Loader2, Settings2, CheckCircle2 } from 'lucide-react';
 import { BacktestRequest } from '../types/api';
 import { ASSET_TYPES } from '../constants/strategies';
 import DateRangeForm from './DateRangeForm';
@@ -8,6 +9,7 @@ import PortfolioForm from './PortfolioForm';
 import AdvancedSettingsForm, { AdvancedStockSettings } from './AdvancedSettingsForm';
 import { useBacktestForm } from '../hooks/useBacktestForm';
 import { useFormValidation } from '../hooks/useFormValidation';
+import { FormSection } from './common';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { Card, CardContent, CardHeader } from './ui/card';
@@ -55,9 +57,6 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
       }));
 
       const params = generateStrategyParams();
-      console.log('Portfolio data being sent:', portfolioData);
-      console.log('Strategy params being sent:', params);
-
       await onSubmit({
         portfolio: portfolioData,
         start_date: state.dates.startDate,
@@ -77,30 +76,29 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <Card>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <Card className="border-border/70 bg-card/80 shadow-sm">
         <CardHeader>
-          <h4 className="text-xl font-semibold text-foreground mb-2">포트폴리오 백테스트</h4>
+          <h4 className="text-xl font-semibold text-foreground">포트폴리오 백테스트</h4>
           <p className="text-sm text-muted-foreground">
-            종목/자산별 투자 금액과 방식을 설정하여 포트폴리오 백테스트를 실행합니다.
+            자산 구성과 전략, 리밸런싱 정책을 선택해 포트폴리오 백테스트를 실행하세요.
           </p>
         </CardHeader>
         <CardContent>
           {(errors.length > 0 || state.ui.errors.length > 0) && (
             <Alert variant="destructive" className="mb-6">
               <AlertDescription>
-                <h3 className="text-sm font-medium mb-2">입력 오류</h3>
-                <ul className="text-sm space-y-1">
-                    {[...errors, ...state.ui.errors].map((error, index) => (
-                      <li key={index}>• {error}</li>
-                    ))}
+                <h3 className="text-sm font-semibold">입력 오류</h3>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {[...errors, ...state.ui.errors].map((error, index) => (
+                    <li key={index}>• {error}</li>
+                  ))}
                 </ul>
               </AlertDescription>
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
-            {/* 포트폴리오 구성 */}
+          <form onSubmit={handleSubmit} className="space-y-8">
             <PortfolioForm
               portfolio={state.portfolio}
               updateStock={actions.updateStock}
@@ -114,76 +112,82 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
               setTotalInvestment={actions.setTotalInvestment}
             />
 
-            {/* 백테스트 설정 */}
-            <div className="mb-8">
-              <h5 className="text-lg font-semibold mb-4">백테스트 설정</h5>
+            <FormSection
+              title="백테스트 기간"
+              description="실행할 기간을 지정하세요. 종목별 커스텀 기간은 고급 설정에서 조정할 수 있습니다."
+            >
               <DateRangeForm
                 startDate={state.dates.startDate}
                 setStartDate={actions.setStartDate}
                 endDate={state.dates.endDate}
                 setEndDate={actions.setEndDate}
               />
-            </div>
+            </FormSection>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <StrategyForm
-                selectedStrategy={state.strategy.selectedStrategy}
-                setSelectedStrategy={actions.setSelectedStrategy}
-                strategyParams={state.strategy.strategyParams}
-                updateStrategyParam={actions.updateStrategyParam}
-              />
-              <CommissionForm
-                rebalanceFrequency={state.settings.rebalanceFrequency}
-                setRebalanceFrequency={actions.setRebalanceFrequency}
-                commission={state.settings.commission}
-                setCommission={actions.setCommission}
-              />
-            </div>
-
-            {/* 고급 설정 버튼 */}
-            <div className="mb-4">
-              <Button
-                type="button"
-                variant={advancedSettings.length > 0 ? "default" : "outline"}
-                onClick={() => setShowAdvancedSettings(true)}
-                disabled={state.portfolio.length === 0}
-                className={`w-full py-2 px-4 text-sm font-medium ${
-                  advancedSettings.length > 0 
-                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                    : ''
-                }`}
+            <div className="grid gap-6 md:grid-cols-2">
+              <FormSection
+                title="전략 선택"
+                description="적용할 투자 전략과 파라미터를 설정하세요."
               >
-                {advancedSettings.length > 0 ? '✓' : '🔧'} 고급 사용자 설정 
-                {advancedSettings.length > 0 && 
-                  ` (${advancedSettings.filter(s => s.startDate || s.endDate || s.strategy !== 'buy_and_hold').length}개 종목 개별 설정됨)`
-                }
-              </Button>
-              {state.portfolio.length === 0 ? (
-                <p className="text-xs text-muted-foreground mt-1 text-center">
-                  포트폴리오에 종목을 추가한 후 고급 설정을 사용할 수 있습니다.
-                </p>
-              ) : advancedSettings.length > 0 && (
-                <p className="text-xs text-green-600 mt-1 text-center">
-                  고급 설정이 적용되었습니다. 각 종목별로 개별 날짜와 전략이 설정됩니다.
-                </p>
-              )}
+                <StrategyForm
+                  selectedStrategy={state.strategy.selectedStrategy}
+                  setSelectedStrategy={actions.setSelectedStrategy}
+                  strategyParams={state.strategy.strategyParams}
+                  updateStrategyParam={actions.updateStrategyParam}
+                />
+              </FormSection>
+              <FormSection
+                title="리밸런싱 & 수수료"
+                description="리밸런싱 주기와 거래 수수료 비율을 입력하세요."
+              >
+                <CommissionForm
+                  rebalanceFrequency={state.settings.rebalanceFrequency}
+                  setRebalanceFrequency={actions.setRebalanceFrequency}
+                  commission={state.settings.commission}
+                  setCommission={actions.setCommission}
+                />
+              </FormSection>
             </div>
 
-            {/* 실행 버튼 */}
-            <div>
+            <FormSection
+              title="종목별 고급 설정"
+              description="포트폴리오에 종목을 추가한 후 개별 전략과 기간을 조정할 수 있습니다."
+            >
+              <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  variant={advancedSettings.length > 0 ? 'secondary' : 'outline'}
+                  onClick={() => setShowAdvancedSettings(true)}
+                  disabled={state.portfolio.length === 0}
+                  className="w-full rounded-full sm:w-auto"
+                >
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  고급 설정 열기
+                </Button>
+                <div className="text-xs text-muted-foreground">
+                  {state.portfolio.length === 0 && '포트폴리오에 종목을 추가하면 고급 설정을 사용할 수 있습니다.'}
+                  {state.portfolio.length > 0 && advancedSettings.length === 0 && '필요 시 종목별 전략과 기간을 세밀하게 조정하세요.'}
+                  {advancedSettings.length > 0 && (
+                    <span className="inline-flex items-center gap-1 text-emerald-600">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      개별 설정이 적용되었습니다.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </FormSection>
+
+            <div className="flex justify-end">
               <Button
                 type="submit"
                 disabled={loading || state.ui.isLoading}
-                className="w-full py-3 px-6 text-lg font-semibold"
+                className="w-full rounded-full text-base font-semibold sm:w-auto sm:px-8"
                 size="lg"
               >
                 {loading || state.ui.isLoading ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    포트폴리오 백테스트 실행 중...
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    백테스트 실행 중...
                   </span>
                 ) : (
                   '포트폴리오 백테스트 실행'
@@ -192,7 +196,6 @@ const BacktestForm: React.FC<BacktestFormProps> = ({ onSubmit, loading = false }
             </div>
           </form>
 
-          {/* 고급 설정 모달 */}
           <AdvancedSettingsForm
             portfolio={state.portfolio}
             isVisible={showAdvancedSettings}

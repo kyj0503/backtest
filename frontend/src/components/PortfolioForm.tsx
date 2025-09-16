@@ -17,8 +17,11 @@ import React, { ChangeEvent } from 'react';
 import { PREDEFINED_STOCKS, ASSET_TYPES } from '../constants/strategies';
 import { Tooltip } from './common';
 import StockAutocomplete from './common/StockAutocomplete';
+import FormSection from './common/FormSection';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { ScrollArea } from './ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from './ui/table';
 
@@ -35,46 +38,75 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
   setTotalInvestment,
 }) => {
   return (
-    <div className="mb-8">
-      <div className="flex flex-col md:flex-row md:items-center md:gap-6 mb-4">
-        <h5 className="text-lg font-semibold mb-2 md:mb-0">포트폴리오 구성</h5>
-                <div className="mb-6">
-          <label className="font-medium text-foreground">입력 방식:</label>
-          <div className="flex border border-primary rounded-md overflow-hidden">
+    <FormSection
+      title="포트폴리오 구성"
+      description="투자할 자산과 비중을 설정하세요. 최대 10개의 자산을 추가할 수 있습니다."
+      actions={
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background p-1 shadow-sm">
             <Button
               type="button"
               onClick={() => setPortfolioInputMode('amount')}
-              variant={portfolioInputMode === 'amount' ? 'default' : 'ghost'}
-              className="rounded-none flex-1"
+              variant={portfolioInputMode === 'amount' ? 'secondary' : 'ghost'}
+              className="rounded-full px-4 py-1 text-sm"
             >
               금액 기준
             </Button>
             <Button
               type="button"
               onClick={() => setPortfolioInputMode('weight')}
-              variant={portfolioInputMode === 'weight' ? 'default' : 'ghost'}
-              className="rounded-none flex-1"
+              variant={portfolioInputMode === 'weight' ? 'secondary' : 'ghost'}
+              className="rounded-full px-4 py-1 text-sm"
             >
               비중 기준
             </Button>
           </div>
+          {portfolioInputMode === 'weight' && (
+            <div className="flex items-center gap-2 rounded-full bg-muted/40 px-3 py-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">전체 투자금액($)</Label>
+              <Input
+                type="number"
+                min={1000}
+                step={100}
+                value={totalInvestment}
+                onChange={e => setTotalInvestment(Number(e.target.value))}
+                className="h-8 w-28 rounded-full border-0 bg-background text-right text-sm shadow-none focus-visible:ring-1"
+              />
+            </div>
+          )}
         </div>
-        {portfolioInputMode === 'weight' && (
-          <div className="flex items-center gap-2 ml-0 md:ml-8 mt-2 md:mt-0">
-            <label className="font-medium text-foreground">전체 투자금액($):</label>
-            <Input
-              type="number"
-              min={1000}
-              step={100}
-              value={totalInvestment}
-              onChange={e => setTotalInvestment(Number(e.target.value))}
-              className="w-32"
-            />
-          </div>
-        )}
-      </div>
-      <div className="overflow-x-auto">
-        <Table>
+      }
+      footer={
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={addStock}
+            disabled={portfolio.length >= 10}
+            variant="outline"
+            className="rounded-full"
+          >
+            + 종목 추가
+          </Button>
+          <Tooltip content="현금을 포트폴리오에 추가 (무위험 자산)">
+            <Button
+              type="button"
+              onClick={addCash}
+              disabled={portfolio.length >= 10}
+              variant="outline"
+              className="rounded-full border-green-300 text-green-700 hover:bg-green-50"
+            >
+              현금 추가
+            </Button>
+          </Tooltip>
+          <span className="text-xs text-muted-foreground">
+            {portfolio.length}/10 자산
+          </span>
+        </div>
+      }
+    >
+      <ScrollArea className="w-full">
+        <div className="min-w-[820px]">
+          <Table className="text-sm">
           <TableHeader>
             <TableRow>
               <TableHead className="w-64">종목/자산</TableHead>
@@ -237,31 +269,10 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               <TableHead className="text-left font-medium"></TableHead>
             </TableRow>
           </TableFooter>
-        </Table>
-      </div>
-
-      <div className="flex gap-3 mt-4">
-        <Button
-          type="button"
-          onClick={addStock}
-          disabled={portfolio.length >= 10}
-          variant="outline"
-        >
-          + 종목 추가
-        </Button>
-        <Tooltip content="현금을 포트폴리오에 추가 (무위험 자산)">
-          <Button
-            type="button"
-            onClick={addCash}
-            disabled={portfolio.length >= 10}
-            variant="outline"
-            className="text-green-600 border-green-300 hover:bg-green-50"
-          >
-            현금 추가
-          </Button>
-        </Tooltip>
-      </div>
-    </div>
+          </Table>
+        </div>
+      </ScrollArea>
+    </FormSection>
   );
 };
 

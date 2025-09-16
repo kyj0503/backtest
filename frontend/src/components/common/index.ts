@@ -2,6 +2,9 @@
 export { FormField } from './FormField';
 export type { FormFieldProps } from './FormField';
 
+export { FormSection } from './FormSection';
+export type { FormSectionProps } from './FormSection';
+
 export { LoadingSpinner, InlineSpinner, ButtonSpinner } from './LoadingSpinner';
 export type { LoadingSpinnerProps } from './LoadingSpinner';
 
