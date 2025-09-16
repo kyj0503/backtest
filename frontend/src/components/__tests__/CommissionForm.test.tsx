@@ -17,7 +17,7 @@ describe('CommissionForm', () => {
 
     // 라벨들이 렌더링되는지 확인
     expect(screen.getByText('리밸런싱 주기')).toBeInTheDocument();
-    expect(screen.getByText('거래 수수료')).toBeInTheDocument();
+    expect(screen.getByText(/거래 수수료/)).toBeInTheDocument();
     expect(screen.getByDisplayValue('0.2')).toBeInTheDocument();
   });
 

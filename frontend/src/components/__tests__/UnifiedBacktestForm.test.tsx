@@ -22,7 +22,9 @@ describe('BacktestForm (integration)', () => {
     
     // CommissionForm: set commission to 0.3 (%)
     // Find the label then query within its container for the input
-    const commissionLabel = screen.getByText('거래 수수료')
+    const commissionLabel = screen
+      .getAllByText(/거래 수수료/)
+      .find(element => element.tagName === 'LABEL') as HTMLElement
     const commissionContainer = commissionLabel.closest('div') as HTMLElement
     const commissionNumber = within(commissionContainer).getByRole('spinbutton') as HTMLInputElement
 

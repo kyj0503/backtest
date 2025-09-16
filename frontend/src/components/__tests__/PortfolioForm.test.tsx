@@ -49,8 +49,9 @@ describe('PortfolioForm', () => {
     })
     expect(addCash).toHaveBeenCalled()
 
-    // 기본 렌더링 확인 (Select 컴포넌트 테스트는 복잡하므로 생략)
+    // 기본 렌더링 확인 (버튼 레이블 기반 검증)
     expect(screen.getByText('포트폴리오 구성')).toBeInTheDocument()
-    expect(screen.getByText('입력 방식:')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '금액 기준' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '비중 기준' })).toBeInTheDocument()
   })
 })
