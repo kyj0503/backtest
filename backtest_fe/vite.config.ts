@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: 5173,
     host: '0.0.0.0',
+    hmr: {
+      host: 'localhost',
+      protocol: 'ws',
+      port: 5173,
+    },
     proxy: {
       '/api': {
         target,

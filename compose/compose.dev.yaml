@@ -4,6 +4,8 @@ services:
     image: mysql:8.0
     container_name: bt_mysql_dev
     restart: unless-stopped
+    networks:
+      - backtest-net
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: stock_community
@@ -22,6 +24,8 @@ services:
       - "6379:6379"
     volumes:
       - backtest_redis_data_dev:/data
+    networks:
+      - backtest-net
 
   backtest_be_fast:
     build:
@@ -41,6 +45,8 @@ services:
       - DATABASE_USER=bt_user
       - DATABASE_PASSWORD=bt_pass
       - DATABASE_NAME=stock_community
+    env_file:
+      - ../backtest_be_fast/.env
     volumes:
       - ../backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
