@@ -26,4 +26,4 @@ Documentation endpoints (Swagger / Redoc):
 
 Notes:
 - Refer to `backtest_be_fast/app/models/requests.py` and `responses.py` for precise request/response schema definitions.
-- Backtest payloads and responses are Pydantic models; validate requests using examples in `tests/fixtures`.
+- Backtest payloads and responses are Pydantic models; review the examples under `backtest_be_fast/docs/` when crafting requests manually.

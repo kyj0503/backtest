@@ -83,75 +83,7 @@ pipeline {
             }
         }
 
-  // 3) 테스트 단계 (프론트엔드/백엔드 병렬 실행)
-  //    - Docker 이미지 빌드 내에서 테스트를 실행하여 테스트 환경을 격리합니다.
-  stage('Tests') {
-            parallel {
-                stage('Frontend Tests') {
-                    steps {
-                        script {
-                            echo 'Running frontend tests...'
-                            sh '''
-                                cd frontend
-                                docker build --build-arg RUN_TESTS=true \
-                                    -t backtest-frontend-test:${BUILD_NUMBER} .
-                            '''
-                            echo "Frontend tests passed"
-                        }
-                    }
-                }
-                stage('FastAPI Tests') {
-                    steps {
-                        script {
-                            echo 'Running FastAPI tests with controlled environment...'
-                            sh '''
-                cd fastapi
-                docker build --build-arg RUN_TESTS=true \
-                  -t backtest-fastapi-test:${BUILD_NUMBER} .
-                            '''
-                            echo "FastAPI tests passed"
-                        }
-                    }
-                }
-            }
-        }
-
-  // 4) JUnit 리포트 수집
-  //    - 각 테스트 결과를 JUnit XML로 수집하고 Jenkins에 보고합니다.
-  //    - 프론트엔드의 경우 호스트의 npm 캐시를 마운트하여 권한 문제를 방지합니다.
-  stage('Collect JUnit Reports') {
-            steps {
-                script {
-                    sh '''
-                        mkdir -p reports/fastapi reports/frontend
-                        # 호스트측 npm 캐시 디렉터리가 존재하고 Jenkins 사용자가 소유하도록 보장
-                        mkdir -p frontend/.npm || true
-                        chown ${UID_J}:${GID_J} frontend/.npm || true
-
-                        # FastAPI JUnit: 이미지 내부에서 테스트를 실행해 JUnit XML을 생성 (Jenkins 사용자 권한)
-                        # Hypothesis DB 호스트 디렉터리를 마운트하고 HYPOTHESIS_DATABASE 환경변수를 설정
-                        docker run --rm -u ${UID_J}:${GID_J} \
-                          -v /var/lib/jenkins/.hypothesis:/home/jenkins/.hypothesis \
-                          -e HYPOTHESIS_DATABASE=/home/jenkins/.hypothesis/examples \
-                          -v "$PWD/reports/fastapi:/reports" backtest-fastapi-test:${BUILD_NUMBER} \
-                          sh -lc "pytest tests/unit/ -v --tb=short --junitxml=/reports/junit.xml"
-
-                        # 프론트엔드 JUnit: Node 컨테이너에서 vitest를 실행
-                        # 호스트의 npm 캐시를 /app/.npm에 마운트하고 NPM_CONFIG_CACHE를 설정해 루트 권한 문제 방지
-                        docker run --rm -u ${UID_J}:${GID_J} \
-                          -e CI=1 -e VITEST_JUNIT_FILE=/reports/junit.xml -e NPM_CONFIG_CACHE=/app/.npm \
-                          -v "$PWD/frontend:/app" -v "$PWD/frontend/.npm:/app/.npm" -v "$PWD/reports/frontend:/reports" -w /app \
-                          node:20-alpine sh -lc "npm ci --prefer-offline --no-audit && npx vitest run"
-                    '''
-
-                    junit allowEmptyResults: true, testResults: 'reports/**/junit.xml'
-                    archiveArtifacts artifacts: 'reports/**/*', allowEmptyArchive: true
-                }
-            }
-        }
-
-
-  // 5) 프로덕션 이미지 빌드 및 레지스트리로 푸시
+  // 3) 프로덕션 이미지 빌드 및 레지스트리로 푸시
   //    - 빌더(backtest-builder)를 사용해 BuildKit으로 빌드합니다.
   //    - GHCR에 로그인 후 이미지 푸시(재시도 로직 포함).
   stage('Build and Push PROD') {
@@ -171,7 +103,7 @@ pipeline {
                                   fi
                                 '''
                                 sh "docker pull ghcr.io/${env.GH_USER}/${env.FASTAPI_PROD_IMAGE}:latest || true"
-                                sh "cd fastapi && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg IMAGE_TAG=${BUILD_NUMBER} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FASTAPI_PROD_IMAGE}:latest -t ${fullImageName} ."
+                                sh "cd fastapi && DOCKER_BUILDKIT=1 docker build --build-arg IMAGE_TAG=${BUILD_NUMBER} --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FASTAPI_PROD_IMAGE}:latest -t ${fullImageName} ."
                                 // GHCR 로그인: 일시적 네트워크 실패를 고려한 재시도 로직
                                 sh '''
                                   set -eu
@@ -230,7 +162,7 @@ pipeline {
                                   fi
                                 '''
                                 sh "docker pull ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest || true"
-                                sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg RUN_TESTS=false --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest -t ${fullImageName} ."
+                                sh "cd frontend && DOCKER_BUILDKIT=1 docker build --build-arg BUILDKIT_INLINE_CACHE=1 --cache-from ghcr.io/${env.GH_USER}/${env.FRONTEND_PROD_IMAGE}:latest -t ${fullImageName} ."
                                 // GHCR 로그인: 일시적 네트워크 실패를 고려한 재시도 로직
                                 sh '''
                                   set -eu

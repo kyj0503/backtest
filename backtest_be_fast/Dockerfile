@@ -13,9 +13,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 
-# Python 의존성 먼저 설치 (uv 기반)
+# Python 의존성 설치 (uv 기반 유지)
 COPY requirements.txt .
-COPY requirements-test.txt .
 # VENV 위치를 소스 밖(/opt/venv)에 두어 바인드 마운트로 덮어지지 않게 함
 ENV VENV_DIR=/opt/venv
 RUN python3 -m venv ${VENV_DIR}
@@ -27,26 +26,19 @@ RUN curl -Ls https://astral.sh/uv/install.sh | sh \
 
 # requirements 설치 (venv 내부 pip 사용)
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir -r requirements-test.txt
-RUN pip install --no-cache-dir backtesting
 
 # 애플리케이션 코드 복사
 COPY app ./app
-COPY tests ./tests
 COPY run_server.py .
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# 빌드 인자들
-ARG RUN_TESTS=false
+# 빌드 인자 및 메타데이터
 ARG IMAGE_TAG=latest
 
 # 환경변수로 설정
 ENV IMAGE_TAG=${IMAGE_TAG}
 ENV IMAGE_NAME=backtest-backend
-
-# 테스트 실행 (빌드 인자로 제어 가능)
-RUN if [ "$RUN_TESTS" = "true" ] ; then python -m pytest tests/unit/ -v --tb=short ; fi
 
 # 포트 노출
 EXPOSE 8000

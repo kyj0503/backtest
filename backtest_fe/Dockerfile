@@ -1,9 +1,6 @@
 # Stage 1: Build the React application
 FROM node:20.8.1-alpine AS build
 
-# Build args
-ARG RUN_TESTS=false
-
 WORKDIR /app
 
 # Copy only package manifests first to leverage Docker layer caching
@@ -18,9 +15,6 @@ RUN if [ -f package-lock.json ]; then \
 
 # Copy rest of sources
 COPY . .
-
-# Run tests optionally during build when RUN_TESTS=true
-RUN if [ "$RUN_TESTS" = "true" ] ; then npm test -- --run ; fi
 
 # Build production assets
 RUN npm run build

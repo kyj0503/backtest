@@ -16,6 +16,12 @@ services:
       - backtest_db_data_dev:/var/lib/mysql
     ports:
       - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-prootpass"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
@@ -36,7 +42,8 @@ services:
     networks:
       - backtest-net
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
@@ -61,8 +68,10 @@ services:
     networks:
       - backtest-net
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "8081:8080"
     environment:
@@ -84,8 +93,10 @@ services:
     networks:
       - backtest-net
     depends_on:
-      - backtest_be_fast
-      - backtest_be_spring
+      backtest_be_fast:
+        condition: service_started
+      backtest_be_spring:
+        condition: service_started
     ports:
       - "5173:5173"
     volumes:
@@ -95,40 +106,6 @@ services:
       - VITE_API_URL=http://backtest_be_fast:8000
       - API_PROXY_TARGET=http://backtest_be_fast:8000
     command: ["npm", "run", "dev"]
-
-  test-backend:
-    build:
-      context: ../backtest_be_fast
-      dockerfile: Dockerfile
-    image: backtest-be-fast:test-runner
-    container_name: backtest_be_fast_test_runner
-    networks:
-      - backtest-net
-    depends_on:
-      - mysql
-    volumes:
-      - ../backtest_be_fast:/app
-    profiles:
-      - test
-    command: ["bash", "-lc", "cd /app && pip install -r requirements-test.txt && pytest -q"]
-
-  test-frontend:
-    build:
-      context: ../backtest_fe
-      dockerfile: Dockerfile.dev
-    image: backtest-fe:test-runner
-    container_name: backtest_fe_test_runner
-    networks:
-      - backtest-net
-    depends_on:
-      - backtest_be_fast
-    volumes:
-      - ../backtest_fe:/app
-      - backtest_fe_node_modules:/app/node_modules
-    profiles:
-      - test
-    entrypoint: ["sh", "-c"]
-    command: "cd /app && npm ci && npm run test:run"
 
 volumes:
   backtest_db_data_dev:

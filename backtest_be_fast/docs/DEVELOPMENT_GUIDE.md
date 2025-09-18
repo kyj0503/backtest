@@ -16,12 +16,6 @@ cd backtest_be_fast
 python run_server.py
 ```
 
-Run tests:
-```bash
-cd backtest_be_fast
-pytest -q
-```
-
 Notes:
 - Configuration values are read from environment variables and `app/core/config.py`.
 - Service wiring and factories live under `app/factories/` and `app/cqrs/service_manager.py`.
