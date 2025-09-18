@@ -1,0 +1,58 @@
+version: '3.8'
+services:
+  # Production compose: only application services.
+  # Assumes external MySQL and Redis are provided (not started by this compose file).
+
+  backtest_be_fast:
+    build:
+      context: ./backtest_be_fast
+      dockerfile: Dockerfile
+    image: backtest-be-fast:prod
+    container_name: backtest_be_fast
+    networks:
+      - backtest-net
+    ports:
+      - "8000:8000"
+  # Load secrets and host configs from project .env file
+  env_file: .env
+  # Required variables in .env: DATABASE_HOST, DATABASE_PORT,
+  # DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME
+    volumes:
+      - ./backtest_be_fast:/app
+    command: ["python", "run_server.py"]
+
+  backtest_be_spring:
+    build:
+      context: ./backtest_be_spring
+      dockerfile: Dockerfile
+    image: backtest-be-spring:prod
+    container_name: backtest_be_spring
+    networks:
+      - backtest-net
+    ports:
+      - "8081:8080"
+  env_file: .env
+  # Required variables in .env: SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME,
+  # SPRING_DATASOURCE_PASSWORD, SPRING_REDIS_HOST
+    volumes:
+      - ./backtest_be_spring:/app
+    command: ["./gradlew", "bootRun"]
+
+  backtest_fe:
+    build:
+      context: ./backtest_fe
+      dockerfile: Dockerfile.dev
+    image: backtest-fe:prod
+    container_name: backtest_fe
+    networks:
+      - backtest-net
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./backtest_fe:/app
+  env_file: .env
+  # Required variables in .env: VITE_API_URL
+
+networks:
+  backtest-net:
+    name: backtest-network

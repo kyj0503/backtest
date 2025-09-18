@@ -1,2 +1,15 @@
+# Environment files
+.env
+.env.prod
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# IDE
+.vscode/
 .github
 .vscode

@@ -86,14 +86,11 @@ services:
       - VITE_API_URL=http://localhost:8000
 
 volumes:
-# explicit named volumes to avoid project-prefix names
   db_data:
     name: backtest_db_data
   redis_data:
     name: backtest_redis_data
-# end of compose
 
 networks:
   backtest-net:
     name: backtest-network
-# end of compose
