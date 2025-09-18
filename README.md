@@ -1,12 +1,18 @@
-- 스키마 구조는 `/database`에 있다.
-- `/backtest_fe`에 `.env` 파일을 생성해야 한다.
-- `/backtest_be_fast`에 `.env` 파일을 생성해야 한다.
-- `/backtest_be_spring`에 `application.properties` 파일을 생성해야 한다.
+- 스키마 구조는 `/database`에 있습니다.
+- 환경파일:
+  - `/backtest_fe`에 `.env` 생성 필요
+  - `/backtest_be_fast`에 `.env` 생성 필요
+  - `/backtest_be_spring`에 `application.properties` 생성 필요
 ---
-- 개발 환경에서는 `compose.dev.yaml` 하나면 모든 스택이 실행된다.
-- 운영 환경에서는 `compose.prod.yaml`을 사용해야 한다. 루트에 `.env` 파일이 필요하다.
-- 외부 DB를 사용하거나 `compose.db.yaml`를 사용하여 컨테이너화 된 DB를 생성할 수 있다.
----
-- 필요시 각 하위 리포지토리의 `compose.yaml`로 각 스택만 실행할 수 있다.
-- 도커 네트워크를 수동으로 생성해야하는 경우 다음 명령어를 사용한다.
-    - `docker network create --driver bridge backtest-network`
+- 개발 환경 실행:
+  ```bash
+  docker compose -f compose/compose.dev.yaml up --build -d
+  ```
+- 테스트 환경 실행:
+  ```bash
+  docker compose -f compose/compose.test.yaml up --build -d
+  ```
+- 프로덕션 환경 실행:
+  ```bash
+  docker compose -f compose/compose.prod.yaml up --build -d
+  ```

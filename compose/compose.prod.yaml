@@ -1,0 +1,88 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: bt_mysql_prod
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ../database:/docker-entrypoint-initdb.d:ro
+      - backtest_db_data_prod:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:7-alpine
+    container_name: bt_redis_prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - backtest_redis_data_prod:/data
+
+  backtest_be_fast:
+    build:
+      context: ../backtest_be_fast
+      dockerfile: Dockerfile
+    image: backtest-be-fast:prod
+    container_name: backtest_be_fast_prod
+    networks:
+      - backtest-net
+    depends_on:
+      - mysql
+    ports:
+      - "8000:8000"
+    env_file: ../.env
+    volumes:
+      - ../backtest_be_fast:/app
+    command: ["python", "run_server.py"]
+
+  backtest_be_spring:
+    build:
+      context: ../backtest_be_spring
+      dockerfile: Dockerfile
+    image: backtest-be-spring:prod
+    container_name: backtest_be_spring_prod
+    networks:
+      - backtest-net
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "8081:8080"
+    env_file: ../.env
+    volumes:
+      - ../backtest_be_spring:/app
+    command: ["./gradlew", "bootRun"]
+
+  backtest_fe:
+    build:
+      context: ../backtest_fe
+      dockerfile: Dockerfile.dev
+    image: backtest-fe:prod
+    container_name: backtest_fe_prod
+    networks:
+      - backtest-net
+    depends_on:
+      - backtest_be_fast
+      - backtest_be_spring
+    ports:
+      - "5173:5173"
+    env_file: ../.env
+    volumes:
+      - ../backtest_fe:/app
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+    command: ["npm", "run", "dev"]
+
+volumes:
+  backtest_db_data_prod:
+  backtest_redis_data_prod:
+
+networks:
+  backtest-net:
+    name: backtest-network

@@ -2,7 +2,7 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: bt_mysql
+    container_name: bt_mysql_dev
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
@@ -10,25 +10,25 @@ services:
       MYSQL_USER: bt_user
       MYSQL_PASSWORD: bt_pass
     volumes:
-      - ./database:/docker-entrypoint-initdb.d:ro
-      - db_data:/var/lib/mysql
+      - ../database:/docker-entrypoint-initdb.d:ro
+      - backtest_db_data_dev:/var/lib/mysql
     ports:
       - "3307:3306"
 
   redis:
     image: redis:7-alpine
-    container_name: bt_redis
+    container_name: bt_redis_dev
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - backtest_redis_data_dev:/data
 
   backtest_be_fast:
     build:
-      context: ./backtest_be_fast
+      context: ../backtest_be_fast
       dockerfile: Dockerfile
-    image: backtest-be-fast:local
-    container_name: backtest_be_fast
+    image: backtest-be-fast:dev
+    container_name: backtest_be_fast_dev
     networks:
       - backtest-net
     depends_on:
@@ -42,15 +42,16 @@ services:
       - DATABASE_PASSWORD=bt_pass
       - DATABASE_NAME=stock_community
     volumes:
-      - ./backtest_be_fast:/app
-    command: ["python", "run_server.py"]
+      - ../backtest_be_fast:/app
+      - backtest_be_fast_venv:/opt/venv
+  # Let the image ENTRYPOINT/CMD run (ensures venv is prepared by entrypoint)
 
   backtest_be_spring:
     build:
-      context: ./backtest_be_spring
+      context: ../backtest_be_spring
       dockerfile: Dockerfile
-    image: backtest-be-spring:local
-    container_name: backtest_be_spring
+    image: backtest-be-spring:dev
+    container_name: backtest_be_spring_dev
     networks:
       - backtest-net
     depends_on:
@@ -64,15 +65,16 @@ services:
       - SPRING_DATASOURCE_PASSWORD=bt_pass
       - SPRING_REDIS_HOST=redis
     volumes:
-      - ./backtest_be_spring:/app
+      - ../backtest_be_spring:/app
+      - backtest_be_spring_gradle_cache:/home/gradle/.gradle
     command: ["./gradlew", "bootRun"]
 
   backtest_fe:
     build:
-      context: ./backtest_fe
+      context: ../backtest_fe
       dockerfile: Dockerfile.dev
-    image: backtest-fe:local
-    container_name: backtest_fe
+    image: backtest-fe:dev
+    container_name: backtest_fe_dev
     networks:
       - backtest-net
     depends_on:
@@ -81,15 +83,19 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - ./backtest_fe:/app
+      - ../backtest_fe:/app
+      - backtest_fe_node_modules:/app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://backtest_be_fast:8000
+      - API_PROXY_TARGET=http://backtest_be_fast:8000
+    command: ["npm", "run", "dev"]
 
 volumes:
-  db_data:
-    name: backtest_db_data
-  redis_data:
-    name: backtest_redis_data
+  backtest_db_data_dev:
+  backtest_redis_data_dev:
+  backtest_fe_node_modules:
+  backtest_be_fast_venv:
+  backtest_be_spring_gradle_cache:
 
 networks:
   backtest-net:
