@@ -1,0 +1,22 @@
+# Development Dockerfile for frontend
+FROM node:20.8.1-alpine
+
+# Install git for testing dependencies
+RUN apk add --no-cache git
+
+WORKDIR /app
+
+# Install dependencies (cached at image build time)
+COPY package.json ./
+RUN npm install
+
+# Copy rest of source (will be overridden by bind mount in dev)
+COPY . .
+
+ENV NODE_ENV=development
+
+EXPOSE 5173
+
+# Default command for development (start Vite on port 5173)
+ENV PORT=5173
+CMD ["npm", "run", "dev"]

@@ -1,0 +1,43 @@
+# 테스트 의존성 패키지
+# 기본 requirements.txt에 추가로 필요한 테스트 도구들
+
+# 데이터베이스 및 보안
+cryptography>=41.0.0  # MySQL 인증용
+
+# 테스트 프레임워크
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-xdist>=3.3.0  # 병렬 테스트 실행
+pytest-mock>=3.11.0  # 모킹 유틸리티
+
+# HTTP 테스트
+httpx>=0.24.0  # FastAPI 테스트용 HTTP 클라이언트
+requests>=2.31.0  # API 테스트용
+
+# 모킹 및 픽스처
+responses>=0.23.0  # HTTP 응답 모킹
+freezegun>=1.2.0  # 시간 모킹
+factory-boy>=3.3.0  # 테스트 데이터 팩토리
+
+# 성능 및 메모리 테스트
+psutil>=5.9.0  # 시스템 리소스 모니터링
+memory-profiler>=0.61.0  # 메모리 프로파일링
+
+# 데이터 검증
+hypothesis>=6.82.0  # 속성 기반 테스트
+jsonschema>=4.18.0  # JSON 스키마 검증
+
+# 테스트 리포트
+pytest-html>=3.2.0  # HTML 테스트 리포트
+pytest-json-report>=1.5.0  # JSON 테스트 리포트
+
+# 코드 품질
+flake8>=6.0.0  # 코드 스타일 검사
+black>=23.7.0  # 코드 포맷터
+isort>=5.12.0  # import 정렬
+
+# 타입 검사
+mypy>=1.5.0
+types-requests>=2.31.0
+types-python-dateutil>=2.8.0
