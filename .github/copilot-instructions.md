@@ -1,22 +1,32 @@
 # AI Coding Agent Instructions
 
-Project: Backtesting System (FastAPI + React + DDD-in-progress + CQRS/Event patterns)
+Project: Backtesting System (FastAPI + Spring Boot + React + DDD-in-progress + CQRS/Event patterns)
 
 ## 1. Big Picture
-- Monorepo: `backend/` (FastAPI, evolving DDD, CQRS, events) + `frontend/` (React/Vite/Tailwind) + infra (`compose/`, `scripts/`, `database/`, `docs/`).
+- Monorepo with three main top-level apps: `backtest_be_fast/` (FastAPI for backtesting), `backtest_be_spring/` (Spring Boot for community, chat, auth, and member features), and `backtest_fe/` (React/Vite/Tailwind + shadcn/ui) plus infra (`compose/`, `scripts/`, `database/`, `docs/`).
 - Backend layering (current reality, not aspiration): service-centric; `domains/` gradually absorbing business concepts. CQRS + EventBus selectively wrap higher-level operations (backtest execution, portfolio ops, optimization, metrics/alerts).
 - Data flow (backtest): HTTP request -> Pydantic request model (`app/models/requests.py`) -> service / CQRS command -> domain services (if enhanced) -> repository (fetch/DB/yfinance) -> result aggregation -> optional domain analysis -> response model.
 - Portfolio & optimization follow analogous command/query flow. Event handlers augment logging/metrics/alerts without coupling core logic.
 
-## 2. Key Directories
-- `backend/app/services/` primary business logic (`backtest_service.py`, `enhanced_backtest_service.py`, `enhanced_portfolio_service.py`).
-- `backend/app/cqrs/` command/query abstractions, handlers, `service_manager.py` orchestrator.
-- `backend/app/events/` event bus + handlers (logging, metrics, alerts) (`event_system.py`).
-- `backend/app/models/` Pydantic request/response/schemas; strict validation + examples.
-- `backend/app/core/config.py` central settings (env via pydantic-settings) exposing computed CORS list.
-- `backend/app/repositories/` data access (`backtest_repository.py`, `data_repository.py`) with DB cache + external fetch logic.
-- `backend/app/domains/` emerging DDD entities/value objects/services; treat as enhancement layer, never break service contracts.
-- `frontend/src/` React app: components, hooks, context, reducers; Vitest setup in `src/test/`.
+- ## 2. Key Directories
+- Top-level apps and important files:
+- `backtest_be_fast/` - FastAPI app dedicated to backtesting.
+- `backtest_be_fast/run_server.py` - quick local run script for the FastAPI service.
+- `backtest_be_fast/app/` - FastAPI application code (services, cqrs, events, models, repositories, domains).
+- `backtest_be_fast/requirements.txt` - Python deps for the backtesting service; `requirements-test.txt` for tests.
+- `backtest_be_spring/` - Spring Boot app for community, chat, member and authentication features.
+- `backtest_be_spring/build.gradle` - Gradle build for Spring Boot service; `src/main` and `src/test` contain Java/Kotlin sources and tests.
+- `backtest_fe/` - Frontend React app using Vite, Tailwind and `shadcn/ui`.
+- `backtest_fe/src/` - React source including `App.tsx`, `main.tsx`, `components/`, `features/`, and `test/` utilities.
+- `compose/`, `scripts/`, `database/`, `docs/` - infra, helper scripts, DB fixtures, and documentation.
+
+- In-repo FastAPI layout (inside `backtest_be_fast/app/`):
+- `services/` - primary business logic (e.g., `backtest_service_old.py`, `enhanced_backtest_service.py`).
+- `cqrs/` - command/query abstractions and handlers.
+- `events/` - event bus and handlers.
+- `models/` - Pydantic request/response/schemas and validators.
+- `repositories/` - data access (DB cache + external fetches like yfinance).
+- `domains/` - DDD entities/value objects and domain services (additive only).
 - `scripts/verify-before-commit.sh` pre-commit CI mimic (Docker build + health probe).
 
 ## 3. Conventions & Patterns
@@ -25,15 +35,17 @@ Project: Backtesting System (FastAPI + React + DDD-in-progress + CQRS/Event patt
 - Enhanced services: subclass base service; extend via helper/private methods (`_enhance_*`) returning dict fragments; never mutate input arguments.
 - Events: Subscribe new handlers by instantiation + `event_bus.subscribe(handler)` inside an initializer similar to `EventSystemManager.initialize()`. Handlers expose data retrieval helpers (`get_metrics_summary`, etc.).
 - Testing markers aligned with `pytest.ini` (`unit`, `integration`, `e2e`, `slow`). New tests must choose one marker; avoid unmarked slow tests.
-- Frontend components: functional components, hooks named `use*`. Co-locate tests as `*.test.tsx` or inside `src/test/` utilities.
+- Frontend components: functional components, hooks named `use*`. Uses `React`, `Vite`, `Tailwind CSS`, and `shadcn/ui` (component primitives). Co-locate tests as `*.test.tsx` or inside `src/test/` utilities.
 
-## 4. Critical Workflows
-- Dev stack: `docker compose -f compose.yml -f compose/compose.dev.yml up --build` (backend 8001->8000, frontend 5174, Redis 6379).
-- Backend local (quick): `python run_server.py` (uses `settings.*`).
-- Tests (backend): `pytest -q` (CI uses Dockerfile with `RUN_TESTS` arg). Coverage: `pytest --cov=app --cov-report=term-missing`.
-- Tests (frontend): `npm run test:run`; coverage via `npm run test:coverage`.
+- ## 4. Critical Workflows
+- Dev stack: `docker compose -f compose.yml -f compose/compose.dev.yml up --build` (FastAPI backend 8001->8000, Spring Boot backend default 8080, frontend 5174, Redis 6379).
+- FastAPI local (quick): `python run_server.py` from `backtest_be_fast/` (uses `settings.*`). Health endpoint: `http://localhost:8000/health`.
+- Spring Boot local: from `backtest_be_spring/` run `./gradlew bootRun` or build with `./gradlew bootJar` then run the jar. Health endpoint: `http://localhost:8080/actuator/health` (if Spring Actuator is enabled).
+- Frontend local: `npm install` then `npm run dev` from `backtest_fe/` (Vite dev server usually on `http://localhost:5174`).
+- Tests (FastAPI): `pytest -q` from `backtest_be_fast/`. Coverage: `pytest --cov=app --cov-report=term-missing`.
+- Tests (Spring Boot): use Gradle test tasks: `./gradlew test` from `backtest_be_spring/`.
+- Tests (frontend): `npm run test:run` from `backtest_fe/`; coverage via `npm run test:coverage`.
 - Pre-commit simulation: run `scripts/verify-before-commit.sh` (expects Docker daemon).
-- Health endpoint: `/health` on backend container (used by script & Docker HEALTHCHECK).
 
 ## 5. Safe Extension Guidelines
 - Add new strategy: update enum in `models/requests.py` (StrategyType) + implement logic in strategy/ or service layer; ensure parameter names match request schema.
@@ -54,11 +66,19 @@ Project: Backtesting System (FastAPI + React + DDD-in-progress + CQRS/Event patt
 - Avoid: introducing breaking enum changes, altering validation semantics silently, embedding secrets, bypassing central config or event registration patterns.
 
 ## 9. Quick Reference Files
-`backend/app/services/enhanced_backtest_service.py` - enrichment pattern
-`backend/app/cqrs/service_manager.py` - handler registration contract
-`backend/app/models/requests.py` - canonical input validation
-`backend/app/core/config.py` - environment & CORS parsing
-`backend/app/events/event_system.py` - handler lifecycle & status API
+`backtest_be_fast/app/services/enhanced_backtest_service.py` - enrichment pattern
+`backtest_be_fast/app/cqrs/service_manager.py` - handler registration contract
+`backtest_be_fast/app/models/requests.py` - canonical input validation
+`backtest_be_fast/app/core/config.py` - environment & CORS parsing
+`backtest_be_fast/app/events/event_system.py` - handler lifecycle & status API
+
+Spring Boot quick refs:
+- `backtest_be_spring/build.gradle` - Gradle build; `src/main` contains application entrypoints and controllers.
+- `backtest_be_spring/src/main/resources/application.yml` - environment profiles and actuator settings (if present).
+
+Frontend quick refs:
+- `backtest_fe/src/main.tsx` / `backtest_fe/src/App.tsx` - app entry points.
+- `backtest_fe/package.json` - scripts: `dev`, `build`, `preview`, `test`.
 
 ## 10. When Unsure
 Search adjacent service or handler for precedent; mirror structure & naming. Prefer additive over destructive edits.

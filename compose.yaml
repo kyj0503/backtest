@@ -1,0 +1,99 @@
+version: '3.8'
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: bt_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: stock_community
+      MYSQL_USER: bt_user
+      MYSQL_PASSWORD: bt_pass
+    volumes:
+      - ./database:/docker-entrypoint-initdb.d:ro
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+
+  redis:
+    image: redis:7-alpine
+    container_name: bt_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backtest_be_fast:
+    build:
+      context: ./backtest_be_fast
+      dockerfile: Dockerfile
+    image: backtest-be-fast:local
+    container_name: backtest_be_fast
+    networks:
+      - backtest-net
+    depends_on:
+      - mysql
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_USER=bt_user
+      - DATABASE_PASSWORD=bt_pass
+      - DATABASE_NAME=stock_community
+    volumes:
+      - ./backtest_be_fast:/app
+    command: ["python", "run_server.py"]
+
+  backtest_be_spring:
+    build:
+      context: ./backtest_be_spring
+      dockerfile: Dockerfile
+    image: backtest-be-spring:local
+    container_name: backtest_be_spring
+    networks:
+      - backtest-net
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/stock_community?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=bt_user
+      - SPRING_DATASOURCE_PASSWORD=bt_pass
+      - SPRING_REDIS_HOST=redis
+    volumes:
+      - ./backtest_be_spring:/app
+    command: ["./gradlew", "bootRun"]
+
+  backtest_fe:
+    build:
+      context: ./backtest_fe
+      dockerfile: Dockerfile.dev
+    image: backtest-fe:local
+    container_name: backtest_fe
+    networks:
+      - backtest-net
+    depends_on:
+      - backtest_be_fast
+      - backtest_be_spring
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./backtest_fe:/app
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
+volumes:
+# explicit named volumes to avoid project-prefix names
+  db_data:
+    name: backtest_db_data
+  redis_data:
+    name: backtest_redis_data
+# end of compose
+
+networks:
+  backtest-net:
+    name: backtest-network
+# end of compose

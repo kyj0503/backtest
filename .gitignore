@@ -1,11 +1,2 @@
-.env
-
-# Build artifacts and caches
-frontend/dist/
-**/__pycache__/
-**/*.py[cod]
-*.log
-node_modules
-
-# Local jenkins logs
-jenkins_log/
+.github
+.vscode
