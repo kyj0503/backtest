@@ -6,11 +6,7 @@
 ---
 - 개발 환경 실행:
   ```bash
-  docker compose -f compose/compose.dev.yaml up --build -d
-  ```
-- 테스트 환경 실행:
-  ```bash
-  docker compose -f compose/compose.test.yaml up --build -d
+  docker compose -f compose/compose.dev.yaml up -d --build
   ```
 - 프로덕션 환경 실행:
   ```bash

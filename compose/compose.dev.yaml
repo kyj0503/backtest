@@ -96,6 +96,40 @@ services:
       - API_PROXY_TARGET=http://backtest_be_fast:8000
     command: ["npm", "run", "dev"]
 
+  test-backend:
+    build:
+      context: ../backtest_be_fast
+      dockerfile: Dockerfile
+    image: backtest-be-fast:test-runner
+    container_name: backtest_be_fast_test_runner
+    networks:
+      - backtest-net
+    depends_on:
+      - mysql
+    volumes:
+      - ../backtest_be_fast:/app
+    profiles:
+      - test
+    command: ["bash", "-lc", "cd /app && pip install -r requirements-test.txt && pytest -q"]
+
+  test-frontend:
+    build:
+      context: ../backtest_fe
+      dockerfile: Dockerfile.dev
+    image: backtest-fe:test-runner
+    container_name: backtest_fe_test_runner
+    networks:
+      - backtest-net
+    depends_on:
+      - backtest_be_fast
+    volumes:
+      - ../backtest_fe:/app
+      - backtest_fe_node_modules:/app/node_modules
+    profiles:
+      - test
+    entrypoint: ["sh", "-c"]
+    command: "cd /app && npm ci && npm run test:run"
+
 volumes:
   backtest_db_data_dev:
   backtest_redis_data_dev:
