@@ -1,44 +1,17 @@
-import { getAuthToken } from '@/features/auth/services/auth';
-
-const getApiBase = () => (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
+const disabledError = () => new Error('커뮤니티 기능은 현재 비활성화되어 있습니다.');
 
 export async function listPosts() {
-  const res = await fetch(`${getApiBase()}/api/v1/community/posts`);
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return Promise.resolve({ items: [] });
 }
 
-export async function createPost(title: string, content: string) {
-  const token = getAuthToken();
-  const res = await fetch(`${getApiBase()}/api/v1/community/posts`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : ''
-    },
-    body: JSON.stringify({ title, content })
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+export async function createPost(_title: string, _content: string) {
+  return Promise.reject(disabledError());
 }
 
-export async function getPost(postId: number) {
-  const res = await fetch(`${getApiBase()}/api/v1/community/posts/${postId}`);
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+export async function getPost(_postId: number) {
+  return Promise.reject(disabledError());
 }
 
-export async function addComment(postId: number, content: string) {
-  const token = getAuthToken();
-  const res = await fetch(`${getApiBase()}/api/v1/community/posts/${postId}/comments`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : ''
-    },
-    body: JSON.stringify({ content })
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+export async function addComment(_postId: number, _content: string) {
+  return Promise.reject(disabledError());
 }
-

@@ -9,47 +9,30 @@ export interface LoginPayload {
   password: string;
 }
 
-const getApiBase = () => (import.meta as any)?.env?.VITE_API_BASE_URL?.replace(/\/$/, '') || '';
+const disabledError = () => new Error('인증 기능은 현재 비활성화되어 있습니다.');
 
-export async function register(payload: RegisterPayload) {
-  const res = await fetch(`${getApiBase()}/api/v1/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  const data = await res.json();
-  localStorage.setItem('auth_token', data.token);
-  localStorage.setItem('auth_user', JSON.stringify({ id: data.user_id, username: data.username, email: data.email }));
-  return data;
+export async function register(_payload: RegisterPayload) {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  return Promise.reject(disabledError());
 }
 
-export async function login(payload: LoginPayload) {
-  const res = await fetch(`${getApiBase()}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error(await res.text());
-  const data = await res.json();
-  localStorage.setItem('auth_token', data.token);
-  localStorage.setItem('auth_user', JSON.stringify({ id: data.user_id, username: data.username, email: data.email }));
-  return data;
+export async function login(_payload: LoginPayload) {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  return Promise.reject(disabledError());
 }
 
 export function getAuthToken(): string | null {
-  return localStorage.getItem('auth_token');
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    localStorage.removeItem('auth_token');
+  }
+  return null;
 }
 
 export function logout() {
-  const token = getAuthToken();
-  return fetch(`${getApiBase()}/api/v1/auth/logout`, {
-    method: 'POST',
-    headers: {
-      'Authorization': token ? `Bearer ${token}` : ''
-    }
-  }).finally(() => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-  });
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  return Promise.resolve();
 }

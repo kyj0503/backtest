@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createPost, listPosts } from '../services/community';
+import { listPosts } from '../services/community';
 
 interface CommunityPost {
   id: number;
@@ -23,29 +23,24 @@ export const useCommunityPosts = ({ autoLoad = true }: UseCommunityPostsOptions 
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const response = await listPosts();
       setPosts(response.items ?? []);
+      setError('커뮤니티 기능은 현재 비활성화되어 있습니다.');
     } catch (err) {
-      const message = err instanceof Error ? err.message : '목록을 불러오지 못했습니다.';
+      const message = err instanceof Error ? err.message : '커뮤니티 기능은 현재 비활성화되어 있습니다.';
       setError(message);
+      setPosts([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const submitPost = useCallback(async (title: string, content: string) => {
-    setError(null);
-    try {
-      await createPost(title, content);
-      await load();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '게시글 등록에 실패했습니다.';
-      setError(message);
-      throw err;
-    }
-  }, [load]);
+  const submitPost = useCallback(async () => {
+    const message = '커뮤니티 기능은 현재 비활성화되어 있습니다.';
+    setError(message);
+    throw new Error(message);
+  }, []);
 
   useEffect(() => {
     if (autoLoad) {
