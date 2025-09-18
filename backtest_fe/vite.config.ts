@@ -19,7 +19,9 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: 5173,
     host: '0.0.0.0',
-    hmr: {
+    // Allow disabling HMR in environments where WebSocket connections fail
+    // (e.g., AdGuard / corporate proxy / unfinished chat feature)
+    hmr: process.env.DISABLE_HMR ? false : {
       host: 'localhost',
       protocol: 'ws',
       port: 5173,
