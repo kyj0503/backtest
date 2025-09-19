@@ -1,16 +1,12 @@
-package com.webproject.backtest_be_spring.domain.chat.repository;
+package com.webproject.backtest_be_spring.infrastructure.persistence.chat;
 
 import com.webproject.backtest_be_spring.domain.chat.model.ChatMessage;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ChatMessageRepository {
-
-    ChatMessage save(ChatMessage message);
-
-    Optional<ChatMessage> findById(Long id);
+public interface JpaChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
     Page<ChatMessage> findByRoomIdAndDeletedFalseOrderByCreatedAtDesc(Long roomId, Pageable pageable);
 

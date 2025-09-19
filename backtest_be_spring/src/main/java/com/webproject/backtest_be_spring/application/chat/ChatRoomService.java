@@ -30,12 +30,14 @@ public class ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final UserRepository userRepository;
+    private final ChatRoomDomainService chatRoomDomainService;
 
     public ChatRoomService(ChatRoomRepository chatRoomRepository, ChatRoomMemberRepository chatRoomMemberRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository, ChatRoomDomainService chatRoomDomainService) {
         this.chatRoomRepository = chatRoomRepository;
         this.chatRoomMemberRepository = chatRoomMemberRepository;
         this.userRepository = userRepository;
+        this.chatRoomDomainService = chatRoomDomainService;
     }
 
     public ChatRoomDto createRoom(Long userId, CreateChatRoomCommand command) {
@@ -53,7 +55,7 @@ public class ChatRoomService {
         chatRoomRepository.save(room);
         ChatRoomMember member = ChatRoomMember.create(room, creator, ChatMemberRole.ADMIN);
         chatRoomMemberRepository.save(member);
-        room.incrementMembers();
+        chatRoomDomainService.increaseMembers(room);
         return ChatRoomDto.from(room);
     }
 
@@ -72,7 +74,7 @@ public class ChatRoomService {
     public void deleteRoom(Long roomId, Long userId) {
         ChatRoom room = chatRoomRepository.findById(roomId).orElseThrow(() -> new ChatRoomNotFoundException(roomId));
         verifyRoomAdmin(room, userId);
-        room.update(room.getName(), room.getDescription(), room.getRoomType(), room.getMaxMembers(), false);
+        chatRoomDomainService.deactivate(room);
     }
 
     public ChatRoomDto getRoom(Long roomId) {
@@ -100,7 +102,7 @@ public class ChatRoomService {
                 .map(existing -> {
                     if (!existing.isActive()) {
                         existing.activate();
-                        room.incrementMembers();
+                        chatRoomDomainService.increaseMembers(room);
                     }
                     return existing;
                 })
@@ -110,7 +112,7 @@ public class ChatRoomService {
                     }
                     ChatRoomMember created = ChatRoomMember.create(room, user, ChatMemberRole.MEMBER);
                     chatRoomMemberRepository.save(created);
-                    room.incrementMembers();
+                    chatRoomDomainService.increaseMembers(room);
                     return created;
                 });
         return ChatRoomMemberDto.from(member);
@@ -121,7 +123,7 @@ public class ChatRoomService {
                 .orElseThrow(() -> new ChatAccessDeniedException());
         if (member.isActive()) {
             member.markInactive();
-            member.getRoom().decrementMembers();
+            chatRoomDomainService.decreaseMembers(member.getRoom());
         }
     }
 

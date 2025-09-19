@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -128,6 +129,11 @@ public class AuthService {
 
     private UserSession createSessionForUser(User user) {
         UserSession session = UserSession.newSession(user);
+
+        String placeholderAccess = "PENDING-" + UUID.randomUUID();
+        String placeholderRefresh = "PENDING-" + UUID.randomUUID();
+        Instant now = Instant.now();
+        session.initializeTokens(placeholderAccess, placeholderRefresh, now, now);
         userSessionRepository.save(session);
 
         String sessionId = String.valueOf(session.getId());
@@ -141,7 +147,7 @@ public class AuthService {
         Instant refreshExpiry = tokenProvider.getExpiry(refreshToken);
 
         session.updateTokens(accessToken, refreshToken, accessExpiry, refreshExpiry);
-        return userSessionRepository.save(session);
+        return session;
     }
 
     private Set<String> rolesFor(User user) {

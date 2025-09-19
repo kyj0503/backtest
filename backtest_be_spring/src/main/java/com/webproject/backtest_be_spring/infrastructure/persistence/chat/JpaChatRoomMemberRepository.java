@@ -1,14 +1,11 @@
-package com.webproject.backtest_be_spring.domain.chat.repository;
+package com.webproject.backtest_be_spring.infrastructure.persistence.chat;
 
 import com.webproject.backtest_be_spring.domain.chat.model.ChatRoomMember;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface ChatRoomMemberRepository {
-
-    ChatRoomMember save(ChatRoomMember member);
-
-    Optional<ChatRoomMember> findById(Long id);
+public interface JpaChatRoomMemberRepository extends JpaRepository<ChatRoomMember, Long> {
 
     Optional<ChatRoomMember> findByRoomIdAndUserId(Long roomId, Long userId);
 

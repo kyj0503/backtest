@@ -115,6 +115,13 @@ public class UserSession {
         return revoked;
     }
 
+    public void initializeTokens(String accessToken, String refreshToken, Instant accessExpiry, Instant refreshExpiry) {
+        this.accessToken = accessToken;
+        this.refreshToken = refreshToken;
+        this.accessExpiresAt = accessExpiry;
+        this.refreshExpiresAt = refreshExpiry;
+    }
+
     public void updateTokens(String accessToken, String refreshToken, Instant accessExpiry, Instant refreshExpiry) {
         this.accessToken = accessToken;
         this.refreshToken = refreshToken;
