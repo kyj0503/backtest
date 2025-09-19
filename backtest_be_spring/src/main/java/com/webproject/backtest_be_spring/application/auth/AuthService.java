@@ -62,7 +62,7 @@ public class AuthService {
             UserSession session = createSessionForUser(user);
             return mapToAuthResult(user, session);
         } catch (DataIntegrityViolationException ex) {
-            throw new UserAlreadyExistsException("이미 등록된 사용자입니다.", ex);
+            throw new UserAlreadyExistsException("이미 등록된 사용자입니다.");
         }
     }
 

@@ -17,4 +17,15 @@ public enum InvestmentType {
     public String toDatabaseValue() {
         return name().toLowerCase();
     }
+
+    public static InvestmentType fromCode(String code) {
+        if (code == null) {
+            return BALANCED;
+        }
+        return InvestmentType.valueOf(code.toUpperCase());
+    }
+
+    public String getCode() {
+        return name().toLowerCase();
+    }
 }
