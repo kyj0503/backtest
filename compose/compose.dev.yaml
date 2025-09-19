@@ -80,10 +80,11 @@ services:
       - SPRING_DATASOURCE_USERNAME=bt_user
       - SPRING_DATASOURCE_PASSWORD=bt_pass
       - SPRING_REDIS_HOST=redis
+    # For runtime validation use the built image's jar instead of mounting host source (avoids gradle-wrapper network fetch)
+    # If you prefer live-reload during development, revert to mounting source and ensure network access for gradle wrapper.
     volumes:
-      - ../backtest_be_spring:/app
       - backtest_be_spring_gradle_cache:/home/gradle/.gradle
-    command: ["./gradlew", "bootRun"]
+    command: ["java", "-jar", "/app/app.jar"]
 
   backtest_fe:
     build:

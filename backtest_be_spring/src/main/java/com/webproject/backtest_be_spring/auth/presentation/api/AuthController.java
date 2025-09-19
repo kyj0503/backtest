@@ -1,4 +1,4 @@
-package com.webproject.backtest_be_spring.presentation.api.auth;
+package com.webproject.backtest_be_spring.auth.presentation.api;
 
 import com.webproject.backtest_be_spring.application.auth.AuthService;
 import com.webproject.backtest_be_spring.application.auth.command.LoginCommand;
@@ -16,7 +16,6 @@ import com.webproject.backtest_be_spring.auth.presentation.api.dto.TokenResponse
 import com.webproject.backtest_be_spring.auth.presentation.api.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.context.annotation.Profile;
 import jakarta.validation.Valid;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/auth")
 @Tag(name = "Authentication", description = "회원 인증 및 토큰 발급 API")
-@Profile("legacy")
 public class AuthController {
 
     private final AuthService authService;
