@@ -1,0 +1,23 @@
+package com.webproject.backtest_be_spring.auth.application.command;
+
+import com.webproject.backtest_be_spring.user.domain.model.InvestmentType;
+import java.util.Objects;
+import java.util.Optional;
+
+public record RegisterUserCommand(
+        String username,
+        String email,
+        String password,
+        Optional<InvestmentType> investmentType
+) {
+    public RegisterUserCommand(
+            String username,
+            String email,
+            String password,
+            Optional<InvestmentType> investmentType) {
+        this.username = Objects.requireNonNull(username, "username must not be null");
+        this.email = Objects.requireNonNull(email, "email must not be null");
+        this.password = Objects.requireNonNull(password, "password must not be null");
+        this.investmentType = investmentType == null ? Optional.empty() : investmentType;
+    }
+}
