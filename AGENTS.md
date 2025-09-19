@@ -11,7 +11,10 @@
 - Full stack: `docker compose -f compose/compose.dev.yaml up -d --build`; stop with `docker compose down`.
 - FastAPI: `pip install -r requirements.txt`, then `uvicorn app.main:app --reload` or `python run_server.py`.
 - Frontend: In `backtest_fe`, run `npm install`, `npm run dev` for Vite, `npm run build` for optimized assets, and `npm run lint` for ESLint.
-- Spring: `./gradlew bootRun` for local API and `./gradlew build` for production artifacts.
+- Spring: `./gradlew bootRun` for local API and `./gradlew build` for production artifacts. Devtools is enabled; in IntelliJ turn on `Build project automatically` and `compiler.automake.allow.when.app.running` to restart on save.
+
+### API Documentation
+- Spring Boot exposes Swagger UI at `http://localhost:8080/swagger-ui.html` once running. OpenAPI endpoints are under `/v3/api-docs/**` and are publicly accessible by default.
 
 ## Coding Style & Naming Conventions
 - Python: PEP 8 via `black` (line length 88) and `isort`; snake_case modules, PascalCase classes, prefer typed interfaces.
@@ -28,5 +31,6 @@
 - Verify lint and a targeted `docker compose` smoke run before requesting review.
 
 ## Configuration & Ops Notes
-- Provide `.env` files in `backtest_fe` and `backtest_be_fast`, and `application.properties` in `backtest_be_spring`; never commit secrets.
-- Update `database/schema.sql` alongside API changes and document new environment keys in the relevant README.
+- Provide `.env` files in `backtest_fe` and `backtest_be_fast`; for `backtest_be_spring` use `application.properties` plus an optional `.env` (copy from `.env.example`) to override sensitive values locally. Never commit secrets.
+- Spring Boot pulls `.env` from its project root (same directory where you run `./gradlew bootRun`). Docker Compose uses the root `.env` for prod overrides.
+- `database/schema.sql` defines the canonical MySQL schema; keep it in sync with JPA mappings (e.g., `users.investment_type` now uses `VARCHAR(20)` with a CHECK constraint). Document new environment keys in the relevant README when they’re introduced.
