@@ -14,7 +14,7 @@ services:
       - ../database:/docker-entrypoint-initdb.d:ro
       - backtest_db_data_prod:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "${MYSQL_HOST_PORT:-3307}:3306"
 
   redis:
     image: redis:7-alpine
@@ -55,6 +55,9 @@ services:
     ports:
       - "8081:8080"
     env_file: ../.env
+    environment:
+      - SPRING_DATASOURCE_HOST=mysql
+      - SPRING_DATASOURCE_PORT=3306
     volumes:
       - ../backtest_be_spring:/app
     command: ["./gradlew", "bootRun"]

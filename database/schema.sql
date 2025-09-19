@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_salt   VARBINARY(128)  NOT NULL COMMENT '비밀번호 솔트',
   password_algo   VARCHAR(50)     NOT NULL DEFAULT 'bcrypt' COMMENT '해시 알고리즘',
   profile_image   VARCHAR(500)    DEFAULT NULL COMMENT '프로필 이미지 URL',
-  investment_type ENUM('conservative', 'moderate', 'balanced', 'aggressive', 'speculative') DEFAULT 'balanced' COMMENT '투자 성향',
+  investment_type VARCHAR(20) NOT NULL DEFAULT 'balanced' COMMENT '투자 성향',
   is_admin        TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '관리자 여부',
   is_active       TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '계정 활성화 상태',
   is_email_verified TINYINT(1)    NOT NULL DEFAULT 0 COMMENT '이메일 인증 여부',
@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uq_users_username (username),
   KEY idx_users_created (created_at DESC),
   KEY idx_users_investment (investment_type),
-  KEY idx_users_last_login (last_login_at DESC)
+  KEY idx_users_last_login (last_login_at DESC),
+  CONSTRAINT chk_users_investment_type CHECK (investment_type IN ('conservative', 'moderate', 'balanced', 'aggressive', 'speculative'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='회원 기본 정보';
 
 -- 회원 세션 (Access Token + Refresh Token 지원)

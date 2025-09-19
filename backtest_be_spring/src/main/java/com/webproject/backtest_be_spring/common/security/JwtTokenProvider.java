@@ -4,6 +4,7 @@ import com.webproject.backtest_be_spring.domain.auth.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
@@ -84,7 +85,7 @@ public class JwtTokenProvider {
     private byte[] resolveKeyBytes(String secret) {
         try {
             return Decoders.BASE64.decode(secret);
-        } catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException | DecodingException ex) {
             return secret.getBytes(StandardCharsets.UTF_8);
         }
     }
