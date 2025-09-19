@@ -62,7 +62,7 @@ services:
   backtest_be_spring:
     build:
       context: ../backtest_be_spring
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     image: backtest-be-spring:dev
     container_name: backtest_be_spring_dev
     networks:

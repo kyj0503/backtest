@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk-jammy
+FROM eclipse-temurin:17-jdk-jammy AS build
 
 WORKDIR /app
 
@@ -18,6 +18,9 @@ RUN chmod +x ./gradlew
 # Build the application
 RUN ./gradlew bootJar -x test --no-daemon
 
-# Run the jar
+# Runtime image: use JRE (smaller) for production runtime
+FROM eclipse-temurin:17-jre-jammy
+WORKDIR /app
+COPY --from=build /app/build/libs/*.jar ./app.jar
 EXPOSE 8002
-CMD ["java", "-jar", "build/libs/backtest-be-spring-0.0.1-SNAPSHOT.jar"]
+CMD ["java", "-jar", "./app.jar"]
