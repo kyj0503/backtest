@@ -14,6 +14,8 @@ import com.webproject.backtest_be_spring.presentation.auth.dto.SignUpRequest;
 import com.webproject.backtest_be_spring.presentation.auth.dto.TokenRefreshRequest;
 import com.webproject.backtest_be_spring.presentation.auth.dto.TokenResponse;
 import com.webproject.backtest_be_spring.presentation.auth.dto.UserResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Authentication", description = "회원 인증 및 토큰 발급 API")
 public class AuthController {
 
     private final AuthService authService;
@@ -33,6 +36,7 @@ public class AuthController {
         this.authService = authService;
     }
 
+    @Operation(summary = "회원 가입", description = "신규 사용자를 등록하고 액세스/리프레시 토큰을 발급합니다.")
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> signUp(@Valid @RequestBody SignUpRequest request) {
         AuthResult result = authService.register(new RegisterUserCommand(
@@ -43,12 +47,14 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(result));
     }
 
+    @Operation(summary = "이메일 로그인", description = "이메일과 비밀번호로 로그인하여 토큰을 발급받습니다.")
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResult result = authService.login(new LoginCommand(request.email(), request.password()));
         return ResponseEntity.ok(toResponse(result));
     }
 
+    @Operation(summary = "토큰 갱신", description = "리프레시 토큰을 사용해 새로운 액세스/리프레시 토큰을 발급합니다.")
     @PostMapping("/token/refresh")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody TokenRefreshRequest request) {
         AuthResult result = authService.refreshTokens(new TokenRefreshCommand(request.refreshToken()));

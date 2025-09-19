@@ -8,6 +8,8 @@ import com.webproject.backtest_be_spring.common.security.UserPrincipal;
 import com.webproject.backtest_be_spring.domain.user.InvestmentType;
 import com.webproject.backtest_be_spring.presentation.user.dto.UpdateProfileRequest;
 import com.webproject.backtest_be_spring.presentation.user.dto.UserProfileResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/users")
+@Tag(name = "Users", description = "사용자 프로필 조회/수정 API")
 public class UserController {
 
     private final UserService userService;
@@ -28,6 +31,7 @@ public class UserController {
         this.userService = userService;
     }
 
+    @Operation(summary = "내 프로필 조회", description = "현재 로그인한 사용자의 프로필 정보를 반환합니다.")
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
         if (principal == null) {
@@ -37,6 +41,7 @@ public class UserController {
         return ResponseEntity.ok(toResponse(dto));
     }
 
+    @Operation(summary = "내 프로필 수정", description = "닉네임, 프로필 이미지, 투자 성향 등을 수정합니다.")
     @PatchMapping("/me")
     public ResponseEntity<UserProfileResponse> updateProfile(
             @AuthenticationPrincipal UserPrincipal principal,
