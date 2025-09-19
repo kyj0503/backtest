@@ -1,13 +1,10 @@
-package com.webproject.backtest_be_spring.domain.community.repository;
+package com.webproject.backtest_be_spring.infrastructure.persistence.community;
 
 import com.webproject.backtest_be_spring.domain.community.model.CommentLike;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CommentLikeRepository {
-
-    CommentLike save(CommentLike like);
-
-    void delete(CommentLike like);
+public interface JpaCommentLikeRepository extends JpaRepository<CommentLike, Long> {
 
     Optional<CommentLike> findByCommentIdAndUserId(Long commentId, Long userId);
 

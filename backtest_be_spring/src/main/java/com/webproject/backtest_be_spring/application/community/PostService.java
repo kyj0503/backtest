@@ -13,6 +13,7 @@ import com.webproject.backtest_be_spring.domain.community.model.PostContentType;
 import com.webproject.backtest_be_spring.domain.community.model.PostLike;
 import com.webproject.backtest_be_spring.domain.community.repository.PostLikeRepository;
 import com.webproject.backtest_be_spring.domain.community.repository.PostRepository;
+import com.webproject.backtest_be_spring.domain.community.service.PostDomainService;
 import com.webproject.backtest_be_spring.domain.user.model.User;
 import com.webproject.backtest_be_spring.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -28,12 +29,14 @@ public class PostService {
     private final PostRepository postRepository;
     private final PostLikeRepository postLikeRepository;
     private final UserRepository userRepository;
+    private final PostDomainService postDomainService;
 
     public PostService(PostRepository postRepository, PostLikeRepository postLikeRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository, PostDomainService postDomainService) {
         this.postRepository = postRepository;
         this.postLikeRepository = postLikeRepository;
         this.userRepository = userRepository;
+        this.postDomainService = postDomainService;
     }
 
     public PostDto create(Long userId, CreatePostCommand command) {
@@ -73,8 +76,7 @@ public class PostService {
     public PostDto getPost(Long postId, boolean increaseViewCount) {
         Post post = postRepository.findByIdAndDeletedFalse(postId).orElseThrow(() -> new PostNotFoundException(postId));
         if (increaseViewCount) {
-            postRepository.incrementViewCount(postId);
-            post.incrementViewCount();
+            postDomainService.increaseViewCount(post);
         }
         return PostDto.from(post);
     }
@@ -98,13 +100,11 @@ public class PostService {
         Optional<PostLike> existing = postLikeRepository.findByPostIdAndUserId(postId, userId);
         if (existing.isPresent()) {
             postLikeRepository.delete(existing.get());
-            postRepository.adjustLikeCount(postId, -1);
-            post.decrementLikeCount();
+            postDomainService.decreaseLikeCount(post);
             return false;
         } else {
             postLikeRepository.save(PostLike.create(post, user));
-            postRepository.adjustLikeCount(postId, 1);
-            post.incrementLikeCount();
+            postDomainService.increaseLikeCount(post);
             return true;
         }
     }

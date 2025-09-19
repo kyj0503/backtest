@@ -13,6 +13,7 @@ import com.webproject.backtest_be_spring.domain.community.model.PostComment;
 import com.webproject.backtest_be_spring.domain.community.repository.CommentLikeRepository;
 import com.webproject.backtest_be_spring.domain.community.repository.PostCommentRepository;
 import com.webproject.backtest_be_spring.domain.community.repository.PostRepository;
+import com.webproject.backtest_be_spring.domain.community.service.PostDomainService;
 import com.webproject.backtest_be_spring.domain.user.model.User;
 import com.webproject.backtest_be_spring.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -29,13 +30,16 @@ public class CommentService {
     private final PostCommentRepository postCommentRepository;
     private final CommentLikeRepository commentLikeRepository;
     private final UserRepository userRepository;
+    private final PostDomainService postDomainService;
 
     public CommentService(PostRepository postRepository, PostCommentRepository postCommentRepository,
-            CommentLikeRepository commentLikeRepository, UserRepository userRepository) {
+            CommentLikeRepository commentLikeRepository, UserRepository userRepository,
+            PostDomainService postDomainService) {
         this.postRepository = postRepository;
         this.postCommentRepository = postCommentRepository;
         this.commentLikeRepository = commentLikeRepository;
         this.userRepository = userRepository;
+        this.postDomainService = postDomainService;
     }
 
     public CommentDto addComment(Long postId, Long userId, CreateCommentCommand command) {
@@ -54,8 +58,7 @@ public class CommentService {
 
         PostComment comment = PostComment.create(post, user, parent, command.content());
         postCommentRepository.save(comment);
-        postRepository.adjustCommentCount(postId, 1);
-        post.incrementCommentCount();
+        postDomainService.increaseCommentCount(post);
         return CommentDto.from(comment, List.of());
     }
 
@@ -72,8 +75,7 @@ public class CommentService {
                 .orElseThrow(() -> new CommentNotFoundException(commentId));
         verifyOwnershipOrAdmin(comment, userId);
         comment.markDeleted();
-        postRepository.adjustCommentCount(comment.getPost().getId(), -1);
-        comment.getPost().decrementCommentCount();
+        postDomainService.decreaseCommentCount(comment.getPost());
     }
 
     public boolean toggleLike(Long commentId, Long userId) {
