@@ -10,10 +10,14 @@ public record RegisterUserCommand(
         String password,
         Optional<InvestmentType> investmentType
 ) {
-    public RegisterUserCommand {
-        Objects.requireNonNull(username, "username must not be null");
-        Objects.requireNonNull(email, "email must not be null");
-        Objects.requireNonNull(password, "password must not be null");
+    public RegisterUserCommand(
+            String username,
+            String email,
+            String password,
+            Optional<InvestmentType> investmentType) {
+        this.username = Objects.requireNonNull(username, "username must not be null");
+        this.email = Objects.requireNonNull(email, "email must not be null");
+        this.password = Objects.requireNonNull(password, "password must not be null");
         this.investmentType = investmentType == null ? Optional.empty() : investmentType;
     }
 }
