@@ -4,6 +4,15 @@ import com.webproject.backtest_be_spring.application.auth.exception.InvalidCrede
 import com.webproject.backtest_be_spring.application.auth.exception.InvalidRefreshTokenException;
 import com.webproject.backtest_be_spring.application.auth.exception.UserAlreadyExistsException;
 import com.webproject.backtest_be_spring.application.auth.exception.UserNotFoundException;
+import com.webproject.backtest_be_spring.application.admin.exception.AdminAccessDeniedException;
+import com.webproject.backtest_be_spring.application.admin.exception.NoticeNotFoundException;
+import com.webproject.backtest_be_spring.application.admin.exception.ReportNotFoundException;
+import com.webproject.backtest_be_spring.application.community.exception.CommentNotFoundException;
+import com.webproject.backtest_be_spring.application.community.exception.CommunityAccessDeniedException;
+import com.webproject.backtest_be_spring.application.community.exception.PostNotFoundException;
+import com.webproject.backtest_be_spring.application.chat.exception.ChatAccessDeniedException;
+import com.webproject.backtest_be_spring.application.chat.exception.ChatMessageNotFoundException;
+import com.webproject.backtest_be_spring.application.chat.exception.ChatRoomNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +39,36 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
+    @ExceptionHandler({PostNotFoundException.class, CommentNotFoundException.class})
+    public ResponseEntity<ErrorResponse> handleCommunityNotFound(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CommunityAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleCommunityAccessDenied(CommunityAccessDeniedException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler({ChatRoomNotFoundException.class, ChatMessageNotFoundException.class,
+            ReportNotFoundException.class, NoticeNotFoundException.class})
+    public ResponseEntity<ErrorResponse> handleDomainNotFound(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(ChatAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleChatAccessDenied(ChatAccessDeniedException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(AdminAccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAdminAccessDenied(AdminAccessDeniedException ex,
+            HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class, IllegalArgumentException.class})
     public ResponseEntity<ErrorResponse> handleValidation(Exception ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "잘못된 요청입니다.", request.getRequestURI());
     }
