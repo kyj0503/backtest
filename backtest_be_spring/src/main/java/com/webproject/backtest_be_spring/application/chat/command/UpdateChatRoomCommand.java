@@ -1,6 +1,6 @@
 package com.webproject.backtest_be_spring.application.chat.command;
 
-import com.webproject.backtest_be_spring.domain.chat.ChatRoomType;
+import com.webproject.backtest_be_spring.domain.chat.model.ChatRoomType;
 
 public record UpdateChatRoomCommand(
         String name,

@@ -1,7 +1,7 @@
 package com.webproject.backtest_be_spring.application.admin.command;
 
-import com.webproject.backtest_be_spring.domain.admin.SystemNoticePriority;
-import com.webproject.backtest_be_spring.domain.admin.SystemNoticeType;
+import com.webproject.backtest_be_spring.domain.admin.model.SystemNoticePriority;
+import com.webproject.backtest_be_spring.domain.admin.model.SystemNoticeType;
 import java.time.Instant;
 
 public record UpdateNoticeCommand(

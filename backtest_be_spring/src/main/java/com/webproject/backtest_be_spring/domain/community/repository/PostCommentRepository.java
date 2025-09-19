@@ -1,7 +1,7 @@
 package com.webproject.backtest_be_spring.domain.community.repository;
 
-import com.webproject.backtest_be_spring.domain.community.Post;
-import com.webproject.backtest_be_spring.domain.community.PostComment;
+import com.webproject.backtest_be_spring.domain.community.model.Post;
+import com.webproject.backtest_be_spring.domain.community.model.PostComment;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;

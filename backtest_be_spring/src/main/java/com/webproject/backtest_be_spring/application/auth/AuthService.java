@@ -10,10 +10,10 @@ import com.webproject.backtest_be_spring.application.auth.exception.InvalidCrede
 import com.webproject.backtest_be_spring.application.auth.exception.InvalidRefreshTokenException;
 import com.webproject.backtest_be_spring.application.auth.exception.UserAlreadyExistsException;
 import com.webproject.backtest_be_spring.application.auth.exception.UserNotFoundException;
-import com.webproject.backtest_be_spring.common.security.JwtTokenProvider;
-import com.webproject.backtest_be_spring.domain.user.InvestmentType;
-import com.webproject.backtest_be_spring.domain.user.User;
-import com.webproject.backtest_be_spring.domain.user.UserSession;
+import com.webproject.backtest_be_spring.infrastructure.security.JwtTokenProvider;
+import com.webproject.backtest_be_spring.domain.user.model.InvestmentType;
+import com.webproject.backtest_be_spring.domain.user.model.User;
+import com.webproject.backtest_be_spring.domain.user.model.UserSession;
 import com.webproject.backtest_be_spring.domain.user.repository.UserRepository;
 import com.webproject.backtest_be_spring.domain.user.repository.UserSessionRepository;
 import io.jsonwebtoken.Claims;

@@ -1,7 +1,7 @@
 package com.webproject.backtest_be_spring.domain.user.repository;
 
-import com.webproject.backtest_be_spring.domain.user.User;
-import com.webproject.backtest_be_spring.domain.user.UserSession;
+import com.webproject.backtest_be_spring.domain.user.model.User;
+import com.webproject.backtest_be_spring.domain.user.model.UserSession;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

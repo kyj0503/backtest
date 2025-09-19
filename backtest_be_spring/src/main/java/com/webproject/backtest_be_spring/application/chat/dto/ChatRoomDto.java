@@ -1,7 +1,7 @@
 package com.webproject.backtest_be_spring.application.chat.dto;
 
-import com.webproject.backtest_be_spring.domain.chat.ChatRoom;
-import com.webproject.backtest_be_spring.domain.chat.ChatRoomType;
+import com.webproject.backtest_be_spring.domain.chat.model.ChatRoom;
+import com.webproject.backtest_be_spring.domain.chat.model.ChatRoomType;
 import java.time.Instant;
 
 public record ChatRoomDto(

@@ -1,6 +1,6 @@
 package com.webproject.backtest_be_spring.application.chat.command;
 
-import com.webproject.backtest_be_spring.domain.chat.ChatMessageType;
+import com.webproject.backtest_be_spring.domain.chat.model.ChatMessageType;
 
 public record SendChatMessageCommand(
         ChatMessageType messageType,

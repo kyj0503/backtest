@@ -1,7 +1,7 @@
 package com.webproject.backtest_be_spring.application.community.command;
 
-import com.webproject.backtest_be_spring.domain.community.PostCategory;
-import com.webproject.backtest_be_spring.domain.community.PostContentType;
+import com.webproject.backtest_be_spring.domain.community.model.PostCategory;
+import com.webproject.backtest_be_spring.domain.community.model.PostContentType;
 
 public record CreatePostCommand(
         PostCategory category,

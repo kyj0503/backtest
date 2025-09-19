@@ -1,6 +1,6 @@
 package com.webproject.backtest_be_spring.domain.community.repository;
 
-import com.webproject.backtest_be_spring.domain.community.CommentLike;
+import com.webproject.backtest_be_spring.domain.community.model.CommentLike;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

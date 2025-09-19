@@ -1,6 +1,6 @@
 package com.webproject.backtest_be_spring.domain.user.repository;
 
-import com.webproject.backtest_be_spring.domain.user.User;
+import com.webproject.backtest_be_spring.domain.user.model.User;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

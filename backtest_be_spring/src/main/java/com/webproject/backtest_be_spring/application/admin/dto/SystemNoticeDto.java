@@ -1,8 +1,8 @@
 package com.webproject.backtest_be_spring.application.admin.dto;
 
-import com.webproject.backtest_be_spring.domain.admin.SystemNotice;
-import com.webproject.backtest_be_spring.domain.admin.SystemNoticePriority;
-import com.webproject.backtest_be_spring.domain.admin.SystemNoticeType;
+import com.webproject.backtest_be_spring.domain.admin.model.SystemNotice;
+import com.webproject.backtest_be_spring.domain.admin.model.SystemNoticePriority;
+import com.webproject.backtest_be_spring.domain.admin.model.SystemNoticeType;
 import java.time.Instant;
 
 public record SystemNoticeDto(

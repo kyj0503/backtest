@@ -1,6 +1,6 @@
 package com.webproject.backtest_be_spring.domain.chat.repository;
 
-import com.webproject.backtest_be_spring.domain.chat.ChatRoomMember;
+import com.webproject.backtest_be_spring.domain.chat.model.ChatRoomMember;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

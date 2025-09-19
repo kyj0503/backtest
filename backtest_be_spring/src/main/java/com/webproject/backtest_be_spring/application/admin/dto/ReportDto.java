@@ -1,9 +1,9 @@
 package com.webproject.backtest_be_spring.application.admin.dto;
 
-import com.webproject.backtest_be_spring.domain.admin.Report;
-import com.webproject.backtest_be_spring.domain.admin.ReportReason;
-import com.webproject.backtest_be_spring.domain.admin.ReportStatus;
-import com.webproject.backtest_be_spring.domain.admin.ReportTargetType;
+import com.webproject.backtest_be_spring.domain.admin.model.Report;
+import com.webproject.backtest_be_spring.domain.admin.model.ReportReason;
+import com.webproject.backtest_be_spring.domain.admin.model.ReportStatus;
+import com.webproject.backtest_be_spring.domain.admin.model.ReportTargetType;
 import java.time.Instant;
 
 public record ReportDto(

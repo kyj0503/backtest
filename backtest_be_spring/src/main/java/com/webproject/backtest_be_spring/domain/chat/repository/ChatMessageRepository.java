@@ -1,6 +1,6 @@
 package com.webproject.backtest_be_spring.domain.chat.repository;
 
-import com.webproject.backtest_be_spring.domain.chat.ChatMessage;
+import com.webproject.backtest_be_spring.domain.chat.model.ChatMessage;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -1,6 +1,6 @@
 package com.webproject.backtest_be_spring.application.auth.command;
 
-import com.webproject.backtest_be_spring.domain.user.InvestmentType;
+import com.webproject.backtest_be_spring.domain.user.model.InvestmentType;
 import java.util.Objects;
 import java.util.Optional;
 

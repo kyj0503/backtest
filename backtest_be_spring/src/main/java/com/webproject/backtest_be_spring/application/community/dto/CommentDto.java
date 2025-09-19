@@ -1,6 +1,6 @@
 package com.webproject.backtest_be_spring.application.community.dto;
 
-import com.webproject.backtest_be_spring.domain.community.PostComment;
+import com.webproject.backtest_be_spring.domain.community.model.PostComment;
 import java.time.Instant;
 import java.util.List;
 

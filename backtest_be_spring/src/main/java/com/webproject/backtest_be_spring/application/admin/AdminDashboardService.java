@@ -1,7 +1,7 @@
 package com.webproject.backtest_be_spring.application.admin;
 
 import com.webproject.backtest_be_spring.application.admin.dto.AdminSummaryDto;
-import com.webproject.backtest_be_spring.domain.admin.ReportStatus;
+import com.webproject.backtest_be_spring.domain.admin.model.ReportStatus;
 import com.webproject.backtest_be_spring.domain.admin.repository.ReportRepository;
 import com.webproject.backtest_be_spring.domain.chat.repository.ChatMessageRepository;
 import com.webproject.backtest_be_spring.domain.chat.repository.ChatRoomRepository;

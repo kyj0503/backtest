@@ -4,8 +4,8 @@ import com.webproject.backtest_be_spring.application.auth.exception.UserAlreadyE
 import com.webproject.backtest_be_spring.application.auth.exception.UserNotFoundException;
 import com.webproject.backtest_be_spring.application.user.command.UpdateUserProfileCommand;
 import com.webproject.backtest_be_spring.application.user.dto.UserProfileDto;
-import com.webproject.backtest_be_spring.domain.user.InvestmentType;
-import com.webproject.backtest_be_spring.domain.user.User;
+import com.webproject.backtest_be_spring.domain.user.model.InvestmentType;
+import com.webproject.backtest_be_spring.domain.user.model.User;
 import com.webproject.backtest_be_spring.domain.user.repository.UserRepository;
 import java.util.Optional;
 import org.springframework.stereotype.Service;

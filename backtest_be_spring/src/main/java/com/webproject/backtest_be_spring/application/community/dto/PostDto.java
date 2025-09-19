@@ -1,8 +1,8 @@
 package com.webproject.backtest_be_spring.application.community.dto;
 
-import com.webproject.backtest_be_spring.domain.community.Post;
-import com.webproject.backtest_be_spring.domain.community.PostContentType;
-import com.webproject.backtest_be_spring.domain.community.PostCategory;
+import com.webproject.backtest_be_spring.domain.community.model.Post;
+import com.webproject.backtest_be_spring.domain.community.model.PostContentType;
+import com.webproject.backtest_be_spring.domain.community.model.PostCategory;
 import java.time.Instant;
 
 public record PostDto(

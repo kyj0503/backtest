@@ -2,7 +2,7 @@ package com.webproject.backtest_be_spring.application.chat;
 
 import com.webproject.backtest_be_spring.application.chat.command.SendChatMessageCommand;
 import com.webproject.backtest_be_spring.application.chat.dto.ChatMessageDto;
-import com.webproject.backtest_be_spring.presentation.chat.messaging.ChatMessagePublisher;
+import com.webproject.backtest_be_spring.infrastructure.messaging.chat.ChatMessagePublisher;
 import org.springframework.stereotype.Service;
 
 @Service
