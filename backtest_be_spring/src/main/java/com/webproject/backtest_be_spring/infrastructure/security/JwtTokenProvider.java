@@ -27,6 +27,10 @@ public class JwtTokenProvider {
     }
 
     public String generateAccessToken(Long userId, String username, String email, Collection<String> roles) {
+        return generateAccessToken(userId, username, email, roles, null);
+    }
+
+    public String generateAccessToken(Long userId, String username, String email, Collection<String> roles, String sessionId) {
         Instant now = Instant.now();
         Instant expiry = now.plus(properties.getAccessTokenExpiration());
 
@@ -34,6 +38,9 @@ public class JwtTokenProvider {
         claims.put("username", username);
         claims.put("email", email);
         claims.put("roles", roles);
+        if (sessionId != null) {
+            claims.put("sessionId", sessionId);
+        }
 
         return buildToken(userId, claims, now, expiry);
     }

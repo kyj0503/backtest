@@ -13,6 +13,7 @@ import com.webproject.backtest_be_spring.domain.chat.model.ChatRoomMember;
 import com.webproject.backtest_be_spring.domain.chat.repository.ChatMessageRepository;
 import com.webproject.backtest_be_spring.domain.chat.repository.ChatRoomMemberRepository;
 import com.webproject.backtest_be_spring.domain.chat.repository.ChatRoomRepository;
+import com.webproject.backtest_be_spring.domain.chat.service.ChatMessageDomainService;
 import com.webproject.backtest_be_spring.domain.user.model.User;
 import com.webproject.backtest_be_spring.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -32,15 +33,18 @@ public class ChatMessageService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final UserRepository userRepository;
+    private final ChatMessageDomainService chatMessageDomainService;
 
     public ChatMessageService(ChatRoomRepository chatRoomRepository,
             ChatRoomMemberRepository chatRoomMemberRepository,
             ChatMessageRepository chatMessageRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ChatMessageDomainService chatMessageDomainService) {
         this.chatRoomRepository = chatRoomRepository;
         this.chatRoomMemberRepository = chatRoomMemberRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.userRepository = userRepository;
+        this.chatMessageDomainService = chatMessageDomainService;
     }
 
     public ChatMessageDto sendMessage(Long roomId, Long userId, SendChatMessageCommand command) {
@@ -56,10 +60,10 @@ public class ChatMessageService {
             replyTo = chatMessageRepository.findById(command.replyToId())
                     .orElseThrow(() -> new ChatMessageNotFoundException(command.replyToId()));
         }
-        ChatMessage message = ChatMessage.create(
+        ChatMessage message = chatMessageDomainService.create(
                 room,
                 sender,
-                Optional.ofNullable(command.messageType()).orElse(ChatMessageType.TEXT),
+                command.messageType(),
                 command.content(),
                 command.fileUrl(),
                 command.fileName(),
@@ -93,6 +97,6 @@ public class ChatMessageService {
                 throw new ChatAccessDeniedException();
             }
         }
-        message.markDeleted();
+        chatMessageDomainService.delete(message);
     }
 }

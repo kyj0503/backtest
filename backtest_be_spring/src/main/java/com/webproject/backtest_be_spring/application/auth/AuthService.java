@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -56,10 +57,13 @@ public class AuthService {
         InvestmentType investmentType = command.investmentType().orElse(InvestmentType.BALANCED);
 
         User user = User.create(command.username(), command.email(), encodedPassword, salt, investmentType);
-        userRepository.save(user);
-
-        UserSession session = createSessionForUser(user);
-        return mapToAuthResult(user, session);
+        try {
+            userRepository.save(user);
+            UserSession session = createSessionForUser(user);
+            return mapToAuthResult(user, session);
+        } catch (DataIntegrityViolationException ex) {
+            throw new UserAlreadyExistsException("이미 등록된 사용자입니다.", ex);
+        }
     }
 
     public AuthResult login(LoginCommand command) {
@@ -106,7 +110,8 @@ public class AuthService {
                 session.getUser().getId(),
                 session.getUser().getUsername(),
                 session.getUser().getEmail(),
-                rolesFor(session.getUser()));
+                rolesFor(session.getUser()),
+                String.valueOf(session.getId()));
         String newRefreshToken = tokenProvider.generateRefreshToken(session.getUser().getId(), sessionId);
 
         Instant accessExpiry = tokenProvider.getExpiry(newAccessToken);
@@ -141,13 +146,14 @@ public class AuthService {
                 user.getId(),
                 user.getUsername(),
                 user.getEmail(),
-                rolesFor(user));
+                rolesFor(user),
+                sessionId);
         String refreshToken = tokenProvider.generateRefreshToken(user.getId(), sessionId);
         Instant accessExpiry = tokenProvider.getExpiry(accessToken);
         Instant refreshExpiry = tokenProvider.getExpiry(refreshToken);
 
         session.updateTokens(accessToken, refreshToken, accessExpiry, refreshExpiry);
-        return session;
+        return userSessionRepository.save(session);
     }
 
     private Set<String> rolesFor(User user) {

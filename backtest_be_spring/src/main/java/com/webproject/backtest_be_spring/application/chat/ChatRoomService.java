@@ -13,6 +13,7 @@ import com.webproject.backtest_be_spring.domain.chat.model.ChatRoomMember;
 import com.webproject.backtest_be_spring.domain.chat.model.ChatRoomType;
 import com.webproject.backtest_be_spring.domain.chat.repository.ChatRoomMemberRepository;
 import com.webproject.backtest_be_spring.domain.chat.repository.ChatRoomRepository;
+import com.webproject.backtest_be_spring.domain.chat.service.ChatRoomDomainService;
 import com.webproject.backtest_be_spring.domain.user.model.User;
 import com.webproject.backtest_be_spring.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
