@@ -75,6 +75,33 @@ const ChatPage: React.FC = () => {
     void loadRooms();
   }, []);
 
+  // Auto-join when the initial selectedRoom is set and user is logged in
+  useEffect(() => {
+    const tryAutoJoin = async () => {
+      if (!selectedRoom) return;
+      if (!user) return;
+      // if already marked as joined, do nothing
+      if (memberJoined) return;
+      try {
+        setJoining(true);
+        await joinRoom(selectedRoom.id);
+        setMemberJoined(true);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '자동 참여 중 오류가 발생했습니다.';
+        if (message.includes('이미') || message.toLowerCase().includes('already')) {
+          setMemberJoined(true);
+        } else {
+          // don't spam the user on initial load; show info only
+          console.warn('자동 채팅방 참여 실패:', message);
+        }
+      } finally {
+        setJoining(false);
+      }
+    };
+
+    void tryAutoJoin();
+  }, [selectedRoom, user]);
+
   useEffect(() => {
     const url = buildWebSocketUrl();
     const client = new SimpleStompClient(url);
