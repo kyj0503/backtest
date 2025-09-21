@@ -1,4 +1,3 @@
-import { buildApiUrl } from '@/shared/api/base';
 import { BacktestRequest } from '../model/api-types';
 
 export interface ApiError {
@@ -35,15 +34,32 @@ const parseErrorResponse = async (response: Response): Promise<ApiError> => {
   let errorId: string | undefined;
 
   try {
-    const data = await response.json();
-    if (typeof data?.detail === 'string') {
-      message = data.detail;
-      errorId = extractErrorId(data.detail);
-    } else if (typeof data?.message === 'string') {
-      message = data.message;
+    // First try JSON parsing (most APIs). If that fails, fall back to text.
+    const text = await response.text();
+    if (!text) {
+      message = response.statusText || message;
+    } else {
+      try {
+        const data = JSON.parse(text);
+        if (typeof data?.detail === 'string') {
+          message = data.detail;
+          errorId = extractErrorId(data.detail);
+        } else if (typeof data?.message === 'string') {
+          message = data.message;
+        } else if (typeof data === 'string') {
+          message = data;
+        } else {
+          // fallback to raw text when JSON doesn't contain expected fields
+          message = text;
+        }
+      } catch (jsonErr) {
+        // not JSON, use raw text
+        message = text;
+      }
     }
   } catch (error) {
-    console.warn('Failed to parse API error payload', error);
+    console.warn('Failed to read API error payload', error);
+    message = response.statusText || message;
   }
 
   return {
@@ -78,58 +94,40 @@ const createNetworkError = (error: unknown): ApiError => {
   };
 };
 
-export const runBacktest = async (request: BacktestRequest) => {
-  const unifiedRequest = {
-    portfolio: request.portfolio.map((stock) => ({
-      symbol: stock.symbol,
-      amount: stock.amount,
-      weight: (stock as any).weight,
-      investment_type: stock.investment_type || 'lump_sum',
-      dca_periods: stock.dca_periods,
-      asset_type: stock.asset_type || 'stock',
-    })),
-    start_date: request.start_date,
-    end_date: request.end_date,
-    strategy: request.strategy,
-    strategy_params: request.strategy_params || {},
-    commission: request.commission ?? 0.002,
-    rebalance_frequency: request.rebalance_frequency || 'monthly',
-  };
+// FastAPI 백테스트 서버는 인증이 필요 없으므로 직접 호출
+// Vite 프록시를 통해 /api/v1/backtest -> http://localhost:8000/api/v1/backtest 로 라우팅됨
+export const backtestApi = {
+  async executeBacktest(request: BacktestRequest) {
+    try {
+      const response = await fetch('/api/v1/backtest/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
 
-  try {
-    const response = await fetch(buildApiUrl('/api/v1/backtest/execute'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(unifiedRequest),
-    });
+      if (!response.ok) {
+        throw await parseErrorResponse(response);
+      }
 
-    if (!response.ok) {
-      throw await parseErrorResponse(response);
+      return response.json();
+    } catch (error) {
+      if (error && typeof error === 'object' && 'message' in (error as Record<string, unknown>)) {
+        throw error as ApiError;
+      }
+      throw createNetworkError(error);
     }
-
-    const result = await response.json();
-
-    if (result?.status === 'success') {
-      return {
-        ...result.data,
-        backtest_type: result.backtest_type,
-        api_version: 'unified',
-      };
-    }
-
-    return result;
-  } catch (error) {
-    if (error && typeof error === 'object' && 'message' in (error as Record<string, unknown>)) {
-      throw error as ApiError;
-    }
-    throw createNetworkError(error);
-  }
+  },
 };
+
+// Convenience named export for backward compatibility with previous imports
+export const runBacktest = (request: BacktestRequest) => backtestApi.executeBacktest(request);
 
 export const getStockData = async (ticker: string, startDate: string, endDate: string) => {
   try {
     const response = await fetch(
-      buildApiUrl(`/api/v1/backtest/stock-data/${ticker}?start_date=${startDate}&end_date=${endDate}`),
+      `/api/v1/backtest/stock-data/${ticker}?start_date=${startDate}&end_date=${endDate}`,
       { headers: { 'Content-Type': 'application/json' } },
     );
 
@@ -149,7 +147,7 @@ export const getStockData = async (ticker: string, startDate: string, endDate: s
 export const getExchangeRate = async (startDate: string, endDate: string) => {
   try {
     const response = await fetch(
-      buildApiUrl(`/api/v1/backtest/exchange-rate?start_date=${startDate}&end_date=${endDate}`),
+      `/api/v1/backtest/exchange-rate?start_date=${startDate}&end_date=${endDate}`,
       { headers: { 'Content-Type': 'application/json' } },
     );
 
@@ -174,9 +172,7 @@ export const getStockVolatilityNews = async (
 ) => {
   try {
     const response = await fetch(
-      buildApiUrl(
-        `/api/v1/backtest/stock-volatility-news/${ticker}?start_date=${startDate}&end_date=${endDate}&threshold=${threshold}`,
-      ),
+      `/api/v1/backtest/stock-volatility-news/${ticker}?start_date=${startDate}&end_date=${endDate}&threshold=${threshold}`,
       { headers: { 'Content-Type': 'application/json' } },
     );
 
@@ -196,7 +192,7 @@ export const getStockVolatilityNews = async (
 export const getNaverNews = async (ticker: string, date: string, display = 10) => {
   try {
     const response = await fetch(
-      buildApiUrl(`/api/v1/naver-news/ticker/${ticker}/date?start_date=${date}&end_date=${date}&display=${display}`),
+      `/api/v1/naver-news/ticker/${ticker}/date?start_date=${date}&end_date=${date}&display=${display}`,
       { headers: { 'Content-Type': 'application/json' } },
     );
 
@@ -216,7 +212,7 @@ export const getNaverNews = async (ticker: string, date: string, display = 10) =
 export const searchNews = async (query: string, display = 15) => {
   try {
     const response = await fetch(
-      buildApiUrl(`/api/v1/naver-news/search?query=${encodeURIComponent(query)}&display=${display}`),
+      `/api/v1/naver-news/search?query=${encodeURIComponent(query)}&display=${display}`,
       { headers: { 'Content-Type': 'application/json' } },
     );
 

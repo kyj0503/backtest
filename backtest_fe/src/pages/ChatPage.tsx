@@ -158,7 +158,14 @@ const ChatPage: React.FC = () => {
     })();
     return () => {
       mounted = false;
-      try { client.disconnect(); } catch (_) {}
+      // 연결 상태를 확인한 후 안전하게 연결 해제
+      try { 
+        if (client.isConnected()) {
+          client.disconnect(); 
+        }
+      } catch (error) {
+        console.debug('WebSocket disconnect error (ignored):', error);
+      }
       wsClientRef.current = null;
     };
   }, []);

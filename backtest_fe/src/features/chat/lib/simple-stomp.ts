@@ -39,6 +39,10 @@ export class SimpleStompClient {
     this.url = url;
   }
 
+  isConnected(): boolean {
+    return this.connected;
+  }
+
   connect(headers: Record<string, string> = {}): Promise<void> {
     if (this.connected) return Promise.resolve();
     if (this.connectPromise) return this.connectPromise;
@@ -106,11 +110,16 @@ export class SimpleStompClient {
 
   disconnect() {
     if (!this.ws) return;
-    try {
-      this.ws.send(['DISCONNECT', '', ''].join('\n'));
-    } catch (error) {
-      console.warn('Failed to send STOMP disconnect frame', error);
+    
+    // 연결 상태일 때만 DISCONNECT 프레임 전송
+    if (this.connected && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(['DISCONNECT', '', ''].join('\n'));
+      } catch (error) {
+        console.warn('Failed to send STOMP disconnect frame', error);
+      }
     }
+    
     this.ws.close();
     this.connected = false;
     this.connectPromise = null;
