@@ -44,6 +44,21 @@ const ChatPage: React.FC = () => {
   const [wsConnected, setWsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Helper to suppress noisy connection-related toasts
+  const showChatError = (message: string) => {
+    try {
+      const m = (message || '').toString();
+      // suppress backend connection-like messages that are noisy on navigation
+      if (/수신|채널|연결하지 못했습니다|채널에 연결/i.test(m)) {
+        console.warn('Suppressed chat error toast:', m);
+        return;
+      }
+    } catch (e) {
+      // ignore
+    }
+    toast.error(message);
+  };
+
   const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -106,15 +121,44 @@ const ChatPage: React.FC = () => {
     const url = buildWebSocketUrl();
     const client = new SimpleStompClient(url);
     wsClientRef.current = client;
-    client
-      .connect()
-      .then(() => setWsConnected(true))
-      .catch((error) => {
-        console.error('웹소켓 연결 실패', error);
-        toast.error('실시간 채팅 수신 채널에 연결하지 못했습니다. 최신 메시지는 새로고침으로 확인해주세요.');
-      });
+    let mounted = true;
+    void (async () => {
+      // Show a connecting toast only if connect takes longer than a short threshold
+      const CONNECT_TOAST_DELAY = 800; // ms
+      let toastTimer: number | null = null;
+      let toastId: string | number | null = null;
+      try {
+        toastTimer = window.setTimeout(() => {
+          // Do not show a toast here; rely on header badge for connection status.
+          console.debug('Chat connect taking longer than threshold; showing status badge.');
+        }, CONNECT_TOAST_DELAY);
+
+        await client.connect();
+        if (!mounted) return;
+        // connected quickly -> cancel pending toast (if any)
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+          toastTimer = null;
+        }
+        if (toastId) {
+          try { /* sonner auto-dismiss handles duration; optionally dismiss manually if supported */ } catch (_) {}
+          toastId = null;
+        }
+        setWsConnected(true);
+      } catch (error) {
+        console.warn('웹소켓 연결 실패 (무시)', error);
+        if (!mounted) return;
+        if (toastTimer) {
+          clearTimeout(toastTimer);
+          toastTimer = null;
+        }
+        // If a connecting toast was shown, replace it with a non-blocking status via UI (we already show '오프라인' badge)
+        setWsConnected(false);
+      }
+    })();
     return () => {
-      client.disconnect();
+      mounted = false;
+      try { client.disconnect(); } catch (_) {}
       wsClientRef.current = null;
     };
   }, []);
@@ -155,9 +199,9 @@ const ChatPage: React.FC = () => {
         const recent = await fetchRecentMessages(selectedRoom.id);
         const sorted = [...recent].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
         setMessages(sorted);
-      } catch (error) {
+        } catch (error) {
         const message = error instanceof Error ? error.message : '메시지를 불러오는 중 오류가 발생했습니다.';
-        toast.error(message);
+        showChatError(message);
         setMessages([]);
       }
     };
@@ -177,12 +221,12 @@ const ChatPage: React.FC = () => {
       setJoining(true);
       await joinRoom(room.id);
       setMemberJoined(true);
-    } catch (error) {
+      } catch (error) {
       const message = error instanceof Error ? error.message : '채팅방 참여 중 오류가 발생했습니다.';
       if (message.includes('이미') || message.toLowerCase().includes('already')) {
         setMemberJoined(true);
       } else {
-        toast.error(message);
+        showChatError(message);
       }
     } finally {
       setJoining(false);
@@ -217,9 +261,9 @@ const ChatPage: React.FC = () => {
         if (exists) return prev;
         return [...prev, response].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
       });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '메시지를 전송하지 못했습니다.';
-      toast.error(message);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '메시지를 전송하지 못했습니다.';
+        showChatError(message);
       setMessageInput(content);
     }
   };
@@ -232,7 +276,7 @@ const ChatPage: React.FC = () => {
       toast.success('채팅방에서 나갔습니다.');
     } catch (error) {
       const message = error instanceof Error ? error.message : '채팅방 나가기 중 오류가 발생했습니다.';
-      toast.error(message);
+      showChatError(message);
     }
   };
 
@@ -288,6 +332,11 @@ const ChatPage: React.FC = () => {
           <Badge variant="outline" className="rounded-full capitalize">
             {selectedRoom.roomType}
           </Badge>
+          <div className="ml-2">
+            <Badge variant={wsConnected ? 'secondary' : 'outline'} className="rounded-full text-xs">
+              {wsConnected ? '연결됨' : '오프라인'}
+            </Badge>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground">{selectedRoom.description || '설명이 없습니다.'}</p>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
