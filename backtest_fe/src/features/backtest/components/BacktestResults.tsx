@@ -33,7 +33,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
   }
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-8">
+    <div className="mx-auto w-[90vw] max-w-[1600px] space-y-8">
       {/* 헤더 */}
       <ResultsHeader data={data} isPortfolio={isPortfolio} />
 
