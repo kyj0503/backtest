@@ -99,6 +99,15 @@ const createNetworkError = (error: unknown): ApiError => {
 export const backtestApi = {
   async executeBacktest(request: BacktestRequest) {
     try {
+      // TEMP DEBUG: log outgoing payload shape to help match backend Pydantic model
+      try {
+        // eslint-disable-next-line no-console
+        console.debug('[backtestApi] executeBacktest outgoing payload:', JSON.parse(JSON.stringify(request)));
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.debug('[backtestApi] failed stringify payload for debug', e);
+      }
+
       const response = await fetch('/api/v1/backtest/execute', {
         method: 'POST',
         headers: {
@@ -111,7 +120,32 @@ export const backtestApi = {
         throw await parseErrorResponse(response);
       }
 
-      return response.json();
+      // TEMP DEBUG: log raw response body to trace what the UI receives
+      try {
+        const text = await response.text();
+        try {
+          // try parsing JSON for pretty logging
+          // eslint-disable-next-line no-console
+          console.debug('[backtestApi] raw response (parsed):', JSON.parse(text));
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.debug('[backtestApi] raw response (text):', text);
+        }
+
+        // return parsed JSON if possible, otherwise text
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          // if backend returned non-JSON body unexpectedly, return as text
+          // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+          return text as unknown as Record<string, unknown>;
+        }
+      } catch (e) {
+        // if reading body fails, fallback to default json() (may throw)
+        // eslint-disable-next-line no-console
+        console.warn('[backtestApi] failed to read response body for debug', e);
+        return response.json();
+      }
     } catch (error) {
       if (error && typeof error === 'object' && 'message' in (error as Record<string, unknown>)) {
         throw error as ApiError;

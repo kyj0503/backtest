@@ -31,17 +31,25 @@ export const useBacktest = (): UseBacktestReturn => {
 
     try {
       const result = await executeBacktest(request);
-      
-      // 통합 API 응답 처리
-      if (result.backtest_type) {
-        setIsPortfolio(result.backtest_type === 'portfolio');
-        console.log(`백테스트 유형: ${result.backtest_type}, 통합 API 사용`);
+
+      // 통합 API 응답 처리: 서버가 wrapper { backtest_type, data, ... } 형태로 반환할 수 있음
+      let normalized = result as any;
+      if (normalized && typeof normalized === 'object' && 'data' in normalized) {
+        // use inner `data` as the shape expected by result components
+        normalized = normalized.data;
+      }
+
+      // 백테스트 유형은 wrapper 레벨에서 결정되므로 원본 `result`를 참조
+      if (result && typeof result === 'object' && 'backtest_type' in (result as any)) {
+        setIsPortfolio((result as any).backtest_type === 'portfolio');
+        // eslint-disable-next-line no-console
+        console.log(`백테스트 유형: ${(result as any).backtest_type}, 통합 API 사용`);
       } else {
         // 레거시 API 응답 처리 (fallback)
         setIsPortfolio(request.portfolio.length > 1 || request.portfolio.some(stock => stock.asset_type === 'cash'));
       }
-      
-      setResults(result);
+
+      setResults(normalized);
     } catch (err) {
       if (err && typeof err === 'object' && 'message' in err) {
         const apiError = err as ApiError;

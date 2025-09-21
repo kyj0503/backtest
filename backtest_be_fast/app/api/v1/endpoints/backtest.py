@@ -820,6 +820,8 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
         })
         
         logger.error(f"Unified backtest execution failed [ID: {error_id}]: {str(e)}")
+        # Debug: include full traceback in logs to help diagnose server-side 500s
+        logger.debug(traceback.format_exc())
         user_message = get_user_friendly_message("unexpected_error", str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
