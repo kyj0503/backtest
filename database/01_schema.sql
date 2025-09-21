@@ -106,9 +106,9 @@ CREATE TABLE IF NOT EXISTS posts (
   title         VARCHAR(200)    NOT NULL COMMENT '제목',
   content       MEDIUMTEXT      NOT NULL COMMENT '내용 (Markdown 지원)',
   content_type  ENUM('text', 'markdown') DEFAULT 'markdown' COMMENT '내용 형식',
-  view_count    INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT '조회수',
-  like_count    INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT '좋아요 수',
-  comment_count INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT '댓글 수',
+  view_count    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '조회수',
+  like_count    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '좋아요 수',
+  comment_count BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '댓글 수',
   is_pinned     TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '상단 고정',
   is_featured   TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '추천 게시글',
   is_deleted    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '논리삭제',
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS post_comments (
   user_id       BIGINT UNSIGNED NOT NULL COMMENT '작성자',
   parent_id     BIGINT UNSIGNED NULL COMMENT '부모 댓글ID (대댓글인 경우)',
   content       TEXT            NOT NULL COMMENT '댓글 내용',
-  like_count    INT UNSIGNED    NOT NULL DEFAULT 0 COMMENT '좋아요 수',
+  like_count    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '좋아요 수',
   is_deleted    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '논리삭제',
   deleted_at    TIMESTAMP       NULL COMMENT '삭제 일시',
   created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '생성일(UTC)',
@@ -371,13 +371,7 @@ CREATE TABLE IF NOT EXISTS user_activity_logs (
   KEY idx_activity_session (session_id),
   CONSTRAINT fk_activity_user FOREIGN KEY (user_id)
     REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='사용자 활동 로그'
-PARTITION BY RANGE (YEAR(created_at)) (
-  PARTITION p2024 VALUES LESS THAN (2025),
-  PARTITION p2025 VALUES LESS THAN (2026),
-  PARTITION p2026 VALUES LESS THAN (2027),
-  PARTITION p_future VALUES LESS THAN MAXVALUE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='사용자 활동 로그';
 
 -- 관리자 작업 로그
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
@@ -414,40 +408,16 @@ CREATE TABLE IF NOT EXISTS system_performance_logs (
   KEY idx_perf_created (created_at DESC),
   KEY idx_perf_endpoint (endpoint),
   KEY idx_perf_composite (metric_type, created_at DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='시스템 성능 로그'
-PARTITION BY RANGE (UNIX_TIMESTAMP(created_at)) (
-  PARTITION p202501 VALUES LESS THAN (UNIX_TIMESTAMP('2025-02-01')),
-  PARTITION p202502 VALUES LESS THAN (UNIX_TIMESTAMP('2025-03-01')),
-  PARTITION p202503 VALUES LESS THAN (UNIX_TIMESTAMP('2025-04-01')),
-  PARTITION p202504 VALUES LESS THAN (UNIX_TIMESTAMP('2025-05-01')),
-  PARTITION p_future VALUES LESS THAN MAXVALUE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='시스템 성능 로그';
 
--- =================================================================
--- 6. 데이터베이스 성능 최적화 설정
--- =================================================================
-
--- 데이터베이스 튜닝 파라미터 (시스템 시작 시 실행)
-SET GLOBAL innodb_buffer_pool_size = 256 * 1024 * 1024; -- 256MB (개발환경)
-SET GLOBAL innodb_log_file_size = 64 * 1024 * 1024; -- 64MB
-SET GLOBAL innodb_log_buffer_size = 16 * 1024 * 1024; -- 16MB
-SET GLOBAL query_cache_size = 64 * 1024 * 1024; -- 64MB
-SET GLOBAL max_connections = 200;
-SET GLOBAL thread_cache_size = 16;
-SET GLOBAL table_open_cache = 400;
-SET GLOBAL innodb_flush_log_at_trx_commit = 2; -- 개발환경: 성능 우선
-
--- =================================================================
--- 7. 추가 인덱스 최적화 (커뮤니티 특화)
 -- =================================================================
 
 -- 사용자 관련 복합 인덱스
-ALTER TABLE users ADD INDEX idx_user_status_level (user_status, user_level);
 ALTER TABLE users ADD INDEX idx_user_activity (last_login_at DESC, is_deleted);
 
 -- 게시판 검색 최적화
 ALTER TABLE posts ADD FULLTEXT INDEX ft_post_search (title, content);
-ALTER TABLE comments ADD FULLTEXT INDEX ft_comment_content (content);
+ALTER TABLE post_comments ADD FULLTEXT INDEX ft_comment_content (content);
 
 -- 채팅 성능 최적화
 ALTER TABLE chat_messages ADD INDEX idx_chat_room_time_type (room_id, created_at DESC, message_type);
@@ -457,8 +427,28 @@ ALTER TABLE chat_room_members ADD INDEX idx_member_activity (user_id, is_active,
 ALTER TABLE user_activity_logs ADD INDEX idx_activity_user_type_time (user_id, activity_type, created_at DESC);
 
 -- 관리자 계정 생성 (비밀번호: admin123!)
-INSERT IGNORE INTO users (id, username, email, password_hash, display_name, user_role, user_status, is_email_verified, created_at) VALUES
-(1, 'admin', 'admin@community.local', '$2a$12$LQv3c1yqBwLVMc5rBXnDIe.5uOZjOTiNtY6XvToWY1y4Z5nOJ5N6K', '시스템 관리자', 'admin', 'active', 1, NOW());
+INSERT IGNORE INTO users (
+  id,
+  username,
+  email,
+  password_hash,
+  password_salt,
+  password_algo,
+  investment_type,
+  is_admin,
+  is_active,
+  is_email_verified
+) VALUES
+(1,
+ 'admin',
+ 'admin@community.local',
+ _binary '$2a$12$LQv3c1yqBwLVMc5rBXnDIe.5uOZjOTiNtY6XvToWY1y4Z5nOJ5N6K',
+ _binary 'dev-salt',
+ 'bcrypt',
+ 'balanced',
+ 1,
+ 1,
+ 1);
 
 -- =================================================================
 -- 8. 초기 데이터 삽입
@@ -482,13 +472,6 @@ INSERT IGNORE INTO system_settings (setting_key, setting_value, setting_type, ca
 ('auto_ban_spam_threshold', '5', 'number', 'moderation', '자동 차단 스팸 임계값');
 
 -- 게시판 카테고리 생성
-INSERT IGNORE INTO categories (id, name, description, display_order, is_active) VALUES
-(1, '공지사항', '사이트 공지사항 및 업데이트 소식', 1, 1),
-(2, '자유게시판', '자유로운 주제로 대화를 나누는 공간', 2, 1),
-(3, '질문답변', '궁금한 것들을 질문하고 답변하는 공간', 3, 1),
-(4, '개발이야기', '개발 관련 이야기를 나누는 공간', 4, 1),
-(5, '취미생활', '취미와 관련된 이야기를 나누는 공간', 5, 1);
-
 -- 기본 채팅방 생성
 INSERT IGNORE INTO chat_rooms (id, name, description, room_type, created_by) VALUES
 (1, '환영합니다!', '새로 오신 분들을 위한 인사 공간입니다', 'public', 1),
