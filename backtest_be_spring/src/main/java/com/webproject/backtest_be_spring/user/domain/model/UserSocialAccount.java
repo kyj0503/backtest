@@ -13,6 +13,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "user_social_accounts")
@@ -43,7 +45,8 @@ public class UserSocialAccount {
     @Column(name = "provider_email", length = 255)
     private String providerEmail;
 
-    @Column(name = "provider_data", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "provider_data", columnDefinition = "JSON")
     private String providerData;
 
     @Column(name = "is_active", nullable = false)

@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE TABLE IF NOT EXISTS user_social_accounts (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
   user_id       BIGINT UNSIGNED NOT NULL COMMENT '회원ID',
-  provider      ENUM('google', 'kakao', 'naver', 'github') NOT NULL COMMENT '소셜 로그인 제공자',
+  provider      ENUM('GOOGLE', 'KAKAO', 'NAVER', 'GITHUB') NOT NULL COMMENT '소셜 로그인 제공자',
   provider_id   VARCHAR(100)    NOT NULL COMMENT '소셜 로그인 고유ID',
   provider_email VARCHAR(255)   DEFAULT NULL COMMENT '소셜 계정 이메일',
   provider_data JSON            DEFAULT NULL COMMENT '소셜 계정 추가 정보',
@@ -102,10 +102,10 @@ CREATE TABLE IF NOT EXISTS user_social_accounts (
 CREATE TABLE IF NOT EXISTS posts (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
   user_id       BIGINT UNSIGNED NOT NULL COMMENT '작성자',
-  category      ENUM('general', 'strategy', 'question', 'news', 'backtest_share') DEFAULT 'general' COMMENT '게시글 카테고리',
+  category      ENUM('GENERAL', 'STRATEGY', 'QUESTION', 'NEWS', 'BACKTEST_SHARE') DEFAULT 'GENERAL' COMMENT '게시글 카테고리',
   title         VARCHAR(200)    NOT NULL COMMENT '제목',
   content       MEDIUMTEXT      NOT NULL COMMENT '내용 (Markdown 지원)',
-  content_type  ENUM('text', 'markdown') DEFAULT 'markdown' COMMENT '내용 형식',
+  content_type  ENUM('TEXT', 'MARKDOWN') DEFAULT 'MARKDOWN' COMMENT '내용 형식',
   view_count    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '조회수',
   like_count    BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '좋아요 수',
   comment_count BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '댓글 수',
@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS chat_rooms (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
   name          VARCHAR(100)    NOT NULL COMMENT '채팅방 이름',
   description   TEXT            DEFAULT NULL COMMENT '채팅방 설명',
-  room_type     ENUM('public', 'private', 'direct') DEFAULT 'public' COMMENT '채팅방 타입',
+  room_type     ENUM('PUBLIC', 'PRIVATE', 'DIRECT') DEFAULT 'PUBLIC' COMMENT '채팅방 타입',
   max_members   INT UNSIGNED    DEFAULT 100 COMMENT '최대 멤버 수',
   current_members INT UNSIGNED  DEFAULT 0 COMMENT '현재 멤버 수',
   created_by    BIGINT UNSIGNED NOT NULL COMMENT '생성자',
@@ -211,7 +211,7 @@ CREATE TABLE IF NOT EXISTS chat_room_members (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
   room_id     BIGINT UNSIGNED NOT NULL COMMENT '채팅방ID',
   user_id     BIGINT UNSIGNED NOT NULL COMMENT '사용자ID',
-  role        ENUM('member', 'moderator', 'admin') DEFAULT 'member' COMMENT '멤버 역할',
+  role        ENUM('MEMBER', 'MODERATOR', 'ADMIN') DEFAULT 'MEMBER' COMMENT '멤버 역할',
   joined_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '입장 일시',
   last_read_at TIMESTAMP      NULL COMMENT '마지막 읽음 일시',
   is_active   TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '활성 상태',
@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
   room_id     BIGINT UNSIGNED NOT NULL COMMENT '채팅방ID',
   user_id     BIGINT UNSIGNED NOT NULL COMMENT '발신자ID',
-  message_type ENUM('text', 'image', 'file', 'system') DEFAULT 'text' COMMENT '메시지 타입',
+  message_type ENUM('TEXT', 'IMAGE', 'FILE', 'SYSTEM') DEFAULT 'TEXT' COMMENT '메시지 타입',
   content     TEXT            NOT NULL COMMENT '메시지 내용',
   file_url    VARCHAR(500)    DEFAULT NULL COMMENT '첨부파일 URL',
   file_name   VARCHAR(255)    DEFAULT NULL COMMENT '첨부파일명',
@@ -261,11 +261,11 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 CREATE TABLE IF NOT EXISTS reports (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
   reporter_id   BIGINT UNSIGNED NOT NULL COMMENT '신고자ID',
-  target_type   ENUM('user', 'post', 'comment', 'chat_message') NOT NULL COMMENT '신고 대상 타입',
+  target_type   ENUM('USER', 'POST', 'COMMENT', 'CHAT_MESSAGE') NOT NULL COMMENT '신고 대상 타입',
   target_id     BIGINT UNSIGNED NOT NULL COMMENT '신고 대상 ID',
-  report_reason ENUM('spam', 'abuse', 'inappropriate', 'copyright', 'other') NOT NULL COMMENT '신고 사유',
+  report_reason ENUM('SPAM', 'ABUSE', 'INAPPROPRIATE', 'COPYRIGHT', 'OTHER') NOT NULL COMMENT '신고 사유',
   description   TEXT            DEFAULT NULL COMMENT '상세 설명',
-  status        ENUM('pending', 'processing', 'resolved', 'dismissed') NOT NULL DEFAULT 'pending' COMMENT '처리 상태',
+  status        ENUM('PENDING', 'PROCESSING', 'RESOLVED', 'DISMISSED') NOT NULL DEFAULT 'PENDING' COMMENT '처리 상태',
   processor_id  BIGINT UNSIGNED DEFAULT NULL COMMENT '처리자 ID',
   resolution    TEXT            DEFAULT NULL COMMENT '처리 결과',
   processed_at  TIMESTAMP       DEFAULT NULL COMMENT '처리 일시',
@@ -287,8 +287,8 @@ CREATE TABLE IF NOT EXISTS system_notices (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'PK',
   title         VARCHAR(200)    NOT NULL COMMENT '공지 제목',
   content       LONGTEXT        NOT NULL COMMENT '공지 내용',
-  notice_type   ENUM('general', 'maintenance', 'update', 'emergency', 'event') NOT NULL DEFAULT 'general' COMMENT '공지 타입',
-  priority      ENUM('low', 'normal', 'high', 'urgent') NOT NULL DEFAULT 'normal' COMMENT '우선순위',
+  notice_type   ENUM('GENERAL', 'MAINTENANCE', 'UPDATE', 'EMERGENCY', 'EVENT') NOT NULL DEFAULT 'GENERAL' COMMENT '공지 타입',
+  priority      ENUM('LOW', 'NORMAL', 'HIGH', 'URGENT') NOT NULL DEFAULT 'NORMAL' COMMENT '우선순위',
   is_popup      TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '팝업 표시 여부',
   is_pinned     TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '상단 고정 여부',
   start_date    TIMESTAMP       DEFAULT NULL COMMENT '게시 시작일',
@@ -474,17 +474,17 @@ INSERT IGNORE INTO system_settings (setting_key, setting_value, setting_type, ca
 -- 게시판 카테고리 생성
 -- 기본 채팅방 생성
 INSERT IGNORE INTO chat_rooms (id, name, description, room_type, created_by) VALUES
-(1, '환영합니다!', '새로 오신 분들을 위한 인사 공간입니다', 'public', 1),
-(2, '자유 채팅', '자유로운 주제로 대화를 나누는 공간입니다', 'public', 1),
-(3, '개발 토론', '개발 관련 토론을 나누는 공간입니다', 'public', 1),
-(4, '도움 요청', '도움이 필요할 때 사용하는 공간입니다', 'public', 1);
+(1, '환영합니다!', '새로 오신 분들을 위한 인사 공간입니다', 'PUBLIC', 1),
+(2, '자유 채팅', '자유로운 주제로 대화를 나누는 공간입니다', 'PUBLIC', 1),
+(3, '개발 토론', '개발 관련 토론을 나누는 공간입니다', 'PUBLIC', 1),
+(4, '도움 요청', '도움이 필요할 때 사용하는 공간입니다', 'PUBLIC', 1);
 
 -- 관리자를 모든 채팅방에 자동 추가
 INSERT IGNORE INTO chat_room_members (room_id, user_id, role, joined_at) VALUES
-(1, 1, 'admin', NOW()),
-(2, 1, 'admin', NOW()),
-(3, 1, 'admin', NOW()),
-(4, 1, 'admin', NOW());
+(1, 1, 'ADMIN', NOW()),
+(2, 1, 'ADMIN', NOW()),
+(3, 1, 'ADMIN', NOW()),
+(4, 1, 'ADMIN', NOW());
 
 SET FOREIGN_KEY_CHECKS=1;
 
