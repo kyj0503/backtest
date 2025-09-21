@@ -31,7 +31,9 @@ services:
     image: backtest-be-fast:prod
     container_name: backtest_be_fast_prod
     networks:
-      - backtest-net
+      backtest-net:
+        aliases:
+          - backtest-be-spring
     depends_on:
       - mysql
     ports:
@@ -48,7 +50,9 @@ services:
     image: backtest-be-spring:prod
     container_name: backtest_be_spring_prod
     networks:
-      - backtest-net
+      backtest-net:
+        aliases:
+          - backtest-be-spring
     depends_on:
       - mysql
       - redis
@@ -79,7 +83,8 @@ services:
     volumes:
       - ../backtest_fe:/app
     environment:
-      - VITE_API_URL=${VITE_API_URL}
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://backtest-be-spring:8080/api}
+      - API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest-be-spring:8080}
     command: ["npm", "run", "dev"]
 
 volumes:

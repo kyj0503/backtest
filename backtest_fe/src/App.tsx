@@ -6,6 +6,12 @@ import { AuthProvider } from '@/features/auth/hooks/useAuth';
 import HomePage from './pages/HomePage';
 import BacktestPage from './pages/BacktestPage';
 import ErrorBoundary from './components/ErrorBoundary';
+import CommunityPage from './pages/CommunityPage';
+import PostDetailPage from './pages/PostDetailPage';
+import ChatPage from './pages/ChatPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import { Toaster } from '@/shared/ui/sonner';
 
 function App() {
   // Initialize theme system
@@ -33,9 +39,14 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/backtest" element={<BacktestPage />} />
-                {/* Community, chat, and auth routes are temporarily disabled */}
+                <Route path="/community" element={<CommunityPage />} />
+                <Route path="/community/:postId" element={<PostDetailPage />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
               </Routes>
             </main>
+            <Toaster richColors position="top-right" closeButton />
           </div>
         </Router>
       </AuthProvider>

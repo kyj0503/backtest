@@ -3,7 +3,7 @@ export const getApiBaseUrl = (): string => {
   if (typeof envBase === 'string' && envBase.length > 0) {
     return envBase.replace(/\/$/, '');
   }
-  return '';
+  return '/api';
 };
 
 export const buildApiUrl = (path: string): string => {

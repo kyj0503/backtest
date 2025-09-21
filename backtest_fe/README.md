@@ -24,8 +24,8 @@ docker compose -f compose.yaml up --build frontend-dev
 - 반응형 디자인
 
 ## 환경변수
-- `VITE_API_BASE_URL`: 백엔드 API 주소 (기본값: 상대 경로 `/api`)
-- `API_PROXY_TARGET`: 개발 서버 프록시 타겟 (기본값: `http://localhost:8001`)
+- `VITE_API_BASE_URL`: 백엔드 API 주소 (기본값: 상대 경로 `/api`, 예: `http://localhost:8080/api`)
+- `API_PROXY_TARGET`: 개발 서버 프록시 타겟 (기본값: `http://localhost:8080`)
 
 ## 문서
 자세한 내용은 [`docs/`](./docs/) 디렉터리를 참조하세요.

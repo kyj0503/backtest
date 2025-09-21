@@ -1,26 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-interface CommentItem {
-  id: number;
-  content: string;
-  created_at: string;
-  username?: string;
-}
+import {
+  addComment as addCommentApi,
+  AddCommentPayload,
+  CommentItem,
+  getPost,
+  listComments,
+  PostDetail,
+} from '../services/community';
 
-interface PostDetail {
-  post: {
-    id: number;
-    title: string;
-    content: string;
-    view_count: number;
-    like_count: number;
-    created_at: string;
-    username?: string;
-  };
-  comments: CommentItem[];
-}
-
-export const usePostDetail = (postId: number | null) => {
-  const [data, setData] = useState<PostDetail | null>(null);
+export const usePostDetail = (postId: number | null | undefined) => {
+  const [post, setPost] = useState<PostDetail | null>(null);
+  const [comments, setComments] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,33 +18,48 @@ export const usePostDetail = (postId: number | null) => {
     if (!postId) return;
     setLoading(true);
     setError(null);
-    setData(null);
-    setError('커뮤니티 기능은 현재 비활성화되어 있습니다.');
-    setLoading(false);
+    try {
+      const [postResponse, commentsResponse] = await Promise.all([getPost(postId), listComments(postId)]);
+      setPost(postResponse);
+      setComments(commentsResponse);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '게시글을 불러오는 중 오류가 발생했습니다.';
+      setError(message);
+      setPost(null);
+      setComments([]);
+    } finally {
+      setLoading(false);
+    }
   }, [postId]);
 
-  const submitComment = useCallback(
-    async () => {
-      if (!postId) return;
-      const message = '커뮤니티 기능은 현재 비활성화되어 있습니다.';
-      setError(message);
-      throw new Error(message);
+  useEffect(() => {
+    if (postId) {
+      void load();
+    }
+  }, [load, postId]);
+
+  const addComment = useCallback(
+    async (payload: AddCommentPayload) => {
+      if (!postId) {
+        throw new Error('게시글이 선택되지 않았습니다.');
+      }
+      const newComment = await addCommentApi(postId, payload);
+      // 최신 댓글을 다시 로드해 정합성을 유지
+      const refreshed = await listComments(postId);
+      setComments(refreshed);
+      return newComment;
     },
-    [postId],
+    [postId]
   );
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   return {
-    data,
+    data: post,
+    comments,
     loading,
     error,
-    actions: {
-      reload: load,
-      addComment: submitComment,
-      clearError: () => setError(null),
-    },
+    reload: load,
+    addComment,
+    setError,
+    setPost,
   };
 };

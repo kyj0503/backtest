@@ -15,8 +15,8 @@ npm run dev
 ```
 
 환경변수(주요)
-- `VITE_API_BASE_URL`: 백엔드 API 절대 경로 사용 시 설정
-- `API_PROXY_TARGET`: 개발 프록시 타겟(예: `http://localhost:8001`)
+- `VITE_API_BASE_URL`: 백엔드 API 절대 경로 사용 시 설정 (예: `http://localhost:8080/api`)
+- `API_PROXY_TARGET`: 개발 프록시 타겟(예: `http://localhost:8080`)
 
 디렉터리 개요
 - `src/` - 애플리케이션 소스

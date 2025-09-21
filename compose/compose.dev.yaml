@@ -66,7 +66,9 @@ services:
     image: backtest-be-spring:dev
     container_name: backtest_be_spring_dev
     networks:
-      - backtest-net
+      backtest-net:
+        aliases:
+          - backtest-be-spring
     depends_on:
       mysql:
         condition: service_healthy
@@ -105,8 +107,8 @@ services:
       - ../backtest_fe:/app
       - backtest_fe_node_modules:/app/node_modules
     environment:
-      - VITE_API_URL=http://backtest_be_fast:8000
-      - API_PROXY_TARGET=http://backtest_be_fast:8000
+      - VITE_API_BASE_URL=http://backtest-be-spring:8080/api
+      - API_PROXY_TARGET=http://backtest-be-spring:8080
     command: ["npm", "run", "dev"]
 
 volumes:

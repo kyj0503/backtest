@@ -30,6 +30,9 @@ export default defineConfig(({ mode }) => ({
       '/api': {
         target,
         changeOrigin: true,
+        headers: {
+          host: 'localhost',
+        }
       }
     }
   },

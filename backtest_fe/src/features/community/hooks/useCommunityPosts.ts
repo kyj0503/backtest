@@ -1,46 +1,42 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listPosts } from '../services/community';
-
-interface CommunityPost {
-  id: number;
-  title: string;
-  content: string;
-  excerpt?: string;
-  view_count: number;
-  like_count: number;
-  created_at: string;
-  username?: string;
-}
+import { listPosts, ListPostsParams, PageResponse, PostSummary } from '../services/community';
 
 interface UseCommunityPostsOptions {
   autoLoad?: boolean;
 }
 
-export const useCommunityPosts = ({ autoLoad = true }: UseCommunityPostsOptions = {}) => {
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+export const useCommunityPosts = (
+  params: ListPostsParams,
+  { autoLoad = true }: UseCommunityPostsOptions = {}
+) => {
+  const { page = 0, size = 20, category, keyword } = params;
+  const [data, setData] = useState<PageResponse<PostSummary> | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await listPosts();
-      setPosts(response.items ?? []);
-      setError('커뮤니티 기능은 현재 비활성화되어 있습니다.');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '커뮤니티 기능은 현재 비활성화되어 있습니다.';
-      setError(message);
-      setPosts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const submitPost = useCallback(async () => {
-    const message = '커뮤니티 기능은 현재 비활성화되어 있습니다.';
-    setError(message);
-    throw new Error(message);
-  }, []);
+  const load = useCallback(
+    async (override?: ListPostsParams) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await listPosts({
+          page,
+          size,
+          category,
+          keyword,
+          ...override,
+        });
+        setData(response);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '게시글을 불러오는 중 오류가 발생했습니다.';
+        setError(message);
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [category, keyword, page, size]
+  );
 
   useEffect(() => {
     if (autoLoad) {
@@ -49,13 +45,10 @@ export const useCommunityPosts = ({ autoLoad = true }: UseCommunityPostsOptions 
   }, [autoLoad, load]);
 
   return {
-    posts,
+    data,
     loading,
     error,
-    actions: {
-      reload: load,
-      createPost: submitPost,
-      clearError: () => setError(null),
-    },
+    reload: load,
+    setError,
   };
 };
