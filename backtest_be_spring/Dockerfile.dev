@@ -11,6 +11,7 @@ RUN mkdir -p ${GRADLE_USER_HOME} && chown -R gradle:gradle ${GRADLE_USER_HOME}
 COPY --chown=gradle:gradle build.gradle settings.gradle ./
 COPY --chown=gradle:gradle gradle ./gradle
 COPY --chown=gradle:gradle src ./src
+COPY --chown=gradle:gradle gradlew ./gradlew
 
 # Ensure project-local .gradle is writable
 # Ensure project directory and common build output directories exist and are writable
@@ -18,6 +19,7 @@ RUN mkdir -p /home/gradle/project/.gradle /home/gradle/project/build /home/gradl
 	&& chown -R gradle:gradle /home/gradle/project
 
 # Build the application
+RUN chmod +x gradlew && cp gradlew /usr/local/bin/gradlew && chmod +x /usr/local/bin/gradlew
 USER gradle
 RUN gradle bootJar -x test --no-daemon
 

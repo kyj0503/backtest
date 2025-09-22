@@ -55,6 +55,7 @@ services:
     build:
       context: ../backtest_be_spring
       dockerfile: Dockerfile.dev
+      target: build
     image: backtest-be-spring:dev
     container_name: backtest_be_spring_dev
     networks:
@@ -74,11 +75,18 @@ services:
       - SPRING_DATASOURCE_USERNAME=bt_user
       - SPRING_DATASOURCE_PASSWORD=bt_pass
       - SPRING_REDIS_HOST=redis
-    # Development: mount host source to enable live reload with gradle bootRun
+    # Development: mount host source into the Gradle project dir so wrapper inside image remains available
     volumes:
-      - ../backtest_be_spring:/app
+      - ../backtest_be_spring:/home/gradle/project:cached
       - backtest_be_spring_gradle_cache:/home/gradle/.gradle
-    command: ["./gradlew", "bootRun"]
+    command: ["/home/gradle/project/gradlew", "bootRun"]
+    healthcheck:
+      # Use a quick TCP connect probe (non-blocking) instead of 'cat' which can block
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080 >/dev/null 2>&1'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backtest_fe:
     build:
@@ -92,7 +100,7 @@ services:
       backtest_be_fast:
         condition: service_started
       backtest_be_spring:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "5173:5173"
     volumes:
