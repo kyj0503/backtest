@@ -13,7 +13,7 @@ export interface User extends BaseEntity {
   username: string;
   email: string;
   profileImage?: string;
-  investmentType?: 'CONSERVATIVE' | 'MODERATE' | 'AGGRESSIVE';
+  investmentType?: 'conservative' | 'moderate' | 'balanced' | 'aggressive' | 'speculative';
 }
 
 export interface ApiResponse<T> {

@@ -17,6 +17,8 @@ import com.webproject.backtest_be_spring.auth.presentation.api.dto.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     public AuthController(AuthService authService) {
         this.authService = authService;
@@ -65,7 +68,12 @@ public class AuthController {
         if (investmentType == null || investmentType.isBlank()) {
             return Optional.empty();
         }
-        return Optional.of(InvestmentType.fromDatabaseValue(investmentType));
+        try {
+            return Optional.of(InvestmentType.fromDatabaseValue(investmentType.trim()));
+        } catch (IllegalArgumentException ex) {
+            logger.warn("Unknown investmentType='{}'. Returning empty Optional.", investmentType);
+            return Optional.empty();
+        }
     }
 
     private AuthResponse toResponse(AuthResult result) {
