@@ -82,5 +82,7 @@ Frontend quick refs:
 
 ## 10. When Unsure
 Search adjacent service or handler for precedent; mirror structure & naming. Prefer additive over destructive edits.
+이모티콘과 이모지를 절대 사용하지 마.
+
 
 (End)

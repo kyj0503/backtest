@@ -7,7 +7,7 @@
 [![React](https://img.shields.io/badge/React-18.2+-61dafb)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-4.4+-646cff)](https://vitejs.dev/)
 
-## 🚀 주요 기능
+## 주요 기능
 
 - **고성능 백테스팅**: 단일 종목 및 포트폴리오 백테스트 지원
 - **인터랙티브 차트**: Recharts 기반 실시간 데이터 시각화
@@ -18,7 +18,7 @@
 - **테마 시스템**: 다크/라이트 모드 및 커스텀 테마 지원
 - **반응형 디자인**: 모바일부터 데스크톱까지 완벽한 반응형 UI
 
-## 🛠️ 설치 및 실행
+## 설치 및 실행
 
 ### 필수 요구사항
 
@@ -48,7 +48,7 @@ docker compose -f compose/compose.dev.yaml up -d
 docker compose -f compose/compose.prod.yaml up -d
 ```
 
-## 🏗️ 아키텍처
+## 아키텍처
 
 ### 프로젝트 구조
 
@@ -82,7 +82,7 @@ src/
 - **테스트**: Vitest + Testing Library
 - **코드 품질**: ESLint + TypeScript
 
-## 🧪 테스트
+## 테스트
 
 ```bash
 # 단위 테스트 실행
@@ -98,7 +98,7 @@ npm run test:coverage
 npm run test:ui
 ```
 
-## 📊 환경 변수
+## 환경 변수
 
 ```env
 # API 설정
@@ -110,7 +110,7 @@ VITE_APP_VERSION=1.0.0
 VITE_BUILD_TIME=2024-01-01T00:00:00Z
 ```
 
-## 🎨 개발 가이드
+## 개발 가이드
 
 ### 커스텀 훅 사용
 
@@ -139,21 +139,3 @@ const result = await BacktestService.executeBacktest(request)
 // 전략 목록 조회
 const strategies = await BacktestService.getStrategies()
 ```
-
-## 📖 문서
-
-- [개발 가이드](./docs/02-Development.md)
-- [테마 시스템](./docs/03-Theme.md)
-- [API 문서](../docs/API.md)
-
-## 🤝 기여하기
-
-1. 저장소를 포크합니다
-2. 기능 브랜치를 생성합니다 (`git checkout -b feature/amazing-feature`)
-3. 변경사항을 커밋합니다 (`git commit -m 'feat: Add amazing feature'`)
-4. 브랜치에 푸시합니다 (`git push origin feature/amazing-feature`)
-5. Pull Request를 생성합니다
-
-## 📄 라이선스
-
-이 프로젝트는 MIT 라이선스를 따릅니다.

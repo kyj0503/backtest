@@ -31,8 +31,3 @@ docker compose -f compose.yml -f compose/compose.dev.yml up --build
 - `app/domains/`: 도메인 모델
 - `app/repositories/`: 데이터 액세스
 - `app/events/`: 이벤트 시스템
-
-문서 색인
-- 02-Development.md — 개발 환경과 실행 방법, 환경변수, 테스트 명령
-- 03-API.md — 공개된 REST/WebSocket 엔드포인트와 예시 요청
-- 04-Architecture.md — 아키텍처 개요와 코드 배치 가이드

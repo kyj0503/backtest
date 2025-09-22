@@ -20,6 +20,3 @@ java -jar build/libs/*.jar
 
 ## API 문서
 서버 실행 후 `http://localhost:8080/swagger-ui.html`에서 확인
-
-## 문서
-자세한 내용은 [`docs/`](./docs/) 디렉터리를 참조하세요.
