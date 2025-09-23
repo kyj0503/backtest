@@ -8,9 +8,9 @@ services:
     command: ["--default-authentication-plugin=mysql_native_password"]
     networks:
       - backtest-net
-    # Development uses the repository root .env (single .env file)
+    # Development uses the repository root .env.local file
     env_file:
-      - ../.env
+      - ../.env.local
     volumes:
       - ../database:/docker-entrypoint-initdb.d:ro
       - backtest_db_data_dev:/var/lib/mysql
@@ -28,9 +28,9 @@ services:
     container_name: bt_redis_dev
     ports:
       - "6379:6379"
-    # Load redis password from repository root .env (REDIS_PASSWORD)
+    # Load redis password from repository root .env.local (REDIS_PASSWORD)
     env_file:
-      - ../.env
+      - ../.env.local
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
       - backtest_redis_data_dev:/data
@@ -53,11 +53,11 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    # Use repository root .env so all services share the same configuration
+    # Use repository root .env.local so all services share the same configuration
     env_file:
-      - ../.env
-  # Use env vars from the repository root .env; recommend setting DATABASE_HOST=mysql in ../.env for container mode
-  # Environment variables are loaded from ../.env via env_file
+      - ../.env.local
+  # Use env vars from the repository root .env.local; recommend setting DATABASE_HOST=mysql in ../.env.local for container mode
+  # Environment variables are loaded from ../.env.local via env_file
     volumes:
       - ../backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
@@ -81,7 +81,7 @@ services:
       - ../backtest_fe:/app
       - backtest_fe_node_modules:/app/node_modules
     env_file:
-      - ../.env
+      - ../.env.local
     environment:
       # API targets are configurable via the host environment. Default points to host.docker.internal
       # so you can run the Spring app from your IDE on the host and have containers reach it.

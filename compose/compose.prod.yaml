@@ -3,93 +3,117 @@ services:
     image: mysql:8.0
     container_name: bt_mysql_prod
     restart: unless-stopped
-    # Production env file (root .env expected to contain production secrets)
-    # Load envs from repository root: production uses only .env
+    command: ["--default-authentication-plugin=mysql_native_password"]
+    networks:
+      - backtest-net
     env_file:
       - ../.env
-    # environment variables for MySQL are provided via the referenced env_file
     volumes:
       - ../database:/docker-entrypoint-initdb.d:ro
       - backtest_db_data_prod:/var/lib/mysql
     ports:
-      - "${MYSQL_HOST_PORT:-3307}:3306"
-    networks:
-      - backtest-net
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"${MYSQL_ROOT_PASSWORD}\" >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:7-alpine
     container_name: bt_redis_prod
+    restart: unless-stopped
     ports:
       - "6379:6379"
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
       - backtest_redis_data_prod:/data
     networks:
       - backtest-net
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backtest_be_fast:
-    build:
-      context: ../backtest_be_fast
-      dockerfile: Dockerfile
-    image: backtest-be-fast:prod
+    image: ghcr.io/capstone-backtest/backtest/backtest-be-fast:latest
     container_name: backtest_be_fast_prod
+    restart: unless-stopped
     networks:
-      backtest-net:
-        aliases:
-          - backtest-be-spring
+      - backtest-net
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
     env_file:
       - ../.env
-    # In production use the built image; do not mount host source
-    # volumes: (removed for prod to avoid running host source)
-    command: ["python", "run_server.py"]
+    environment:
+      - DATABASE_HOST=mysql
+      - DATABASE_PORT=3306
+      - DATABASE_USER=root
+      - DEBUG=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   backtest_be_spring:
-    build:
-      context: ../backtest_be_spring
-      dockerfile: Dockerfile
-    image: backtest-be-spring:prod
+    image: ghcr.io/capstone-backtest/backtest/backtest-be-spring:latest
     container_name: backtest_be_spring_prod
-    networks:
-      backtest-net:
-        aliases:
-          - backtest-be-spring
-    depends_on:
-      - mysql
-      - redis
-    ports:
-      - "8081:8080"
-    env_file:
-      - ../.env
-    # Production envs are provided via ../.env (SPRING_DATASOURCE_*, VITE_API_BASE_URL, etc.)
-    # Run the pre-built JAR from the image in production.
-    # Do not mount the host source in production -> preserves image's built app.jar
-    command: ["java", "-jar", "./app.jar"]
-
-  backtest_fe:
-    build:
-      context: ../backtest_fe
-      dockerfile: Dockerfile.dev
-    image: backtest-fe:prod
-    container_name: backtest_fe_prod
+    restart: unless-stopped
     networks:
       - backtest-net
     depends_on:
-      - backtest_be_fast
-      - backtest_be_spring
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
-      - "5173:5173"
+      - "8080:8080"
     env_file:
       - ../.env
-    # In production run the built frontend image; do not mount host source
-    # volumes: (removed for prod to use built image)
     environment:
-      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://backtest-be-spring:8080/api}
-      - API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest-be-spring:8080}
-    # Serve the production build (image's default). Keep command minimal.
-    command: ["npm", "run", "start"]
+      - SPRING_DATASOURCE_HOST=mysql
+      - SPRING_DATASOURCE_PORT=3306
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_PROFILES_ACTIVE=prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backtest_fe:
+    image: ghcr.io/capstone-backtest/backtest/backtest-fe:latest
+    container_name: backtest_fe_prod
+    restart: unless-stopped
+    networks:
+      - backtest-net
+    depends_on:
+      backtest_be_fast:
+        condition: service_healthy
+      backtest_be_spring:
+        condition: service_healthy
+    ports:
+      - "80:80"   # Nginx serves on port 80
+      - "443:443" # HTTPS
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   backtest_db_data_prod:
@@ -97,4 +121,5 @@ volumes:
 
 networks:
   backtest-net:
-    name: backtest-network
+    name: backtest-network-prod
+    driver: bridge
