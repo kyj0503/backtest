@@ -6,10 +6,16 @@ WORKDIR /app
 
 # 시스템 패키지 업데이트 및 필수 도구 설치
 RUN apt-get update && apt-get install -y \
+    build-essential \
     gcc \
     g++ \
     curl \
     python3-venv \
+    python3-dev \
+    libssl-dev \
+    libffi-dev \
+    cargo \
+    rustc \
     && rm -rf /var/lib/apt/lists/*
 
 

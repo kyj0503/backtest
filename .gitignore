@@ -13,6 +13,6 @@ node_modules/
 
 # IDE
 .vscode/
-.github
 .vscode
 .vscode/settings.json
+copilot-instructions.md
