@@ -1,7 +1,6 @@
 # Environment files
 .env
 .env.prod
-*.env.local
 .env.*
 
 # Python

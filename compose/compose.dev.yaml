@@ -8,10 +8,9 @@ services:
     command: ["--default-authentication-plugin=mysql_native_password"]
     networks:
       - backtest-net
-    # Development uses the repository root .env for overrides (single .env file)
+    # Development uses the repository root .env (single .env file)
     env_file:
       - ../.env
-      - ../.env.local
     volumes:
       - ../database:/docker-entrypoint-initdb.d:ro
       - backtest_db_data_dev:/var/lib/mysql
@@ -53,7 +52,6 @@ services:
     # Use repository root .env so all services share the same configuration
     env_file:
       - ../.env
-      - ../.env.local
   # Use env vars from the repository root .env; recommend setting DATABASE_HOST=mysql in ../.env for container mode
   # Environment variables are loaded from ../.env via env_file
     volumes:
@@ -80,7 +78,6 @@ services:
       - backtest_fe_node_modules:/app/node_modules
     env_file:
       - ../.env
-      - ../.env.local
     environment:
       # API targets are configurable via the host environment. Default points to host.docker.internal
       # so you can run the Spring app from your IDE on the host and have containers reach it.

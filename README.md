@@ -9,16 +9,12 @@ docker compose -f compose/compose.dev.yaml up -d --build
 ```
 
 환경 변수 설정
-- 개발: `.env.local.example` 파일을 루트에서 `.env.local`로 복사한 뒤 필요한 값을 채워 주세요.
-	```bash
-	cp .env.local.example .env.local
-	# 편집: vi .env.local 또는 에디터에서 수정
-	```
-- 프로덕션: `.env.example`을 `.env`로 복사 후 실제 시크릿으로 교체하세요.
+- 개발 및 프로덕션: 루트의 `.env` 파일을 사용합니다. 개발용 예제가 있으면 `.env.example`을 복사해서 `.env`로 만들고 필요한 값을 채워 주세요.
 	```bash
 	cp .env.example .env
+	# 편집: vi .env 또는 에디터에서 수정
 	```
-Compose 파일은 각 서비스의 `env_file`을 통해 루트 `.env` / `.env.local`을 불러오도록 구성되어 있습니다. 비밀 값은 로컬에서만 유지하고 리포지토리에 직접 커밋하지 마세요.
+Compose 파일은 각 서비스의 `env_file`을 통해 루트 `.env`를 불러오도록 구성되어 있습니다. 비밀 값은 로컬에서만 유지하고 리포지토리에 직접 커밋하지 마세요.
 
 MySQL 인증 관련 주의사항
 - 개발용 Compose는 FastAPI(PyMySQL)와의 호환성을 위해 MySQL을 `mysql_native_password` 인증 플러그인으로 시작하도록 설정되어 있습니다. 이는 일부 환경에서 기본 `caching_sha2_password`로 인한 인증 오류(예: RSA 키 교환 문제)를 예방하기 위한 조치입니다.
