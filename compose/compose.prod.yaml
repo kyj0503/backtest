@@ -63,11 +63,7 @@ services:
       - "8081:8080"
     env_file:
       - ../.env
-    environment:
-      - SPRING_DATASOURCE_HOST=mysql
-      - SPRING_DATASOURCE_PORT=3306
-      - SPRING_REDIS_HOST=redis
-      - SPRING_REDIS_PORT=6379
+    # Production envs are provided via ../.env (SPRING_DATASOURCE_*, VITE_API_BASE_URL, etc.)
     # Run the pre-built JAR from the image in production.
     # Do not mount the host source in production -> preserves image's built app.jar
     command: ["java", "-jar", "./app.jar"]

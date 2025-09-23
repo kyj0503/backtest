@@ -3,6 +3,9 @@ services:
     image: mysql:8.0
     container_name: bt_mysql_dev
     restart: unless-stopped
+    # Use mysql_native_password to ensure compatibility with PyMySQL client
+    # (avoids 'caching_sha2_password' auth errors when the client lacks RSA support).
+    command: ["--default-authentication-plugin=mysql_native_password"]
     networks:
       - backtest-net
     # Development uses root .env.local for overrides
@@ -14,7 +17,7 @@ services:
     ports:
       - "3307:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-prootpass"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"${MYSQL_ROOT_PASSWORD:-010503}\" >/dev/null 2>&1"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -38,6 +41,9 @@ services:
     container_name: backtest_be_fast_dev
     networks:
       - backtest-net
+    # Allow containers to resolve host.docker.internal (so IDE-run Spring on host is reachable)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       mysql:
         condition: service_healthy
@@ -46,48 +52,18 @@ services:
     # Use root development env file for local overrides
     env_file:
       - ../.env.local
+    # Use env vars from .env.local; recommend setting DATABASE_HOST=mysql in .env.local for container mode
+    environment:
+      - "DATABASE_HOST=${DATABASE_HOST:-mysql}"
+      - "DATABASE_PORT=${DATABASE_PORT:-3306}"
+      - "DATABASE_USER=${DATABASE_USER:-root}"
+      - "DATABASE_PASSWORD=${DATABASE_PASSWORD}"
+      - "DATABASE_NAME=${DATABASE_NAME:-stock_data_cache}"
+      - "DATABASE_URL=${DATABASE_URL}"
     volumes:
       - ../backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
   # Let the image ENTRYPOINT/CMD run (ensures venv is prepared by entrypoint)
-
-  backtest_be_spring:
-    build:
-      context: ../backtest_be_spring
-      dockerfile: Dockerfile.dev
-      target: build
-    image: backtest-be-spring:dev
-    container_name: backtest_be_spring_dev
-    networks:
-      backtest-net:
-        aliases:
-          - backtest-be-spring
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    ports:
-      - "8081:8080"
-    environment:
-      - SPRING_DATASOURCE_HOST=mysql
-      - SPRING_DATASOURCE_PORT=3306
-      - SPRING_DATASOURCE_USERNAME=bt_user
-      - SPRING_DATASOURCE_PASSWORD=bt_pass
-      - SPRING_REDIS_HOST=redis
-    # Development: mount host source into the Gradle project dir so wrapper inside image remains available
-    volumes:
-      - ../backtest_be_spring:/home/gradle/project:cached
-      - backtest_be_spring_gradle_cache:/home/gradle/.gradle
-    command: ["/home/gradle/project/gradlew", "bootRun"]
-    healthcheck:
-      # Use a quick TCP connect probe (non-blocking) instead of 'cat' which can block
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080 >/dev/null 2>&1'" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   backtest_fe:
     build:
       context: ../backtest_fe
@@ -96,20 +72,26 @@ services:
     container_name: backtest_fe_dev
     networks:
       - backtest-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       backtest_be_fast:
         condition: service_started
-      backtest_be_spring:
-        condition: service_healthy
     ports:
       - "5173:5173"
     volumes:
       - ../backtest_fe:/app
       - backtest_fe_node_modules:/app/node_modules
     environment:
-      - VITE_API_BASE_URL=http://backtest-be-spring:8080/api
-      - API_PROXY_TARGET=http://backtest-be-spring:8080
+      # API targets are configurable via the host environment. Default points to host.docker.internal
+      # so you can run the Spring app from your IDE on the host and have containers reach it.
+      # In dev we serve the app via Vite dev server; use a relative API base ('/api') so the browser
+      # doesn't need to resolve host.docker.internal. The dev server will proxy '/api' to
+      # API_PROXY_TARGET (defaulting to the FastAPI container so backtesting works without Spring).
+      - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
+      - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest_be_fast:8000}"
     command: ["npm", "run", "dev"]
+
 
 volumes:
   backtest_db_data_dev:
