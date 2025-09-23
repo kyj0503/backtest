@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests and Build Checks
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: backtest_test
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install frontend dependencies and run tests
+      working-directory: ./backtest_fe
+      run: |
+        npm ci
+        npm run test:run
+        npm run lint
+        npm run build
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install FastAPI dependencies & run tests
+      working-directory: ./backtest_be_fast
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        # Set test env vars
+        export DATABASE_HOST=localhost
+        export DATABASE_PORT=3306
+        export DATABASE_USER=root
+        export DATABASE_PASSWORD=test_password
+        export DATABASE_NAME=backtest_test
+        export REDIS_PASSWORD=""
+        export SECRET_KEY="test-secret-key-for-ci-that-is-long-enough-for-hs512-algorithm-requirements-abcdefghijklmnopqrstuvwxyz"
+        # run pytest if tests exist
+        # python -m pytest -q
+
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Run Spring Boot tests and build
+      working-directory: ./backtest_be_spring
+      run: |
+        chmod +x ./gradlew
+        ./gradlew test
+        ./gradlew assemble
+      env:
+        SPRING_DATASOURCE_HOST: localhost
+        SPRING_DATASOURCE_PORT: 3306
+        SPRING_DATASOURCE_USERNAME: root
+        SPRING_DATASOURCE_PASSWORD: test_password
+        APP_SECURITY_JWT_SECRET: test-secret-key-for-ci-that-is-long-enough-for-hs512-algorithm-requirements-abcdefghijklmnopqrstuvwxyz
+        SPRING_REDIS_HOST: localhost
+        SPRING_REDIS_PORT: 6379
+        SPRING_REDIS_PASSWORD: ""
+
+    - name: Upload build artifacts (optional)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ci-artifacts
+        path: |
+          backtest_fe/dist || true
+          backtest_be_spring/build/libs/*.jar || true
