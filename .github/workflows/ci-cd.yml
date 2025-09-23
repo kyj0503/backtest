@@ -253,31 +253,21 @@ jobs:
           
           # Health check
           sleep 30
-          echo "🔍 Running health checks..."
+          echo "Running health checks..."
           if curl -f http://localhost:8000/health > /dev/null 2>&1; then
-            echo "✅ FastAPI is healthy"
+            echo "FastAPI is healthy"
           else
-            echo "❌ FastAPI health check failed"
-          fi
-          
-          if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
-            echo "✅ Spring Boot is healthy"
-          else
-            echo "❌ Spring Boot health check failed"
-          fi
-          
-          if curl -f http://localhost/ > /dev/null 2>&1; then
-            echo "✅ Frontend is healthy"
-          else
-            echo "❌ Frontend health check failed"
+            echo "FastAPI health check failed"
           fi
 
-    - name: Notify deployment status
-      if: always()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: ${{ job.status }}
-        channel: '#deployments'
-        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          if curl -f http://localhost:8080/actuator/health > /dev/null 2>&1; then
+            echo "Spring Boot is healthy"
+          else
+            echo "Spring Boot health check failed"
+          fi
+
+          if curl -f http://localhost/ > /dev/null 2>&1; then
+            echo "Frontend is healthy"
+          else
+            echo "Frontend health check failed"
+          fi
