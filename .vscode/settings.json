@@ -18,5 +18,6 @@
                 "copilot/o4-mini"
             ]
         }
-    }
+    },
+    "java.compile.nullAnalysis.mode": "disabled"
 }
