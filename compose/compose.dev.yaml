@@ -53,13 +53,7 @@ services:
     env_file:
       - ../.env.local
     # Use env vars from .env.local; recommend setting DATABASE_HOST=mysql in .env.local for container mode
-    environment:
-      - "DATABASE_HOST=${DATABASE_HOST:-mysql}"
-      - "DATABASE_PORT=${DATABASE_PORT:-3306}"
-      - "DATABASE_USER=${DATABASE_USER:-root}"
-      - "DATABASE_PASSWORD=${DATABASE_PASSWORD}"
-      - "DATABASE_NAME=${DATABASE_NAME:-stock_data_cache}"
-      - "DATABASE_URL=${DATABASE_URL}"
+    # Environment variables are loaded from ../.env.local via env_file
     volumes:
       - ../backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
