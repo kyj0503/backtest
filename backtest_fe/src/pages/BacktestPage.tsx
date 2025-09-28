@@ -23,7 +23,7 @@ const BacktestPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background py-8">
-  <div className="mx-auto px-6 w-[90vw] max-w-[90vw]">
+  <div className="mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-7xl">
         {/* Page Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
