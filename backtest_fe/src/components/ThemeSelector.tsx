@@ -21,10 +21,19 @@ const ThemePreview: React.FC<ThemePreviewProps> = ({ themeName, isActive, onClic
   
   return (
     <Card 
-      className={`cursor-pointer transition-all duration-200 hover:scale-105 ${
+      role="button"
+      tabIndex={0}
+      aria-pressed={isActive}
+      className={`cursor-pointer transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
         isActive ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'
       }`}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onClick()
+        }
+      }}
     >
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between">

@@ -2,7 +2,7 @@
  * 공통 유틸리티 함수 테스트
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   formatDate,
   formatNumber,
@@ -153,7 +153,15 @@ describe('Utility Functions', () => {
 })
 
 describe('Debounce', () => {
-  it('should debounce function calls', async () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('should debounce function calls', () => {
     let counter = 0
     const increment = () => counter++
     const debouncedIncrement = debounce(increment, 100)
@@ -164,7 +172,10 @@ describe('Debounce', () => {
 
     expect(counter).toBe(0)
 
-    await new Promise(resolve => setTimeout(resolve, 150))
+    vi.advanceTimersByTime(99)
+    expect(counter).toBe(0)
+
+    vi.advanceTimersByTime(1)
     expect(counter).toBe(1)
   })
 })

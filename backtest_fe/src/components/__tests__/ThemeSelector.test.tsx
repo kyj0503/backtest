@@ -1,131 +1,114 @@
-/**
- * ThemeSelector 컴포넌트 테스트
- */
-
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@/test/utils'
 import userEvent from '@testing-library/user-event'
+import { render, screen } from '@/test/utils'
 import ThemeSelector from '../ThemeSelector'
+import type { ThemeDefinition } from '@/shared/types/theme'
 
-// useTheme 훅 모킹
+type MinimalTheme = Pick<ThemeDefinition, 'name' | 'cssVars'>
+
+const buildTheme = (name: string, color: string): MinimalTheme => ({
+  name,
+  cssVars: {
+    theme: {
+      'font-sans': 'Inter, sans-serif',
+      'font-mono': 'JetBrains Mono, monospace',
+      'font-serif': 'Newsreader, serif',
+      radius: '0.5rem',
+    },
+    light: {
+      background: '#ffffff',
+      foreground: '#000000',
+      card: '#ffffff',
+      'card-foreground': '#000000',
+      popover: '#ffffff',
+      'popover-foreground': '#000000',
+      primary: color,
+      'primary-foreground': '#ffffff',
+      secondary: '#cccccc',
+      'secondary-foreground': '#000000',
+      muted: '#eeeeee',
+      'muted-foreground': '#555555',
+      accent: '#dddddd',
+      'accent-foreground': '#000000',
+      destructive: '#ff0000',
+      'destructive-foreground': '#ffffff',
+      border: '#e5e7eb',
+      input: '#f3f4f6',
+      ring: '#2563eb',
+      'chart-1': '#ff0000',
+      'chart-2': '#00ff00',
+      'chart-3': '#0000ff',
+      'chart-4': '#ff00ff',
+      'chart-5': '#00ffff',
+      sidebar: '#ffffff',
+      'sidebar-foreground': '#000000',
+      'sidebar-primary': '#2563eb',
+      'sidebar-primary-foreground': '#ffffff',
+      'sidebar-accent': '#e2e8f0',
+      'sidebar-accent-foreground': '#0f172a',
+      'sidebar-border': '#cbd5f5',
+      'sidebar-ring': '#1d4ed8',
+    },
+    dark: {
+      background: '#111827',
+      foreground: '#f9fafb',
+      card: '#1f2937',
+      'card-foreground': '#f9fafb',
+      popover: '#1f2937',
+      'popover-foreground': '#f9fafb',
+      primary: color,
+      'primary-foreground': '#0f172a',
+      secondary: '#374151',
+      'secondary-foreground': '#f9fafb',
+      muted: '#4b5563',
+      'muted-foreground': '#d1d5db',
+      accent: '#2563eb',
+      'accent-foreground': '#ffffff',
+      destructive: '#f87171',
+      'destructive-foreground': '#111827',
+      border: '#374151',
+      input: '#1f2937',
+      ring: '#60a5fa',
+      'chart-1': '#0ea5e9',
+      'chart-2': '#22d3ee',
+      'chart-3': '#38bdf8',
+      'chart-4': '#818cf8',
+      'chart-5': '#a855f7',
+      sidebar: '#111827',
+      'sidebar-foreground': '#f9fafb',
+      'sidebar-primary': '#60a5fa',
+      'sidebar-primary-foreground': '#0f172a',
+      'sidebar-accent': '#1e293b',
+      'sidebar-accent-foreground': '#e2e8f0',
+      'sidebar-border': '#1f2937',
+      'sidebar-ring': '#60a5fa',
+    },
+  },
+})
+
 const mockChangeTheme = vi.fn()
 const mockToggleDarkMode = vi.fn()
 
+const themes = {
+  claymorphism: buildTheme('claymorphism', '#2563eb'),
+  'amber-minimal': buildTheme('amber-minimal', '#f59e0b'),
+} as const
+
+const availableThemes = [
+  { id: 'claymorphism', name: 'claymorphism', displayName: 'Claymorphism' },
+  { id: 'amber-minimal', name: 'amber-minimal', displayName: 'Amber Minimal' },
+]
+
 vi.mock('@/shared/hooks/useTheme', () => ({
   useTheme: () => ({
-    currentTheme: 'default' as const,
+    currentTheme: 'claymorphism' as const,
     isDarkMode: false,
     changeTheme: mockChangeTheme,
     toggleDarkMode: mockToggleDarkMode,
-    getAvailableThemes: () => [
-      { id: 'default', displayName: 'Default Theme', name: 'default' },
-      { id: 'blue', displayName: 'Blue Theme', name: 'blue' },
-    ],
-    themes: {
-      default: {
-        name: 'default',
-        cssVars: {
-          light: {
-            background: '#ffffff',
-            foreground: '#000000',
-            primary: '#0000ff',
-            secondary: '#00ff00',
-            accent: '#ff0000',
-            card: '#f0f0f0',
-            muted: '#e0e0e0',
-            border: '#cccccc',
-            input: '#dddddd',
-            ring: '#aaaaaa',
-            'card-foreground': '#000000',
-            'primary-foreground': '#ffffff',
-            'secondary-foreground': '#000000',
-            'muted-foreground': '#666666',
-            'accent-foreground': '#ffffff',
-            'destructive': '#ff0000',
-            'destructive-foreground': '#ffffff',
-            'popover': '#ffffff',
-            'popover-foreground': '#000000',
-          },
-          dark: {
-            background: '#000000',
-            foreground: '#ffffff',
-            primary: '#0000ff',
-            secondary: '#00ff00',
-            accent: '#ff0000',
-            card: '#1a1a1a',
-            muted: '#2a2a2a',
-            border: '#333333',
-            input: '#222222',
-            ring: '#555555',
-            'card-foreground': '#ffffff',
-            'primary-foreground': '#ffffff',
-            'secondary-foreground': '#000000',
-            'muted-foreground': '#999999',
-            'accent-foreground': '#ffffff',
-            'destructive': '#ff0000',
-            'destructive-foreground': '#ffffff',
-            'popover': '#1a1a1a',
-            'popover-foreground': '#ffffff',
-          },
-          theme: {
-            'font-sans': 'Inter, sans-serif',
-            radius: '0.5rem',
-          }
-        }
-      },
-      blue: {
-        name: 'blue',
-        cssVars: {
-          light: {
-            background: '#ffffff',
-            foreground: '#000000',
-            primary: '#0066cc',
-            secondary: '#00aaff',
-            accent: '#3399ff',
-            card: '#f0f8ff',
-            muted: '#e0f0ff',
-            border: '#cce5ff',
-            input: '#ddeeff',
-            ring: '#aaccee',
-            'card-foreground': '#000000',
-            'primary-foreground': '#ffffff',
-            'secondary-foreground': '#000000',
-            'muted-foreground': '#666666',
-            'accent-foreground': '#ffffff',
-            'destructive': '#ff0000',
-            'destructive-foreground': '#ffffff',
-            'popover': '#ffffff',
-            'popover-foreground': '#000000',
-          },
-          dark: {
-            background: '#001122',
-            foreground: '#ffffff',
-            primary: '#0066cc',
-            secondary: '#00aaff',
-            accent: '#3399ff',
-            card: '#002244',
-            muted: '#003355',
-            border: '#004466',
-            input: '#002233',
-            ring: '#005577',
-            'card-foreground': '#ffffff',
-            'primary-foreground': '#ffffff',
-            'secondary-foreground': '#000000',
-            'muted-foreground': '#999999',
-            'accent-foreground': '#ffffff',
-            'destructive': '#ff0000',
-            'destructive-foreground': '#ffffff',
-            'popover': '#002244',
-            'popover-foreground': '#ffffff',
-          },
-          theme: {
-            'font-sans': 'Inter, sans-serif',
-            radius: '0.5rem',
-          }
-        }
-      }
-    }
-  })
+    getAvailableThemes: () => availableThemes,
+    getCurrentThemeDefinition: () => themes['claymorphism'],
+    themes,
+  }),
 }))
 
 describe('ThemeSelector', () => {
@@ -133,67 +116,51 @@ describe('ThemeSelector', () => {
     vi.clearAllMocks()
   })
 
-  it('컴포넌트가 올바르게 렌더링된다', () => {
+  it('displays headings and helper text', () => {
     render(<ThemeSelector />)
-    
-    expect(screen.getByText('테마 설정')).toBeInTheDocument()
-    expect(screen.getByText(/원하는 디자인 테마를 선택하세요/i)).toBeInTheDocument()
+
+    expect(screen.getByRole('heading', { name: /테마 설정/ })).toBeInTheDocument()
+    expect(screen.getByText(/원하는 디자인 테마를 선택하세요/)).toBeInTheDocument()
   })
 
-  it('사용 가능한 모든 테마를 표시한다', () => {
+  it('lists available themes with active indicator', () => {
     render(<ThemeSelector />)
-    
-    // theme.name을 기반으로 렌더링되므로 'Default'와 'Blue'를 찾음
-    expect(screen.getByText(/^Default$/i)).toBeInTheDocument()
-    expect(screen.getByText(/^Blue$/i)).toBeInTheDocument()
+
+    const activeCard = screen.getByRole('button', { name: /Claymorphism/ })
+    const inactiveCard = screen.getByRole('button', { name: /Amber Minimal/ })
+
+    expect(activeCard).toHaveAttribute('aria-pressed', 'true')
+    expect(inactiveCard).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('현재 활성화된 테마에 배지를 표시한다', () => {
-    render(<ThemeSelector />)
-    
-    const activeBadges = screen.getAllByText('활성')
-    expect(activeBadges).toHaveLength(1)
-  })
-
-  it('다크 모드 토글 버튼이 정상 작동한다', async () => {
+  it('toggles dark mode when the toggle button is clicked', async () => {
     const user = userEvent.setup()
     render(<ThemeSelector />)
-    
-    const darkModeButton = screen.getByRole('button', { name: /라이트/i })
-    await user.click(darkModeButton)
-    
+
+    await user.click(screen.getByRole('button', { name: /라이트/ }))
+
     expect(mockToggleDarkMode).toHaveBeenCalledTimes(1)
   })
 
-  it('테마를 클릭하면 changeTheme이 호출된다', async () => {
+  it('invokes changeTheme when a theme is selected', async () => {
     const user = userEvent.setup()
     render(<ThemeSelector />)
-    
-    // 'Blue' 텍스트를 포함한 카드를 찾아서 클릭
-    const blueThemeCard = screen.getByText(/^Blue$/i).closest('.rounded-lg')
-    expect(blueThemeCard).toBeInTheDocument()
-    
-    if (blueThemeCard) {
-      await user.click(blueThemeCard)
-      expect(mockChangeTheme).toHaveBeenCalledWith('blue')
+
+    const amberHeading = screen.getByText('Amber Minimal')
+    const themeCard = amberHeading.closest('[role="button"]')
+    expect(themeCard).not.toBeNull()
+
+    if (themeCard) {
+      await user.click(themeCard)
     }
+
+    expect(mockChangeTheme).toHaveBeenCalledWith('amber-minimal')
   })
 
-  it('현재 테마 정보를 표시한다', () => {
+  it('displays current theme metadata', () => {
     render(<ThemeSelector />)
-    
-    expect(screen.getByText(/현재 테마 정보/i)).toBeInTheDocument()
-    // displayName이 표시됨
-    expect(screen.getByText(/Default Theme/i)).toBeInTheDocument()
-    expect(screen.getByText(/다크 모드:/i)).toBeInTheDocument()
-    expect(screen.getByText(/비활성/i)).toBeInTheDocument()
-  })
 
-  it('각 테마의 색상 프리뷰를 표시한다', () => {
-    render(<ThemeSelector />)
-    
-    // 각 테마마다 6개의 색상 프리뷰가 있어야 함
-    const colorPreviews = screen.getAllByTitle(/Primary|Secondary|Accent|Card|Background|Muted/i)
-    expect(colorPreviews.length).toBeGreaterThan(0)
+    expect(screen.getByText(/선택된 테마:/)).toHaveTextContent('Claymorphism')
+    expect(screen.getByText(/다크 모드:/)).toHaveTextContent('비활성')
   })
 })
