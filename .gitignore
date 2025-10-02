@@ -14,7 +14,6 @@ node_modules/
 .vscode/
 .vscode
 .vscode/settings.json
-copilot-instructions.md
 
 # Spring
 backtest_be_spring/spring-boot.log
