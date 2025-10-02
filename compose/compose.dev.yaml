@@ -90,6 +90,8 @@ services:
       # API_PROXY_TARGET (defaulting to the FastAPI container so backtesting works without Spring).
       - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
       - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest_be_fast:8000}"
+      - "SPRING_PROXY_TARGET=${SPRING_PROXY_TARGET:-http://host.docker.internal:8080}"
+      - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest_be_fast:8000}"
     command: ["npm", "run", "dev"]
 
 
