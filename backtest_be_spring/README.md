@@ -1,12 +1,12 @@
 # Spring Boot 커뮤니티 백엔드 (backtest_be_spring)
 
-이 서비스는 커뮤니티, 채팅, 인증 관련 기능을 제공하는 Spring Boot 기반 백엔드 애플리케이션입니다.
+커뮤니티, 채팅, 인증 기능을 제공하는 Spring Boot 백엔드다.
 
-주요 책임:
+주요 책임
 - 사용자 인증 및 회원 관리
 - 커뮤니티 게시판(게시글/댓글/검색)
 - 실시간 채팅(웹소켓/STOMP)
-- 권한 및 보안 (Spring Security)
+- 권한 및 보안(Spring Security)
 
 ## 요구 사항
 - Java 17 이상
@@ -14,17 +14,17 @@
 - Docker 및 Docker Compose (Docker 배포/개발 선택시)
 
 ## 빠른 시작 (로컬)
-루트에서 프로젝트로 이동 후 Gradle Wrapper로 실행합니다.
+루트에서 프로젝트로 이동해 Gradle Wrapper로 실행한다.
 
 ```bash
 cd backtest_be_spring
 ./gradlew bootRun
 ```
 
-애플리케이션이 시작되면 기본 포트로 노출됩니다 (기본: 8080). 설정은 `src/main/resources/application.yml`과 환경 변수로 오버라이드할 수 있습니다.
+기본 포트는 8080이다. 설정은 `src/main/resources/application.yml`과 환경 변수로 오버라이드한다.
 
 ## 프로덕션 빌드
-JAR 파일을 빌드한 뒤 실행합니다.
+JAR 파일을 빌드한 뒤 실행한다.
 
 ```bash
 ./gradlew bootJar
@@ -32,16 +32,11 @@ java -jar build/libs/*.jar
 ```
 
 ## Docker / Docker Compose (개발 환경)
-루트의 Compose 구성에서 `backtest_be_spring` 서비스가 정의되어 있습니다. 전체 스택을 띄우려면 프로젝트 루트에서 다음을 실행하세요:
+개발용 Compose(dev)는 Spring Boot 컨테이너를 포함하지 않는다. IDE에서 로컬로 실행하고, 컨테이너는 `host.docker.internal`로 호스트의 8080에 접근한다.
 
+프론트엔드/다른 서비스와 함께 개발 스택을 띄우려면 프로젝트 루트에서 실행한다.
 ```bash
 docker compose -f compose/compose.dev.yaml up -d --build
-```
-
-컨테이너 로그 확인:
-
-```bash
-docker compose -f compose/compose.dev.yaml logs -f backtest_be_spring
 ```
 
 ## 설정 (환경 변수)
@@ -49,30 +44,26 @@ docker compose -f compose/compose.dev.yaml logs -f backtest_be_spring
 - 데이터베이스 연결: `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`
 - JWT/보안 관련: `JWT_SECRET`, `JWT_EXPIRATION_MS` 등 (환경에 따라 다름)
 
-권장 방법: 민감한 값은 시스템 환경 변수 또는 Secrets 관리 도구(예: Docker secrets, Kubernetes secrets)에 보관하세요.
+민감한 값은 환경 변수 또는 시크릿 매니저를 사용한다.
 
 ## API 문서
-애플리케이션 실행 후 Swagger UI를 통해 API 문서를 확인할 수 있습니다:
-
-```
-http://localhost:8080/swagger-ui.html
-```
+애플리케이션 실행 후 API 문서(Swagger UI)를 확인한다: `http://localhost:8080/swagger-ui.html`
 
 ## 테스트
-단위/통합 테스트는 Gradle로 실행합니다.
+단위/통합 테스트는 Gradle로 실행한다.
 
 ```bash
 ./gradlew test
 ```
 
-테스트 및 CI 관련 자세한 내용은 `docs/Test.md`를 참고하세요.
+자세한 내용은 `docs/Development.md`, `docs/Test.md`를 참고한다.
 
 ## 로그 및 헬스 체크
 - 기본 헬스 체크 엔드포인트: `/actuator/health` (Actuator가 활성화된 경우)
 - 메트릭 및 상태 정보는 Actuator 설정에 따라 노출됩니다.
 
 ## 기여 및 코드 스타일
-- 코드 포맷: `./gradlew spotlessApply` (프로젝트에 Spotless 설정이 있을 경우)
-- 커밋 메시지: 간결한 설명과 변경 의도를 포함하세요
+- 코드 포맷: `./gradlew spotlessApply`(Spotless 설정이 있는 경우)
+- 커밋 메시지: 간결하게 작성한다
 
-더 자세한 개발 지침은 `docs/Development.md`와 `docs/Test.md`를 확인하세요.
+자세한 개발/테스트 지침은 `docs/Development.md`, `docs/Test.md`를 참고한다.

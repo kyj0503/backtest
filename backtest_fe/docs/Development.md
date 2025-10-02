@@ -9,11 +9,11 @@ cp .env.example .env # 필요한 경우
 npm run dev
 ```
 
-Vite 개발 서버는 포트 5173에서 실행되며, Docker 컨테이너에서도 동일한 포트를 노출합니다.
+Vite 개발 서버는 포트 5173에서 실행되며 Docker 컨테이너에서도 동일한 포트를 노출한다.
 
 ## 환경 변수
 
-주요 값은 프로젝트 루트의 `.env.local` 또는 `.env`에서 관리합니다.
+주요 값은 프로젝트 루트의 `.env.local` 또는 `.env`에서 관리한다.
 
 ```bash
 VITE_API_BASE_URL=/api
@@ -24,11 +24,11 @@ VITE_APP_VERSION=1.0.0
 REDIS_PASSWORD=change-me-dev-redis-pass
 ```
 
-Docker Compose는 `REDIS_PASSWORD`를 명령 치환에 사용하므로, 필요하면 `export REDIS_PASSWORD=...`로 환경 변수에 미리 등록합니다.
+Compose는 `REDIS_PASSWORD`를 명령 치환에 사용하므로 필요하면 `export REDIS_PASSWORD=...`로 미리 등록한다.
 
 ## Vite 프록시 구성
 
-`vite.config.ts`는 서비스별 타깃을 분리합니다.
+`vite.config.ts`는 서비스별 타깃을 분리한다.
 
 ```ts
 server: {
@@ -43,7 +43,7 @@ server: {
 }
 ```
 
-`SPRING_TARGET`과 `FASTAPI_TARGET`은 각각 `SPRING_PROXY_TARGET`, `FASTAPI_PROXY_TARGET` 환경 변수로 설정합니다.
+`SPRING_TARGET`, `FASTAPI_TARGET`은 각각 `SPRING_PROXY_TARGET`, `FASTAPI_PROXY_TARGET` 환경 변수로 설정한다.
 
 ## 폴더 구조
 
@@ -66,9 +66,9 @@ src/
 └── themes/
 ```
 
-- `features/backtest`는 폼 리듀서, 전략 설정, API 연동 등을 포함합니다.
-- `shared/hooks`에는 `useAsync`, `useForm`, `useTheme` 등 재사용 가능한 훅이 모여 있습니다.
-- `test/` 디렉터리에는 공용 테스트 설정, MSW 서버 구성, 픽스처가 있습니다.
+- `features/backtest`는 폼 리듀서, 전략 설정, API 연동을 포함한다.
+- `shared/hooks`에는 `useAsync`, `useForm`, `useTheme` 등 재사용 훅이 있다.
+- `test/`에는 공용 테스트 설정, MSW 서버 구성, 픽스처가 있다.
 
 ## 커스텀 훅 패턴
 
@@ -79,7 +79,7 @@ const { data, isLoading, error, execute } = useAsync(fetcher, [], { immediate: f
 await execute()
 ```
 
-비동기 호출 상태(isLoading, isSuccess, isError)를 관리합니다.
+비동기 호출 상태(isLoading, isSuccess, isError)를 관리한다.
 
 ### useForm
 
@@ -87,7 +87,7 @@ await execute()
 const { data, errors, handleSubmit } = useForm(initialValues, validators)
 ```
 
-필드 업데이트, 폼 검증, 제출 핸들러를 제공합니다.
+필드 업데이트, 폼 검증, 제출 핸들러를 제공한다.
 
 ### useTheme
 
@@ -95,11 +95,11 @@ const { data, errors, handleSubmit } = useForm(initialValues, validators)
 const { currentTheme, isDarkMode, changeTheme, toggleDarkMode } = useTheme()
 ```
 
-`themes/` 디렉터리에 정의된 테마를 적용하고 다크 모드를 토글합니다.
+`themes/` 디렉터리에 정의된 테마를 적용하고 다크 모드를 토글한다.
 
 ## 서비스 레이어 패턴
 
-`features/backtest/services/backtestService.ts`는 Axios 기반 API 호출을 하나의 서비스 클래스로 묶습니다. 테스트는 Axios 인스턴스를 목킹하여 요청 경로와 페이로드를 검증합니다.
+`features/backtest/services/backtestService.ts`는 Axios 기반 API 호출을 서비스 클래스로 묶는다. 테스트는 Axios 인스턴스를 목킹해 요청 경로/페이로드를 검증한다.
 
 ```ts
 const result = await BacktestService.executeBacktest(request)
@@ -110,7 +110,7 @@ expect(apiClient.post).toHaveBeenCalledWith('/v1/backtest/execute', request)
 
 - 러너: Vitest (`vitest.config.ts`에서 jsdom 환경과 전역 설정 사용)
 - 렌더링: React Testing Library + 커스텀 `render`
-- API 모킹: MSW 서버 초기화(`src/test/setup.ts`), 그러나 서비스 테스트는 현재 Axios 목을 사용
+- API 모킹: MSW 서버 초기화(`src/test/setup.ts`), 서비스 테스트는 Axios 목을 사용
 - 테스트 유틸리티: `src/test/fixtures.ts`, `src/test/helpers.ts`
 
-실행 명령은 `npm run test:run`이며, Docker 컨테이너에서는 `docker compose -f compose/compose.dev.yaml exec backtest_fe npm run test:run`을 사용합니다.
+실행 명령은 `npm run test:run`이며, 컨테이너에서는 `docker compose -f compose/compose.dev.yaml exec backtest_fe npm run test:run`을 사용한다.

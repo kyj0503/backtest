@@ -38,8 +38,7 @@ cp .env.example .env
 # 개발 서버 실행
 npm run dev
 
-# 브라우저에서 확인
-# http://localhost:5173
+# 접속: http://localhost:5173
 ```
 
 ### Docker 환경
@@ -54,8 +53,7 @@ docker compose -f compose/compose.dev.yaml up -d backtest_fe
 # 로그 확인
 docker compose -f compose/compose.dev.yaml logs -f backtest_fe
 
-# 브라우저에서 확인
-# http://localhost:5173
+# 접속: http://localhost:5173
 ```
 
 ## 주요 스크립트
@@ -112,7 +110,7 @@ VITE_APP_VERSION=1.0.0
 REDIS_PASSWORD=change-me-dev-redis-pass
 ```
 
-환경 변수는 모두 `import.meta.env`로 접근합니다. Docker Compose를 사용할 때는 `REDIS_PASSWORD`가 명령어 치환에 사용되므로 필요하다면 `export REDIS_PASSWORD=...` 형태로 값을 미리 노출해 경고를 방지할 수 있습니다.
+환경 변수는 `import.meta.env`로 접근한다. Compose 사용 시 `REDIS_PASSWORD`가 명령 치환에 사용되므로 필요하면 `export REDIS_PASSWORD=...`로 미리 노출한다.
 
 ## 프록시 설정
 
@@ -149,7 +147,7 @@ npm run test:run
 docker compose -f compose/compose.dev.yaml exec backtest_fe npm run test:run
 ```
 
-테스트 작성 규칙과 목록은 `docs/Testing.md`에 정리되어 있습니다.
+테스트 작성 규칙과 목록은 `docs/Test.md`에 정리되어 있다.
 
 ## 빌드 및 배포
 
