@@ -1,15 +1,19 @@
 import '@testing-library/jest-dom'
-import { expect, afterEach } from 'vitest'
+import { expect, afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import * as matchers from '@testing-library/jest-dom/matchers'
+import { server } from './mocks/server'
 
 // Testing Library 매처 확장
 expect.extend(matchers)
 
-// 각 테스트 후 DOM 정리
+// MSW 서버 설정
+beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }))
 afterEach(() => {
   cleanup()
+  server.resetHandlers()
 })
+afterAll(() => server.close())
 
 // MSW를 위한 전역 설정
 Object.defineProperty(window, 'matchMedia', {

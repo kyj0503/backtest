@@ -119,51 +119,140 @@ class BacktestService {
 
 ## 테스트 전략
 
-### 테스트 유형별 접근
+### 현재 테스트 현황 (59개 통과 ✅)
+
+```
+Test Files:  6 passed
+Tests:       59 passed
+
+📊 테스트 분포:
+  - 단위 테스트: 33 tests (Hooks, Utils)
+  - 통합 테스트: 10 tests (Services)
+  - 컴포넌트 테스트: 16 tests (UI Components)
+```
+
+### 테스트 실행
 
 ```bash
-# 단위 테스트 - 유틸리티, 훅, 서비스
-npm run test:unit
+# 전체 테스트 실행 (watch 모드)
+npm test
 
-# 컴포넌트 테스트 - UI 컴포넌트 
-npm run test:components
+# 단일 실행 (CI 모드)
+npm test -- --run
 
-# 통합 테스트 - 전체 플로우
-npm run test:integration
+# 특정 파일 테스트
+npm test ErrorBoundary
 
-# 모든 테스트 실행
-npm run test:run
+# 커버리지 포함
+npm test -- --coverage
+
+# UI 모드
+npm test -- --ui
 ```
 
-### 테스트 작성 패턴
+### 테스트 인프라
 
+**테스트 도구**:
+- **Vitest**: 빠른 테스트 러너
+- **Testing Library**: React 컴포넌트 테스팅
+- **MSW**: API 모킹
+- **jsdom**: 브라우저 환경 시뮬레이션
+
+**테스트 유틸리티** (`src/test/`):
+```
+test/
+├── setup.ts         # 전역 설정, MSW 라이프사이클
+├── utils.tsx        # 커스텀 render, Testing Library re-export
+├── fixtures.ts      # 테스트 데이터 팩토리
+├── helpers.ts       # 테스트 헬퍼 함수들
+└── mocks/
+    ├── handlers.ts  # MSW API 핸들러
+    └── server.ts    # MSW 서버 설정
+```
+
+### 테스트 작성 예시
+
+#### 1. 훅 테스트
 ```typescript
-// 훅 테스트
-describe('useBacktest', () => {
-  it('should handle successful backtest execution', async () => {
-    const { result } = renderHook(() => useBacktest());
-    
-    await act(async () => {
-      await result.current.execute(mockRequest);
-    });
+import { describe, it, expect } from 'vitest'
+import { renderHook, waitFor } from '@testing-library/react'
+import { useAsync } from '../useAsync'
 
-    expect(result.current.data).toEqual(mockResult);
-  });
-});
+describe('useAsync', () => {
+  it('데이터 로딩에 성공한다', async () => {
+    const { result } = renderHook(() => useAsync<string>())
+    
+    await result.current.execute(async () => 'success')
 
-// 컴포넌트 테스트
-describe('BacktestForm', () => {
-  it('should submit form with valid data', async () => {
-    const mockOnSubmit = vi.fn();
-    render(<BacktestForm onSubmit={mockOnSubmit} />);
-    
-    await userEvent.type(screen.getByLabelText('Symbol'), 'AAPL');
-    await userEvent.click(screen.getByRole('button', { name: 'Execute' }));
-    
-    expect(mockOnSubmit).toHaveBeenCalledWith({ symbol: 'AAPL' });
-  });
-});
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.data).toBe('success')
+    })
+  })
+})
 ```
+
+#### 2. 컴포넌트 테스트
+```typescript
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@/test/utils'
+import userEvent from '@testing-library/user-event'
+import ThemeSelector from '../ThemeSelector'
+
+describe('ThemeSelector', () => {
+  it('테마 변경이 정상 작동한다', async () => {
+    const user = userEvent.setup()
+    render(<ThemeSelector />)
+    
+    const blueTheme = screen.getByText(/^Blue$/i)
+    await user.click(blueTheme)
+    
+    // 테마 변경 확인 로직
+  })
+})
+```
+
+#### 3. 서비스 통합 테스트 (MSW 사용)
+```typescript
+import { describe, it, expect } from 'vitest'
+import { BacktestService } from '../backtestService'
+import { createMockBacktestRequest } from '@/test/fixtures'
+
+describe('backtestService', () => {
+  it('백테스트 실행 API를 호출한다', async () => {
+    const request = createMockBacktestRequest()
+    const result = await BacktestService.executeBacktest(request)
+    
+    expect(result.success).toBe(true)
+    expect(result.data).toBeDefined()
+  })
+})
+```
+
+### 테스트 가이드라인
+
+#### FIRST 원칙
+- **Fast**: 빠른 실행
+- **Independent**: 독립적 실행
+- **Repeatable**: 재현 가능
+- **Self-validating**: 자동 검증
+- **Timely**: 적시 작성
+
+#### AAA 패턴
+```typescript
+it('예시 테스트', () => {
+  // Arrange: 테스트 준비
+  const data = createMockData()
+  
+  // Act: 동작 실행
+  const result = someFunction(data)
+  
+  // Assert: 결과 검증
+  expect(result).toBe(expected)
+})
+```
+
+더 자세한 내용은 [📖 테스트 전략 가이드](./04-Test-Strategy.md)를 참고하세요.
 
 ## 스타일링 패턴
 

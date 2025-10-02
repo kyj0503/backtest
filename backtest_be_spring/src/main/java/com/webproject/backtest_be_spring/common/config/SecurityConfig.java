@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/community/posts/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/chat/rooms/**").permitAll()
+                        .requestMatchers("/api/v1/chat/**").permitAll() // 임시: 모든 채팅 API 허용
                         .anyRequest().authenticated());
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

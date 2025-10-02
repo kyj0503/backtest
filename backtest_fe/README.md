@@ -84,19 +84,52 @@ src/
 
 ## 테스트
 
+### 테스트 실행
+
 ```bash
-# 단위 테스트 실행
-npm run test
+# 단위 테스트 실행 (watch 모드)
+npm test
 
-# 테스트 실행 (CI 모드)
-npm run test:run
+# 단일 실행 모드 (CI용)
+npm test -- --run
 
-# 커버리지 리포트
-npm run test:coverage
+# 특정 테스트 파일만 실행
+npm test ErrorBoundary
 
-# 테스트 UI
-npm run test:ui
+# 커버리지 포함 실행
+npm test -- --coverage
+
+# UI 모드로 실행
+npm test -- --ui
 ```
+
+### 테스트 현황
+
+```
+✅ 59개 테스트 통과
+📦 6개 테스트 파일
+
+단위 테스트:
+  - useAsync (6 tests)
+  - useForm (10 tests)  
+  - utils (17 tests)
+
+통합 테스트:
+  - backtestService (10 tests)
+
+컴포넌트 테스트:
+  - ThemeSelector (7 tests)
+  - ErrorBoundary (9 tests)
+```
+
+### 테스트 인프라
+
+- **Vitest**: 빠른 단위 테스트 실행
+- **Testing Library**: React 컴포넌트 테스팅
+- **MSW**: API 모킹 및 통합 테스트
+- **jsdom**: 브라우저 환경 시뮬레이션
+
+더 자세한 테스트 전략은 [📖 테스트 전략 가이드](./docs/04-Test-Strategy.md)를 참고하세요.
 
 ## 환경 변수
 
