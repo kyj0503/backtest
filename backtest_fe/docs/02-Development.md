@@ -1,380 +1,116 @@
-### 개발 환경 설정
+# 개발 환경 가이드
+
+## 환경 준비
 
 ```bash
-# 프로젝트 클론 후
 cd backtest_fe
-
-# 의존성 설치
 npm ci
-
-# 환경 변수 설정
-cp .env.example .env
-
-# 개발 서버 실행
+cp .env.example .env # 필요한 경우
 npm run dev
 ```
 
-## 환경 설정
+Vite 개발 서버는 포트 5173에서 실행되며, Docker 컨테이너에서도 동일한 포트를 노출합니다.
 
-### 환경 변수
+## 환경 변수
+
+주요 값은 프로젝트 루트의 `.env.local` 또는 `.env`에서 관리합니다.
 
 ```bash
-# .env.development (개발용)
-VITE_API_URL=http://localhost:8080/api
-VITE_ENVIRONMENT=development
-VITE_DEBUG=true
-
-# .env.production (배포용)  
-VITE_API_URL=https://api.backtest.com/api
-VITE_ENVIRONMENT=production
-VITE_DEBUG=false
+VITE_API_BASE_URL=/api
+API_PROXY_TARGET=http://backtest_be_fast:8000
+SPRING_PROXY_TARGET=http://host.docker.internal:8080
+FASTAPI_PROXY_TARGET=http://backtest_be_fast:8000
+VITE_APP_VERSION=1.0.0
+REDIS_PASSWORD=change-me-dev-redis-pass
 ```
 
-### API 프록시 설정
+Docker Compose는 `REDIS_PASSWORD`를 명령 치환에 사용하므로, 필요하면 `export REDIS_PASSWORD=...`로 환경 변수에 미리 등록합니다.
 
-개발 중 CORS 문제 해결을 위한 프록시 설정:
+## Vite 프록시 구성
 
-```typescript
-// vite.config.ts
-export default defineConfig({
-  server: {
-    proxy: {
-      '/api': {
-        target: process.env.API_PROXY_TARGET || 'http://localhost:8080',
-        changeOrigin: true,
-        secure: false
-      }
-    }
+`vite.config.ts`는 서비스별 타깃을 분리합니다.
+
+```ts
+server: {
+  proxy: {
+    '/api/auth': { target: SPRING_TARGET, changeOrigin: true },
+    '/api/users': { target: SPRING_TARGET, changeOrigin: true },
+    '/api/chat': { target: SPRING_TARGET, changeOrigin: true },
+    '/ws': { target: SPRING_TARGET, changeOrigin: true, ws: true },
+    '/api/v1/backtest': { target: FASTAPI_TARGET, changeOrigin: true },
+    '/api': { target: SPRING_TARGET, changeOrigin: true }
   }
-});
+}
 ```
 
-## 아키텍처 패턴
+`SPRING_TARGET`과 `FASTAPI_TARGET`은 각각 `SPRING_PROXY_TARGET`, `FASTAPI_PROXY_TARGET` 환경 변수로 설정합니다.
 
-### 1. 폴더 구조
+## 폴더 구조
 
 ```
 src/
-├── shared/                 # 공통 인프라
-│   ├── types/             # 글로벌 타입 정의
-│   ├── config/            # 환경 설정
-│   ├── hooks/             # 재사용 가능한 훅
-│   │   ├── useAsync.ts    # 비동기 상태 관리
-│   │   ├── useForm.ts     # 폼 상태 관리
-│   │   └── useLocalStorage.ts
-│   ├── utils/             # 유틸리티 함수들
-│   └── components/        # 공통 UI 컴포넌트
-├── features/              # 기능별 모듈
-│   ├── backtest/         # 백테스트 기능
-│   │   ├── components/   # 백테스트 전용 컴포넌트
-│   │   ├── hooks/        # 백테스트 훅
-│   │   ├── services/     # API 서비스
-│   │   └── types/        # 백테스트 타입
-│   └── portfolio/        # 포트폴리오 기능
-├── pages/                # 페이지 컴포넌트
-└── test/                 # 테스트 유틸리티
+├── features/
+│   ├── auth/
+│   ├── backtest/
+│   ├── chat/
+│   └── community/
+├── pages/
+├── shared/
+│   ├── api/
+│   ├── components/
+│   ├── config/
+│   ├── hooks/
+│   ├── types/
+│   └── utils/
+├── test/
+└── themes/
 ```
 
-### 2. 커스텀 훅 패턴
+- `features/backtest`는 폼 리듀서, 전략 설정, API 연동 등을 포함합니다.
+- `shared/hooks`에는 `useAsync`, `useForm`, `useTheme` 등 재사용 가능한 훅이 모여 있습니다.
+- `test/` 디렉터리에는 공용 테스트 설정, MSW 서버 구성, 픽스처가 있습니다.
 
-#### useAsync - 비동기 상태 관리
-```typescript
-const { data, isLoading, error, execute } = useAsync<BacktestResult>();
+## 커스텀 훅 패턴
 
-// 사용 예시
-const handleBacktest = async (params: BacktestRequest) => {
-  await execute(() => BacktestService.execute(params));
-};
+### useAsync
+
+```ts
+const { data, isLoading, error, execute } = useAsync(fetcher, [], { immediate: false })
+await execute()
 ```
 
-#### useForm - 폼 상태 관리
-```typescript
-const { values, errors, handleChange, handleSubmit, isValid } = useForm({
-  initialValues: { symbol: '', strategy: 'buy_and_hold' },
-  validationSchema: backtestSchema,
-  onSubmit: handleBacktestSubmit
-});
+비동기 호출 상태(isLoading, isSuccess, isError)를 관리합니다.
+
+### useForm
+
+```ts
+const { data, errors, handleSubmit } = useForm(initialValues, validators)
 ```
 
-### 3. 서비스 레이어 패턴
+필드 업데이트, 폼 검증, 제출 핸들러를 제공합니다.
 
-```typescript
-// features/backtest/services/backtestService.ts
-class BacktestService {
-  private static instance: BacktestService;
-  
-  static getInstance(): BacktestService {
-    if (!BacktestService.instance) {
-      BacktestService.instance = new BacktestService();
-    }
-    return BacktestService.instance;
-  }
+### useTheme
 
-  async execute(params: BacktestRequest): Promise<BacktestResult> {
-    const response = await apiClient.post<BacktestResult>('/backtest', params);
-    return response.data;
-  }
-}
+```ts
+const { currentTheme, isDarkMode, changeTheme, toggleDarkMode } = useTheme()
 ```
 
-## 테스트 전략
+`themes/` 디렉터리에 정의된 테마를 적용하고 다크 모드를 토글합니다.
 
-### 현재 테스트 현황 (59개 통과 ✅)
+## 서비스 레이어 패턴
 
-```
-Test Files:  6 passed
-Tests:       59 passed
+`features/backtest/services/backtestService.ts`는 Axios 기반 API 호출을 하나의 서비스 클래스로 묶습니다. 테스트는 Axios 인스턴스를 목킹하여 요청 경로와 페이로드를 검증합니다.
 
-📊 테스트 분포:
-  - 단위 테스트: 33 tests (Hooks, Utils)
-  - 통합 테스트: 10 tests (Services)
-  - 컴포넌트 테스트: 16 tests (UI Components)
+```ts
+const result = await BacktestService.executeBacktest(request)
+expect(apiClient.post).toHaveBeenCalledWith('/v1/backtest/execute', request)
 ```
 
-### 테스트 실행
+## 테스트 인프라
 
-```bash
-# 전체 테스트 실행 (watch 모드)
-npm test
+- 러너: Vitest (`vitest.config.ts`에서 jsdom 환경과 전역 설정 사용)
+- 렌더링: React Testing Library + 커스텀 `render`
+- API 모킹: MSW 서버 초기화(`src/test/setup.ts`), 그러나 서비스 테스트는 현재 Axios 목을 사용
+- 테스트 유틸리티: `src/test/fixtures.ts`, `src/test/helpers.ts`
 
-# 단일 실행 (CI 모드)
-npm test -- --run
-
-# 특정 파일 테스트
-npm test ErrorBoundary
-
-# 커버리지 포함
-npm test -- --coverage
-
-# UI 모드
-npm test -- --ui
-```
-
-### 테스트 인프라
-
-**테스트 도구**:
-- **Vitest**: 빠른 테스트 러너
-- **Testing Library**: React 컴포넌트 테스팅
-- **MSW**: API 모킹
-- **jsdom**: 브라우저 환경 시뮬레이션
-
-**테스트 유틸리티** (`src/test/`):
-```
-test/
-├── setup.ts         # 전역 설정, MSW 라이프사이클
-├── utils.tsx        # 커스텀 render, Testing Library re-export
-├── fixtures.ts      # 테스트 데이터 팩토리
-├── helpers.ts       # 테스트 헬퍼 함수들
-└── mocks/
-    ├── handlers.ts  # MSW API 핸들러
-    └── server.ts    # MSW 서버 설정
-```
-
-### 테스트 작성 예시
-
-#### 1. 훅 테스트
-```typescript
-import { describe, it, expect } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
-import { useAsync } from '../useAsync'
-
-describe('useAsync', () => {
-  it('데이터 로딩에 성공한다', async () => {
-    const { result } = renderHook(() => useAsync<string>())
-    
-    await result.current.execute(async () => 'success')
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-      expect(result.current.data).toBe('success')
-    })
-  })
-})
-```
-
-#### 2. 컴포넌트 테스트
-```typescript
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@/test/utils'
-import userEvent from '@testing-library/user-event'
-import ThemeSelector from '../ThemeSelector'
-
-describe('ThemeSelector', () => {
-  it('테마 변경이 정상 작동한다', async () => {
-    const user = userEvent.setup()
-    render(<ThemeSelector />)
-    
-    const blueTheme = screen.getByText(/^Blue$/i)
-    await user.click(blueTheme)
-    
-    // 테마 변경 확인 로직
-  })
-})
-```
-
-#### 3. 서비스 통합 테스트 (MSW 사용)
-```typescript
-import { describe, it, expect } from 'vitest'
-import { BacktestService } from '../backtestService'
-import { createMockBacktestRequest } from '@/test/fixtures'
-
-describe('backtestService', () => {
-  it('백테스트 실행 API를 호출한다', async () => {
-    const request = createMockBacktestRequest()
-    const result = await BacktestService.executeBacktest(request)
-    
-    expect(result.success).toBe(true)
-    expect(result.data).toBeDefined()
-  })
-})
-```
-
-### 테스트 가이드라인
-
-#### FIRST 원칙
-- **Fast**: 빠른 실행
-- **Independent**: 독립적 실행
-- **Repeatable**: 재현 가능
-- **Self-validating**: 자동 검증
-- **Timely**: 적시 작성
-
-#### AAA 패턴
-```typescript
-it('예시 테스트', () => {
-  // Arrange: 테스트 준비
-  const data = createMockData()
-  
-  // Act: 동작 실행
-  const result = someFunction(data)
-  
-  // Assert: 결과 검증
-  expect(result).toBe(expected)
-})
-```
-
-더 자세한 내용은 [📖 테스트 전략 가이드](./04-Test-Strategy.md)를 참고하세요.
-
-## 스타일링 패턴
-
-### Tailwind CSS 조합
-
-```typescript
-import { cn } from '@/shared/utils';
-
-// 조건부 스타일링
-const Button = ({ variant, size, disabled, className, ...props }) => (
-  <button
-    className={cn(
-      // 기본 스타일
-      'inline-flex items-center justify-center rounded-md font-medium transition-colors',
-      // 변형별 스타일
-      {
-        'bg-primary text-primary-foreground hover:bg-primary/90': variant === 'default',
-        'bg-secondary text-secondary-foreground hover:bg-secondary/80': variant === 'secondary',
-      },
-      // 크기별 스타일  
-      {
-        'h-10 px-4 py-2': size === 'default',
-        'h-9 px-3': size === 'sm',
-        'h-11 px-8': size === 'lg',
-      },
-      // 상태별 스타일
-      disabled && 'opacity-50 cursor-not-allowed',
-      className
-    )}
-    disabled={disabled}
-    {...props}
-  />
-);
-```
-
-### shadcn/ui 컴포넌트 활용
-
-```typescript
-// 기본 컴포넌트 확장
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-
-const CustomForm = () => (
-  <form className="space-y-4">
-    <Input 
-      placeholder="Symbol" 
-      value={symbol}
-      onChange={(e) => setSymbol(e.target.value)}
-    />
-    <Button type="submit" disabled={isLoading}>
-      {isLoading ? 'Executing...' : 'Execute Backtest'}
-    </Button>
-  </form>
-);
-```
-
-## 개발 도구
-
-### VS Code 확장 프로그램
-
-```json
-// .vscode/extensions.json
-{
-  "recommendations": [
-    "bradlc.vscode-tailwindcss",
-    "esbenp.prettier-vscode", 
-    "dbaeumer.vscode-eslint",
-    "ms-vscode.vscode-typescript-next"
-  ]
-}
-```
-
-### ESLint 설정
-
-```json
-// .eslintrc.json
-{
-  "extends": [
-    "@typescript-eslint/recommended",
-    "plugin:react-hooks/recommended"
-  ],
-  "rules": {
-    "@typescript-eslint/no-unused-vars": "error",
-    "@typescript-eslint/no-explicit-any": "error",
-    "react-hooks/exhaustive-deps": "warn"
-  }
-}
-```
-
-## 빌드 & 배포
-
-### 빌드 최적화
-
-```bash
-# 타입 검사
-npm run type-check
-
-# 린팅
-npm run lint
-
-# 테스트
-npm run test:run
-
-# 프로덕션 빌드
-npm run build
-
-# 빌드 크기 분석
-npm run build:analyze
-```
-
-### Docker 개발 환경
-
-```dockerfile
-# Dockerfile.dev
-FROM node:18-alpine
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-EXPOSE 5173
-
-CMD ["npm", "run", "dev", "--", "--host"]
-```
+실행 명령은 `npm run test:run`이며, Docker 컨테이너에서는 `docker compose -f compose/compose.dev.yaml exec backtest_fe npm run test:run`을 사용합니다.

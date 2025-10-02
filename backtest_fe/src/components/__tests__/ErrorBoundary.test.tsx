@@ -36,15 +36,20 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('정상 컴포넌트')).toBeInTheDocument()
   })
 
-  it('에러가 발생하면 에러 UI를 표시한다', () => {
+  it('에러가 발생하면 에러 UI를 표시한다', async () => {
+    // Suppress console.error for this test
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
     )
 
-    expect(screen.getByText(/오류가 발생했습니다/i)).toBeInTheDocument()
+    expect(await screen.findByText(/오류가 발생했습니다/i)).toBeInTheDocument()
     expect(screen.getByText(/예상치 못한 오류로 인해/i)).toBeInTheDocument()
+    
+    consoleSpy.mockRestore()
   })
 
   it('다시 시도 버튼을 표시한다', () => {
@@ -100,6 +105,8 @@ describe('ErrorBoundary', () => {
   it('페이지 새로고침 버튼을 클릭하면 window.location.reload를 호출한다', async () => {
     const user = userEvent.setup()
     const reloadMock = vi.fn()
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    
     Object.defineProperty(window, 'location', {
       value: { reload: reloadMock },
       writable: true,
@@ -111,10 +118,11 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     )
 
-    const reloadButton = screen.getByRole('button', { name: /페이지 새로고침/i })
+    const reloadButton = await screen.findByRole('button', { name: /페이지 새로고침/i })
     await user.click(reloadButton)
 
     expect(reloadMock).toHaveBeenCalledTimes(1)
+    consoleSpy.mockRestore()
   })
 
   it('커스텀 fallback UI를 제공하면 사용한다', () => {

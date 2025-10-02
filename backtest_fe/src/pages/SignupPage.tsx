@@ -25,8 +25,7 @@ const signupSchema = z
     password: z.string().min(6, '비밀번호는 6자 이상 입력해주세요.'),
     confirmPassword: z.string().min(6, '비밀번호 확인을 입력해주세요.'),
     investmentType: z
-      .enum(['conservative', 'moderate', 'balanced', 'aggressive', 'speculative'])
-      .default('balanced'),
+      .enum(['conservative', 'moderate', 'balanced', 'aggressive', 'speculative']),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: '비밀번호가 일치하지 않습니다.',

@@ -120,10 +120,11 @@ apiClient.interceptors.response.use(
         throw error;
       }
       (error.config as any)._retry = true;
-      error.config.headers = {
-        ...error.config.headers,
-        Authorization: `${tokens.tokenType ?? 'Bearer'} ${tokens.accessToken}`,
-      };
+      const headers = error.config.headers || {};
+      if (typeof headers.set === 'function') {
+        headers.set('Authorization', `${tokens.tokenType ?? 'Bearer'} ${tokens.accessToken}`);
+      }
+      error.config.headers = headers;
       return apiClient.request(error.config);
     } catch (refreshError) {
       authStorage.clearAll();

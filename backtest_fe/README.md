@@ -1,174 +1,232 @@
-# 백테스팅 프론트엔드
+# Backtest Frontend
 
-> 최신 React, TypeScript, Tailwind CSS를 활용한 전문적인 백테스팅 대시보드
+백테스트 플랫폼의 React 기반 프론트엔드 애플리케이션입니다.
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/your-repo/backtest-frontend)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.2+-61dafb)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-4.4+-646cff)](https://vitejs.dev/)
+## 프로젝트 개요
 
-## 주요 기능
+트레이딩 전략의 백테스팅과 포트폴리오 최적화를 위한 웹 인터페이스입니다.
 
-- **고성능 백테스팅**: 단일 종목 및 포트폴리오 백테스트 지원
-- **인터랙티브 차트**: Recharts 기반 실시간 데이터 시각화
-- **다양한 전략**: 이동평균, RSI, 볼린저 밴드 등 다양한 트레이딩 전략
-- **실시간 데이터**: Yahoo Finance API 연동으로 최신 시장 데이터 제공
-- **포트폴리오 관리**: 자산 배분 및 리밸런싱 시뮬레이션
-- **위험 분석**: VaR, CVaR, 샤프비율 등 위험 지표 제공
-- **테마 시스템**: 다크/라이트 모드 및 커스텀 테마 지원
-- **반응형 디자인**: 모바일부터 데스크톱까지 완벽한 반응형 UI
+**주요 기능:**
+- 백테스트 실행 및 결과 시각화
+- 전략 매개변수 최적화
+- 포트폴리오 구성 및 분석
+- 실시간 데이터 조회
+- 테마 커스터마이징
 
-## 설치 및 실행
+## 기술 스택
 
-### 필수 요구사항
+- **프레임워크**: React 18.2, TypeScript 5.0
+- **빌드 도구**: Vite 4.4
+- **스타일링**: Tailwind CSS, shadcn/ui
+- **상태 관리**: Custom Hooks (useAsync, useForm)
+- **차트**: Recharts
+- **HTTP 클라이언트**: Axios
+- **테스트**: Vitest, Testing Library, MSW
+- **환경**: Node.js >=20.0.0
 
-- Node.js 16.0.0 이상
-- npm 8.0.0 이상
+## 빠른 시작
 
-### 개발 환경 설정
+### 로컬 환경
 
 ```bash
 # 의존성 설치
 npm ci
 
-# 환경 변수 설정
+# 환경 변수 설정 (선택사항)
 cp .env.example .env
 
 # 개발 서버 실행
 npm run dev
+
+# 브라우저에서 확인
+# http://localhost:5173
 ```
 
-### Docker로 실행
+### Docker 환경
 
 ```bash
-# 개발 환경
-docker compose -f compose/compose.dev.yaml up -d
+# 프로젝트 루트에서 실행
+cd /path/to/backtest
 
-# 프로덕션 환경
-docker compose -f compose/compose.prod.yaml up -d
+# 컨테이너 시작
+docker compose -f compose/compose.dev.yaml up -d backtest_fe
+
+# 로그 확인
+docker compose -f compose/compose.dev.yaml logs -f backtest_fe
+
+# 브라우저에서 확인
+# http://localhost:5173
 ```
 
-## 아키텍처
+## 주요 스크립트
 
-### 프로젝트 구조
+```bash
+# 개발
+npm run dev          # 개발 서버 실행 (포트 5173)
+npm run build        # 프로덕션 빌드
+npm run preview      # 빌드 결과 미리보기
+
+# 테스트
+npm test             # 테스트 실행 (watch 모드)
+npm run test:run     # 단일 실행 (CI 모드)
+npm run test:coverage # 커버리지 리포트
+npm run test:ui      # Vitest UI 모드
+
+# 코드 품질
+npm run lint         # ESLint 검사
+npm run lint:fix     # ESLint 자동 수정
+npm run type-check   # TypeScript 타입 검사
+```
+
+## 디렉터리 구조
 
 ```
 src/
-├── shared/                 # 공통 모듈
-│   ├── api/               # API 클라이언트 및 인터셉터
+├── shared/                 # 공통 인프라
+│   ├── types/             # 글로벌 타입 정의
 │   ├── config/            # 환경 설정
-│   ├── hooks/             # 재사용 가능한 커스텀 훅
-│   ├── types/             # 전역 타입 정의
+│   ├── hooks/             # 재사용 가능한 훅
+│   ├── utils/             # 유틸리티 함수들
 │   ├── ui/                # shadcn/ui 컴포넌트
-│   └── utils/             # 유틸리티 함수
+│   └── components/        # 공통 컴포넌트
 ├── features/              # 기능별 모듈
-│   ├── auth/              # 인증 관련
-│   ├── backtest/          # 백테스트 기능
-│   ├── chat/              # 실시간 채팅
-│   └── community/         # 커뮤니티 기능
-├── pages/                 # 페이지 컴포넌트
-├── components/            # 공통 컴포넌트
-└── test/                  # 테스트 유틸리티
+│   ├── auth/             # 인증/인가
+│   ├── backtest/         # 백테스트 기능
+│   ├── community/        # 커뮤니티 기능
+│   └── chat/             # 채팅 기능
+├── pages/                # 페이지 컴포넌트
+├── test/                 # 테스트 유틸리티
+└── themes/               # 테마 정의 파일
 ```
 
-### 기술 스택
+## 환경 변수
 
-- **프레임워크**: React 18.2+ with TypeScript
-- **빌드 도구**: Vite 4.4+
-- **스타일링**: Tailwind CSS + shadcn/ui
-- **상태 관리**: React Context + Custom Hooks
-- **차트**: Recharts 2.9+
-- **HTTP 클라이언트**: Axios
-- **테스트**: Vitest + Testing Library
-- **코드 품질**: ESLint + TypeScript
+루트 `.env.local` 예시는 다음과 같습니다.
+
+```bash
+VITE_API_BASE_URL=/api
+API_PROXY_TARGET=http://backtest_be_fast:8000
+SPRING_PROXY_TARGET=http://host.docker.internal:8080
+FASTAPI_PROXY_TARGET=http://backtest_be_fast:8000
+VITE_APP_VERSION=1.0.0
+REDIS_PASSWORD=change-me-dev-redis-pass
+```
+
+환경 변수는 모두 `import.meta.env`로 접근합니다. Docker Compose를 사용할 때는 `REDIS_PASSWORD`가 명령어 치환에 사용되므로 필요하다면 `export REDIS_PASSWORD=...` 형태로 값을 미리 노출해 경고를 방지할 수 있습니다.
+
+## 프록시 설정
+
+개발 중 CORS 문제 해결을 위한 프록시가 구성되어 있습니다 (vite.config.ts):
+
+- `/api/auth` → Spring Boot (포트 8080)
+- `/api/users` → Spring Boot
+- `/api/chat` → Spring Boot
+- `/api/v1/backtest` → FastAPI (포트 8000)
+- `/ws` → WebSocket (Spring Boot)
 
 ## 테스트
+
+### 현재 테스트 현황
+
+```
+Test Files:  6
+Tests:       59
+Duration:    약 2초 (vitest run 기준)
+```
+
+테스트 분포는 다음과 같습니다.
+- 공용 훅 및 유틸리티 단위 테스트: 33개
+- 서비스 레이어 단위 테스트: 10개 (axios 클라이언트를 목킹)
+- UI 컴포넌트 테스트: 16개 (Testing Library 기반)
 
 ### 테스트 실행
 
 ```bash
-# 단위 테스트 실행 (watch 모드)
-npm test
+# 로컬 환경
+npm run test:run
 
-# 단일 실행 모드 (CI용)
-npm test -- --run
-
-# 특정 테스트 파일만 실행
-npm test ErrorBoundary
-
-# 커버리지 포함 실행
-npm test -- --coverage
-
-# UI 모드로 실행
-npm test -- --ui
+# Docker 환경
+docker compose -f compose/compose.dev.yaml exec backtest_fe npm run test:run
 ```
 
-### 테스트 현황
+테스트 작성 규칙과 목록은 `docs/Testing.md`에 정리되어 있습니다.
 
-```
-✅ 59개 테스트 통과
-📦 6개 테스트 파일
+## 빌드 및 배포
 
-단위 테스트:
-  - useAsync (6 tests)
-  - useForm (10 tests)  
-  - utils (17 tests)
+### 프로덕션 빌드
 
-통합 테스트:
-  - backtestService (10 tests)
+```bash
+# 타입 체크
+npm run type-check
 
-컴포넌트 테스트:
-  - ThemeSelector (7 tests)
-  - ErrorBoundary (9 tests)
-```
+# 린팅
+npm run lint
 
-### 테스트 인프라
+# 테스트
+npm run test:run
 
-- **Vitest**: 빠른 단위 테스트 실행
-- **Testing Library**: React 컴포넌트 테스팅
-- **MSW**: API 모킹 및 통합 테스트
-- **jsdom**: 브라우저 환경 시뮬레이션
-
-더 자세한 테스트 전략은 [📖 테스트 전략 가이드](./docs/04-Test-Strategy.md)를 참고하세요.
-
-## 환경 변수
-
-```env
-# API 설정
-VITE_API_BASE_URL=/api           # 백엔드 API 주소
-API_PROXY_TARGET=http://localhost:8080  # 개발 서버 프록시 타겟
-
-# 앱 정보
-VITE_APP_VERSION=1.0.0
-VITE_BUILD_TIME=2024-01-01T00:00:00Z
+# 빌드
+npm run build
 ```
 
-## 개발 가이드
+빌드 결과는 `dist/` 디렉터리에 생성됩니다.
 
-### 커스텀 훅 사용
+### Docker 빌드
 
-```typescript
-import { useBacktest } from '@/features/backtest/hooks/useBacktestV2'
-import { useForm } from '@/shared/hooks/useForm'
+```bash
+# 개발 이미지
+docker build -f Dockerfile.dev -t backtest-fe:dev .
 
-// 백테스트 실행
-const { runBacktest, result, isLoading } = useBacktest()
-
-// 폼 상태 관리
-const { data, setFieldValue, handleSubmit, isValid } = useForm(
-  initialData, 
-  validationRules
-)
+# 프로덕션 이미지
+docker build -f Dockerfile -t backtest-fe:prod .
 ```
 
-### API 서비스 사용
+## 코드 품질
 
-```typescript
-import { BacktestService } from '@/features/backtest/services/backtestService'
+### ESLint 규칙
 
-// 백테스트 실행
-const result = await BacktestService.executeBacktest(request)
+- TypeScript 권장 규칙 적용
+- React Hooks 규칙 적용
+- 미사용 변수 오류 처리
+- 명시적 any 타입 오류 처리
 
-// 전략 목록 조회
-const strategies = await BacktestService.getStrategies()
-```
+### TypeScript 설정
+
+- Strict 모드 활성화
+- Path alias 설정 (`@/*`)
+- ES Module 사용
+
+## 문서
+
+- [개발 가이드](./docs/02-Development.md) - 개발 환경 설정 및 아키텍처
+- [테스트 전략](./docs/Testing.md) - 테스트 작성 가이드 및 모범 사례
+- [테마 시스템](./docs/03-Theme.md) - 테마 커스터마이징 가이드
+
+## 주요 의존성
+
+**프로덕션 의존성:**
+- react: ^18.2.0
+- react-dom: ^18.2.0
+- react-router-dom: ^6.30.1
+- axios: ^1.6.0
+- recharts: ^2.9.0
+- zod: ^3.25.76
+- react-hook-form: ^7.62.0
+- lucide-react: ^0.544.0
+
+**개발 의존성:**
+- typescript: ^5.0.0
+- vite: ^4.4.0
+- vitest: ^3.2.4
+- @testing-library/react: ^16.3.0
+- msw: ^2.11.3
+- happy-dom: ^16.14.4
+- tailwindcss: ^3.3.0
+
+## 라이선스
+
+MIT
+
+## 작성자
+
+Backtesting Team

@@ -1,341 +1,67 @@
-## 아키텍처
+# 테마 시스템
 
-### 핵심 구성 요소
+## 구조
 
 ```
 src/
 ├── shared/
-│   ├── types/theme.ts      # 테마 관련 타입 정의
-│   └── hooks/useTheme.ts   # 테마 관리 훅
-├── themes/                 # 테마 정의 파일
-│   ├── default.json        # 기본 라이트 테마
-│   └── dark.json          # 다크 테마  
-└── index.css              # CSS 변수 정의
+│   └── hooks/
+│       └── useTheme.ts
+├── shared/
+│   └── types/theme.ts
+└── themes/
+    ├── amber-minimal.json
+    ├── amethyst-haze.json
+    ├── bubblegun.json
+    └── claymorphism.json
 ```
 
-### 타입 정의
+- JSON 파일은 라이트/다크 팔레트와 폰트, 곡률 등 CSS 변수를 제공합니다.
+- `useTheme` 훅이 JSON을 로드해 `document.documentElement`에 CSS 변수를 주입합니다.
 
-```typescript
-// src/shared/types/theme.ts
-export type ThemeMode = 'light' | 'dark' | 'system';
+## 타입 정의
 
-export interface ThemeColors {
-  background: string;
-  foreground: string;
-  primary: string;
-  'primary-foreground': string;
-  secondary: string;
-  'secondary-foreground': string;
-  accent: string;
-  'accent-foreground': string;
-  destructive: string;
-  'destructive-foreground': string;
-  muted: string;
-  'muted-foreground': string;
-  card: string;
-  'card-foreground': string;
-  border: string;
-  input: string;
-  ring: string;
+```ts
+export interface ThemeDefinition {
+  cssVars: {
+    theme: { 'font-sans': string; radius: string; [key: string]: string }
+    light: ThemeColors
+    dark: ThemeColors
+  }
 }
 
-export interface Theme {
-  name: string;
-  colors: ThemeColors;
-}
+export type ThemeName = 'amber-minimal' | 'amethyst-haze' | 'bubblegum' | 'claymorphism'
 ```
 
-## 사용 방법
+`ThemeColors`는 버튼, 카드, 차트, 사이드바 색상을 포함하며 필요한 키를 확장할 수 있습니다.
 
-### 기본 사용법
+## useTheme 사용법
 
-```tsx
-import { useTheme } from '@/shared/hooks/useTheme';
-
-const Header = () => {
-  const { theme, setTheme, isDarkMode, toggleTheme } = useTheme();
-
-  return (
-    <header className="bg-background border-b">
-      <div className="flex items-center justify-between p-4">
-        <h1 className="text-foreground font-bold">Backtest Platform</h1>
-        
-        {/* 테마 토글 버튼 */}
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={toggleTheme}
-        >
-          {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
-      </div>
-    </header>
-  );
-};
-```
-
-### 테마 선택기 컴포넌트
-
-```tsx
-import { useTheme } from '@/shared/hooks/useTheme';
+```ts
+import { useTheme } from '@/shared/hooks/useTheme'
 
 const ThemeSelector = () => {
-  const { theme, setTheme } = useTheme();
-
-  return (
-    <Select value={theme} onValueChange={setTheme}>
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="테마 선택" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="light">라이트 모드</SelectItem>
-        <SelectItem value="dark">다크 모드</SelectItem>
-        <SelectItem value="system">시스템 설정</SelectItem>
-      </SelectContent>
-    </Select>
-  );
-};
-```
-
-## 테마 커스터마이제이션
-
-### 새 테마 추가
-
-1. **테마 파일 생성**
-
-```json
-// src/themes/blue.json
-{
-  "name": "blue",
-  "colors": {
-    "background": "hsl(210, 100%, 98%)",
-    "foreground": "hsl(210, 40%, 8%)",
-    "primary": "hsl(210, 100%, 50%)",
-    "primary-foreground": "hsl(0, 0%, 98%)",
-    "secondary": "hsl(210, 40%, 96%)",
-    "secondary-foreground": "hsl(210, 40%, 11%)",
-    "accent": "hsl(210, 40%, 94%)",
-    "accent-foreground": "hsl(210, 40%, 11%)",
-    "destructive": "hsl(0, 84%, 60%)",
-    "destructive-foreground": "hsl(0, 0%, 98%)",
-    "muted": "hsl(210, 40%, 96%)",
-    "muted-foreground": "hsl(210, 40%, 45%)",
-    "card": "hsl(0, 0%, 100%)",
-    "card-foreground": "hsl(210, 40%, 8%)",
-    "border": "hsl(210, 40%, 90%)",
-    "input": "hsl(210, 40%, 90%)",
-    "ring": "hsl(210, 100%, 50%)"
-  }
+  const { currentTheme, changeTheme, isDarkMode, toggleDarkMode, getAvailableThemes } = useTheme()
+  // ...
 }
 ```
 
-2. **훅에 테마 등록**
+- `changeTheme(themeName)`는 선택한 테마를 적용하고 로컬 스토리지에 저장합니다.
+- `toggleDarkMode()`는 다크 모드 CSS 클래스와 저장 값을 동기화합니다.
+- `getAvailableThemes()`는 테마 리스트와 표시명을 반환합니다.
 
-```typescript
-// src/shared/hooks/useTheme.ts
-import blueTheme from '@/themes/blue.json';
+## 새 테마 추가
 
-const themes = {
-  light: defaultTheme,
-  dark: darkTheme,
-  blue: blueTheme  // 새 테마 추가
-} as const;
+1. `themes` 디렉터리에 JSON 파일을 추가합니다.
+2. `useTheme.ts`에서 해당 JSON을 import하고 `themes` 맵에 등록합니다.
+3. 필요하면 `ThemeName` 유니언 타입을 업데이트합니다.
 
-export type ThemeMode = keyof typeof themes;
-```
+## CSS 적용 방식
 
-### 동적 색상 변경
+`useTheme` 훅은 아래 순서로 스타일을 적용합니다.
 
-```typescript
-const CustomColorPicker = () => {
-  const { updateThemeColor } = useTheme();
+1. 다크 모드 여부에 따라 `html` 요소에 `dark` 클래스를 추가 또는 제거합니다.
+2. 테마 메타 변수(`font-sans`, `radius` 등)를 `--font-sans` 형태로 등록합니다.
+3. 현재 모드(light/dark)에 맞는 색상을 CSS 변수(`--background`, `--primary` 등)로 주입합니다.
 
-  const handleColorChange = (colorKey: keyof ThemeColors, newColor: string) => {
-    updateThemeColor(colorKey, newColor);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-2">
-        <label>Primary Color:</label>
-        <input
-          type="color"
-          onChange={(e) => handleColorChange('primary', e.target.value)}
-        />
-      </div>
-      {/* 다른 색상들... */}
-    </div>
-  );
-};
-```
-
-## CSS 변수 시스템
-
-### 기본 설정
-
-```css
-/* src/index.css */
-:root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
-  --primary: 240 5.9% 10%;
-  --primary-foreground: 0 0% 98%;
-  /* ... 기타 변수들 */
-}
-
-.dark {
-  --background: 240 10% 3.9%;
-  --foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 5.9% 10%;
-  /* ... 기타 변수들 */
-}
-```
-
-### Tailwind CSS 설정
-
-```javascript
-// tailwind.config.js
-module.exports = {
-  darkMode: ['class'],
-  theme: {
-    extend: {
-      colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        // ... 기타 색상들
-      },
-    },
-  },
-};
-```
-
-## 고급 기능
-
-### 시스템 테마 감지
-
-```typescript
-// src/shared/hooks/useTheme.ts
-const useSystemTheme = () => {
-  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light');
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = (e: MediaQueryListEvent) => {
-      setSystemTheme(e.matches ? 'dark' : 'light');
-    };
-
-    setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  return systemTheme;
-};
-```
-
-### 테마 전환 애니메이션
-
-```css
-/* 부드러운 테마 전환 효과 */
-* {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-/* 특정 요소는 애니메이션 제외 */
-.no-theme-transition {
-  transition: none !important;
-}
-```
-
-### 테마별 이미지 처리
-
-```tsx
-const ThemedImage = ({ lightSrc, darkSrc, alt, ...props }) => {
-  const { isDarkMode } = useTheme();
-  
-  return (
-    <img 
-      src={isDarkMode ? darkSrc : lightSrc}
-      alt={alt}
-      {...props}
-    />
-  );
-};
-
-// 사용 예시
-<ThemedImage
-  lightSrc="/logo-light.png"
-  darkSrc="/logo-dark.png"
-  alt="Logo"
-  className="h-8 w-auto"
-/>
-```
-
-## 테스트
-
-### 테마 관련 테스트
-
-```typescript
-// __tests__/useTheme.test.ts
-describe('useTheme', () => {
-  it('should toggle between light and dark themes', () => {
-    const { result } = renderHook(() => useTheme());
-    
-    expect(result.current.theme).toBe('light');
-    
-    act(() => {
-      result.current.toggleTheme();
-    });
-    
-    expect(result.current.theme).toBe('dark');
-  });
-
-  it('should persist theme preference', () => {
-    const { result } = renderHook(() => useTheme());
-    
-    act(() => {
-      result.current.setTheme('dark');
-    });
-    
-    expect(localStorage.getItem('theme')).toBe('dark');
-  });
-});
-```
-
-## 접근성 고려사항
-
-### 고대비 모드 지원
-
-```css
-@media (prefers-contrast: high) {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 0%;
-    --primary: 240 100% 50%;
-    --border: 0 0% 50%;
-  }
-  
-  .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-  }
-}
-```
-
-### 모션 감소 지원
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
-    animation: none !important;
-  }
-}
-```
+이 구조로 Tailwind CSS가 `var(--background)` 등의 토큰을 활용해 UI 색상을 제어할 수 있습니다.

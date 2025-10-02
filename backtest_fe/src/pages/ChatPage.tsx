@@ -39,7 +39,7 @@ const ChatPage: React.FC = () => {
   const [messageInput, setMessageInput] = useState('');
   const [joining, setJoining] = useState(false);
   const [memberJoined, setMemberJoined] = useState(false);
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+  const [, setSubscriptionId] = useState<string | null>(null);
   const wsClientRef = useRef<SimpleStompClient | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);

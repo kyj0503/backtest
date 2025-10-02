@@ -13,15 +13,6 @@ interface AppConfig {
   readonly BUILD_TIME: string;
 }
 
-// 환경 변수 검증 및 기본값 설정
-const getEnvVar = (key: string, defaultValue?: string): string => {
-  const value = import.meta.env[key] || defaultValue;
-  if (!value) {
-    throw new Error(`Required environment variable ${key} is not defined`);
-  }
-  return value;
-};
-
 // API URL 빌드 함수
 const buildApiUrl = (): string => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL;

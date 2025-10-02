@@ -4,13 +4,29 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { BacktestService } from '../backtestService'
-import { apiClient } from '@/shared/api/client'
 import { createMockBacktestResult, createMockStrategy, mockApiResponse } from '@/test/utils'
 
-// API 클라이언트 모킹
-vi.mock('@/shared/api/client')
+vi.mock('@/shared/api/client', () => {
+  const mockGet = vi.fn()
+  const mockPost = vi.fn()
+  
+  return {
+    apiClient: {
+      get: mockGet,
+      post: mockPost,
+      put: vi.fn(),
+      delete: vi.fn(),
+      defaults: { headers: { common: {} } },
+      interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+    }
+  }
+})
 
-const mockedApiClient = vi.mocked(apiClient)
+// Import after mocking
+import { apiClient } from '@/shared/api/client'
+
+const mockGet = apiClient.get as any
+const mockPost = apiClient.post as any
 
 describe('BacktestService', () => {
   beforeEach(() => {
@@ -20,7 +36,7 @@ describe('BacktestService', () => {
   describe('executeBacktest', () => {
     it('should execute backtest successfully', async () => {
       const mockResult = createMockBacktestResult()
-      mockedApiClient.post.mockResolvedValue(mockApiResponse(mockResult))
+      mockPost.mockResolvedValue(mockApiResponse(mockResult))
 
       const request = {
         portfolio: [{ symbol: 'AAPL', amount: 1000 }],
@@ -31,13 +47,13 @@ describe('BacktestService', () => {
 
       const result = await BacktestService.executeBacktest(request)
 
-      expect(mockedApiClient.post).toHaveBeenCalledWith('/v1/backtest/execute', request)
+      expect(mockPost).toHaveBeenCalledWith('/v1/backtest/execute', request)
       expect(result).toEqual(mockResult)
     })
 
     it('should handle backtest execution error', async () => {
       const error = new Error('Backtest failed')
-      mockedApiClient.post.mockRejectedValue(error)
+      mockPost.mockRejectedValue(error)
 
       const request = {
         portfolio: [{ symbol: 'AAPL', amount: 1000 }],
@@ -53,11 +69,11 @@ describe('BacktestService', () => {
   describe('getStrategies', () => {
     it('should fetch strategies successfully', async () => {
       const mockStrategies = [createMockStrategy()]
-      mockedApiClient.get.mockResolvedValue(mockApiResponse(mockStrategies))
+      mockGet.mockResolvedValue(mockApiResponse(mockStrategies))
 
       const result = await BacktestService.getStrategies()
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/v1/strategies')
+      expect(mockGet).toHaveBeenCalledWith('/v1/strategies')
       expect(result).toEqual(mockStrategies)
     })
   })
@@ -65,11 +81,11 @@ describe('BacktestService', () => {
   describe('getStrategy', () => {
     it('should fetch specific strategy', async () => {
       const mockStrategy = createMockStrategy()
-      mockedApiClient.get.mockResolvedValue(mockApiResponse(mockStrategy))
+      mockGet.mockResolvedValue(mockApiResponse(mockStrategy))
 
       const result = await BacktestService.getStrategy('buy_and_hold')
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/v1/strategies/buy_and_hold')
+      expect(mockGet).toHaveBeenCalledWith('/v1/strategies/buy_and_hold')
       expect(result).toEqual(mockStrategy)
     })
   })
@@ -83,11 +99,11 @@ describe('BacktestService', () => {
         display: 10,
         items: []
       }
-      mockedApiClient.get.mockResolvedValue(mockApiResponse(mockNews))
+      mockGet.mockResolvedValue(mockApiResponse(mockNews))
 
       const result = await BacktestService.searchNews('AAPL')
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/v1/naver-news/search', {
+      expect(mockGet).toHaveBeenCalledWith('/v1/naver-news/search', {
         params: { query: 'AAPL', display: 10 }
       })
       expect(result).toEqual(mockNews)
@@ -101,11 +117,11 @@ describe('BacktestService', () => {
         display: 20,
         items: []
       }
-      mockedApiClient.get.mockResolvedValue(mockApiResponse(mockNews))
+      mockGet.mockResolvedValue(mockApiResponse(mockNews))
 
       await BacktestService.searchNews('AAPL', 20)
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/v1/naver-news/search', {
+      expect(mockGet).toHaveBeenCalledWith('/v1/naver-news/search', {
         params: { query: 'AAPL', display: 20 }
       })
     })
@@ -119,11 +135,11 @@ describe('BacktestService', () => {
         change_rate: 0.5,
         trend: 'up' as const
       }
-      mockedApiClient.get.mockResolvedValue(mockApiResponse(mockExchangeRate))
+      mockGet.mockResolvedValue(mockApiResponse(mockExchangeRate))
 
       const result = await BacktestService.getExchangeRate()
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/v1/yfinance/exchange-rate')
+      expect(mockGet).toHaveBeenCalledWith('/v1/yfinance/exchange-rate')
       expect(result).toEqual(mockExchangeRate)
     })
   })
@@ -140,11 +156,11 @@ describe('BacktestService', () => {
           last_updated: '2023-12-01T10:00:00Z'
         }
       ]
-      mockedApiClient.get.mockResolvedValue(mockApiResponse(mockVolatilityData))
+      mockGet.mockResolvedValue(mockApiResponse(mockVolatilityData))
 
       const result = await BacktestService.getVolatilityData(['AAPL', 'GOOGL'])
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/v1/volatility', {
+      expect(mockGet).toHaveBeenCalledWith('/v1/volatility', {
         params: { symbols: 'AAPL,GOOGL' }
       })
       expect(result).toEqual(mockVolatilityData)
@@ -158,7 +174,7 @@ describe('BacktestService', () => {
         best_score: 1.5,
         results: []
       }
-      mockedApiClient.post.mockResolvedValue(mockApiResponse(mockOptimizationResult))
+      mockPost.mockResolvedValue(mockApiResponse(mockOptimizationResult))
 
       const request = {
         ticker: 'AAPL',
@@ -174,7 +190,7 @@ describe('BacktestService', () => {
 
       const result = await BacktestService.runOptimization(request)
 
-      expect(mockedApiClient.post).toHaveBeenCalledWith('/v1/optimize/run', request)
+      expect(mockPost).toHaveBeenCalledWith('/v1/optimize/run', request)
       expect(result).toEqual(mockOptimizationResult)
     })
   })
@@ -186,11 +202,11 @@ describe('BacktestService', () => {
         environment: 'production',
         last_updated: '2023-12-01T10:00:00Z'
       }
-      mockedApiClient.get.mockResolvedValue(mockApiResponse(mockSystemInfo))
+      mockGet.mockResolvedValue(mockApiResponse(mockSystemInfo))
 
       const result = await BacktestService.getSystemInfo()
 
-      expect(mockedApiClient.get).toHaveBeenCalledWith('/v1/system/info')
+      expect(mockGet).toHaveBeenCalledWith('/v1/system/info')
       expect(result).toEqual(mockSystemInfo)
     })
   })

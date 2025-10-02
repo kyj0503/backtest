@@ -132,9 +132,17 @@ describe('Utility Functions', () => {
   })
 
   it('should build URLs with params', () => {
+    // Mock window.location for testing
+    const originalLocation = window.location
+    delete (window as any).location
+    window.location = { origin: 'http://localhost:3000' } as any
+    
     const url = buildUrl('/api/test', { page: 1, size: 10 })
     expect(url).toContain('page=1')
     expect(url).toContain('size=10')
+    
+    // Restore
+    window.location = originalLocation as any
   })
 
   it('should extract error messages', () => {

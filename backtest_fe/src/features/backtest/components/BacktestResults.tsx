@@ -5,7 +5,7 @@ import ResultsHeader from './results/ResultsHeader';
 import ChartsSection from './results/ChartsSection';
 import AdditionalFeatures from './results/AdditionalFeatures';
 import { BacktestResultsProps } from '../model/backtest-result-types';
-import { AlertCircle, Download, FileImage, FileText } from 'lucide-react';
+import { AlertCircle, FileImage, FileText } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 
 const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) => {
@@ -55,7 +55,6 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
 
       // 한 페이지에 맞추기 위해 높이 조정
       const pageHeight = 297;
-      let y = 0;
       if (imgHeight > pageHeight) {
         // 여러 페이지로 나누기
         let remainingHeight = imgHeight;

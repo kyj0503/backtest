@@ -36,7 +36,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, PenSquare } from 'lucide-react';
-import { cn } from '@/shared/lib/core/utils';
 import { Link } from 'react-router-dom';
 import { formatRelative } from 'date-fns';
 
@@ -58,7 +57,7 @@ const createPostSchema = z.object({
   title: z.string().min(3, '제목은 최소 3자 이상 입력해주세요.').max(200, '제목은 200자 이하로 입력해주세요.'),
   content: z.string().min(1, '내용을 입력해주세요.'),
   category: z.enum(['general', 'strategy', 'question', 'news', 'backtest_share']),
-  contentType: z.enum(['text', 'markdown']).default('markdown'),
+  contentType: z.enum(['text', 'markdown']),
   pinned: z.boolean().optional(),
   featured: z.boolean().optional(),
 });
