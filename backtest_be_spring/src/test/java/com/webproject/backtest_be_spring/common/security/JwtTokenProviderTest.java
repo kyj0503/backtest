@@ -6,6 +6,7 @@ import com.webproject.backtest_be_spring.common.security.JwtProperties;
 import io.jsonwebtoken.Claims;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,5 +46,18 @@ class JwtTokenProviderTest {
         assertThat(claims.getSubject()).isEqualTo("1");
         assertThat(claims.get("sessionId", String.class)).isEqualTo("session-123");
         assertThat(tokenProvider.getExpiry(token)).isAfter(Instant.now());
+    }
+
+    @Test
+    @DisplayName("서명이 변조된 토큰은 거부된다")
+    void tamperedTokenIsRejected() {
+        String token = tokenProvider.generateAccessToken(1L, "alice", "alice@example.com", Set.of("ROLE_USER"));
+        String[] parts = token.split("\\.");
+        byte[] payload = Base64.getUrlDecoder().decode(parts[1]);
+        payload[0] = (byte) (payload[0] ^ 0x01);
+        String tamperedPayload = Base64.getUrlEncoder().withoutPadding().encodeToString(payload);
+        String tampered = parts[0] + "." + tamperedPayload + "." + parts[2];
+
+        assertThat(tokenProvider.isTokenValid(tampered)).isFalse();
     }
 }
