@@ -295,7 +295,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         <LazyStatsSummary stats={statsPayload} />
       </Suspense>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-3">
         {chartCards?.map((card, index) => (
           <div key={index} className="flex flex-col">
             {card}
