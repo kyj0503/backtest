@@ -32,9 +32,9 @@ java -jar build/libs/*.jar
 ```
 
 ## Docker / Docker Compose (개발 환경)
-개발용 Compose(dev)는 Spring Boot 컨테이너를 포함하지 않는다. IDE에서 로컬로 실행하고, 컨테이너는 `host.docker.internal`로 호스트의 8080에 접근한다.
+전체 스택을 동시에 실행할 수 있다.
 
-프론트엔드/다른 서비스와 함께 개발 스택을 띄우려면 프로젝트 루트에서 실행한다.
+프로젝트 루트에서 실행한다.
 ```bash
 docker compose -f compose/compose.dev.yaml up -d --build
 ```

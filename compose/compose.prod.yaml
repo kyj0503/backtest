@@ -57,7 +57,6 @@ services:
     environment:
       - DATABASE_HOST=mysql
       - DATABASE_PORT=3306
-      - DATABASE_USER=root
       - DEBUG=false
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -83,7 +82,6 @@ services:
     environment:
       - SPRING_DATASOURCE_HOST=mysql
       - SPRING_DATASOURCE_PORT=3306
-      - SPRING_DATASOURCE_USERNAME=root
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
       - SPRING_PROFILES_ACTIVE=prod

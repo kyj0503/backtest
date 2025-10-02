@@ -17,7 +17,8 @@ services:
     ports:
       - "3307:3306"
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"${MYSQL_ROOT_PASSWORD:-010503}\" >/dev/null 2>&1"]
+      # healthcheck는 컨테이너 내부 환경 변수를 사용
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" >/dev/null 2>&1"]
       interval: 5s
       timeout: 10s
       retries: 10
@@ -31,11 +32,19 @@ services:
     # Load redis password from repository root .env.local (REDIS_PASSWORD)
     env_file:
       - ../.env.local
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    # command는 env_file의 REDIS_PASSWORD를 사용
+    command: sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
     volumes:
       - backtest_redis_data_dev:/data
     networks:
       - backtest-net
+    healthcheck:
+      # healthcheck는 컨테이너 내부 환경 변수를 사용
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
 
   backtest_be_fast:
     build:
@@ -75,6 +84,8 @@ services:
     depends_on:
       backtest_be_fast:
         condition: service_started
+      backtest_be_spring:
+        condition: service_started
     ports:
       - "5173:5173"
     volumes:
@@ -90,9 +101,35 @@ services:
       # API_PROXY_TARGET (defaulting to the FastAPI container so backtesting works without Spring).
       - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
       - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest_be_fast:8000}"
-      - "SPRING_PROXY_TARGET=${SPRING_PROXY_TARGET:-http://host.docker.internal:8080}"
+      - "SPRING_PROXY_TARGET=${SPRING_PROXY_TARGET:-http://backtest_be_spring:8080}"
       - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest_be_fast:8000}"
     command: ["npm", "run", "dev"]
+
+  backtest_be_spring:
+    build:
+      context: ../backtest_be_spring
+      dockerfile: Dockerfile.dev
+    image: backtest-be-spring:dev
+    container_name: backtest_be_spring_dev
+    networks:
+      - backtest-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    env_file:
+      - ../.env.local
+    environment:
+      # Docker 컨테이너 내부에서는 서비스 이름으로 접근
+      - SPRING_DATASOURCE_HOST=mysql
+      - SPRING_DATASOURCE_PORT=3306
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      # 나머지 환경 변수는 env_file에서 로드됨
+    # Healthcheck omitted in dev to avoid extra tools in runtime image
 
 
 volumes:

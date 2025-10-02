@@ -1,7 +1,12 @@
-# Environment files
+# Environment files (모든 시크릿은 루트의 .env와 .env.local에서 관리)
 .env
+.env.local
 .env.prod
 .env.*
+
+# compose 폴더 내 .env 파일도 무시 (사용하지 않음)
+compose/.env
+compose/.env.*
 
 # Python
 __pycache__/
