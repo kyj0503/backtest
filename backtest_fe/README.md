@@ -196,12 +196,6 @@ docker build -f Dockerfile -t backtest-fe:prod .
 - Path alias 설정 (`@/*`)
 - ES Module 사용
 
-## 문서
-
-- [개발 가이드](./docs/02-Development.md) - 개발 환경 설정 및 아키텍처
-- [테스트 전략](./docs/Testing.md) - 테스트 작성 가이드 및 모범 사례
-- [테마 시스템](./docs/03-Theme.md) - 테마 커스터마이징 가이드
-
 ## 주요 의존성
 
 **프로덕션 의존성:**
@@ -222,11 +216,3 @@ docker build -f Dockerfile -t backtest-fe:prod .
 - msw: ^2.11.3
 - happy-dom: ^16.14.4
 - tailwindcss: ^3.3.0
-
-## 라이선스
-
-MIT
-
-## 작성자
-
-Backtesting Team
