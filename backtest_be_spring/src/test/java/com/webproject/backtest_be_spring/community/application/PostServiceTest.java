@@ -173,6 +173,44 @@ class PostServiceTest {
         verify(postDomainService).decreaseLikeCount(post);
     }
 
+    @Test
+    @DisplayName("게시글 수정은 소유자나 관리자만 수행할 수 있다")
+    void updateRejectsUnauthorizedUser() {
+        User owner = user(1L, "alice", false);
+        Post post = Post.create(owner, PostCategory.GENERAL, "제목", "내용", PostContentType.MARKDOWN, false, false);
+        ReflectionTestUtils.setField(post, "id", 300L);
+        User requester = user(4L, "mallory", false);
+
+        when(postRepository.findByIdAndDeletedFalse(300L)).thenReturn(Optional.of(post));
+        when(userRepository.findById(4L)).thenReturn(Optional.of(requester));
+
+        UpdatePostCommand command = new UpdatePostCommand(
+                PostCategory.GENERAL,
+                "제목2",
+                "내용2",
+                PostContentType.MARKDOWN,
+                null,
+                null);
+
+        assertThatThrownBy(() -> postService.update(300L, 4L, command))
+                .isInstanceOf(CommunityAccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("조회수 증가 요청 시 도메인 서비스가 호출된다")
+    void getPostIncreasesViewCountWhenRequested() {
+        User owner = user(1L, "alice", false);
+        Post post = Post.create(owner, PostCategory.GENERAL, "제목", "내용", PostContentType.MARKDOWN, false, false);
+        ReflectionTestUtils.setField(post, "id", 400L);
+
+        when(postRepository.findByIdAndDeletedFalse(400L)).thenReturn(Optional.of(post));
+
+        PostDto dto = postService.getPost(400L, true);
+
+        assertThat(dto.id()).isEqualTo(400L);
+        verify(postDomainService).increaseViewCount(post);
+    }
+
     private User user(Long id, String username, boolean admin) {
         User user = User.create(username, username + "@example.com", "Password!234", new byte[]{1, 2, 3}, InvestmentType.BALANCED);
         ReflectionTestUtils.setField(user, "id", id);

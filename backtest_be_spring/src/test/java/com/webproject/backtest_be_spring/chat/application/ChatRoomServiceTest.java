@@ -8,8 +8,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.webproject.backtest_be_spring.chat.application.command.CreateChatRoomCommand;
+import com.webproject.backtest_be_spring.chat.application.command.UpdateChatRoomCommand;
 import com.webproject.backtest_be_spring.chat.application.dto.ChatRoomDto;
 import com.webproject.backtest_be_spring.chat.application.dto.ChatRoomMemberDto;
+import com.webproject.backtest_be_spring.chat.application.exception.ChatAccessDeniedException;
 import com.webproject.backtest_be_spring.chat.domain.model.ChatMemberRole;
 import com.webproject.backtest_be_spring.chat.domain.model.ChatRoom;
 import com.webproject.backtest_be_spring.chat.domain.model.ChatRoomMember;
@@ -116,6 +118,66 @@ class ChatRoomServiceTest {
                 .hasMessageContaining("채팅방 인원이 가득 찼습니다");
         verify(chatRoomMemberRepository, never()).save(any(ChatRoomMember.class));
         verify(chatRoomDomainService, never()).increaseMembers(room);
+    }
+
+    @Test
+    @DisplayName("여유가 있는 채팅방에 새 구성원이 입장하면 저장된다")
+    void joinRoomCreatesNewMemberWhenCapacityAvailable() {
+        User creator = user(1L, "alice", false);
+        ChatRoom room = ChatRoom.create("새 방", "테스트", ChatRoomType.PUBLIC, 5, creator);
+        ReflectionTestUtils.setField(room, "id", 42L);
+        ReflectionTestUtils.setField(room, "currentMembers", 1);
+        User joiner = user(5L, "joiner", false);
+
+        when(chatRoomRepository.findByIdAndActiveTrue(42L)).thenReturn(Optional.of(room));
+        when(userRepository.findById(5L)).thenReturn(Optional.of(joiner));
+        when(chatRoomMemberRepository.findByRoomIdAndUserId(42L, 5L)).thenReturn(Optional.empty());
+        when(chatRoomMemberRepository.save(any(ChatRoomMember.class))).thenAnswer(invocation -> {
+            ChatRoomMember saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", 77L);
+            return saved;
+        });
+
+        ChatRoomMemberDto dto = chatRoomService.joinRoom(42L, 5L);
+
+        assertThat(dto.userId()).isEqualTo(5L);
+        assertThat(dto.role()).isEqualTo(ChatMemberRole.MEMBER);
+        verify(chatRoomDomainService).increaseMembers(room);
+    }
+
+    @Test
+    @DisplayName("관리자가 아니면 채팅방 설정을 수정할 수 없다")
+    void updateRoomRejectedForNonAdmin() {
+        User creator = user(1L, "alice", false);
+        ChatRoom room = ChatRoom.create("방", "설명", ChatRoomType.PUBLIC, 10, creator);
+        ReflectionTestUtils.setField(room, "id", 8L);
+        User requester = user(9L, "guest", false);
+
+        when(chatRoomRepository.findById(8L)).thenReturn(Optional.of(room));
+        when(userRepository.findById(9L)).thenReturn(Optional.of(requester));
+
+        UpdateChatRoomCommand command = new UpdateChatRoomCommand("새 이름", null, null, null, null);
+
+        assertThatThrownBy(() -> chatRoomService.updateRoom(8L, 9L, command))
+                .isInstanceOf(ChatAccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("구성원이 방을 나가면 비활성화되고 인원이 감소한다")
+    void leaveRoomMarksMemberInactive() {
+        User creator = user(1L, "alice", false);
+        ChatRoom room = ChatRoom.create("방", "설명", ChatRoomType.PUBLIC, 10, creator);
+        ReflectionTestUtils.setField(room, "id", 11L);
+        User memberUser = user(4L, "member", false);
+        ChatRoomMember member = ChatRoomMember.create(room, memberUser, ChatMemberRole.MEMBER);
+        ReflectionTestUtils.setField(member, "id", 500L);
+
+        when(chatRoomMemberRepository.findByRoomIdAndUserId(11L, 4L)).thenReturn(Optional.of(member));
+
+        chatRoomService.leaveRoom(11L, 4L);
+
+        assertThat(member.isActive()).isFalse();
+        verify(chatRoomDomainService).decreaseMembers(room);
     }
 
     private User user(Long id, String username, boolean admin) {

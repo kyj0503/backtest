@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.webproject.backtest_be_spring.community.application.command.CreateCommentCommand;
 import com.webproject.backtest_be_spring.community.application.dto.CommentDto;
+import com.webproject.backtest_be_spring.community.application.exception.CommunityAccessDeniedException;
 import com.webproject.backtest_be_spring.community.domain.model.CommentLike;
 import com.webproject.backtest_be_spring.community.domain.model.Post;
 import com.webproject.backtest_be_spring.community.domain.model.PostCategory;
@@ -127,6 +128,44 @@ class CommentServiceTest {
 
         assertThat(comment.isDeleted()).isTrue();
         verify(postDomainService).decreaseCommentCount(post);
+    }
+
+    @Test
+    @DisplayName("좋아요가 없으면 새로운 좋아요를 추가한다")
+    void toggleLikeAddsWhenNotPresent() {
+        Post post = post(1L);
+        User writer = user(2L, "writer", false);
+        User liker = user(3L, "liker", false);
+        PostComment comment = PostComment.create(post, writer, null, "댓글");
+        ReflectionTestUtils.setField(comment, "id", 41L);
+
+        when(postCommentRepository.findByIdAndDeletedFalse(41L)).thenReturn(Optional.of(comment));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(liker));
+        when(commentLikeRepository.findByCommentIdAndUserId(41L, 3L)).thenReturn(Optional.empty());
+
+        boolean liked = commentService.toggleLike(41L, 3L);
+
+        assertThat(liked).isTrue();
+        assertThat(comment.getLikeCount()).isEqualTo(1L);
+        verify(commentLikeRepository).save(any(CommentLike.class));
+    }
+
+    @Test
+    @DisplayName("관리자가 아니고 작성자도 아니면 댓글을 삭제할 수 없다")
+    void deleteCommentRejectsUnauthorizedUser() {
+        Post post = post(1L);
+        User writer = user(2L, "writer", false);
+        User requester = user(4L, "guest", false);
+        PostComment comment = PostComment.create(post, writer, null, "댓글");
+        ReflectionTestUtils.setField(comment, "id", 50L);
+
+        when(postCommentRepository.findByIdAndDeletedFalse(50L)).thenReturn(Optional.of(comment));
+        when(userRepository.findById(4L)).thenReturn(Optional.of(requester));
+
+        assertThatThrownBy(() -> commentService.deleteComment(50L, 4L))
+                .isInstanceOf(CommunityAccessDeniedException.class);
+        assertThat(comment.isDeleted()).isFalse();
+        verify(postDomainService, never()).decreaseCommentCount(post);
     }
 
     private Post post(Long id) {
