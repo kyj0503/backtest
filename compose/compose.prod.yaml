@@ -24,8 +24,7 @@ services:
     image: redis:7-alpine
     container_name: bt_redis_prod
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # Do not bind Redis to the host to avoid port conflicts (6379 often used)
     command: sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
     volumes:
       - backtest_redis_data_prod:/data
