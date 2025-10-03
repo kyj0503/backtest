@@ -88,13 +88,7 @@ services:
       - SPRING_REDIS_PORT=6379
       - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
       - SPRING_PROFILES_ACTIVE=prod
-    healthcheck:
-      # Use TCP check instead of curl (not installed in runtime image)
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' "]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 40s
+    # No container-level healthcheck; rely on Jenkins smoke checks
 
   backtest_fe:
     image: ghcr.io/capstone-backtest/backtest/backtest-fe:latest
@@ -106,7 +100,7 @@ services:
       backtest_be_fast:
         condition: service_healthy
       backtest_be_spring:
-        condition: service_healthy
+        condition: service_started
     ports:
       - "80:80"
       - "443:443"
