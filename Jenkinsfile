@@ -150,7 +150,8 @@ pipeline {
           poll_http http://localhost:8000/health 60 || true
           # Spring is published on host 8082 (container stays on 8080)
           poll_http http://localhost:8082/actuator/health 60 || true
-          poll_http http://localhost/health 60 || true
+          # FE published on host 8083
+          poll_http http://localhost:8083/health 60 || true
         '''
       }
     }
