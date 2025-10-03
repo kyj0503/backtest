@@ -138,7 +138,8 @@ pipeline {
           }
 
           poll_http http://localhost:8000/health 60 || true
-          poll_http http://localhost:8080/actuator/health 60 || true
+          # Spring is published on host 8082 (container stays on 8080)
+          poll_http http://localhost:8082/actuator/health 60 || true
           poll_http http://localhost/health 60 || true
         '''
       }
@@ -158,4 +159,3 @@ pipeline {
     }
   }
 }
-
