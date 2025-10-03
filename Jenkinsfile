@@ -17,7 +17,7 @@ pipeline {
     COMPOSE_FILE = 'compose/compose.prod.yaml'
     COMPOSE_PROJECT_NAME = 'backtest-prod'
     // External env file path on the server
-    ENV_FILE_PATH = '/opt/backtest/.env'
+    ENV_FILE_PATH = '/opt/backtest/backend/.env'
 
     // Image namespace used by compose.prod.yaml
     // Compose expects ghcr.io/capstone-backtest/backtest/*:latest by default.
@@ -49,6 +49,9 @@ pipeline {
             ls -ld /opt || true
             ls -ld /opt/backtest || true
             ls -l /opt/backtest || true
+            echo "Listing env dir: $(dirname "${ENV_FILE_PATH}")"
+            ls -ld "$(dirname "${ENV_FILE_PATH}")" || true
+            ls -l "$(dirname "${ENV_FILE_PATH}")" || true
             # Ensure external env file exists and is readable
             if [ ! -r "${ENV_FILE_PATH}" ]; then
               echo "ERROR: Env file missing or not readable at ${ENV_FILE_PATH} (user=$(id -un), uid=$(id -u), groups=$(id -Gn))" >&2
