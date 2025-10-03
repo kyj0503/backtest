@@ -16,6 +16,8 @@ pipeline {
     // Compose (prod)
     COMPOSE_FILE = 'compose/compose.prod.yaml'
     COMPOSE_PROJECT_NAME = 'backtest-prod'
+    // External env file path on the server
+    ENV_FILE_PATH = '/opt/backtest/.env'
 
     // Image namespace used by compose.prod.yaml
     // Compose expects ghcr.io/capstone-backtest/backtest/*:latest by default.
@@ -42,15 +44,15 @@ pipeline {
             echo "Compose version:"; docker compose version || true
             echo "Current branch:"; git rev-parse --abbrev-ref HEAD || true
             echo "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}"
-            # Ensure root .env exists (prod secrets/config live here for compose.prod)
-            if [ ! -f .env ]; then
-              echo "ERROR: Missing .env at repo root. Create it from .env.example" >&2
+            # Ensure external env file exists and has required keys
+            if [ ! -f "${ENV_FILE_PATH}" ]; then
+              echo "ERROR: Missing env file at ${ENV_FILE_PATH}" >&2
               exit 1
             fi
             # Do not print secrets; just assert required keys exist
             for k in MYSQL_ROOT_PASSWORD REDIS_PASSWORD; do
-              if ! grep -E "^${k}=" .env >/dev/null 2>&1; then
-                echo "ERROR: ${k} is missing in .env" >&2; exit 1; fi
+              if ! grep -E "^${k}=" "${ENV_FILE_PATH}" >/dev/null 2>&1; then
+                echo "ERROR: ${k} is missing in ${ENV_FILE_PATH}" >&2; exit 1; fi
             done
           '''
         }
@@ -101,9 +103,9 @@ pipeline {
       steps {
         sh '''
           set -euxo pipefail
-          # Run compose with prod file and the root .env
-          docker compose --env-file .env -f ${COMPOSE_FILE} up -d --remove-orphans
-          docker compose --env-file .env -f ${COMPOSE_FILE} ps
+          # Run compose with prod file and external env file. Also direct services' env_file via BACKTEST_ENV_FILE
+          BACKTEST_ENV_FILE=${ENV_FILE_PATH} docker compose --env-file "${ENV_FILE_PATH}" -f ${COMPOSE_FILE} up -d --remove-orphans
+          BACKTEST_ENV_FILE=${ENV_FILE_PATH} docker compose --env-file "${ENV_FILE_PATH}" -f ${COMPOSE_FILE} ps
         '''
       }
     }
