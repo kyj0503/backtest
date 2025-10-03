@@ -3,12 +3,9 @@ services:
     image: mysql:8.0
     container_name: bt_mysql_dev
     restart: unless-stopped
-    # Use mysql_native_password to ensure compatibility with PyMySQL client
-    # (avoids 'caching_sha2_password' auth errors when the client lacks RSA support).
     command: ["--default-authentication-plugin=mysql_native_password"]
     networks:
       - backtest-net
-    # Development uses the repository root .env.local file
     env_file:
       - ../.env.local
     volumes:
@@ -17,7 +14,6 @@ services:
     ports:
       - "3307:3306"
     healthcheck:
-      # healthcheck는 컨테이너 내부 환경 변수를 사용
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" >/dev/null 2>&1"]
       interval: 5s
       timeout: 10s
@@ -29,17 +25,14 @@ services:
     container_name: bt_redis_dev
     ports:
       - "6379:6379"
-    # Load redis password from repository root .env.local (REDIS_PASSWORD)
     env_file:
       - ../.env.local
-    # command는 env_file의 REDIS_PASSWORD를 사용
     command: sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
     volumes:
       - backtest_redis_data_dev:/data
     networks:
       - backtest-net
     healthcheck:
-      # healthcheck는 컨테이너 내부 환경 변수를 사용
       test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
       interval: 5s
       timeout: 10s
@@ -54,7 +47,6 @@ services:
     container_name: backtest_be_fast_dev
     networks:
       - backtest-net
-    # Allow containers to resolve host.docker.internal (so IDE-run Spring on host is reachable)
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -62,15 +54,11 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
-    # Use repository root .env.local so all services share the same configuration
     env_file:
       - ../.env.local
-  # Use env vars from the repository root .env.local; recommend setting DATABASE_HOST=mysql in ../.env.local for container mode
-  # Environment variables are loaded from ../.env.local via env_file
     volumes:
       - ../backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
-  # Let the image ENTRYPOINT/CMD run (ensures venv is prepared by entrypoint)
   backtest_fe:
     build:
       context: ../backtest_fe
@@ -94,11 +82,6 @@ services:
     env_file:
       - ../.env.local
     environment:
-      # API targets are configurable via the host environment. Default points to host.docker.internal
-      # so you can run the Spring app from your IDE on the host and have containers reach it.
-      # In dev we serve the app via Vite dev server; use a relative API base ('/api') so the browser
-      # doesn't need to resolve host.docker.internal. The dev server will proxy '/api' to
-      # API_PROXY_TARGET (defaulting to the FastAPI container so backtesting works without Spring).
       - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
       - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest_be_fast:8000}"
       - "SPRING_PROXY_TARGET=${SPRING_PROXY_TARGET:-http://backtest_be_spring:8080}"
@@ -123,14 +106,10 @@ services:
     env_file:
       - ../.env.local
     environment:
-      # Docker 컨테이너 내부에서는 서비스 이름으로 접근
       - SPRING_DATASOURCE_HOST=mysql
       - SPRING_DATASOURCE_PORT=3306
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
-      # 나머지 환경 변수는 env_file에서 로드됨
-    # Healthcheck omitted in dev to avoid extra tools in runtime image
-
 
 volumes:
   backtest_db_data_dev:
