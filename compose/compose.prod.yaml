@@ -81,7 +81,7 @@ services:
     environment:
       - SPRING_DATASOURCE_HOST=mysql
       - SPRING_DATASOURCE_PORT=3306
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/stock_data_cache?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/stock_community?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - SPRING_REDIS_HOST=redis
