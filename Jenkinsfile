@@ -39,7 +39,7 @@ pipeline {
         script {
           env.GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD || echo ${BUILD_NUMBER}", returnStdout: true).trim()
           sh '''
-            set -euxo pipefail
+            set -eu
             echo "Docker version:"; docker --version || true
             echo "Compose version:"; docker compose version || true
             echo "Current branch:"; git rev-parse --abbrev-ref HEAD || true
@@ -64,7 +64,7 @@ pipeline {
         script {
           // Build FastAPI (prod image)
           sh '''
-            set -euxo pipefail
+            set -eu
             cd backtest_be_fast
             docker build \
               --build-arg IMAGE_TAG=${GIT_COMMIT_SHORT} \
@@ -75,7 +75,7 @@ pipeline {
 
           // Build Spring Boot (prod image)
           sh '''
-            set -euxo pipefail
+            set -eu
             cd backtest_be_spring
             docker build \
               -t ${SPRING_IMAGE}:${GIT_COMMIT_SHORT} \
@@ -85,7 +85,7 @@ pipeline {
 
           // Build Frontend (prod Nginx image)
           sh '''
-            set -euxo pipefail
+            set -eu
             cd backtest_fe
             docker build \
               -t ${FE_IMAGE}:${GIT_COMMIT_SHORT} \
@@ -102,7 +102,7 @@ pipeline {
     stage('Deploy (docker compose)') {
       steps {
         sh '''
-          set -euxo pipefail
+          set -eu
           # Run compose with prod file and external env file. Also direct services' env_file via BACKTEST_ENV_FILE
           BACKTEST_ENV_FILE=${ENV_FILE_PATH} docker compose --env-file "${ENV_FILE_PATH}" -f ${COMPOSE_FILE} up -d --remove-orphans
           BACKTEST_ENV_FILE=${ENV_FILE_PATH} docker compose --env-file "${ENV_FILE_PATH}" -f ${COMPOSE_FILE} ps
@@ -113,7 +113,7 @@ pipeline {
     stage('Smoke Checks') {
       steps {
         sh '''
-          set -euxo pipefail
+          set -eu
           # Wait for container health where defined
           wait_healthy() {
             name="$1"; tries="${2:-30}"; sleep_s=2;
