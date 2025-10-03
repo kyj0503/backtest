@@ -44,9 +44,14 @@ pipeline {
             echo "Compose version:"; docker compose version || true
             echo "Current branch:"; git rev-parse --abbrev-ref HEAD || true
             echo "GIT_COMMIT_SHORT=${GIT_COMMIT_SHORT}"
-            # Ensure external env file exists and has required keys
-            if [ ! -f "${ENV_FILE_PATH}" ]; then
-              echo "ERROR: Missing env file at ${ENV_FILE_PATH}" >&2
+            echo "Using ENV_FILE_PATH=${ENV_FILE_PATH}"
+            # Basic visibility for troubleshooting (no secrets printed)
+            ls -ld /opt || true
+            ls -ld /opt/backtest || true
+            ls -l /opt/backtest || true
+            # Ensure external env file exists and is readable
+            if [ ! -r "${ENV_FILE_PATH}" ]; then
+              echo "ERROR: Env file missing or not readable at ${ENV_FILE_PATH} (user=$(id -un), uid=$(id -u), groups=$(id -Gn))" >&2
               exit 1
             fi
             # Do not print secrets; just assert required keys exist
