@@ -39,12 +39,12 @@ services:
       retries: 10
       start_period: 10s
 
-  backtest_be_fast:
+  backtest-be-fast:
     build:
       context: ../backtest_be_fast
       dockerfile: Dockerfile
     image: backtest-be-fast:dev
-    container_name: backtest_be_fast_dev
+    container_name: backtest-be-fast-dev
     networks:
       - backtest-net
     extra_hosts:
@@ -59,20 +59,20 @@ services:
     volumes:
       - ../backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
-  backtest_fe:
+  backtest-fe:
     build:
       context: ../backtest_fe
       dockerfile: Dockerfile.dev
     image: backtest-fe:dev
-    container_name: backtest_fe_dev
+    container_name: backtest-fe-dev
     networks:
       - backtest-net
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      backtest_be_fast:
+      backtest-be-fast:
         condition: service_started
-      backtest_be_spring:
+      backtest-be-spring:
         condition: service_started
     ports:
       - "5173:5173"
@@ -83,17 +83,17 @@ services:
       - ../.env
     environment:
       - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
-      - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest_be_fast:8000}"
-      - "SPRING_PROXY_TARGET=${SPRING_PROXY_TARGET:-http://backtest_be_spring:8080}"
-      - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest_be_fast:8000}"
+      - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest-be-fast:8000}"
+      - "SPRING_PROXY_TARGET=${SPRING_PROXY_TARGET:-http://backtest-be-spring:8080}"
+      - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest-be-fast:8000}"
     command: ["npm", "run", "dev"]
 
-  backtest_be_spring:
+  backtest-be-spring:
     build:
       context: ../backtest_be_spring
       dockerfile: Dockerfile.dev
     image: backtest-be-spring:dev
-    container_name: backtest_be_spring_dev
+    container_name: backtest-be-spring-dev
     networks:
       - backtest-net
     depends_on:

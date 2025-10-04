@@ -124,11 +124,17 @@ const ChatPage: React.FC = () => {
       return;
     }
 
+    // 이미 연결되어 있으면 중복 연결 방지
+    if (wsClientRef.current?.isConnected()) {
+      console.log('[ChatPage] WebSocket already connected, skipping duplicate connection');
+      setWsConnected(true);
+      return;
+    }
+
     const url = buildWebSocketUrl();
     const client = new SimpleStompClient(url);
     wsClientRef.current = client;
     let mounted = true;
-    let connectAttempted = false;
     
     void (async () => {
       // Show a connecting toast only if connect takes longer than a short threshold
@@ -137,10 +143,6 @@ const ChatPage: React.FC = () => {
       let toastId: string | number | null = null;
       
       try {
-        // React Strict Mode에서 중복 연결 방지
-        if (connectAttempted) return;
-        connectAttempted = true;
-        
         toastTimer = window.setTimeout(() => {
           // Do not show a toast here; rely on header badge for connection status.
           console.debug('Chat connect taking longer than threshold; showing status badge.');
