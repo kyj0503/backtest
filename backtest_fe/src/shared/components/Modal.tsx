@@ -50,6 +50,8 @@ const Modal: React.FC<ModalProps> = ({
     return sizes[size];
   };
 
+  const fallbackDescription = '이 창의 자세한 내용을 아래에서 확인할 수 있습니다.';
+
   return (
     <Dialog 
       open={isOpen} 
@@ -63,12 +65,12 @@ const Modal: React.FC<ModalProps> = ({
           }
         }}
       >
-        {(title || description) && (
-          <DialogHeader>
-            {title && <DialogTitle>{title}</DialogTitle>}
-            {description && <DialogDescription>{description}</DialogDescription>}
-          </DialogHeader>
-        )}
+        <DialogHeader className={!title && !description ? 'sr-only' : undefined}>
+          {title && <DialogTitle>{title}</DialogTitle>}
+          <DialogDescription className={description ? undefined : 'sr-only'}>
+            {description ?? fallbackDescription}
+          </DialogDescription>
+        </DialogHeader>
         
         {children}
         

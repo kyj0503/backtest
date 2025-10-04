@@ -14,6 +14,7 @@ interface UseVolatilityNewsParams {
   startDate: string;
   endDate: string;
   enabled?: boolean;
+  canViewNews?: boolean;
 }
 
 interface UseVolatilityNewsReturn {
@@ -41,7 +42,8 @@ export const useVolatilityNews = ({
   symbols, 
   startDate, 
   endDate, 
-  enabled = true 
+  enabled = true,
+  canViewNews = true
 }: UseVolatilityNewsParams): UseVolatilityNewsReturn => {
   const [volatilityData, setVolatilityData] = useState<{ [key: string]: VolatilityEvent[] }>({});
   const [selectedStock, setSelectedStock] = useState<string>('');
@@ -96,6 +98,9 @@ export const useVolatilityNews = ({
 
   const openNewsModal = async (_date: string, event: VolatilityEvent) => {
     // _date 매개변수는 호환성을 위해 유지하지만, 현재는 회사명만으로 검색
+    if (!canViewNews) {
+      return;
+    }
     setCurrentNewsEvent(event);
     setShowNewsModal(true);
     setNewsLoading(true);

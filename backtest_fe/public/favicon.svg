@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title>Backtesting</title>
+  <desc>Simple candlestick and trend icon representing backtesting</desc>
+  <defs>
+    <!-- Background gradient: dark navy to deep indigo -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <!-- Soft grid lines pattern -->
+    <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M8 0H0V8" fill="none" stroke="#334155" stroke-width="0.5" />
+    </pattern>
+  </defs>
+
+  <!-- Rounded background -->
+  <rect width="64" height="64" rx="12" fill="url(#bg)" />
+  <rect width="64" height="64" rx="12" fill="url(#grid)" opacity="0.25" />
+
+  <!-- Uptrend line (primary blue) -->
+  <path d="M8 44 L22 36 L32 40 L46 28 L56 20" fill="none" stroke="#3B82F6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+
+  <!-- Candlesticks: green = up, red = down -->
+  <!-- Left green candle -->
+  <line x1="20" y1="48" x2="20" y2="30" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" opacity="0.9" />
+  <rect x="17" y="36" width="6" height="10" rx="1.5" fill="#10B981" />
+
+  <!-- Middle red candle -->
+  <line x1="34" y1="50" x2="34" y2="26" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" opacity="0.9" />
+  <rect x="31" y="34" width="6" height="-8" rx="1.5" fill="#EF4444" transform="scale(1,-1) translate(0,-68)" />
+
+  <!-- Right green candle -->
+  <line x1="48" y1="46" x2="48" y2="22" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" opacity="0.9" />
+  <rect x="45" y="30" width="6" height="12" rx="1.5" fill="#10B981" />
+
+  <!-- Small highlight dot -->
+  <circle cx="56" cy="20" r="3" fill="#facc15" />
+</svg>

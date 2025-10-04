@@ -4,6 +4,7 @@ import NewsModal from './volatility/NewsModal';
 import { useVolatilityNews } from '../hooks/useVolatilityNews';
 import { StockVolatilityNewsProps } from '../model/volatility-news-types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 
 const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({ 
   symbols, 
@@ -11,6 +12,7 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
   endDate, 
   className = "" 
 }) => {
+  const { user } = useAuth();
   const {
     volatilityData,
     selectedStock,
@@ -25,7 +27,7 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
       openNewsModal,
       closeNewsModal
     }
-  } = useVolatilityNews({ symbols, startDate, endDate });
+  } = useVolatilityNews({ symbols, startDate, endDate, canViewNews: Boolean(user) });
 
   // 현금이 아닌 유효한 심볼만 필터링
   const validSymbols = symbols.filter(symbol => 
@@ -73,6 +75,11 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
           <CardTitle className="text-lg">📰 주가 급등/급락 뉴스 (5% 이상 변동일)</CardTitle>
         </CardHeader>
         <CardContent>
+          {!user && (
+            <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+              뉴스 보기 기능은 로그인 이후 이용할 수 있습니다.
+            </div>
+          )}
           {!hasSignificantEvents ? (
             <div className="text-center">
               <p className="text-muted-foreground">해당 기간 중 5% 이상 급등/급락한 날이 없습니다.</p>
@@ -112,6 +119,7 @@ const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({
                 selectedStock={selectedStock}
                 events={selectedEvents}
                 onNewsClick={openNewsModal}
+                newsDisabled={!user}
               />
             </>
           )}

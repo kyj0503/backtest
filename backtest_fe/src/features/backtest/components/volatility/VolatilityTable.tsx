@@ -5,9 +5,10 @@ interface VolatilityTableProps {
   selectedStock: string;
   events: VolatilityEvent[];
   onNewsClick: (date: string, event: VolatilityEvent) => void;
+  newsDisabled?: boolean;
 }
 
-const VolatilityTable: React.FC<VolatilityTableProps> = ({ selectedStock, events, onNewsClick }) => {
+const VolatilityTable: React.FC<VolatilityTableProps> = ({ selectedStock, events, onNewsClick, newsDisabled = false }) => {
   if (events.length === 0) {
     return (
       <div className="text-center py-8">
@@ -57,7 +58,12 @@ const VolatilityTable: React.FC<VolatilityTableProps> = ({ selectedStock, events
               <td className="px-6 py-4 whitespace-nowrap">
                 <button
                   onClick={() => onNewsClick(event.date, event)}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-primary bg-accent hover:bg-accent/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors"
+                  disabled={newsDisabled}
+                  className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
+                    newsDisabled
+                      ? 'cursor-not-allowed bg-muted text-muted-foreground'
+                      : 'text-primary bg-accent hover:bg-accent/80'
+                  }`}
                 >
                   📰 뉴스 보기
                 </button>
