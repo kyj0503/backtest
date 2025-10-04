@@ -112,6 +112,15 @@ services:
       - SPRING_DATASOURCE_PORT=3306
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+    volumes:
+      # 소스 코드 볼륨 마운트 (Hot Reload)
+      - ./backtest_be_spring/src:/app/src:ro
+      - ./backtest_be_spring/build.gradle:/app/build.gradle:ro
+      - ./backtest_be_spring/settings.gradle:/app/settings.gradle:ro
+      # Gradle 캐시 볼륨 (빌드 속도 향상)
+      - backtest_be_spring_gradle_cache:/home/gradle/.gradle
+      # 빌드 출력 디렉토리 (컨테이너 내부에서 생성)
+      - backtest_be_spring_build:/app/build
 
 volumes:
   backtest_db_data_dev:
@@ -119,6 +128,7 @@ volumes:
   backtest_fe_node_modules:
   backtest_be_fast_venv:
   backtest_be_spring_gradle_cache:
+  backtest_be_spring_build:
 
 networks:
   backtest-net:

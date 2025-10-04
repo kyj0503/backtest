@@ -13,15 +13,39 @@
 - Gradle Wrapper (프로젝트에 포함됨)
 - Docker 및 Docker Compose (Docker 배포/개발 선택시)
 
-## 빠른 시작 (로컬)
-루트에서 프로젝트로 이동해 Gradle Wrapper로 실행한다.
+## 빠른 시작
 
+### Docker Compose 개발 환경
+
+**Hot Reload 지원**: 소스 코드 변경 시 자동으로 재빌드되고 서버가 재시작됩니다.
+
+프로젝트 루트에서 전체 스택을 실행합니다:
 ```bash
-cd backtest_be_spring
-./gradlew bootRun
+docker compose -f compose.dev.yaml up -d --build
 ```
 
-기본 포트는 8080이다. 설정은 `src/main/resources/application.yml`과 환경 변수로 오버라이드한다.
+- Spring Boot: http://localhost:8080
+- FastAPI: http://localhost:8000
+- Frontend: http://localhost:5173
+- MySQL: localhost:3307
+- Redis: localhost:6380
+
+**소스 코드 수정**: `backtest_be_spring/src` 디렉토리의 파일을 수정하면 Gradle이 자동으로 변경을 감지하고 애플리케이션을 재시작합니다.
+
+**로그 확인**:
+```bash
+docker logs -f backtest-be-spring-dev
+```
+
+**서비스 재시작** (필요 시):
+```bash
+docker compose -f compose.dev.yaml restart backtest-be-spring
+```
+
+**서비스 중지**:
+```bash
+docker compose -f compose.dev.yaml down
+```
 
 ## 프로덕션 빌드
 JAR 파일을 빌드한 뒤 실행한다.
