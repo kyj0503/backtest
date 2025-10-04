@@ -42,6 +42,10 @@ export default defineConfig(({ mode }) => ({
         target: FASTAPI_TARGET,
         changeOrigin: true,
       },
+      '/api/v1/naver-news': {
+        target: FASTAPI_TARGET,
+        changeOrigin: true,
+      },
       // Spring Boot 서버 (인증, 사용자 관리, 채팅, 커뮤니티)
       '/api/v1/auth': {
         target: SPRING_TARGET,
