@@ -1,3 +1,5 @@
+name: backtest-dev
+
 services:
   mysql:
     image: mysql:8.0
