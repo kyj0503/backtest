@@ -13,13 +13,13 @@ pipeline {
     DOCKER_CLIENT_TIMEOUT = '300'
     COMPOSE_HTTP_TIMEOUT  = '300'
 
-    // Compose (prod)
-    COMPOSE_FILE = 'compose/compose.prod.yaml'
+    // Compose (prod) - 서버에 있는 compose 파일 사용
+    COMPOSE_FILE = '/opt/backtest/backend/compose.yaml'
     COMPOSE_PROJECT_NAME = 'backtest-prod'
-    // External env file path on the server
+    // External env file path on the server (compose 파일과 같은 디렉터리)
     ENV_FILE_PATH = '/opt/backtest/backend/.env'
 
-    // Image namespace used by compose.prod.yaml
+    // Image namespace used by compose
     // Compose expects ghcr.io/capstone-backtest/backtest/*:latest by default.
     REGISTRY_NS = 'ghcr.io/capstone-backtest/backtest'
     FAST_IMAGE   = "${REGISTRY_NS}/backtest-be-fast"
@@ -111,9 +111,10 @@ pipeline {
       steps {
         sh '''
           set -eu
-          # Run compose with prod file and external env file. Also direct services' env_file via BACKTEST_ENV_FILE
-          BACKTEST_ENV_FILE=${ENV_FILE_PATH} docker compose --env-file "${ENV_FILE_PATH}" -f ${COMPOSE_FILE} up -d --remove-orphans
-          BACKTEST_ENV_FILE=${ENV_FILE_PATH} docker compose --env-file "${ENV_FILE_PATH}" -f ${COMPOSE_FILE} ps
+          cd /opt/backtest/backend
+          # Run compose with server's compose file and .env in same directory
+          docker compose up -d --remove-orphans
+          docker compose ps
         '''
       }
     }
@@ -133,11 +134,10 @@ pipeline {
             echo "ERROR: $name not healthy" >&2; return 1
           }
 
-          # Named containers in compose.prod.yaml
-          wait_healthy bt_mysql_prod 60 || true
-          wait_healthy bt_redis_prod 60 || true
+          # Named containers (network_mode: host이므로 MySQL/Redis는 호스트에 설치됨)
+          wait_healthy backtest_be_fast_prod 60 || true
 
-          # Poll app endpoints
+          # Poll app endpoints (network_mode: host이므로 localhost 사용)
           poll_http() {
             url="$1"; tries="${2:-30}"; sleep_s=2;
             for i in $(seq 1 "$tries"); do
@@ -148,10 +148,8 @@ pipeline {
           }
 
           poll_http http://localhost:8000/health 60 || true
-          # Spring is published on host 8082 (container stays on 8080)
-          poll_http http://localhost:8082/actuator/health 60 || true
-          # FE published on host 8083
-          poll_http http://localhost:8083/health 60 || true
+          poll_http http://localhost:8080/actuator/health 60 || true
+          poll_http http://localhost:80/ 60 || true
         '''
       }
     }

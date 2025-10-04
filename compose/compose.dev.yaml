@@ -7,7 +7,7 @@ services:
     networks:
       - backtest-net
     env_file:
-      - ../.env.local
+      - ../.env
     volumes:
       - ../database:/docker-entrypoint-initdb.d:ro
       - backtest_db_data_dev:/var/lib/mysql
@@ -26,7 +26,7 @@ services:
     ports:
       - "6380:6379"
     env_file:
-      - ../.env.local
+      - ../.env
     command: sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
     volumes:
       - backtest_redis_data_dev:/data
@@ -55,7 +55,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ../.env.local
+      - ../.env
     volumes:
       - ../backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
@@ -80,7 +80,7 @@ services:
       - ../backtest_fe:/app
       - backtest_fe_node_modules:/app/node_modules
     env_file:
-      - ../.env.local
+      - ../.env
     environment:
       - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
       - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest_be_fast:8000}"
@@ -104,7 +104,7 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - ../.env.local
+      - ../.env
     environment:
       - SPRING_DATASOURCE_HOST=mysql
       - SPRING_DATASOURCE_PORT=3306

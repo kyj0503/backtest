@@ -35,8 +35,12 @@ const Header: React.FC = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" className="rounded-full px-4 py-3">로그인</Button>
-          <Button className="rounded-full px-4 py-3">회원가입</Button>
+          <Button asChild variant="ghost" className="rounded-full px-4 py-3">
+            <Link to="/login">로그인</Link>
+          </Button>
+          <Button asChild className="rounded-full px-4 py-3">
+            <Link to="/signup">회원가입</Link>
+          </Button>
         </div>
       </div>
     </header>

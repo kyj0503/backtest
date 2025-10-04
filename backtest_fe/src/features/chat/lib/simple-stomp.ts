@@ -48,13 +48,27 @@ export class SimpleStompClient {
     if (this.connectPromise) return this.connectPromise;
 
     this.connectPromise = new Promise((resolve, reject) => {
+      // WebSocket이 이미 연결 중이거나 연결된 경우 재사용
+      if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+        if (this.connected) {
+          resolve();
+          return;
+        }
+        // 연결 중이면 기다림 (이미 onmessage 핸들러가 resolve 호출할 것)
+        return;
+      }
+
+      console.log('[STOMP] Connecting to:', this.url);
       this.ws = new WebSocket(this.url);
+      
       this.ws.onopen = () => {
+        console.log('[STOMP] WebSocket connection opened');
         const lines = ['CONNECT', 'accept-version:1.2', 'heart-beat:0,0'];
         Object.entries(headers).forEach(([key, value]) => {
           lines.push(`${key}:${value}`);
         });
         lines.push('', '');
+        console.log('[STOMP] Sending CONNECT frame');
         this.ws?.send(lines.join('\n'));
       };
 
@@ -62,7 +76,9 @@ export class SimpleStompClient {
         const data = typeof event.data === 'string' ? event.data : '';
         const frames = parseFrames(data);
         frames.forEach((frame) => {
+          console.log('[STOMP] Received frame:', frame.command);
           if (frame.command === 'CONNECTED') {
+            console.log('[STOMP] Connection established');
             this.connected = true;
             resolve();
             return;
@@ -72,13 +88,20 @@ export class SimpleStompClient {
             handler?.(frame);
           }
           if (frame.command === 'ERROR') {
+            console.error('[STOMP] Error frame received:', frame.body);
             reject(new Error(frame.body || 'STOMP ERROR'));
           }
         });
       };
 
       this.ws.onerror = (event) => {
-        reject(event instanceof ErrorEvent ? event.error : new Error('WebSocket error'));
+        console.error('[STOMP] WebSocket error:', event);
+        // React Strict Mode에서 발생하는 불필요한 에러 로그 억제
+        // 연결이 아직 완료되지 않은 경우에만 reject
+        if (!this.connected) {
+          reject(new Error('WebSocket connection failed'));
+        }
+        // 이미 연결된 경우 에러 무시 (재연결 로직이 필요하면 여기에 추가)
       };
 
       this.ws.onclose = () => {

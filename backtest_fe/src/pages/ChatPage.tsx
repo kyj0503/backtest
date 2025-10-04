@@ -118,16 +118,29 @@ const ChatPage: React.FC = () => {
   }, [selectedRoom, user]);
 
   useEffect(() => {
+    // 로그인하지 않은 경우 WebSocket 연결하지 않음
+    if (!user) {
+      setWsConnected(false);
+      return;
+    }
+
     const url = buildWebSocketUrl();
     const client = new SimpleStompClient(url);
     wsClientRef.current = client;
     let mounted = true;
+    let connectAttempted = false;
+    
     void (async () => {
       // Show a connecting toast only if connect takes longer than a short threshold
       const CONNECT_TOAST_DELAY = 800; // ms
       let toastTimer: number | null = null;
       let toastId: string | number | null = null;
+      
       try {
+        // React Strict Mode에서 중복 연결 방지
+        if (connectAttempted) return;
+        connectAttempted = true;
+        
         toastTimer = window.setTimeout(() => {
           // Do not show a toast here; rely on header badge for connection status.
           console.debug('Chat connect taking longer than threshold; showing status badge.');
@@ -146,8 +159,14 @@ const ChatPage: React.FC = () => {
         }
         setWsConnected(true);
       } catch (error) {
-        console.warn('웹소켓 연결 실패 (무시)', error);
+        // React Strict Mode의 이중 마운트로 인한 에러는 무시
         if (!mounted) return;
+        
+        // 실제 연결 실패만 로깅
+        if (error instanceof Error && !error.message.includes('WebSocket error')) {
+          console.warn('웹소켓 연결 실패:', error.message);
+        }
+        
         if (toastTimer) {
           clearTimeout(toastTimer);
           toastTimer = null;
@@ -156,6 +175,7 @@ const ChatPage: React.FC = () => {
         setWsConnected(false);
       }
     })();
+    
     return () => {
       mounted = false;
       // 연결 상태를 확인한 후 안전하게 연결 해제
@@ -164,11 +184,11 @@ const ChatPage: React.FC = () => {
           client.disconnect(); 
         }
       } catch (error) {
-        console.debug('WebSocket disconnect error (ignored):', error);
+        // Cleanup 중 에러는 무시
       }
       wsClientRef.current = null;
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const client = wsClientRef.current;

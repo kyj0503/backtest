@@ -5,8 +5,8 @@ import path from 'path'
 // https://vitejs.dev/config/
 const target = process.env.API_PROXY_TARGET || 'http://localhost:8001'
 // When running inside Docker Compose, use service hostnames on the shared network.
-const SPRING_TARGET = process.env.SPRING_PROXY_TARGET || 'http://backtest-be-spring:8080';
-const FASTAPI_TARGET = process.env.FASTAPI_PROXY_TARGET || 'http://backtest_be_fast:8000';
+const SPRING_TARGET = process.env.SPRING_PROXY_TARGET || 'http://localhost:8080';
+const FASTAPI_TARGET = process.env.FASTAPI_PROXY_TARGET || 'http://localhost:8000';
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
@@ -29,53 +29,95 @@ export default defineConfig(({ mode }) => ({
       protocol: 'ws',
       port: 5173,
     },
+    // 캐시 무효화 및 개발 서버 안정성 개선
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
+    // CORS 설정
+    cors: true,
     proxy: {
-      // Spring Boot 서버 (인증, 사용자 관리, 채팅)
-      '/api/auth': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-        headers: {
-          host: 'localhost',
-        }
-      },
-      '/api/users': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-        headers: {
-          host: 'localhost',
-        }
-      },
-      '/api/chat': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-        headers: {
-          host: 'localhost',
-        }
-      },
-      // WebSocket (STOMP) 연결을 위한 프록시
-      '/ws': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-        ws: true, // WebSocket 지원 활성화
-        headers: {
-          host: 'localhost',
-        }
-      },
-      // FastAPI 서버 (백테스트 - 인증 불필요)
+      // FastAPI 서버 (백테스트 - 인증 불필요) - 먼저 매칭되어야 함
       '/api/v1/backtest': {
         target: FASTAPI_TARGET,
         changeOrigin: true,
-        headers: {
-          host: 'localhost',
-        }
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            // Docker 컨테이너 이름의 언더스코어가 포함된 호스트명은 HTTP 표준에서 유효하지 않음
+            // Host 헤더를 localhost로 재작성하여 Tomcat 오류 방지
+            proxyReq.setHeader('Host', 'localhost:8000');
+          });
+        },
       },
-      // 기타 API 요청은 Spring Boot로 (기본값)
+      // Spring Boot 서버 (인증, 사용자 관리, 채팅, 커뮤니티)
+      '/api/v1/auth': {
+        target: SPRING_TARGET,
+        changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            proxyReq.setHeader('Host', 'localhost:8080');
+          });
+        },
+      },
+      '/api/v1/users': {
+        target: SPRING_TARGET,
+        changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            proxyReq.setHeader('Host', 'localhost:8080');
+          });
+        },
+      },
+      '/api/v1/chat': {
+        target: SPRING_TARGET,
+        changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            proxyReq.setHeader('Host', 'localhost:8080');
+          });
+        },
+      },
+      '/api/v1/community': {
+        target: SPRING_TARGET,
+        changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            proxyReq.setHeader('Host', 'localhost:8080');
+          });
+        },
+      },
+      '/api/v1/admin': {
+        target: SPRING_TARGET,
+        changeOrigin: true,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            proxyReq.setHeader('Host', 'localhost:8080');
+          });
+        },
+      },
+      // WebSocket (STOMP) 연결을 위한 프록시
+      '/ws': {
+        target: SPRING_TARGET, // 프로토콜 변환은 Vite가 자동으로 처리
+        changeOrigin: true,
+        ws: true, // WebSocket 지원 활성화
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('WebSocket proxy error:', err);
+          });
+          proxy.on('proxyReqWs', (proxyReq, req, socket, options, head) => {
+            console.log('WebSocket request:', req.url, '-> target:', options.target);
+          });
+        },
+      },
+      // 기타 API 요청은 Spring Boot로 (기본값 - 가장 마지막에 매칭)
       '/api': {
         target: SPRING_TARGET,
         changeOrigin: true,
-        headers: {
-          host: 'localhost',
-        }
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            proxyReq.setHeader('Host', 'localhost:8080');
+          });
+        },
       }
     }
   },

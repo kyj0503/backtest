@@ -1,3 +1,10 @@
+# 운영 서버 전용 Compose 파일
+# /opt/backtest/backend/compose.yaml로 복사하여 사용
+# 사용법:
+#   1. 이 파일을 서버의 /opt/backtest/backend/ 디렉터리에 복사
+#   2. 같은 디렉터리에 .env 파일 준비
+#   3. docker compose -f compose.yaml up -d
+
 name: backtest-prod
 
 services:
@@ -7,17 +14,20 @@ services:
     restart: unless-stopped
     network_mode: host
     env_file:
-      - ${BACKTEST_ENV_FILE:-/opt/backtest/backend/.env}
+      - .env
     environment:
       # 호스트의 MySQL 사용
       - DATABASE_HOST=localhost
       - DATABASE_PORT=3306
       - DEBUG=false
+      - HOST=0.0.0.0
+      - PORT=8000
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   backtest_be_spring:
     image: ghcr.io/capstone-backtest/backtest/backtest-be-spring:latest
@@ -25,18 +35,18 @@ services:
     restart: unless-stopped
     network_mode: host
     env_file:
-      - ${BACKTEST_ENV_FILE:-/opt/backtest/backend/.env}
+      - .env
     environment:
       # 호스트의 MySQL과 Redis 사용
       - SPRING_DATASOURCE_HOST=localhost
       - SPRING_DATASOURCE_PORT=3306
-      - SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/stock_community?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - SPRING_REDIS_HOST=localhost
       - SPRING_REDIS_PORT=6379
       - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
       - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
 
   backtest_fe:
     image: ghcr.io/capstone-backtest/backtest/backtest-fe:latest
@@ -44,13 +54,9 @@ services:
     restart: unless-stopped
     network_mode: host
     env_file:
-      - ${BACKTEST_ENV_FILE:-/opt/backtest/backend/.env}
+      - .env
     depends_on:
-      - backtest_be_fast
-      - backtest_be_spring
-
-# 운영 환경에서는 호스트의 MySQL과 Redis를 사용하므로 volumes 불필요
-networks:
-  backtest-net:
-    name: backtest-network-prod
-    driver: bridge
+      backtest_be_fast:
+        condition: service_healthy
+      backtest_be_spring:
+        condition: service_started
