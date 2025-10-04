@@ -291,18 +291,154 @@ class ChartDataService:
     
     def _generate_rsi_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
         """RSI 지표 생성"""
-        # RSI 구현 로직은 복잡하므로 추후 구현
-        return []
+        try:
+            period = int(params.get('rsi_period', 14))
+            overbought = float(params.get('rsi_overbought', 70))
+            oversold = float(params.get('rsi_oversold', 30))
+
+            close = pd.Series(data['Close'])
+            delta = close.diff()
+            gain = delta.where(delta > 0, 0.0)
+            loss = -delta.where(delta < 0, 0.0)
+            avg_gain = gain.ewm(alpha=1 / period, adjust=False).mean()
+            avg_loss = loss.ewm(alpha=1 / period, adjust=False).mean()
+            avg_loss = avg_loss.replace(0, np.finfo(float).eps)
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+
+            rsi_data = []
+            for idx, val in rsi.items():
+                if not pd.isna(val):
+                    rsi_data.append({
+                        "timestamp": idx.isoformat(),
+                        "date": idx.strftime('%Y-%m-%d'),
+                        "value": float(val)
+                    })
+
+            indicators: List[IndicatorData] = []
+            if rsi_data:
+                indicators.append(IndicatorData(
+                    name=f"RSI_{period}",
+                    type="line",
+                    color="#EC4899",  # pink-500
+                    data=rsi_data
+                ))
+
+                # Overbought/Oversold reference lines
+                ob_data = []
+                os_data = []
+                for idx in data.index:
+                    ob_data.append({
+                        "timestamp": idx.isoformat(),
+                        "date": idx.strftime('%Y-%m-%d'),
+                        "value": overbought
+                    })
+                    os_data.append({
+                        "timestamp": idx.isoformat(),
+                        "date": idx.strftime('%Y-%m-%d'),
+                        "value": oversold
+                    })
+
+                indicators.append(IndicatorData(
+                    name="RSI_OVERBOUGHT",
+                    type="line",
+                    color="#EF4444",  # red-500
+                    data=ob_data
+                ))
+                indicators.append(IndicatorData(
+                    name="RSI_OVERSOLD",
+                    type="line",
+                    color="#10B981",  # green-500
+                    data=os_data
+                ))
+
+            return indicators
+        except Exception:
+            return []
     
     def _generate_bollinger_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
         """볼린저 밴드 지표 생성"""
-        # 볼린저 밴드 구현 로직은 복잡하므로 추후 구현
-        return []
+        try:
+            period = int(params.get('period', 20))
+            std_dev = float(params.get('std_dev', 2.0))
+
+            close = pd.Series(data['Close'])
+            sma = close.rolling(window=period).mean()
+            std = close.rolling(window=period).std()
+            upper = sma + (std_dev * std)
+            lower = sma - (std_dev * std)
+
+            indicators: List[IndicatorData] = []
+
+            def make_line(series: pd.Series, name: str, color: str) -> IndicatorData:
+                line = []
+                for idx, val in series.items():
+                    if not pd.isna(val):
+                        line.append({
+                            "timestamp": idx.isoformat(),
+                            "date": idx.strftime('%Y-%m-%d'),
+                            "value": float(val)
+                        })
+                return IndicatorData(name=name, type="line", color=color, data=line)
+
+            indicators.append(make_line(sma, f"SMA_{period}", "#8884d8"))
+            indicators.append(make_line(upper, "BB_UPPER", "#6B7280"))  # gray-500
+            indicators.append(make_line(lower, "BB_LOWER", "#6B7280"))
+
+            return indicators
+        except Exception:
+            return []
     
     def _generate_macd_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
         """MACD 지표 생성"""
-        # MACD 구현 로직은 복잡하므로 추후 구현
-        return []
+        try:
+            fast = int(params.get('fast_period', 12))
+            slow = int(params.get('slow_period', 26))
+            signal = int(params.get('signal_period', 9))
+
+            close = pd.Series(data['Close'])
+            ema_fast = close.ewm(span=fast).mean()
+            ema_slow = close.ewm(span=slow).mean()
+            macd = ema_fast - ema_slow
+            sig = macd.ewm(span=signal).mean()
+
+            macd_data = []
+            sig_data = []
+            for idx in data.index:
+                mv = macd.loc[idx] if idx in macd.index else np.nan
+                sv = sig.loc[idx] if idx in sig.index else np.nan
+                if not pd.isna(mv):
+                    macd_data.append({
+                        "timestamp": idx.isoformat(),
+                        "date": idx.strftime('%Y-%m-%d'),
+                        "value": float(mv)
+                    })
+                if not pd.isna(sv):
+                    sig_data.append({
+                        "timestamp": idx.isoformat(),
+                        "date": idx.strftime('%Y-%m-%d'),
+                        "value": float(sv)
+                    })
+
+            indicators: List[IndicatorData] = []
+            if macd_data:
+                indicators.append(IndicatorData(
+                    name="MACD",
+                    type="line",
+                    color="#8B5CF6",  # violet-500
+                    data=macd_data
+                ))
+            if sig_data:
+                indicators.append(IndicatorData(
+                    name="MACD_SIGNAL",
+                    type="line",
+                    color="#F59E0B",  # amber-500
+                    data=sig_data
+                ))
+
+            return indicators
+        except Exception:
+            return []
     
     def _calculate_backtest_stats(self, data: pd.DataFrame, initial_cash: float) -> Dict[str, Any]:
         """백테스트 통계 계산"""

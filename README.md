@@ -6,18 +6,18 @@
 ```bash
 # 주의: 항상 루트 디렉토리에서 실행해야 .env.local 파일이 로드됩니다
 cd /backtest  # 또는 프로젝트 루트로 이동
-docker compose -f compose/compose.dev.yaml up -d --build
+docker compose -f compose.dev.yaml up -d --build
 ```
 
 중지
 ```bash
-docker compose -f compose/compose.dev.yaml down
+docker compose -f compose.dev.yaml down
 ```
 
 완전 제거(컨테이너/이미지/볼륨)
 ```bash
 # --rmi all, --volumes는 로컬 이미지와 볼륨을 제거한다
-docker compose -f compose/compose.dev.yaml down --rmi all --volumes --remove-orphans
+docker compose -f compose.dev.yaml down --rmi all --volumes --remove-orphans
 ```
 
 상태 확인
@@ -26,15 +26,15 @@ docker compose -f compose/compose.dev.yaml down --rmi all --volumes --remove-orp
 docker ps --filter "name=backtest" --format "table {{.Names}}\t{{.Status}}"
 
 # Compose 병합 설정 확인
-docker compose -f compose/compose.dev.yaml config
+docker compose -f compose.dev.yaml config
 ```
 
 개별 컨테이너 제어
 ```bash
 # 서비스 단위 실행/중지/삭제
-docker compose -f compose/compose.dev.yaml up -d backtest_be_fast backtest_fe mysql
-docker compose -f compose/compose.dev.yaml stop backtest_be_fast backtest_fe mysql
-docker compose -f compose/compose.dev.yaml rm -f backtest_be_fast backtest_fe mysql
+docker compose -f compose.dev.yaml up -d backtest_be_fast backtest_fe mysql
+docker compose -f compose.dev.yaml stop backtest_be_fast backtest_fe mysql
+docker compose -f compose.dev.yaml rm -f backtest_be_fast backtest_fe mysql
 ```
 
 환경 변수
@@ -50,7 +50,7 @@ cp .env.example .env
 nano .env  # SECRET_KEY, JWT_SECRET, PASSWORDS 등
 ```
 
-- Compose는 각 서비스에서 `env_file: ../.env`로 루트 환경 파일을 불러온다.
+- Compose는 각 서비스에서 `env_file: .env`로 루트 환경 파일을 불러온다.
 - 모든 시크릿 값은 환경 변수로만 관리하며, 코드나 설정 파일에 초기값을 넣지 않는다.
 - 자세한 내용은 [`ENV_GUIDE.md`](./ENV_GUIDE.md) 참조.
 
@@ -70,7 +70,7 @@ sudo nano .env
 # 운영 환경 설정 입력 (SECRET_KEY, MYSQL_ROOT_PASSWORD, REDIS_PASSWORD 등)
 
 # 3. compose 파일 복사 (git 저장소에서)
-sudo cp /path/to/repo/compose/compose.server.yaml ./compose.yaml
+sudo cp /path/to/repo/compose.server.yaml ./compose.yaml
 ```
 
 ### 스택 관리
