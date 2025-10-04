@@ -5,7 +5,7 @@
 실행
 ```bash
 # 주의: 항상 루트 디렉토리에서 실행해야 .env.local 파일이 로드됩니다
-cd /home/kyj/backtest  # 또는 프로젝트 루트로 이동
+cd /backtest  # 또는 프로젝트 루트로 이동
 docker compose -f compose/compose.dev.yaml up -d --build
 ```
 

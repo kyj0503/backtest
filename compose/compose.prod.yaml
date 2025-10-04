@@ -1,60 +1,18 @@
+name: backtest-prod
+
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: bt_mysql_prod
-    restart: unless-stopped
-    command: ["--default-authentication-plugin=mysql_native_password"]
-    networks:
-      - backtest-net
-    env_file:
-      - ${BACKTEST_ENV_FILE:-../.env}
-    volumes:
-      - ../database:/docker-entrypoint-initdb.d:ro
-      - backtest_db_data_prod:/var/lib/mysql
-    ports:
-      - "3307:3306"
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" >/dev/null 2>&1"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-
-  redis:
-    image: redis:7-alpine
-    container_name: bt_redis_prod
-    restart: unless-stopped
-    # Do not bind Redis to the host to avoid port conflicts (6379 often used)
-    command: sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
-    volumes:
-      - backtest_redis_data_prod:/data
-    networks:
-      - backtest-net
-    env_file:
-      - ${BACKTEST_ENV_FILE:-../.env}
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   backtest_be_fast:
     image: ghcr.io/capstone-backtest/backtest/backtest-be-fast:latest
     container_name: backtest_be_fast_prod
     restart: unless-stopped
     networks:
       - backtest-net
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     ports:
       - "8000:8000"
     env_file:
       - ${BACKTEST_ENV_FILE:-../.env}
     environment:
-      - DATABASE_HOST=mysql
+      - DATABASE_HOST=host.docker.internal
       - DATABASE_PORT=3306
       - DEBUG=false
     healthcheck:
@@ -88,7 +46,6 @@ services:
       - SPRING_REDIS_PORT=6379
       - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
       - SPRING_PROFILES_ACTIVE=prod
-    # No container-level healthcheck; rely on Jenkins smoke checks
 
   backtest_fe:
     image: ghcr.io/capstone-backtest/backtest/backtest-fe:latest
@@ -106,7 +63,6 @@ services:
       - "8443:443"
     env_file:
       - ${BACKTEST_ENV_FILE:-../.env}
-    # Healthcheck handled by Jenkins smoke checks
 
 volumes:
   backtest_db_data_prod:
