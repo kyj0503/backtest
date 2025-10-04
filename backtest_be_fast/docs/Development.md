@@ -31,12 +31,12 @@ HOST=0.0.0.0 PORT=8000 python run_server.py
 ## 전체 스택(Compose)
 프로젝트 루트에서 전체 스택을 실행한다.
 ```bash
-docker compose -f compose/compose.dev.yaml up -d --build
+docker compose -f compose.dev.yaml up -d --build
 ```
 
 의존 서비스만 기동하려면 다음을 사용한다.
 ```bash
-docker compose -f compose/compose.dev.yaml up -d mysql redis
+docker compose -f compose.dev.yaml up -d mysql redis
 ```
 
 ## 테스트
@@ -49,7 +49,7 @@ PYTHONPATH=. pytest --cov=app --cov-report=term-missing
 
 의존 리소스가 필요하면 Compose로 mysql, redis를 먼저 띄운다.
 ```bash
-docker compose -f compose/compose.dev.yaml up -d mysql redis
+docker compose -f compose.dev.yaml up -d mysql redis
 PYTHONPATH=. pytest -v
 ```
 

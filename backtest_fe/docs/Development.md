@@ -113,4 +113,4 @@ expect(apiClient.post).toHaveBeenCalledWith('/v1/backtest/execute', request)
 - API 모킹: MSW 서버 초기화(`src/test/setup.ts`), 서비스 테스트는 Axios 목을 사용
 - 테스트 유틸리티: `src/test/fixtures.ts`, `src/test/helpers.ts`
 
-실행 명령은 `npm run test:run`이며, 컨테이너에서는 `docker compose -f compose/compose.dev.yaml exec backtest_fe npm run test:run`을 사용한다.
+실행 명령은 `npm run test:run`이며, 컨테이너에서는 `docker compose -f compose.dev.yaml exec backtest_fe npm run test:run`을 사용한다.

@@ -21,8 +21,8 @@ PYTHONPATH=. pytest -m unit --cov=app --cov-report=term-missing
 
 Compose(의존 서비스 필요 시)
 ```bash
-docker compose -f compose/compose.dev.yaml up -d mysql redis
-docker compose -f compose/compose.dev.yaml run --rm backtest_be_fast pytest -v
+docker compose -f compose.dev.yaml up -d mysql redis
+docker compose -f compose.dev.yaml run --rm backtest_be_fast pytest -v
 ```
 
 CI에서는 `pytest -v`와 커버리지 보고를 권장한다.

@@ -85,7 +85,8 @@ class ChartDataService:
             self.logger.info(f"자산 곡선 데이터 생성 완료: {len(equity_data)} 포인트")
             
             # 3. 거래 마커 생성
-            trade_markers = self._generate_trade_markers(data, request.strategy)
+            trade_log = backtest_result.trade_log if backtest_result else []
+            trade_markers = self._generate_trade_markers(data, request.strategy, trade_log)
             self.logger.info(f"거래 마커 생성 완료: {len(trade_markers)} 개")
             
             # 4. 기술 지표 데이터 생성
@@ -209,24 +210,80 @@ class ChartDataService:
         
         return equity_data
     
-    def _generate_trade_markers(self, data: pd.DataFrame, strategy: str) -> List[TradeMarker]:
+    def _generate_trade_markers(self, data: pd.DataFrame, strategy: str, trade_log: List[Dict[str, Any]]) -> List[TradeMarker]:
         """거래 마커 생성"""
-        if strategy == "buy_and_hold":
-            # Buy & Hold는 첫날에 매수만
-            first_date = data.index[0]
-            first_price = float(data['Close'].iloc[0])
-            
-            return [TradeMarker(
-                timestamp=first_date.isoformat(),
-                date=first_date.strftime('%Y-%m-%d'),
-                price=first_price,
-                type="entry",  # entry/exit 중 하나
-                side="buy",    # buy/sell 중 하나 (필수 필드)
-                size=1.0
-            )]
-        else:
-            # 다른 전략들은 임시로 빈 리스트 반환 (추후 백테스트 결과에서 추출)
-            return []
+        markers: List[TradeMarker] = []
+
+        if not trade_log:
+            if strategy == "buy_and_hold" and not data.empty:
+                first_date = data.index[0]
+                first_price = float(data['Close'].iloc[0])
+                markers.append(TradeMarker(
+                    timestamp=first_date.isoformat(),
+                    date=first_date.strftime('%Y-%m-%d'),
+                    price=first_price,
+                    type="entry",
+                    side="buy",
+                    size=1.0
+                ))
+            return markers
+
+        trades_df = pd.DataFrame(trade_log)
+        if trades_df.empty:
+            return markers
+
+        def _parse_side(direction_value: Any, entry: bool = True) -> str:
+            if isinstance(direction_value, (int, float)):
+                if direction_value == 0:
+                    return 'buy' if entry else 'sell'
+                return 'buy' if direction_value > 0 else 'sell'
+            direction = str(direction_value).lower()
+            if 'long' in direction:
+                return 'buy' if entry else 'sell'
+            if 'short' in direction:
+                return 'sell' if entry else 'buy'
+            return 'buy' if entry else 'sell'
+
+        for _, trade in trades_df.iterrows():
+            entry_time = trade.get('EntryTime') or trade.get('Entry Date') or trade.get('EntryTimestamp')
+            exit_time = trade.get('ExitTime') or trade.get('Exit Date') or trade.get('ExitTimestamp')
+
+            entry_price = trade.get('EntryPrice') or trade.get('Entry Price')
+            exit_price = trade.get('ExitPrice') or trade.get('Exit Price')
+            size = trade.get('Size') or trade.get('Size (contracts)') or 1.0
+            direction_val = trade.get('Direction') or trade.get('Trade Type')
+
+            try:
+                if pd.notna(entry_time):
+                    entry_timestamp = pd.to_datetime(entry_time)
+                    markers.append(TradeMarker(
+                        timestamp=entry_timestamp.isoformat(),
+                        date=entry_timestamp.strftime('%Y-%m-%d'),
+                        price=float(entry_price) if pd.notna(entry_price) else float(data['Close'].iloc[0]),
+                        type="entry",
+                        side=_parse_side(direction_val, entry=True),
+                        size=float(size) if pd.notna(size) else 1.0
+                    ))
+            except Exception:
+                pass
+
+            try:
+                if pd.notna(exit_time):
+                    exit_timestamp = pd.to_datetime(exit_time)
+                    pnl_pct = trade.get('PnL (%)') or trade.get('PnLPct') or trade.get('ReturnPct')
+                    markers.append(TradeMarker(
+                        timestamp=exit_timestamp.isoformat(),
+                        date=exit_timestamp.strftime('%Y-%m-%d'),
+                        price=float(exit_price) if pd.notna(exit_price) else float(data['Close'].iloc[-1]),
+                        type="exit",
+                        side=_parse_side(direction_val, entry=False),
+                        size=float(size) if pd.notna(size) else 1.0,
+                        pnl_pct=float(pnl_pct) if pnl_pct is not None and not pd.isna(pnl_pct) else None
+                    ))
+            except Exception:
+                pass
+
+        return markers
     
     def _generate_indicators(self, data: pd.DataFrame, strategy: str, strategy_params: Dict[str, Any]) -> List[IndicatorData]:
         """기술 지표 데이터 생성"""
@@ -240,7 +297,9 @@ class ChartDataService:
             indicators.extend(self._generate_bollinger_indicators(data, strategy_params))
         elif strategy == "macd_strategy":
             indicators.extend(self._generate_macd_indicators(data, strategy_params))
-        
+        elif strategy == "ema_crossover":
+            indicators.extend(self._generate_ema_indicators(data, strategy_params))
+
         return indicators
     
     def _generate_sma_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
@@ -437,6 +496,34 @@ class ChartDataService:
                 ))
 
             return indicators
+        except Exception:
+            return []
+
+    def _generate_ema_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
+        """EMA 지표 생성"""
+        try:
+            fast = int(params.get('fast_window', 12))
+            slow = int(params.get('slow_window', 26))
+
+            close = pd.Series(data['Close'])
+            ema_fast = close.ewm(span=fast, adjust=False).mean()
+            ema_slow = close.ewm(span=slow, adjust=False).mean()
+
+            def make_line(series: pd.Series, name: str, color: str) -> IndicatorData:
+                line = []
+                for idx, val in series.items():
+                    if not pd.isna(val):
+                        line.append({
+                            "timestamp": idx.isoformat(),
+                            "date": idx.strftime('%Y-%m-%d'),
+                            "value": float(val)
+                        })
+                return IndicatorData(name=name, type="line", color=color, data=line)
+
+            return [
+                make_line(ema_fast, f"EMA_{fast}", "#8B5CF6"),
+                make_line(ema_slow, f"EMA_{slow}", "#F59E0B"),
+            ]
         except Exception:
             return []
     

@@ -10,6 +10,7 @@ from app.strategies.implementations.sma_strategy import SMAStrategy
 from app.strategies.implementations.rsi_strategy import RSIStrategy
 from app.strategies.implementations.bollinger_strategy import BollingerBandsStrategy
 from app.strategies.implementations.macd_strategy import MACDStrategy
+from app.strategies.implementations.ema_strategy import EMAStrategy
 from app.strategies.implementations.buy_hold_strategy import BuyAndHoldStrategy
 
 
@@ -144,6 +145,30 @@ class DefaultStrategyFactory(StrategyFactoryInterface):
                 },
                 'constraints': [
                     'fast_period < slow_period'
+                ]
+            },
+            'ema_crossover': {
+                'class': EMAStrategy,
+                'name': 'EMA Crossover Strategy',
+                'description': 'EMA 단기/장기 이동평균 교차 전략',
+                'parameters': {
+                    'fast_window': {
+                        'type': int,
+                        'default': 12,
+                        'min': 5,
+                        'max': 50,
+                        'description': '단기 EMA 기간'
+                    },
+                    'slow_window': {
+                        'type': int,
+                        'default': 26,
+                        'min': 10,
+                        'max': 200,
+                        'description': '장기 EMA 기간'
+                    }
+                },
+                'constraints': [
+                    'fast_window < slow_window'
                 ]
             },
             'buy_and_hold': {

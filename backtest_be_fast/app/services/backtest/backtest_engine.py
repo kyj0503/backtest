@@ -3,9 +3,10 @@
 """
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from uuid import uuid4
 import pandas as pd
+import numpy as np
 
 from backtesting import Backtest
 from fastapi import HTTPException
@@ -278,10 +279,11 @@ class BacktestEngine:
                 beta=None,
                 kelly_criterion=None,
                 sqn=None,
+                trade_log=[],
                 execution_time_seconds=0.1,
                 timestamp=datetime.now()
             )
-    
+
     def _convert_result_to_response(self, stats: pd.Series, request: BacktestRequest) -> BacktestResult:
         """백테스트 결과를 API 응답 형식으로 변환"""
         def safe_float(key: str, default: float = 0.0) -> float:
@@ -307,11 +309,48 @@ class BacktestEngine:
             start_date = pd.to_datetime(request.start_date)
             end_date = pd.to_datetime(request.end_date)
             duration_days = (end_date - start_date).days
-            
+
             # 날짜를 문자열로 변환
             start_date_str = str(request.start_date)
             end_date_str = str(request.end_date)
-            
+
+            trade_log: List[Dict[str, Any]] = []
+            trades_df = stats.get('_trades') if hasattr(stats, 'get') else None
+            if isinstance(trades_df, pd.DataFrame) and not trades_df.empty:
+                trade_log = trades_df.fillna(0).to_dict(orient='records')
+
+            alpha_pct = None
+            beta_value = None
+
+            if getattr(request, 'benchmark_ticker', None):
+                try:
+                    benchmark = self.data_fetcher.get_stock_data(
+                        ticker=request.benchmark_ticker,
+                        start_date=start_date,
+                        end_date=end_date
+                    )
+                    equity_curve = stats.get('_equity_curve') if hasattr(stats, 'get') else None
+                    if (
+                        benchmark is not None and not benchmark.empty
+                        and isinstance(equity_curve, pd.DataFrame) and not equity_curve.empty
+                    ):
+                        strat_returns = equity_curve['Equity'].pct_change().dropna()
+                        bench_returns = benchmark['Close'].pct_change().dropna()
+                        strat_returns, bench_returns = strat_returns.align(bench_returns, join='inner')
+                        if len(strat_returns) > 1 and bench_returns.var() != 0:
+                            cov_matrix = np.cov(strat_returns, bench_returns)
+                            cov = cov_matrix[0][1]
+                            var_bench = bench_returns.var()
+                            if var_bench != 0:
+                                beta_value = cov / var_bench
+                                mean_strat = strat_returns.mean()
+                                mean_bench = bench_returns.mean()
+                                alpha_pct = (mean_strat - beta_value * mean_bench) * 100
+                                beta_value = float(beta_value)
+                                alpha_pct = float(alpha_pct)
+                except Exception:
+                    pass
+
             return BacktestResult(
                 ticker=request.ticker,
                 strategy=request.strategy,
@@ -336,10 +375,11 @@ class BacktestEngine:
                 avg_trade_pct=safe_float('Avg. Trade [%]'),
                 best_trade_pct=safe_float('Best Trade [%]'),
                 worst_trade_pct=safe_float('Worst Trade [%]'),
-                alpha_pct=None,  # 추후 계산 추가
-                beta=None,       # 추후 계산 추가
+                alpha_pct=alpha_pct,
+                beta=beta_value,
                 kelly_criterion=None,  # 추후 계산 추가
                 sqn=safe_float('SQN') if 'SQN' in stats else None,
+                trade_log=trade_log,
                 execution_time_seconds=0.5,  # 추후 실제 시간 측정 추가
                 timestamp=datetime.now()
             )

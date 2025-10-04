@@ -48,10 +48,10 @@ npm run dev
 cd /path/to/backtest
 
 # 컨테이너 시작
-docker compose -f compose/compose.dev.yaml up -d backtest_fe
+docker compose -f compose.dev.yaml up -d backtest_fe
 
 # 로그 확인
-docker compose -f compose/compose.dev.yaml logs -f backtest_fe
+docker compose -f compose.dev.yaml logs -f backtest_fe
 
 # 접속: http://localhost:5173
 ```
@@ -144,7 +144,7 @@ Duration:    약 2초 (vitest run 기준)
 npm run test:run
 
 # Docker 환경
-docker compose -f compose/compose.dev.yaml exec backtest_fe npm run test:run
+docker compose -f compose.dev.yaml exec backtest_fe npm run test:run
 ```
 
 테스트 작성 규칙과 목록은 `docs/Test.md`에 정리되어 있다.

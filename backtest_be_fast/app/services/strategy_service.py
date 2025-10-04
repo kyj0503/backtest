@@ -8,6 +8,7 @@ from ..strategies.implementations import (
     RSIStrategy,
     BollingerBandsStrategy,
     MACDStrategy,
+    EMAStrategy,
     BuyAndHoldStrategy
 )
 
@@ -115,6 +116,27 @@ class StrategyService:
                     }
                 }
             },
+            'ema_crossover': {
+                'class': EMAStrategy,
+                'name': 'EMA Crossover',
+                'description': '지수 이동평균 교차 기반 전략',
+                'parameters': {
+                    'fast_window': {
+                        'type': 'int',
+                        'default': 12,
+                        'min': 5,
+                        'max': 50,
+                        'description': '단기 EMA 기간'
+                    },
+                    'slow_window': {
+                        'type': 'int',
+                        'default': 26,
+                        'min': 10,
+                        'max': 200,
+                        'description': '장기 EMA 기간'
+                    }
+                }
+            },
             'buy_and_hold': {
                 'class': BuyAndHoldStrategy,
                 'name': 'Buy and Hold',
@@ -186,13 +208,19 @@ class StrategyService:
             long_window = validated_params.get('long_window', 20)
             if short_window >= long_window:
                 raise ValueError(f"SMA 전략에서 short_window({short_window})는 long_window({long_window})보다 작아야 합니다")
-        
+
         elif strategy_name == 'rsi_strategy':
             rsi_overbought = validated_params.get('rsi_overbought', 70)
             rsi_oversold = validated_params.get('rsi_oversold', 30)
             if rsi_oversold >= rsi_overbought:
                 raise ValueError(f"RSI 전략에서 rsi_oversold({rsi_oversold})는 rsi_overbought({rsi_overbought})보다 작아야 합니다")
-        
+
+        elif strategy_name == 'ema_crossover':
+            fast_window = validated_params.get('fast_window', 12)
+            slow_window = validated_params.get('slow_window', 26)
+            if fast_window >= slow_window:
+                raise ValueError(f"EMA 전략에서 fast_window({fast_window})는 slow_window({slow_window})보다 작아야 합니다")
+
         return validated_params
 
 

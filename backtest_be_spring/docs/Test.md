@@ -19,7 +19,7 @@ cd backtest_be_spring
 
 ```bash
 # 루트 프로젝트에서 전체 스택 기동
-docker compose -f compose/compose.dev.yaml up -d --build
+docker compose -f compose.dev.yaml up -d --build
 
 # 백엔드 서비스의 테스트 실행
 cd backtest_be_spring

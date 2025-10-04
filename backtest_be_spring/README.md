@@ -36,7 +36,7 @@ java -jar build/libs/*.jar
 
 프로젝트 루트에서 실행한다.
 ```bash
-docker compose -f compose/compose.dev.yaml up -d --build
+docker compose -f compose.dev.yaml up -d --build
 ```
 
 ## 설정 (환경 변수)

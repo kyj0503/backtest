@@ -43,7 +43,7 @@ test_endpoint() {
 echo ""
 echo "1. 서비스 상태 확인"
 echo "-------------------"
-docker compose -f compose/compose.dev.yaml ps
+docker compose -f compose.dev.yaml ps
 
 echo ""
 echo "2. Health Check 테스트"
@@ -69,11 +69,11 @@ echo "------------------------"
 
 echo ""
 echo "=== Spring Boot 로그 ==="
-docker compose -f compose/compose.dev.yaml logs backtest-be-spring --tail=10 | grep -v "^$"
+docker compose -f compose.dev.yaml logs backtest-be-spring --tail=10 | grep -v "^$"
 
 echo ""
 echo "=== FastAPI 로그 ==="
-docker compose -f compose/compose.dev.yaml logs backtest-be-fast --tail=10 | grep -v "^$"
+docker compose -f compose.dev.yaml logs backtest-be-fast --tail=10 | grep -v "^$"
 
 echo ""
 echo "========================================="

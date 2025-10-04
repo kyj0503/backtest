@@ -24,12 +24,7 @@
 - MySQL, Redis 컨테이너 포함
 - Docker 네트워크 사용 (bridge)
 
-#### compose.prod.yaml (운영 환경 - Jenkins용)
-- 호스트의 MySQL/Redis 사용
-- `network_mode: host` 적용
-- MySQL/Redis 컨테이너 제거
-
-#### compose.server.yaml (운영 서버 전용 - 신규)
+#### compose.server.yaml (운영 서버 전용)
 - `/opt/backtest/backend/` 디렉터리에서 독립 실행
 - 같은 디렉터리의 `.env` 파일 사용
 - Jenkins 없이도 스택 관리 가능
@@ -41,7 +36,7 @@
 - Bridge 네트워크 사용
 - 모든 서비스 컨테이너로 실행
 
-**운영 환경 (compose.prod.yaml, compose.server.yaml):**
+**운영 환경 (compose.server.yaml):**
 - ⚠️ `network_mode: host`는 WSL2에서 제한적
 - WSL2는 Linux VM이므로 호스트 네트워크 모드가 다르게 동작
 - **권장:** 운영 서버는 네이티브 Linux 사용
@@ -60,7 +55,7 @@
 ```bash
 # 서버에서 실행
 cd /opt/backtest/backend
-wget https://raw.githubusercontent.com/capstone-backtest/backtest/main/compose/compose.server.yaml -O compose.yaml
+wget https://raw.githubusercontent.com/capstone-backtest/backtest/main/compose.server.yaml -O compose.yaml
 ```
 
 **이제 가능한 작업:**
@@ -86,7 +81,7 @@ docker compose ps
 ## Jenkins CI/CD 파이프라인 개선 ✅
 
 **변경 사항:**
-- `COMPOSE_FILE`: `compose/compose.prod.yaml` → `/opt/backtest/backend/compose.yaml`
+- `COMPOSE_FILE`: `compose.server.yaml` → `/opt/backtest/backend/compose.yaml`
 - `ENV_FILE_PATH`: `/opt/backtest/backend/.env` (동일)
 - Deploy 단계: 서버의 compose 파일 직접 사용
 
@@ -108,8 +103,7 @@ backtest/
 ├── Jenkinsfile                   # 업데이트됨
 └── compose/
     ├── compose.dev.yaml          # 개발 환경 (전체 스택)
-    ├── compose.prod.yaml         # 운영 환경 (Jenkins용)
-    └── compose.server.yaml       # 운영 서버 전용 (신규)
+    └── compose.server.yaml       # 운영 서버 전용
 
 # 운영 서버:
 /opt/backtest/backend/
@@ -129,8 +123,8 @@ cp .env.local .env
 rm .env.local
 
 # 3. 스택 재시작
-docker compose -f compose/compose.dev.yaml down
-docker compose -f compose/compose.dev.yaml up -d
+docker compose -f compose.dev.yaml down
+docker compose -f compose.dev.yaml up -d
 ```
 
 ### 운영 서버

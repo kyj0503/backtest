@@ -163,7 +163,7 @@ useEffect(() => {
 - 이유: Tomcat 10.1이 Host 헤더의 언더스코어를 거부함
 
 **영향받은 파일**:
-- `compose/compose.dev.yaml`
+- `compose.dev.yaml`
 - `.env.local`
 - `backtest_fe/vite.config.ts`
 
@@ -192,14 +192,14 @@ export function buildWebSocketUrl(path: string): string {
 ### 로컬 환경 실행
 ```bash
 # 전체 스택 시작
-docker compose -f compose/compose.dev.yaml up -d --build
+docker compose -f compose.dev.yaml up -d --build
 
 # 서비스 상태 확인
-docker compose -f compose/compose.dev.yaml ps
+docker compose -f compose.dev.yaml ps
 
 # 로그 확인
-docker compose -f compose/compose.dev.yaml logs -f backtest-fe
-docker compose -f compose/compose.dev.yaml logs -f backtest-be-spring
+docker compose -f compose.dev.yaml logs -f backtest-fe
+docker compose -f compose.dev.yaml logs -f backtest-be-spring
 ```
 
 ### 브라우저 테스트
@@ -248,7 +248,7 @@ docker compose -f compose/compose.dev.yaml logs -f backtest-be-spring
 ## 🔄 향후 개선 사항
 
 ### 프로덕션 빌드 테스트
-- [ ] `docker compose -f compose/compose.prod.yaml` 환경에서 검증
+- [ ] `docker compose -f compose.server.yaml` 환경에서 검증
 - [ ] Nginx 프록시를 통한 WebSocket 연결 테스트
 - [ ] SSL/TLS 적용 시 WSS 프로토콜 확인
 

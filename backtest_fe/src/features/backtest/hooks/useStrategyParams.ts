@@ -101,7 +101,9 @@ export const useStrategyParams = (): UseStrategyParamsReturn => {
       'bb_std': '볼린저 밴드 표준편차',
       'macd_fast': 'MACD 빠른 기간',
       'macd_slow': 'MACD 느린 기간',
-      'macd_signal': 'MACD 신호선 기간'
+      'macd_signal': 'MACD 신호선 기간',
+      'fast_window': '단기 EMA 기간',
+      'slow_window': '장기 EMA 기간'
     };
     
     return labelMap[key] || key;

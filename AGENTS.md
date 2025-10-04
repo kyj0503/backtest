@@ -6,11 +6,11 @@ This monorepo contains a FastAPI back end, a Spring Boot back end, a React front
 - `backtest_be_fast/` FastAPI service (app code under `app/`, tests under `tests/`).
 - `backtest_be_spring/` Spring Boot service (`src/main/java`, `src/test/java`).
 - `backtest_fe/` React + TypeScript app (`src/`, tests in `__tests__` or `*.test.tsx`).
-- `compose/` Docker Compose files (`compose.dev.yaml`, `compose.prod.yaml`).
+- Docker Compose files (`compose.dev.yaml`, `compose.server.yaml`).
 - `database/` SQL init scripts. Root `.env.local` (dev) and `.env` (prod) load into services.
 
 ## Build, Test, and Run
-- Dev stack: `docker compose -f compose/compose.dev.yaml up -d --build`
+- Dev stack: `docker compose -f compose.dev.yaml up -d --build`
 - FastAPI (local): `cd backtest_be_fast && python run_server.py`
   - Tests: `pip install -r requirements.txt -r requirements-test.txt && PYTHONPATH=. pytest -v`
 - Spring Boot: `cd backtest_be_spring && ./gradlew bootRun`

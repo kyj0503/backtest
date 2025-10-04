@@ -19,10 +19,10 @@ This document captures issues observed in the current codebase, suggested improv
   - The FE maintains a hardcoded strategy config while the BE exposes `/api/v1/strategies`. Divergence risks mismatch and additional maintenance.
 
 - Compose path structure changed
-  - Compose files moved to repo root, but `compose.dev.yaml` still referenced `../` paths. README and scripts referenced `compose/compose.dev.yaml`.
+  - Compose files moved to repo root, but `compose.dev.yaml` still referenced `../` paths. README and scripts referenced `compose.dev.yaml`.
 
 - Documentation drift
-  - Several docs reference `compose/compose.dev.yaml` and `compose/compose.server.yaml` paths, and mention `compose.prod.yaml` which is being replaced by `compose.server.yaml`.
+  - Several docs reference `compose.dev.yaml` and `compose/compose.server.yaml` paths, and mention `compose.prod.yaml` which is being replaced by `compose.server.yaml`.
 
 ## Recommended Improvements
 
@@ -48,28 +48,28 @@ This document captures issues observed in the current codebase, suggested improv
 
 1) Compose/dev ergonomics (done in this change)
    - Fix `compose.dev.yaml` relative paths to match new root placement.
-   - Update README commands from `compose/compose.dev.yaml` to `compose.dev.yaml`.
+   - Update README commands from `compose.dev.yaml` to `compose.dev.yaml`.
    - Note `compose.prod.yaml` deprecation in README.
 
-2) ChartData indicators (started)
-   - Implement RSI, Bollinger, MACD indicator generation in ChartDataService.
-   - Validate names, colors, and data shape with FE charts.
+2) ChartData indicators (완료)
+   - RSI/Bollinger/MACD 라인이 ChartData에 포함되어 FE 차트에서 표시됨.
 
-3) Trade markers (next)
-   - Surface trade logs from Backtesting results; extend ChartDataService to include entry/exit markers.
+3) Trade markers (완료)
+   - Backtesting trade 로그를 차트 마커로 노출.
 
-4) Benchmark metrics (next)
-   - Add optional alpha/beta computation when `benchmark_ticker` is provided.
+4) Benchmark metrics (완료)
+   - `benchmark_ticker` 제공 시 alpha/beta 계산 후 응답에 포함.
 
 5) FE strategy catalog (next)
    - Add a client service to fetch `/api/v1/strategies`; render controls dynamically.
 
-6) Docs cleanup (follow-up)
-   - Sweep docs for `compose/compose.dev.yaml` references and replace with `compose.dev.yaml`.
+6) Docs cleanup (진행 중)
+   - Sweep docs for `compose.dev.yaml` references and replace with `compose.dev.yaml`.
    - Replace `compose.prod.yaml` mentions with `compose.server.yaml` where appropriate.
 
 ## Work Started in This Commit
 
 - Fixed compose paths and README to work with root-level compose files.
 - Implemented RSI, Bollinger, and MACD overlays in ChartDataService so indicator lines appear on FE charts for those strategies.
-
+- Added trade marker extraction and benchmark alpha/beta metrics to Backtest responses.
+- Registered EMA crossover strategy and updated client defaults.

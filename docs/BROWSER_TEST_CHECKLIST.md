@@ -200,7 +200,7 @@ localStorage.getItem('token')
 ### WebSocket 연결 실패 시
 ```bash
 # Spring Boot 로그 확인
-docker compose -f compose/compose.dev.yaml logs backtest-be-spring --tail=50
+docker compose -f compose.dev.yaml logs backtest-be-spring --tail=50
 
 # 포트 리스닝 확인
 netstat -tuln | grep 8080
@@ -209,19 +209,19 @@ netstat -tuln | grep 8080
 ### 인증 문제 시
 ```bash
 # FastAPI 로그 확인 (인증 서비스)
-docker compose -f compose/compose.dev.yaml logs backtest-be-fast --tail=50
+docker compose -f compose.dev.yaml logs backtest-be-fast --tail=50
 
 # Redis 연결 확인 (세션 저장소)
-docker compose -f compose/compose.dev.yaml exec redis redis-cli ping
+docker compose -f compose.dev.yaml exec redis redis-cli ping
 ```
 
 ### 프론트엔드 에러 시
 ```bash
 # Frontend 로그 확인
-docker compose -f compose/compose.dev.yaml logs backtest-fe --tail=50
+docker compose -f compose.dev.yaml logs backtest-fe --tail=50
 
 # 컨테이너 재시작
-docker compose -f compose/compose.dev.yaml restart backtest-fe
+docker compose -f compose.dev.yaml restart backtest-fe
 ```
 
 ---

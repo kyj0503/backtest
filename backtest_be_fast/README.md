@@ -24,8 +24,8 @@ python run_server.py
 ## 전체 스택(Compose)
 프로젝트 루트에서 실행한다.
 ```bash
-docker compose -f compose/compose.dev.yaml up -d --build
-docker compose -f compose/compose.dev.yaml logs -f backtest_be_fast
+docker compose -f compose.dev.yaml up -d --build
+docker compose -f compose.dev.yaml logs -f backtest_be_fast
 ```
 
 ## 주요 엔드포인트
@@ -54,8 +54,8 @@ PYTHONPATH=. pytest -m unit --cov=app --cov-report=term
 
 Compose(의존 서비스 필요 시)
 ```bash
-docker compose -f compose/compose.dev.yaml up -d mysql redis
-docker compose -f compose/compose.dev.yaml run --rm backtest_be_fast pytest -v
+docker compose -f compose.dev.yaml up -d mysql redis
+docker compose -f compose.dev.yaml run --rm backtest_be_fast pytest -v
 ```
 
 ## 개발자 참고

@@ -22,7 +22,7 @@ class BacktestResult(BaseModel):
     annualized_return_pct: float = Field(..., description="연간 수익률 (%)")
     buy_and_hold_return_pct: float = Field(..., description="매수후보유 수익률 (%)")
     cagr_pct: float = Field(..., description="연복리성장률 (%)")
-    
+
     # 위험 지표
     volatility_pct: float = Field(..., description="변동성 (%)")
     sharpe_ratio: float = Field(..., description="샤프 비율")
@@ -38,12 +38,15 @@ class BacktestResult(BaseModel):
     avg_trade_pct: float = Field(..., description="평균 거래 수익률 (%)")
     best_trade_pct: float = Field(..., description="최고 거래 수익률 (%)")
     worst_trade_pct: float = Field(..., description="최악 거래 수익률 (%)")
-    
+
     # 추가 지표
     alpha_pct: Optional[float] = Field(None, description="알파 (%)")
     beta: Optional[float] = Field(None, description="베타")
     kelly_criterion: Optional[float] = Field(None, description="켈리 기준")
     sqn: Optional[float] = Field(None, description="SQN")
+
+    # 거래 로그
+    trade_log: List[Dict[str, Any]] = Field(default_factory=list, description="거래 내역")
     
     # 메타데이터
     execution_time_seconds: float = Field(..., description="실행 시간 (초)")
@@ -79,6 +82,18 @@ class BacktestResult(BaseModel):
                 "beta": 0.89,
                 "kelly_criterion": 0.23,
                 "sqn": 1.45,
+                "trade_log": [
+                    {
+                        "EntryTime": "2020-01-06T00:00:00",
+                        "ExitTime": "2020-01-10T00:00:00",
+                        "EntryPrice": 100.5,
+                        "ExitPrice": 104.2,
+                        "Direction": "Long",
+                        "Size": 1.0,
+                        "PnL": 3.7,
+                        "PnL_pct": 3.68
+                    }
+                ],
                 "execution_time_seconds": 2.34,
                 "timestamp": "2024-01-15T10:30:00"
             }

@@ -15,6 +15,7 @@ class StrategyType(str, Enum):
     BOLLINGER_BANDS = "bollinger_bands"
     MACD_STRATEGY = "macd_strategy"
     BUY_AND_HOLD = "buy_and_hold"
+    EMA_CROSSOVER = "ema_crossover"
 
 
 class OptimizationMethod(str, Enum):

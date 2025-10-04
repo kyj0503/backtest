@@ -114,6 +114,26 @@ export const STRATEGY_CONFIGS: Record<string, StrategyConfig> = {
         description: '시그널 라인 기간'
       }
     }
+  },
+  ema_crossover: {
+    name: 'EMA 교차',
+    description: '지수 이동평균선 교차 기반 매매',
+    parameters: {
+      fast_window: {
+        type: 'int',
+        default: 12,
+        min: 5,
+        max: 50,
+        description: '단기 EMA 기간'
+      },
+      slow_window: {
+        type: 'int',
+        default: 26,
+        min: 10,
+        max: 200,
+        description: '장기 EMA 기간'
+      }
+    }
   }
 };
 

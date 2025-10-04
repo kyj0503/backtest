@@ -47,9 +47,9 @@ Docker 워크플로우(Compose 사용):
 # 필요 시 환경 변수 설정
 export REDIS_PASSWORD=change-me-dev-redis-pass
 cd /home/kyj/backtest
-docker compose -f compose/compose.dev.yaml up -d backtest_fe
-docker compose -f compose/compose.dev.yaml exec backtest_fe npm run test:run
-docker compose -f compose/compose.dev.yaml down
+docker compose -f compose.dev.yaml up -d backtest_fe
+docker compose -f compose.dev.yaml exec backtest_fe npm run test:run
+docker compose -f compose.dev.yaml down
 ```
 
 Vitest는 `src/test/setup.ts`에서 Testing Library 매처를 등록하고 MSW 서버 시작/종료를 관리한다. 커버리지는 `npm run test:coverage`로 생성한다(결과는 `coverage/`).

@@ -5,6 +5,7 @@ from .sma_strategy import SMAStrategy
 from .rsi_strategy import RSIStrategy
 from .bollinger_strategy import BollingerBandsStrategy
 from .macd_strategy import MACDStrategy
+from .ema_strategy import EMAStrategy
 from .buy_hold_strategy import BuyAndHoldStrategy
 
 __all__ = [
@@ -12,5 +13,6 @@ __all__ = [
     'RSIStrategy', 
     'BollingerBandsStrategy',
     'MACDStrategy',
+    'EMAStrategy',
     'BuyAndHoldStrategy'
 ]
