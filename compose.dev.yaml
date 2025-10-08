@@ -15,6 +15,8 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - DEBUG=true
     volumes:
       - ./backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
