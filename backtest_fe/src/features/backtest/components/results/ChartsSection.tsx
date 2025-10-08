@@ -294,7 +294,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         </ResultBlock>
       ),
       (
-        <ResultBlock title="누적 수익률" description="전략의 누적 수익률을 확인하세요" key="single-equity">
+        <ResultBlock title="수익률 & 드로우다운 차트" description="전략의 누적 수익률과 드로우다운을 확인하세요" key="single-equity">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyEquityChart data={singleEquityData as any} />
           </Suspense>
