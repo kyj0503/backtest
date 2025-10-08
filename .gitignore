@@ -1,12 +1,5 @@
 # Environment files (모든 시크릿은 루트의 .env와 .env.local에서 관리)
 .env
-.env.local
-.env.prod
-.env.*
-
-# compose 폴더 내 .env 파일도 무시 (사용하지 않음)
-compose/.env
-compose/.env.*
 
 # Python
 __pycache__/
@@ -14,20 +7,5 @@ __pycache__/
 
 # Node
 node_modules/
-
-# IDE
-.vscode/
-.vscode
+.vscode/launch.json
 .vscode/settings.json
-
-# Spring
-backtest_be_spring/spring-boot.log
-.idea/.gitignore
-.idea/backtest.iml
-.idea/gradle.xml
-.idea/misc.xml
-.idea/modules.xml
-.idea/vcs.xml
-.idea/inspectionProfiles/Project_Default.xml
-.idea/
-GEMINI.md

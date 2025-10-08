@@ -5,7 +5,6 @@ import path from 'path'
 // https://vitejs.dev/config/
 const target = process.env.API_PROXY_TARGET || 'http://localhost:8001'
 // When running inside Docker Compose, use service hostnames on the shared network.
-const SPRING_TARGET = process.env.SPRING_PROXY_TARGET || 'http://localhost:8080';
 const FASTAPI_TARGET = process.env.FASTAPI_PROXY_TARGET || 'http://localhost:8000';
 
 export default defineConfig(({ mode }) => ({
@@ -46,38 +45,6 @@ export default defineConfig(({ mode }) => ({
         target: FASTAPI_TARGET,
         changeOrigin: true,
       },
-      // Spring Boot 서버 (인증, 사용자 관리, 채팅, 커뮤니티)
-      '/api/v1/auth': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-      },
-      '/api/v1/users': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-      },
-      '/api/v1/chat': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-      },
-      '/api/v1/community': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-      },
-      '/api/v1/admin': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-      },
-      // WebSocket (STOMP) 연결을 위한 프록시
-      '/ws': {
-        target: SPRING_TARGET.replace(/^http/, 'ws'),
-        changeOrigin: true,
-        ws: true,
-      },
-      // 기타 API 요청은 Spring Boot로 (기본값 - 가장 마지막에 매칭)
-      '/api': {
-        target: SPRING_TARGET,
-        changeOrigin: true,
-      }
     }
   },
   build: {
