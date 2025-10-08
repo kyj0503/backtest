@@ -3,7 +3,7 @@
 This file gives focused, actionable guidance so an AI coding assistant can be immediately productive in this repository.
 
 Key points (read before editing code)
-- Project layout: `backtest_be_fast/` (FastAPI backend), `backtest_fe/` (React frontend), `backtest_be_spring/` (Spring backend). The FastAPI service is the primary target for AI changes.
+- Project layout: `backtest_be_fast/` (FastAPI backend), `backtest_fe/` (React frontend). The FastAPI service is the primary target for AI changes.
 - Architecture: DDD-inspired layered structure with CQRS and an EventBus. Main folders:
   - `app/api/` — request/response layer; endpoints are under `api/v1/endpoints`.
   - `app/services/` — business logic and backtest engine wrappers.
@@ -16,8 +16,8 @@ Key points (read before editing code)
 Run / debug (FastAPI)
 - Local dev (no docker): `python run_server.py` from `backtest_be_fast/` — uses `uvicorn` and `app.core.config.settings`.
 - With Docker Compose (recommended for full stack):
-  - Start: `docker compose -f compose/compose.dev.yaml up -d --build` (root `README.md` shows this).
-  - Stop: `docker compose -f compose/compose.dev.yaml down`.
+  - Start: `docker compose -f compose.dev.yaml up -d --build` (root `README.md` shows this).
+  - Stop: `docker compose -f compose.dev.yaml down`.
 - Entrypoint: `backtest_be_fast/entrypoint.sh` creates a virtualenv in container and installs `/requirements.txt` if missing.
 
 Important conventions and patterns

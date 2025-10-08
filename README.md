@@ -1,6 +1,6 @@
 개발 스택 가이드
 
-개발/운영 모두 Docker Compose로 FastAPI, 프론트엔드, MySQL, Redis를 함께 실행할 수 있다.
+개발/운영 모두 Docker Compose로 FastAPI 백엔드와 React 프론트엔드를 함께 실행할 수 있다.
 
 실행
 ```bash
@@ -32,9 +32,9 @@ docker compose -f compose.dev.yaml config
 개별 컨테이너 제어
 ```bash
 # 서비스 단위 실행/중지/삭제
-docker compose -f compose.dev.yaml up -d backtest_be_fast backtest_fe mysql
-docker compose -f compose.dev.yaml stop backtest_be_fast backtest_fe mysql
-docker compose -f compose.dev.yaml rm -f backtest_be_fast backtest_fe mysql
+docker compose -f compose.dev.yaml up -d backtest_be_fast backtest_fe
+docker compose -f compose.dev.yaml stop backtest_be_fast backtest_fe
+docker compose -f compose.dev.yaml rm -f backtest_be_fast backtest_fe
 ```
 
 환경 변수
@@ -44,7 +44,7 @@ docker compose -f compose.dev.yaml rm -f backtest_be_fast backtest_fe mysql
 
 ## 운영 서버 배포
 
-운영 서버에서는 호스트에 설치된 MySQL과 Redis를 사용합니다.
+운영 서버에서는 호스트에 설치된 데이터베이스를 사용합니다.
 
 ### 초기 설정 (1회만)
 
@@ -95,13 +95,10 @@ docker compose up -d
 # 또는 Jenkins CI/CD 파이프라인 사용
 ```
 
-MySQL 인증 주의
-- 개발용 Compose는 PyMySQL 호환을 위해 `mysql_native_password` 플러그인으로 기동한다. 기본 `caching_sha2_password`로 인한 인증 오류를 회피한다.
-
 볼륨 정리
 ```bash
 # 프로젝트 볼륨만 삭제
-docker volume rm backtest_db_data_dev backtest_redis_data_dev backtest_fe_node_modules backtest_be_fast_venv || true
+docker volume rm backtest_fe_node_modules backtest_be_fast_venv || true
 
 # 불필요 볼륨 정리(주의)
 docker volume prune -f
