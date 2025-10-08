@@ -1,91 +1,56 @@
-import { useState } from 'react';
-import { BacktestRequest } from '../model/api-types';
-import { runBacktest as executeBacktest, ApiError } from '../api/backtestApi';
+import { useState, useCallback, useMemo } from 'react';
+import { BacktestService } from '../services/backtestService';
+import {
+  BacktestRequest,
+  UnifiedBacktestResponse,
+} from '../model/api-types';
 
-export interface UseBacktestReturn {
-  results: any;
-  loading: boolean;
-  error: string | null;
-  errorType: string | null;
-  errorId: string | null;
-  isPortfolio: boolean;
-  runBacktest: (request: BacktestRequest) => Promise<void>;
-  clearResults: () => void;
-  clearError: () => void;
-}
-
-export const useBacktest = (): UseBacktestReturn => {
-  const [results, setResults] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+export function useBacktest() {
+  const [lastRequest, setLastRequest] = useState<BacktestRequest | null>(null);
+  const [result, setResult] = useState<UnifiedBacktestResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [errorType, setErrorType] = useState<string | null>(null);
-  const [errorId, setErrorId] = useState<string | null>(null);
-  const [isPortfolio, setIsPortfolio] = useState(false);
 
-  const runBacktest = async (request: BacktestRequest) => {
-    setLoading(true);
+  const runBacktest = useCallback(async (request: BacktestRequest) => {
+    setLastRequest(request);
+    setIsLoading(true);
     setError(null);
-    setErrorType(null);
-    setErrorId(null);
-    setResults(null);
 
     try {
-      const result = await executeBacktest(request);
-
-      // 통합 API 응답 처리: 서버가 wrapper { backtest_type, data, ... } 형태로 반환할 수 있음
-      let normalized = result as any;
-      if (normalized && typeof normalized === 'object' && 'data' in normalized) {
-        // use inner `data` as the shape expected by result components
-        normalized = normalized.data;
-      }
-
-      // 백테스트 유형은 wrapper 레벨에서 결정되므로 원본 `result`를 참조
-      if (result && typeof result === 'object' && 'backtest_type' in (result as any)) {
-        setIsPortfolio((result as any).backtest_type === 'portfolio');
-        // eslint-disable-next-line no-console
-        console.log(`백테스트 유형: ${(result as any).backtest_type}, 통합 API 사용`);
-      } else {
-        // 레거시 API 응답 처리 (fallback)
-        setIsPortfolio(request.portfolio.length > 1 || request.portfolio.some(stock => stock.asset_type === 'cash'));
-      }
-
-      setResults(normalized);
+      const data = await BacktestService.executeBacktest(request);
+      setResult(data);
+      return data;
     } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
-        const apiError = err as ApiError;
-        setError(apiError.message);
-        setErrorType(apiError.type || 'unknown');
-        setErrorId(apiError.errorId || null);
-      } else {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
-        setError(errorMessage);
-        setErrorType('unknown');
-      }
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(errorMessage);
+      throw err;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  const clearResults = () => {
-    setResults(null);
-    setIsPortfolio(false);
-  };
-
-  const clearError = () => {
+  const reset = useCallback(() => {
+    setResult(null);
     setError(null);
-    setErrorType(null);
-    setErrorId(null);
-  };
+    setIsLoading(false);
+  }, []);
+
+  const isPortfolioBacktest = useMemo(() => {
+    return result?.backtest_type === 'portfolio';
+  }, [result]);
+
+  const isSingleStockBacktest = useMemo(() => {
+    return result?.backtest_type === 'single_stock';
+  }, [result]);
 
   return {
-    results,
-    loading,
+    result,
+    isLoading,
     error,
-    errorType,
-    errorId,
-    isPortfolio,
     runBacktest,
-    clearResults,
-    clearError,
+    reset,
+    lastRequest,
+    isPortfolioBacktest,
+    isSingleStockBacktest,
   };
-};
+}

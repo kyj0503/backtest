@@ -7,7 +7,7 @@ from ....models.requests import BacktestRequest, UnifiedBacktestRequest
 from ....models.responses import BacktestResult, ErrorResponse, ChartDataResponse
 from ....models.schemas import PortfolioBacktestRequest, PortfolioStock
 from ....services.backtest_service import backtest_service
-from ....services.portfolio_service import PortfolioBacktestService
+from ....services.portfolio_service import PortfolioService
 from ....services.yfinance_db import load_ticker_data
 from ....core.custom_exceptions import (
     DataNotFoundError, 
@@ -26,7 +26,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-portfolio_service = PortfolioBacktestService()
+portfolio_service = PortfolioService()
 
 
 @router.get(
