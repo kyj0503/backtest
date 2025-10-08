@@ -1,6 +1,6 @@
 {
   "name": "backtesting-frontend",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "Professional backtesting dashboard built with React, TypeScript, Tailwind CSS, and Recharts for visualizing trading strategy performance",
   "private": true,
   "type": "module",
