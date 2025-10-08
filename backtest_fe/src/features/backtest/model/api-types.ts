@@ -158,6 +158,8 @@ export interface PortfolioBacktestResponse {
   start_date: string;
   end_date: string;
   strategy: string;
+  sp500_benchmark?: Array<{ date: string; close: number; volume: number }>;
+  nasdaq_benchmark?: Array<{ date: string; close: number; volume: number }>;
 }
 
 // 전략 관련 타입

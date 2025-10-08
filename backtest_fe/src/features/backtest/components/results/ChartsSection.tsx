@@ -1,4 +1,4 @@
-import React, { Suspense, memo, useMemo } from 'react';
+import React, { Suspense, memo, useMemo, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -16,13 +16,15 @@ import {
   LazyTradesChart,
   LazyStatsSummary,
   LazyStockPriceChart,
+  LazyExchangeRateChart,
+  LazyStockVolatilityNews,
 } from '../lazy/LazyChartComponents';
 import ChartLoading from '@/shared/components/ChartLoading';
 import { useStockData } from '../../hooks/useStockData';
-import EnhancedChartsSection from './EnhancedChartsSection';
 import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint } from '../../model/backtest-result-types';
 import { FormLegend } from '@/shared/components';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Grid3X3, Grid } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
 
 interface ChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -48,6 +50,8 @@ const ResultBlock: React.FC<{
 );
 
 const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio }) => {
+  // 차트 레이아웃 모드 상태 (true: 2열, false: 1열)
+  const [isCompactView, setIsCompactView] = useState(true);
   const portfolioData = useMemo<PortfolioData | null>(
     () => (isPortfolio && 'portfolio_composition' in data ? (data as PortfolioData) : null),
     [data, isPortfolio],
@@ -133,6 +137,56 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     }
     return chartData?.summary_stats ?? {};
   }, [portfolioData, chartData?.summary_stats]);
+
+  // 벤치마크 데이터
+  const sp500Benchmark = useMemo<any[]>(() => {
+    const chartBenchmark = (data as ChartData).sp500_benchmark;
+    const portfolioBenchmark = (data as PortfolioData).sp500_benchmark;
+    const result = chartBenchmark ?? portfolioBenchmark ?? [];
+    console.log('S&P 500 Benchmark data:', result.length, 'items');
+    return result;
+  }, [data]);
+
+  const nasdaqBenchmark = useMemo<any[]>(() => {
+    const chartBenchmark = (data as ChartData).nasdaq_benchmark;
+    const portfolioBenchmark = (data as PortfolioData).nasdaq_benchmark;
+    const result = chartBenchmark ?? portfolioBenchmark ?? [];
+    console.log('NASDAQ Benchmark data:', result.length, 'items');
+    return result;
+  }, [data]);
+
+  const formatDateTick = (value: string) => {
+    const date = new Date(value);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
+
+  const withBenchmarkReturn = (points: any[]) =>
+    points?.map((point, index) => {
+      if (index === 0) {
+        return { ...point, return_pct: 0 };
+      }
+      const prev = points[index - 1];
+      const returnPct = ((point.close - prev.close) / prev.close) * 100;
+      return { ...point, return_pct: returnPct };
+    }) ?? [];
+
+  // 날짜 정보
+  const startDate = portfolioData
+    ? portfolioData.portfolio_statistics.Start
+    : chartData?.start_date ?? '';
+  const endDate = portfolioData
+    ? portfolioData.portfolio_statistics.End
+    : chartData?.end_date ?? '';
+
+  // 심볼 정보
+  const newsSymbols = useMemo(() => {
+    if (portfolioData) {
+      return Array.from(
+        new Set(portfolioData.portfolio_composition.map(item => item.symbol.replace(/_\d+$/, ''))),
+      );
+    }
+    return chartData?.ticker ? [chartData.ticker] : [];
+  }, [portfolioData, chartData?.ticker]);
 
   const renderPortfolioCharts = (): React.ReactNode[] | null => {
     if (!portfolioData) return null;
@@ -246,7 +300,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         </ResultBlock>
       ),
       (
-        <ResultBlock title="누적 수익률" description="전략의 누적 수익률을 확인하세요" key="single-equity">
+        <ResultBlock title="수익률 & 드로우다운 차트" description="전략의 누적 수익률과 드로우다운을 확인하세요" key="single-equity">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyEquityChart data={singleEquityData as any} />
           </Suspense>
@@ -278,7 +332,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       cards.push(
         <ResultBlock title="거래 내역" description="전략이 실행한 체결 신호" key="single-trades">
           <Suspense fallback={<ChartLoading height={360} />}>
-            <LazyTradesChart trades={singleTrades as any} />
+            <LazyTradesChart trades={singleTrades as any} showCard={false} />
           </Suspense>
         </ResultBlock>,
       );
@@ -287,23 +341,161 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     return cards;
   };
 
-  const chartCards = portfolioData ? renderPortfolioCharts() : renderSingleStockCharts();
+  // 모든 차트를 하나의 배열로 통합
+  const renderAllCharts = (): React.ReactNode[] => {
+    const allCharts: React.ReactNode[] = [];
+    
+    // 1. 기본 차트 추가 (OHLC, 누적 수익률, 개별 주가, 거래 내역)
+    const baseCharts = portfolioData ? renderPortfolioCharts() : renderSingleStockCharts();
+    if (baseCharts) {
+      allCharts.push(...baseCharts);
+    }
+
+    // 2. 벤치마크 차트
+    if (sp500Benchmark.length > 0) {
+      allCharts.push(
+        <ResultBlock
+          title="S&P 500 벤치마크"
+          description="지수 수준과 일일 수익률을 함께 확인하세요"
+          actions={<FormLegend items={[{ label: '좌측: 지수 · 우측: 일일 수익률', tone: 'muted' }]} />}
+          key="sp500"
+        >
+          <ResponsiveContainer width="100%" height={320}>
+            <LineChart data={withBenchmarkReturn(sp500Benchmark)}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tickFormatter={formatDateTick} />
+              <YAxis yAxisId="left" orientation="left" />
+              <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip
+                formatter={(value: number, name: string) => {
+                  if (name === 'close') return [value.toFixed(2), '지수'];
+                  if (name === 'return_pct') return [`${value.toFixed(2)}%`, '일일 수익률'];
+                  return [value, name];
+                }}
+                labelFormatter={(label: string) => `날짜: ${label}`}
+              />
+              <Area yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" fillOpacity={0.15} fill="#3b82f6" />
+              <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ResultBlock>
+      );
+    }
+
+    if (nasdaqBenchmark.length > 0) {
+      allCharts.push(
+        <ResultBlock
+          title="NASDAQ 벤치마크"
+          description="지수 수준과 일일 수익률을 함께 확인하세요"
+          actions={<FormLegend items={[{ label: '좌측: 지수 · 우측: 일일 수익률', tone: 'muted' }]} />}
+          key="nasdaq"
+        >
+          <ResponsiveContainer width="100%" height={320}>
+            <LineChart data={withBenchmarkReturn(nasdaqBenchmark)}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tickFormatter={formatDateTick} />
+              <YAxis yAxisId="left" orientation="left" />
+              <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip
+                formatter={(value: number, name: string) => {
+                  if (name === 'close') return [value.toFixed(2), '지수'];
+                  if (name === 'return_pct') return [`${value.toFixed(2)}%`, '일일 수익률'];
+                  return [value, name];
+                }}
+                labelFormatter={(label: string) => `날짜: ${label}`}
+              />
+              <Area yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" fillOpacity={0.15} fill="#3b82f6" />
+              <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ResultBlock>
+      );
+    }
+
+    // 3. 환율 차트
+    if (startDate && endDate) {
+      allCharts.push(
+        <ResultBlock
+          title="환율 추이"
+          description="동일 기간의 원/달러 환율 변동"
+          key="exchange-rate"
+        >
+          <Suspense fallback={<ChartLoading height={260} />}>
+            <LazyExchangeRateChart startDate={startDate} endDate={endDate} showCard={false} />
+          </Suspense>
+        </ResultBlock>
+      );
+    }
+
+    return allCharts;
+  };
+
+  const allChartCards = renderAllCharts();
+
+  // 뉴스 섹션 (별도 렌더링, 전체 너비)
+  const renderNewsSection = () => {
+    if (!startDate || !endDate || newsSymbols.length === 0) return null;
+
+    return (
+      <ResultBlock
+        title="주가 급등락 뉴스"
+        description="백테스트 기간 중 주요 뉴스 흐름"
+        actions={<FormLegend items={[{ label: newsSymbols.join(' · '), tone: 'muted' }]} />}
+        key="news"
+      >
+        <Suspense fallback={<ChartLoading height={260} />}>
+          <LazyStockVolatilityNews symbols={newsSymbols} startDate={startDate} endDate={endDate} />
+        </Suspense>
+      </ResultBlock>
+    );
+  };
 
   return (
     <div className="space-y-6">
+      {/* 1. 성과 지표 */}
       <Suspense fallback={<ChartLoading height={260} />}>
         <LazyStatsSummary stats={statsPayload} />
       </Suspense>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        {chartCards?.map((card, index) => (
+      {/* 2. 분석 차트 */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-foreground">분석 차트</h3>
+          <p className="text-sm text-muted-foreground">
+            백테스트 결과를 다양한 차트로 분석하세요
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsCompactView(!isCompactView)}
+          className="flex items-center gap-2"
+        >
+          {isCompactView ? (
+            <>
+              <Grid className="w-4 h-4" />
+              넓게 보기
+            </>
+          ) : (
+            <>
+              <Grid3X3 className="w-4 h-4" />
+              컴팩트 보기
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* 모든 분석 차트 (OHLC, 수익률, 주가, 거래내역, 벤치마크, 환율) */}
+      <div className={`grid gap-6 ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+        {allChartCards.map((card, index) => (
           <div key={index} className="flex flex-col">
             {card}
           </div>
         ))}
       </div>
 
-      <EnhancedChartsSection data={data} isPortfolio={isPortfolio} />
+      {/* 3. 뉴스 섹션 (전체 너비) */}
+      {renderNewsSection()}
     </div>
   );
 });

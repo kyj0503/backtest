@@ -13,9 +13,10 @@ interface Trade {
 
 interface TradesChartProps {
   trades: Trade[];
+  showCard?: boolean;
 }
 
-const TradesChart: React.FC<TradesChartProps> = memo(({ trades }) => {
+const TradesChart: React.FC<TradesChartProps> = memo(({ trades, showCard = true }) => {
   // 출구 거래 필터링 및 메모이제이션
   const exitTrades = useMemo(() => {
     if (!trades || !Array.isArray(trades)) return [];
@@ -59,62 +60,73 @@ const TradesChart: React.FC<TradesChartProps> = memo(({ trades }) => {
 
   // 빈 데이터 처리
   if (exitTrades.length === 0) {
+    const emptyContent = (
+      <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+        <TrendingUp className="h-8 w-8 mb-2 opacity-50" />
+        <p>표시할 거래 데이터가 없습니다.</p>
+      </div>
+    );
+    return showCard ? (
+      <Card>
+        <CardHeader>
+          <CardTitle>거래 수익률 분포</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {emptyContent}
+        </CardContent>
+      </Card>
+    ) : emptyContent;
+  }
+
+  const chartContent = (
+    <ResponsiveContainer width="100%" height={250}>
+      <ScatterChart data={exitTrades} margin={chartConfig.margin}>
+        <CartesianGrid 
+          strokeDasharray="3 3" 
+          opacity={chartConfig.opacity.grid} 
+        />
+        <XAxis 
+          dataKey="date" 
+          tick={{ fontSize: 12 }} 
+        />
+        <YAxis 
+          dataKey="pnl_pct" 
+          tick={{ fontSize: 12 }}
+          label={{ 
+            value: 'P&L (%)', 
+            angle: -90, 
+            position: 'insideLeft' 
+          }}
+        />
+        <Scatter 
+          dataKey="pnl_pct" 
+          fill={chartConfig.colors.default}
+        >
+          {renderCells()}
+        </Scatter>
+        <ReferenceLine 
+          y={0} 
+          stroke={chartConfig.colors.reference} 
+          strokeDasharray="2 2" 
+        />
+      </ScatterChart>
+    </ResponsiveContainer>
+  );
+
+  if (showCard) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>거래 수익률 분포</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-            <TrendingUp className="h-8 w-8 mb-2 opacity-50" />
-            <p>표시할 거래 데이터가 없습니다.</p>
-          </div>
+          {chartContent}
         </CardContent>
       </Card>
     );
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>거래 수익률 분포</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={250}>
-          <ScatterChart data={exitTrades} margin={chartConfig.margin}>
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              opacity={chartConfig.opacity.grid} 
-            />
-            <XAxis 
-              dataKey="date" 
-              tick={{ fontSize: 12 }} 
-            />
-            <YAxis 
-              dataKey="pnl_pct" 
-              tick={{ fontSize: 12 }}
-              label={{ 
-                value: 'P&L (%)', 
-                angle: -90, 
-                position: 'insideLeft' 
-              }}
-            />
-            <Scatter 
-              dataKey="pnl_pct" 
-              fill={chartConfig.colors.default}
-            >
-              {renderCells()}
-            </Scatter>
-            <ReferenceLine 
-              y={0} 
-              stroke={chartConfig.colors.reference} 
-              strokeDasharray="2 2" 
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
+  return chartContent;
 });
 
 TradesChart.displayName = 'TradesChart';
