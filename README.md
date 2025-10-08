@@ -1,6 +1,6 @@
 개발 스택 가이드
 
-개발/운영 모두 Docker Compose로 FastAPI, 프론트엔드, MySQL, Redis, Spring Boot를 함께 실행할 수 있다.
+개발/운영 모두 Docker Compose로 FastAPI, 프론트엔드, MySQL, Redis를 함께 실행할 수 있다.
 
 실행
 ```bash

@@ -29,25 +29,6 @@ services:
       retries: 3
       start_period: 40s
 
-  backtest_be_spring:
-    image: ghcr.io/capstone-backtest/backtest/backtest-be-spring:latest
-    container_name: backtest_be_spring_prod
-    restart: unless-stopped
-    network_mode: host
-    env_file:
-      - .env
-    environment:
-      # 호스트의 MySQL과 Redis 사용
-      - SPRING_DATASOURCE_HOST=localhost
-      - SPRING_DATASOURCE_PORT=3306
-      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-root}
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - SPRING_REDIS_HOST=localhost
-      - SPRING_REDIS_PORT=6379
-      - SPRING_REDIS_PASSWORD=${REDIS_PASSWORD}
-      - SPRING_PROFILES_ACTIVE=prod
-      - SERVER_PORT=8080
-
   backtest_fe:
     image: ghcr.io/capstone-backtest/backtest/backtest-fe:latest
     container_name: backtest_fe_prod
@@ -58,5 +39,3 @@ services:
     depends_on:
       backtest_be_fast:
         condition: service_healthy
-      backtest_be_spring:
-        condition: service_started
