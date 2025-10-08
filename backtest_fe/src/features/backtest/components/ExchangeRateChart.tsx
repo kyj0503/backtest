@@ -98,6 +98,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
             }}
           />
           <YAxis 
+            domain={[minRate - 50, maxRate + 50]}
             tick={{ fontSize: 12 }}
             tickFormatter={(value: number) => `₩${value.toFixed(0)}`}
           />
