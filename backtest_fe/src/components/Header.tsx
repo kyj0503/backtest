@@ -1,7 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, Moon, Sun, Palette } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { useTheme } from '@/shared/hooks/useTheme';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/shared/ui/dropdown-menu';
 
 const navigationItems = [
   { href: '/', label: '홈' },
@@ -9,6 +18,9 @@ const navigationItems = [
 ];
 
 const Header: React.FC = () => {
+  const { currentTheme, isDarkMode, changeTheme, toggleDarkMode, getAvailableThemes } = useTheme();
+  const availableThemes = getAvailableThemes();
+
   return (
     <header className="sticky top-0 z-50 bg-background/90 backdrop-blur border-b border-border/80">
       <div className="mx-auto flex h-20 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -31,6 +43,39 @@ const Header: React.FC = () => {
             </Button>
           ))}
         </nav>
+
+        <div className="flex items-center gap-3">
+          {/* Theme Selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="rounded-full px-4 py-3">
+                <Palette className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>테마 선택</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableThemes.map((theme) => (
+                <DropdownMenuItem
+                  key={theme.id}
+                  onClick={() => changeTheme(theme.id)}
+                  className={currentTheme === theme.id ? 'bg-accent' : ''}
+                >
+                  {theme.displayName}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Dark Mode Toggle */}
+          <Button
+            variant="ghost"
+            className="rounded-full px-4 py-3"
+            onClick={toggleDarkMode}
+          >
+            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
     </header>
   );
