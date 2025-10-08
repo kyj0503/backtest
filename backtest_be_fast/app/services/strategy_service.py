@@ -3,7 +3,7 @@
 """
 from typing import Dict, Any, Type
 from backtesting import Strategy
-from ..strategies.implementations import (
+from ..strategies import (
     SMAStrategy,
     RSIStrategy,
     BollingerBandsStrategy,
