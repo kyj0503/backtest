@@ -805,6 +805,52 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
             
             result = await portfolio_service.run_portfolio_backtest(portfolio_request)
             
+            # 추가 데이터 수집 (환율, 벤치마크 등)
+            additional_data = {}
+            try:
+                # 환율 데이터
+                exchange_data = load_ticker_data("KRW=X", str(request.start_date), str(request.end_date))
+                if exchange_data is not None and not exchange_data.empty:
+                    exchange_rate_data = []
+                    for date_idx, row in exchange_data.iterrows():
+                        exchange_rate_data.append({
+                            "date": date_idx.strftime('%Y-%m-%d'),
+                            "rate": float(row['Close'])
+                        })
+                    additional_data["exchange_rate"] = exchange_rate_data
+                
+                # S&P 500 벤치마크 데이터
+                sp500_data = load_ticker_data("^GSPC", str(request.start_date), str(request.end_date))
+                if sp500_data is not None and not sp500_data.empty:
+                    benchmark_data = []
+                    for date_idx, row in sp500_data.iterrows():
+                        benchmark_data.append({
+                            "date": date_idx.strftime('%Y-%m-%d'),
+                            "close": float(row['Close']),
+                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                        })
+                    additional_data["sp500_benchmark"] = benchmark_data
+                
+                # 나스닥 벤치마크 데이터
+                nasdaq_data = load_ticker_data("^IXIC", str(request.start_date), str(request.end_date))
+                if nasdaq_data is not None and not nasdaq_data.empty:
+                    nasdaq_benchmark = []
+                    for date_idx, row in nasdaq_data.iterrows():
+                        nasdaq_benchmark.append({
+                            "date": date_idx.strftime('%Y-%m-%d'),
+                            "close": float(row['Close']),
+                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                        })
+                    additional_data["nasdaq_benchmark"] = nasdaq_benchmark
+                
+            except Exception as e:
+                logger.warning(f"추가 데이터 수집 실패: {str(e)}")
+                # 추가 데이터 수집 실패가 전체 백테스트를 실패시키지 않도록
+            
+            # 추가 데이터를 결과에 병합
+            if "data" in result:
+                result["data"].update(additional_data)
+            
             # 응답을 표준화된 형식으로 변환
             return {
                 "status": "success",
