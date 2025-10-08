@@ -1,46 +1,6 @@
 name: backtest-dev
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: bt_mysql_dev
-    restart: unless-stopped
-    command: ["--default-authentication-plugin=mysql_native_password"]
-    networks:
-      - backtest-net
-    env_file:
-      - .env
-    volumes:
-      - ./database:/docker-entrypoint-initdb.d:ro
-      - backtest_db_data_dev:/var/lib/mysql
-    ports:
-      - "3307:3306"
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" >/dev/null 2>&1"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-      start_period: 10s
-
-  redis:
-    image: redis:7-alpine
-    container_name: bt_redis_dev
-    ports:
-      - "6380:6379"
-    env_file:
-      - .env
-    command: sh -c 'redis-server --requirepass "$$REDIS_PASSWORD"'
-    volumes:
-      - backtest_redis_data_dev:/data
-    networks:
-      - backtest-net
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-      start_period: 10s
-
   backtest-be-fast:
     build:
       context: ./backtest_be_fast
@@ -51,9 +11,6 @@ services:
       - backtest-net
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    depends_on:
-      mysql:
-        condition: service_healthy
     ports:
       - "8000:8000"
     env_file:
@@ -88,8 +45,6 @@ services:
     command: ["npm", "run", "dev"]
 
 volumes:
-  backtest_db_data_dev:
-  backtest_redis_data_dev:
   backtest_fe_node_modules:
   backtest_be_fast_venv:
 
