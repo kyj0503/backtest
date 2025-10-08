@@ -1,4 +1,4 @@
-import React, { Suspense, memo, useMemo } from 'react';
+import React, { Suspense, memo, useMemo, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -22,7 +22,8 @@ import { useStockData } from '../../hooks/useStockData';
 import EnhancedChartsSection from './EnhancedChartsSection';
 import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint } from '../../model/backtest-result-types';
 import { FormLegend } from '@/shared/components';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Grid3X3, Grid } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
 
 interface ChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -48,6 +49,8 @@ const ResultBlock: React.FC<{
 );
 
 const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio }) => {
+  // 차트 레이아웃 모드 상태 (true: 2열, false: 1열)
+  const [isCompactView, setIsCompactView] = useState(true);
   const portfolioData = useMemo<PortfolioData | null>(
     () => (isPortfolio && 'portfolio_composition' in data ? (data as PortfolioData) : null),
     [data, isPortfolio],
@@ -295,7 +298,35 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         <LazyStatsSummary stats={statsPayload} />
       </Suspense>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      {/* 차트 레이아웃 토글 버튼 */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-foreground">차트 분석</h3>
+          <p className="text-sm text-muted-foreground">
+            백테스트 결과를 다양한 차트로 분석하세요
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsCompactView(!isCompactView)}
+          className="flex items-center gap-2"
+        >
+          {isCompactView ? (
+            <>
+              <Grid className="w-4 h-4" />
+              넓게 보기
+            </>
+          ) : (
+            <>
+              <Grid3X3 className="w-4 h-4" />
+              컴팩트 보기
+            </>
+          )}
+        </Button>
+      </div>
+
+      <div className={`grid gap-6 ${isCompactView ? 'xl:grid-cols-2' : 'xl:grid-cols-1'}`}>
         {chartCards?.map((card, index) => (
           <div key={index} className="flex flex-col">
             {card}
