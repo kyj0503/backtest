@@ -139,15 +139,21 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
   }, [portfolioData, chartData?.summary_stats]);
 
   // 벤치마크 데이터
-  const sp500Benchmark = useMemo<any[]>(
-    () => (data as ChartData).sp500_benchmark ?? (data as PortfolioData).sp500_benchmark ?? [],
-    [data],
-  );
+  const sp500Benchmark = useMemo<any[]>(() => {
+    const chartBenchmark = (data as ChartData).sp500_benchmark;
+    const portfolioBenchmark = (data as PortfolioData).sp500_benchmark;
+    const result = chartBenchmark ?? portfolioBenchmark ?? [];
+    console.log('S&P 500 Benchmark data:', result.length, 'items');
+    return result;
+  }, [data]);
 
-  const nasdaqBenchmark = useMemo<any[]>(
-    () => (data as ChartData).nasdaq_benchmark ?? (data as PortfolioData).nasdaq_benchmark ?? [],
-    [data],
-  );
+  const nasdaqBenchmark = useMemo<any[]>(() => {
+    const chartBenchmark = (data as ChartData).nasdaq_benchmark;
+    const portfolioBenchmark = (data as PortfolioData).nasdaq_benchmark;
+    const result = chartBenchmark ?? portfolioBenchmark ?? [];
+    console.log('NASDAQ Benchmark data:', result.length, 'items');
+    return result;
+  }, [data]);
 
   const formatDateTick = (value: string) => {
     const date = new Date(value);
