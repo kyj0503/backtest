@@ -3,7 +3,6 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import ResultsHeader from './results/ResultsHeader';
 import ChartsSection from './results/ChartsSection';
-import AdditionalFeatures from './results/AdditionalFeatures';
 import { BacktestResultsProps } from '../model/backtest-result-types';
 import { AlertCircle, FileImage, FileText } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -123,7 +122,6 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
 
       <section className="space-y-8 rounded-[32px] border border-border/40 bg-card/30 p-8 shadow-sm">
         <ChartsSection data={data} isPortfolio={isPortfolio} />
-        <AdditionalFeatures data={data} isPortfolio={isPortfolio} />
       </section>
     </div>
   );

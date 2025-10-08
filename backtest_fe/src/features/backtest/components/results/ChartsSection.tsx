@@ -16,6 +16,8 @@ import {
   LazyTradesChart,
   LazyStatsSummary,
   LazyStockPriceChart,
+  LazyExchangeRateChart,
+  LazyStockVolatilityNews,
 } from '../lazy/LazyChartComponents';
 import ChartLoading from '@/shared/components/ChartLoading';
 import { useStockData } from '../../hooks/useStockData';
@@ -135,6 +137,50 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     }
     return chartData?.summary_stats ?? {};
   }, [portfolioData, chartData?.summary_stats]);
+
+  // 벤치마크 데이터
+  const sp500Benchmark = useMemo<any[]>(
+    () => (data as ChartData).sp500_benchmark ?? (data as PortfolioData).sp500_benchmark ?? [],
+    [data],
+  );
+
+  const nasdaqBenchmark = useMemo<any[]>(
+    () => (data as ChartData).nasdaq_benchmark ?? (data as PortfolioData).nasdaq_benchmark ?? [],
+    [data],
+  );
+
+  const formatDateTick = (value: string) => {
+    const date = new Date(value);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
+
+  const withBenchmarkReturn = (points: any[]) =>
+    points?.map((point, index) => {
+      if (index === 0) {
+        return { ...point, return_pct: 0 };
+      }
+      const prev = points[index - 1];
+      const returnPct = ((point.close - prev.close) / prev.close) * 100;
+      return { ...point, return_pct: returnPct };
+    }) ?? [];
+
+  // 날짜 정보
+  const startDate = portfolioData
+    ? portfolioData.portfolio_statistics.Start
+    : chartData?.start_date ?? '';
+  const endDate = portfolioData
+    ? portfolioData.portfolio_statistics.End
+    : chartData?.end_date ?? '';
+
+  // 심볼 정보
+  const newsSymbols = useMemo(() => {
+    if (portfolioData) {
+      return Array.from(
+        new Set(portfolioData.portfolio_composition.map(item => item.symbol.replace(/_\d+$/, ''))),
+      );
+    }
+    return chartData?.ticker ? [chartData.ticker] : [];
+  }, [portfolioData, chartData?.ticker]);
 
   const renderPortfolioCharts = (): React.ReactNode[] | null => {
     if (!portfolioData) return null;
@@ -289,73 +335,17 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     return cards;
   };
 
-  // Enhanced 차트 데이터 추출
-  const exchangeRates = useMemo<any[]>(
-    () => (data as ChartData).exchange_rates ?? (data as PortfolioData).exchange_rates ?? [],
-    [data],
-  );
-
-  const sp500Benchmark = useMemo<any[]>(
-    () => (data as ChartData).sp500_benchmark ?? (data as PortfolioData).sp500_benchmark ?? [],
-    [data],
-  );
-
-  const nasdaqBenchmark = useMemo<any[]>(
-    () => (data as ChartData).nasdaq_benchmark ?? (data as PortfolioData).nasdaq_benchmark ?? [],
-    [data],
-  );
-
-  const formatDateTick = (value: string) => {
-    const date = new Date(value);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-  };
-
-  const withBenchmarkReturn = (points: any[]) =>
-    points?.map((point, index) => {
-      if (index === 0) {
-        return { ...point, return_pct: 0 };
-      }
-      const prev = points[index - 1];
-      const returnPct = ((point.close - prev.close) / prev.close) * 100;
-      return { ...point, return_pct: returnPct };
-    }) ?? [];
-
   // 모든 차트를 하나의 배열로 통합
   const renderAllCharts = (): React.ReactNode[] => {
     const allCharts: React.ReactNode[] = [];
     
-    // 기본 차트 추가
+    // 1. 기본 차트 추가 (OHLC, 누적 수익률, 개별 주가, 거래 내역)
     const baseCharts = portfolioData ? renderPortfolioCharts() : renderSingleStockCharts();
     if (baseCharts) {
       allCharts.push(...baseCharts);
     }
 
-    // 환율 차트
-    if (exchangeRates.length > 0) {
-      allCharts.push(
-        <ResultBlock
-          title="환율 추이"
-          description="백테스트 기간 동안의 원/달러 변동"
-          actions={<FormLegend items={[{ label: `${exchangeRates.length}포인트`, tone: 'muted' }]} />}
-          key="exchange-rate"
-        >
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={exchangeRates}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tickFormatter={formatDateTick} />
-              <YAxis tickFormatter={(value: number) => `₩${value.toFixed(0)}`} />
-              <Tooltip
-                formatter={(value: number) => [`₩${value.toFixed(2)}`, '환율']}
-                labelFormatter={(label: string) => `날짜: ${label}`}
-              />
-              <Line type="monotone" dataKey="rate" stroke="#f97316" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ResultBlock>
-      );
-    }
-
-    // S&P 500 벤치마크
+    // 2. 벤치마크 차트
     if (sp500Benchmark.length > 0) {
       allCharts.push(
         <ResultBlock
@@ -386,7 +376,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       );
     }
 
-    // NASDAQ 벤치마크
     if (nasdaqBenchmark.length > 0) {
       allCharts.push(
         <ResultBlock
@@ -417,44 +406,17 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       );
     }
 
-    // 매매 신호 차트 (단일 종목 백테스트에서만)
-    if (!isPortfolio && singleTrades.length > 0 && singleOhlcData.length > 0) {
-      const dataWithSignals = singleOhlcData.map(item => {
-        const buySignal = singleTrades.find(trade => trade.date === item.date && trade.type === 'entry');
-        const sellSignal = singleTrades.find(trade => trade.date === item.date && trade.type === 'exit');
-        return {
-          ...item,
-          buySignal: buySignal ? buySignal.price : undefined,
-          sellSignal: sellSignal ? sellSignal.price : undefined,
-        };
-      });
-
+    // 3. 환율 차트
+    if (startDate && endDate) {
       allCharts.push(
         <ResultBlock
-          title="매매 신호"
-          description="전략이 실행한 매수/매도 시점을 확인하세요"
-          actions={<FormLegend items={[{ label: `${singleTrades.length}개 거래`, tone: 'accent' }]} />}
-          key="trade-signals"
+          title="환율 추이"
+          description="동일 기간의 원/달러 환율 변동"
+          key="exchange-rate"
         >
-          <ResponsiveContainer width="100%" height={360}>
-            <LineChart data={dataWithSignals}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tickFormatter={formatDateTick} />
-              <YAxis />
-              <Tooltip
-                formatter={(value: number, name: string) => {
-                  if (name === 'close') return [`$${value.toFixed(2)}`, '종가'];
-                  if (name === 'buySignal') return [`$${value?.toFixed(2)}`, '매수 신호'];
-                  if (name === 'sellSignal') return [`$${value?.toFixed(2)}`, '매도 신호'];
-                  return [value, name];
-                }}
-                labelFormatter={(label: string) => `날짜: ${label}`}
-              />
-              <Line type="monotone" dataKey="close" stroke="#6b7280" strokeWidth={1.5} dot={false} />
-              <Line type="monotone" dataKey="buySignal" stroke="#10b981" strokeWidth={0} dot={{ r: 5, fill: '#10b981' }} />
-              <Line type="monotone" dataKey="sellSignal" stroke="#ef4444" strokeWidth={0} dot={{ r: 5, fill: '#ef4444' }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <Suspense fallback={<ChartLoading height={260} />}>
+            <LazyExchangeRateChart startDate={startDate} endDate={endDate} />
+          </Suspense>
         </ResultBlock>
       );
     }
@@ -464,16 +426,35 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
   const allChartCards = renderAllCharts();
 
+  // 뉴스 섹션 (별도 렌더링, 전체 너비)
+  const renderNewsSection = () => {
+    if (!startDate || !endDate || newsSymbols.length === 0) return null;
+
+    return (
+      <ResultBlock
+        title="주가 급등락 뉴스"
+        description="백테스트 기간 중 주요 뉴스 흐름"
+        actions={<FormLegend items={[{ label: newsSymbols.join(' · '), tone: 'muted' }]} />}
+        key="news"
+      >
+        <Suspense fallback={<ChartLoading height={260} />}>
+          <LazyStockVolatilityNews symbols={newsSymbols} startDate={startDate} endDate={endDate} />
+        </Suspense>
+      </ResultBlock>
+    );
+  };
+
   return (
     <div className="space-y-6">
+      {/* 1. 성과 지표 */}
       <Suspense fallback={<ChartLoading height={260} />}>
         <LazyStatsSummary stats={statsPayload} />
       </Suspense>
 
-      {/* 차트 레이아웃 토글 버튼 */}
+      {/* 2. 분석 차트 */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold text-foreground">차트 분석</h3>
+          <h3 className="text-lg font-semibold text-foreground">분석 차트</h3>
           <p className="text-sm text-muted-foreground">
             백테스트 결과를 다양한 차트로 분석하세요
           </p>
@@ -498,7 +479,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         </Button>
       </div>
 
-      {/* 모든 차트를 동일하게 처리 */}
+      {/* 모든 분석 차트 (OHLC, 수익률, 주가, 거래내역, 벤치마크, 환율) */}
       <div className={`grid gap-6 ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
         {allChartCards.map((card, index) => (
           <div key={index} className="flex flex-col">
@@ -506,6 +487,9 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           </div>
         ))}
       </div>
+
+      {/* 3. 뉴스 섹션 (전체 너비) */}
+      {renderNewsSection()}
     </div>
   );
 });
