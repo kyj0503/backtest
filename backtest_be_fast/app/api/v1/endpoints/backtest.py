@@ -662,6 +662,49 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
         # 현금 자산 여부 확인
         has_cash_asset = any(asset.asset_type == 'cash' for asset in request.portfolio)
         
+        # 추가 데이터 수집 (환율, 벤치마크) - 백테스트 실행 전에 공통으로 수집
+        additional_data = {}
+        try:
+            # 원달러 환율 데이터
+            exchange_data = load_ticker_data("KRW=X", str(request.start_date), str(request.end_date))
+            if exchange_data is not None and not exchange_data.empty:
+                exchange_rates = []
+                for date_idx, row in exchange_data.iterrows():
+                    exchange_rates.append({
+                        "date": date_idx.strftime('%Y-%m-%d'),
+                        "rate": float(row['Close']),
+                        "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                    })
+                additional_data["exchange_rates"] = exchange_rates
+            
+            # S&P 500 벤치마크 데이터
+            sp500_data = load_ticker_data("^GSPC", str(request.start_date), str(request.end_date))
+            if sp500_data is not None and not sp500_data.empty:
+                benchmark_data = []
+                for date_idx, row in sp500_data.iterrows():
+                    benchmark_data.append({
+                        "date": date_idx.strftime('%Y-%m-%d'),
+                        "close": float(row['Close']),
+                        "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                    })
+                additional_data["sp500_benchmark"] = benchmark_data
+            
+            # 나스닥 벤치마크 데이터
+            nasdaq_data = load_ticker_data("^IXIC", str(request.start_date), str(request.end_date))
+            if nasdaq_data is not None and not nasdaq_data.empty:
+                nasdaq_benchmark = []
+                for date_idx, row in nasdaq_data.iterrows():
+                    nasdaq_benchmark.append({
+                        "date": date_idx.strftime('%Y-%m-%d'),
+                        "close": float(row['Close']),
+                        "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                    })
+                additional_data["nasdaq_benchmark"] = nasdaq_benchmark
+            
+        except Exception as e:
+            logger.warning(f"추가 데이터 수집 실패: {str(e)}")
+            # 추가 데이터 수집 실패가 전체 백테스트를 실패시키지 않도록
+        
         # 단일 종목 vs 포트폴리오 판별
         if len(request.portfolio) == 1 and not has_cash_asset:
             # 단일 종목 백테스트 실행
@@ -681,50 +724,6 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
             
             # 차트 데이터 생성 (상세 정보 포함)
             chart_data = await backtest_service.generate_chart_data(single_request, result)
-            
-            # 추가 데이터 수집 (환율, 벤치마크)
-            additional_data = {}
-            
-            try:
-                # 원달러 환율 데이터
-                exchange_data = load_ticker_data("KRW=X", str(request.start_date), str(request.end_date))
-                if exchange_data is not None and not exchange_data.empty:
-                    exchange_rates = []
-                    for date_idx, row in exchange_data.iterrows():
-                        exchange_rates.append({
-                            "date": date_idx.strftime('%Y-%m-%d'),
-                            "rate": float(row['Close']),
-                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
-                        })
-                    additional_data["exchange_rates"] = exchange_rates
-                
-                # S&P 500 벤치마크 데이터
-                sp500_data = load_ticker_data("^GSPC", str(request.start_date), str(request.end_date))
-                if sp500_data is not None and not sp500_data.empty:
-                    benchmark_data = []
-                    for date_idx, row in sp500_data.iterrows():
-                        benchmark_data.append({
-                            "date": date_idx.strftime('%Y-%m-%d'),
-                            "close": float(row['Close']),
-                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
-                        })
-                    additional_data["sp500_benchmark"] = benchmark_data
-                
-                # 나스닥 벤치마크 데이터
-                nasdaq_data = load_ticker_data("^IXIC", str(request.start_date), str(request.end_date))
-                if nasdaq_data is not None and not nasdaq_data.empty:
-                    nasdaq_benchmark = []
-                    for date_idx, row in nasdaq_data.iterrows():
-                        nasdaq_benchmark.append({
-                            "date": date_idx.strftime('%Y-%m-%d'),
-                            "close": float(row['Close']),
-                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
-                        })
-                    additional_data["nasdaq_benchmark"] = nasdaq_benchmark
-                
-            except Exception as e:
-                logger.warning(f"추가 데이터 수집 실패: {str(e)}")
-                # 추가 데이터 수집 실패가 전체 백테스트를 실패시키지 않도록
             
             # 응답을 표준화된 형식으로 변환 (포트폴리오와 유사한 구조)
             return {
@@ -804,48 +803,6 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
             )
             
             result = await portfolio_service.run_portfolio_backtest(portfolio_request)
-            
-            # 추가 데이터 수집 (환율, 벤치마크 등)
-            additional_data = {}
-            try:
-                # 환율 데이터
-                exchange_data = load_ticker_data("KRW=X", str(request.start_date), str(request.end_date))
-                if exchange_data is not None and not exchange_data.empty:
-                    exchange_rate_data = []
-                    for date_idx, row in exchange_data.iterrows():
-                        exchange_rate_data.append({
-                            "date": date_idx.strftime('%Y-%m-%d'),
-                            "rate": float(row['Close'])
-                        })
-                    additional_data["exchange_rate"] = exchange_rate_data
-                
-                # S&P 500 벤치마크 데이터
-                sp500_data = load_ticker_data("^GSPC", str(request.start_date), str(request.end_date))
-                if sp500_data is not None and not sp500_data.empty:
-                    benchmark_data = []
-                    for date_idx, row in sp500_data.iterrows():
-                        benchmark_data.append({
-                            "date": date_idx.strftime('%Y-%m-%d'),
-                            "close": float(row['Close']),
-                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
-                        })
-                    additional_data["sp500_benchmark"] = benchmark_data
-                
-                # 나스닥 벤치마크 데이터
-                nasdaq_data = load_ticker_data("^IXIC", str(request.start_date), str(request.end_date))
-                if nasdaq_data is not None and not nasdaq_data.empty:
-                    nasdaq_benchmark = []
-                    for date_idx, row in nasdaq_data.iterrows():
-                        nasdaq_benchmark.append({
-                            "date": date_idx.strftime('%Y-%m-%d'),
-                            "close": float(row['Close']),
-                            "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
-                        })
-                    additional_data["nasdaq_benchmark"] = nasdaq_benchmark
-                
-            except Exception as e:
-                logger.warning(f"추가 데이터 수집 실패: {str(e)}")
-                # 추가 데이터 수집 실패가 전체 백테스트를 실패시키지 않도록
             
             # 추가 데이터를 결과에 병합
             if "data" in result:
