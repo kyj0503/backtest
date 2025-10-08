@@ -6,12 +6,12 @@ import logging
 from abc import ABC, abstractmethod
 from uuid import uuid4
 
-from app.strategies.implementations.sma_strategy import SMAStrategy
-from app.strategies.implementations.rsi_strategy import RSIStrategy
-from app.strategies.implementations.bollinger_strategy import BollingerBandsStrategy
-from app.strategies.implementations.macd_strategy import MACDStrategy
-from app.strategies.implementations.ema_strategy import EMAStrategy
-from app.strategies.implementations.buy_hold_strategy import BuyAndHoldStrategy
+from app.strategies.sma_strategy import SMAStrategy
+from app.strategies.rsi_strategy import RSIStrategy
+from app.strategies.bollinger_strategy import BollingerBandsStrategy
+from app.strategies.macd_strategy import MACDStrategy
+from app.strategies.ema_strategy import EMAStrategy
+from app.strategies.buy_hold_strategy import BuyAndHoldStrategy
 
 
 class StrategyFactoryInterface(ABC):
