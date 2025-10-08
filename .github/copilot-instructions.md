@@ -24,7 +24,7 @@ Important conventions and patterns
 - CQRS & handlers: Command and Query handlers are registered centrally in `app/cqrs/service_manager.py`. Add new handlers by registering them there (or call existing registration helper patterns).
 - Service creation: Use `app/factories/service_factory.py` to construct services so tests and runtime share the same singletons (e.g., `service_factory.create_backtest_service()`). Avoid directly instantiating deep service classes unless necessary for tests.
 - Repositories: Use repository interfaces and exported global instances (e.g., `backtest_repository`) from `app/repositories/__init__.py`. When writing code that needs DB access, depend on the repository abstraction.
-- Settings: Configuration values come from `app/core/config.py` (`settings` global). Environment overrides are expected; `.env`/`.env.local` is used by Compose. Prefer reading `settings` instead of os.environ directly.
+- Settings: Configuration values come from `app/core/config.py` (`settings` global). Environment overrides are expected; `.env` is used by Compose. Prefer reading `settings` instead of os.environ directly.
 - API surface: Main router is mounted at `settings.api_v1_str` (default `/api/v1`). Endpoints are grouped under `api/v1/endpoints` (e.g., `backtest`, `strategies`).
 
 Testing & dev notes

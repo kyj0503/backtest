@@ -4,7 +4,6 @@
 
 실행
 ```bash
-# 주의: 항상 루트 디렉토리에서 실행해야 .env.local 파일이 로드됩니다
 cd /backtest  # 또는 프로젝트 루트로 이동
 docker compose -f compose.dev.yaml up -d --build
 ```
@@ -39,7 +38,7 @@ docker compose -f compose.dev.yaml rm -f backtest_be_fast backtest_fe
 
 환경 변수
 - **모든 환경 변수는 루트 디렉토리의 `.env` 파일에서만 관리한다.**
-- 서브 폴더(`backtest_be_fast/`, `backtest_be_spring/`, `backtest_fe/`, `compose/`)에는 `.env` 파일을 만들지 않는다.
+- 서브 폴더(`backtest_be_fast/`, `backtest_fe/`)에는 `.env` 파일을 만들지 않는다.
 - `.env` 파일은 git에 추적되지 않으므로 각 환경에서 직접 생성해야 한다.
 
 ## 운영 서버 배포
