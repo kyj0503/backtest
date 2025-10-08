@@ -9,16 +9,11 @@ import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 
 const BacktestPage: React.FC = () => {
-  const { results, loading, error, errorType, errorId, isPortfolio, runBacktest, clearError } = useBacktest();
+  const { result: results, isLoading: loading, error, isPortfolioBacktest: isPortfolio, runBacktest, reset: clearError } = useBacktest();
 
-  const getErrorTitle = (type: string) => {
-    switch (type) {
-      case 'network': return '네트워크 오류';
-      case 'data_not_found': return '데이터 없음';
-      case 'validation': return '입력값 오류';
-      case 'rate_limit': return '요청 제한 초과';
-      default: return '오류가 발생했습니다';
-    }
+  const getErrorTitle = (err: string | null) => {
+    if (!err) return '오류가 발생했습니다';
+    return '오류가 발생했습니다';
   };
 
   return (
@@ -75,15 +70,10 @@ const BacktestPage: React.FC = () => {
             <AlertTriangle className="h-4 w-4" />
             <div className="flex-1">
               <AlertTitle>
-                {getErrorTitle(errorType || 'unknown')}
+                {getErrorTitle(error)}
               </AlertTitle>
               <AlertDescription className="mt-1">
                 {error}
-                {errorId && (
-                  <div className="text-xs mt-2 font-mono">
-                    오류 ID: {errorId}
-                  </div>
-                )}
               </AlertDescription>
             </div>
             <Button
@@ -117,7 +107,7 @@ const BacktestPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <BacktestResults 
-                data={results} 
+                data={results.data as any} 
                 isPortfolio={isPortfolio} 
               />
             </CardContent>

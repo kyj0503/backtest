@@ -14,7 +14,7 @@ import { Button } from '@/shared/ui/button';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 
 interface BacktestFormProps {
-  onSubmit: (request: BacktestRequest) => Promise<void>;
+  onSubmit: (request: BacktestRequest) => Promise<any>;
   loading?: boolean;
 }
 

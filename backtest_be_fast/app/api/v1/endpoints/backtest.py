@@ -7,7 +7,7 @@ from ....models.requests import BacktestRequest, UnifiedBacktestRequest
 from ....models.responses import BacktestResult, ErrorResponse, ChartDataResponse
 from ....models.schemas import PortfolioBacktestRequest, PortfolioStock
 from ....services.backtest_service import backtest_service
-from ....services.portfolio_service import PortfolioBacktestService
+from ....services.portfolio_service import PortfolioService
 from ....services.yfinance_db import load_ticker_data
 from ....core.custom_exceptions import (
     DataNotFoundError, 
@@ -26,47 +26,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-portfolio_service = PortfolioBacktestService()
-
-
-@router.get(
-    "/metrics",
-    summary="백테스트 메트릭 요약",
-    description="이벤트 시스템에서 집계된 백테스트 메트릭(성공률, 전략별 성과 등)을 반환합니다."
-)
-async def get_backtest_metrics():
-    """백테스트 메트릭 요약 반환 API"""
-    return event_system_manager.get_backtest_metrics()
-
-
-@router.get(
-    "/notifications",
-    summary="백테스트 알림 조회",
-    description="이벤트 시스템에서 수집된 백테스트 알림(성과, 실패 등)을 반환합니다."
-)
-async def get_backtest_notifications(limit: int = 20):
-    """백테스트 알림 반환 API"""
-    return event_system_manager.get_backtest_notifications(limit)
-
-
-@router.get(
-    "/portfolio-analytics",
-    summary="포트폴리오 분석 통계 조회",
-    description="이벤트 시스템에서 집계된 포트폴리오 분석/통계 데이터를 반환합니다. portfolio_id로 특정 포트폴리오만 조회 가능."
-)
-async def get_portfolio_analytics(portfolio_id: str = None):
-    """포트폴리오 분석 결과 반환 API"""
-    return event_system_manager.get_portfolio_analytics(portfolio_id)
-
-
-@router.get(
-    "/portfolio-alerts",
-    summary="포트폴리오 경고/알림 조회",
-    description="이벤트 시스템에서 수집된 포트폴리오 경고/알림을 반환합니다. portfolio_id로 특정 포트폴리오만 조회 가능."
-)
-async def get_portfolio_alerts(portfolio_id: str = None, limit: int = 20):
-    """포트폴리오 경고 반환 API"""
-    return event_system_manager.get_portfolio_alerts(portfolio_id, limit)
+portfolio_service = PortfolioService()
 
 
 @router.post(
@@ -426,54 +386,6 @@ async def get_stock_volatility_news(
             "status": "error", 
             "message": f"주가 변동성 분석 실패: {str(e)}",
             "data": {"volatility_events": []}
-        }
-async def get_exchange_rate(
-    start_date: str,
-    end_date: str
-):
-    """
-    원달러 환율 데이터 조회 API
-    
-    - **start_date**: 시작 날짜 (YYYY-MM-DD)
-    - **end_date**: 종료 날짜 (YYYY-MM-DD)
-    
-    반환값: 날짜별 원달러 환율 데이터
-    """
-    try:
-        # KRW=X 티커로 원달러 환율 데이터 조회
-        exchange_data = load_ticker_data("KRW=X", start_date, end_date)
-        
-        if exchange_data is None or exchange_data.empty:
-            return {
-                "status": "error",
-                "message": "환율 데이터를 가져올 수 없습니다.",
-                "data": {"exchange_rates": []}
-            }
-        
-        # 데이터 변환
-        exchange_rates = []
-        for date, row in exchange_data.iterrows():
-            exchange_rates.append({
-                "date": date.strftime('%Y-%m-%d'),
-                "rate": float(row['Close']),
-                "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
-            })
-        
-        return {
-            "status": "success",
-            "data": {
-                "base_currency": "USD",
-                "target_currency": "KRW", 
-                "exchange_rates": exchange_rates
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"환율 데이터 조회 중 오류: {str(e)}")
-        return {
-            "status": "error",
-            "message": f"환율 데이터 조회 실패: {str(e)}",
-            "data": {"exchange_rates": []}
         }
 
 

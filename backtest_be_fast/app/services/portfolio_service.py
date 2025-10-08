@@ -4,8 +4,9 @@
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import logging
+from decimal import Decimal
 
 from app.models.schemas import PortfolioBacktestRequest, PortfolioStock
 from app.models.requests import BacktestRequest
@@ -17,25 +18,12 @@ from app.core.custom_exceptions import (
     InvalidSymbolError, 
     ValidationError
 )
-
 logger = logging.getLogger(__name__)
 
 # 상수 정의
 DEFAULT_DCA_PERIODS = 12
 MAX_PORTFOLIO_ITEMS = 10
 DEFAULT_COMMISSION = 0.002
-
-
-# 역호환성을 위한 별칭 (기존 코드와의 호환성 유지)
-class PortfolioService:
-    """포트폴리오 서비스 (PortfolioBacktestService의 별칭)"""
-    
-    @staticmethod
-    async def run_portfolio_backtest(request: PortfolioBacktestRequest) -> Dict[str, Any]:
-        """포트폴리오 백테스트 실행 (PortfolioBacktestService로 위임)"""
-        service = PortfolioBacktestService()
-        return await service.run_portfolio_backtest(request)
-
 
 class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
@@ -71,10 +59,12 @@ class DCACalculator:
         
         return 0, 0, 0
 
-
-class PortfolioBacktestService:
+class PortfolioService:
     """포트폴리오 백테스트 서비스"""
-    
+    def __init__(self):
+        """포트폴리오 서비스 초기화"""
+        logger.info("포트폴리오 서비스가 초기화되었습니다")
+
     @staticmethod
     def calculate_dca_portfolio_returns(
         portfolio_data: Dict[str, pd.DataFrame],
@@ -267,8 +257,8 @@ class PortfolioBacktestService:
         
         # 최대 연속 상승/하락일
         daily_changes = daily_returns > 0
-        consecutive_gains = PortfolioBacktestService._get_max_consecutive(daily_changes, True)
-        consecutive_losses = PortfolioBacktestService._get_max_consecutive(daily_changes, False)
+        consecutive_gains = PortfolioService._get_max_consecutive(daily_changes, True)
+        consecutive_losses = PortfolioService._get_max_consecutive(daily_changes, False)
         
         # Profit Factor 계산 (이익일 수익률의 합 / 손실일 손실률의 절댓값 합)
         positive_returns = daily_returns[daily_returns > 0]
@@ -960,3 +950,70 @@ class PortfolioBacktestService:
                 'error': str(e),
                 'code': 'BUY_HOLD_PORTFOLIO_BACKTEST_ERROR'
             }
+
+    async def run_portfolio_backtest_with_optimization(self, request: PortfolioBacktestRequest) -> Dict[str, Any]:
+        """
+        포트폴리오 최적화가 포함된 백테스트 실행
+        
+        기존 포트폴리오 백테스트에 다음과 같은 고급 분석을 추가합니다:
+        - 포트폴리오 가중치 최적화
+        - 자산 간 상관관계 분석
+        - 다변화 효과 분석
+        - 리밸런싱 추천
+        """
+        try:
+            # 1. 기존 포트폴리오 백테스트 실행
+            base_result = await self.run_portfolio_backtest(request)
+            
+            # 2. 도메인 서비스를 활용한 고급 분석 추가
+            enhanced_result = await self._enhance_portfolio_result(request, base_result)
+            
+            return enhanced_result
+            
+        except Exception as e:
+            logger.error(f"Enhanced 포트폴리오 백테스트 실행 중 오류: {str(e)}")
+            raise
+    
+    async def _enhance_portfolio_result(self, request: PortfolioBacktestRequest, base_result: Dict[str, Any]) -> Dict[str, Any]:
+        """포트폴리오 백테스트 결과에 도메인 분석 추가"""
+        
+        # 기본 결과 복사
+        enhanced_result = base_result.copy()
+        
+        # 도메인 분석 결과 추가
+        portfolio_analysis = {}
+        
+        try:
+            # 1. 포트폴리오 최적화 분석
+            optimization_analysis = await self._analyze_portfolio_optimization(request)
+            portfolio_analysis['optimization'] = optimization_analysis
+            
+            # 2. 상관관계 분석
+            correlation_analysis = await self._analyze_asset_correlation(request)
+            portfolio_analysis['correlation'] = correlation_analysis
+            
+            # 3. 다변화 분석
+            diversification_analysis = self._analyze_diversification(request)
+            portfolio_analysis['diversification'] = diversification_analysis
+            
+            # 4. 리밸런싱 추천
+            rebalancing_recommendations = self._generate_rebalancing_recommendations(request)
+            portfolio_analysis['rebalancing'] = rebalancing_recommendations
+            
+            # 5. 포트폴리오 품질 평가
+            quality_assessment = self._assess_portfolio_quality(request, base_result)
+            portfolio_analysis['quality'] = quality_assessment
+            
+            # 도메인 분석 결과를 기본 결과에 추가
+            enhanced_result['portfolio_analysis'] = portfolio_analysis
+            
+        except Exception as e:
+            logger.warning(f"포트폴리오 도메인 분석 중 오류 발생 (기본 결과는 유지): {str(e)}")
+            enhanced_result['portfolio_analysis'] = {
+                'error': f"포트폴리오 분석 중 오류: {str(e)}",
+                'base_result_available': True
+            }
+        
+        return enhanced_result
+    
+portfolio_service = PortfolioService()

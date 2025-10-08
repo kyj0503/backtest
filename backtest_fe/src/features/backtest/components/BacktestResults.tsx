@@ -1,79 +1,176 @@
 import React, { useRef } from 'react';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import ResultsHeader from './results/ResultsHeader';
 import ChartsSection from './results/ChartsSection';
 import { BacktestResultsProps } from '../model/backtest-result-types';
-import { AlertCircle, FileImage, FileText } from 'lucide-react';
+import { AlertCircle, FileDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 
 const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) => {
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  const downloadAsImage = async () => {
-    if (!resultsRef.current) {
-      console.error('No element to capture');
-      return;
+  const generateReportText = (): string => {
+    const lines: string[] = [];
+    const timestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
+
+    lines.push('='.repeat(80));
+    lines.push('백테스트 결과 리포트');
+    lines.push('='.repeat(80));
+    lines.push(`생성 일시: ${timestamp}`);
+    lines.push('');
+
+    if (isPortfolio && 'portfolio_statistics' in data && data.portfolio_statistics) {
+      // 포트폴리오 백테스트
+      lines.push('[ 포트폴리오 백테스트 ]');
+      lines.push('');
+
+      // 포트폴리오 구성
+      if ('portfolio_composition' in data && data.portfolio_composition) {
+        lines.push('■ 포트폴리오 구성');
+        lines.push('-'.repeat(80));
+        data.portfolio_composition.forEach((stock) => {
+          lines.push(`  ${stock.symbol.padEnd(10)} - 비중: ${(stock.weight * 100).toFixed(2)}%`);
+        });
+        lines.push('');
+      }
+
+      // 주요 성과 지표
+      const stats = data.portfolio_statistics;
+      lines.push('■ 주요 성과 지표');
+      lines.push('-'.repeat(80));
+      lines.push(`  백테스트 기간       : ${stats.Start} ~ ${stats.End}`);
+      lines.push(`  운용 기간           : ${stats.Duration}`);
+      lines.push(`  초기 자본금         : $${stats.Initial_Value.toLocaleString()}`);
+      lines.push(`  최종 자산가치       : $${stats.Final_Value.toLocaleString()}`);
+      lines.push(`  최고 자산가치       : $${stats.Peak_Value.toLocaleString()}`);
+      lines.push('');
+      lines.push(`  총 수익률           : ${stats.Total_Return.toFixed(2)}%`);
+      lines.push(`  연간 수익률         : ${stats.Annual_Return.toFixed(2)}%`);
+      lines.push(`  연간 변동성         : ${stats.Annual_Volatility.toFixed(2)}%`);
+      lines.push('');
+      lines.push(`  샤프 비율           : ${stats.Sharpe_Ratio.toFixed(2)}`);
+      lines.push(`  최대 낙폭(MDD)      : ${stats.Max_Drawdown.toFixed(2)}%`);
+      lines.push(`  평균 낙폭           : ${stats.Avg_Drawdown.toFixed(2)}%`);
+      lines.push('');
+      lines.push(`  총 거래일수         : ${stats.Total_Trading_Days}일`);
+      lines.push(`  상승일수            : ${stats.Positive_Days}일`);
+      lines.push(`  하락일수            : ${stats.Negative_Days}일`);
+      lines.push(`  승률                : ${stats.Win_Rate.toFixed(2)}%`);
+      lines.push(`  Profit Factor       : ${stats.Profit_Factor.toFixed(2)}`);
+      lines.push(`  연속 상승 최대      : ${stats.Max_Consecutive_Gains}일`);
+      lines.push(`  연속 하락 최대      : ${stats.Max_Consecutive_Losses}일`);
+      lines.push('');
+
+      // 개별 종목 수익률
+      if ('individual_returns' in data && data.individual_returns) {
+        lines.push('■ 개별 종목 수익률');
+        lines.push('-'.repeat(80));
+        Object.entries(data.individual_returns).forEach(([symbol, info]) => {
+          lines.push(`  ${symbol.padEnd(10)} - 수익률: ${(info.return * 100).toFixed(2)}%  |  비중: ${(info.weight * 100).toFixed(2)}%`);
+          lines.push(`               시작가: $${info.start_price.toFixed(2)}  |  종료가: $${info.end_price.toFixed(2)}`);
+        });
+        lines.push('');
+      }
+
+    } else if ('ticker' in data && data.ticker) {
+      // 단일 종목 백테스트
+      lines.push('[ 단일 종목 백테스트 ]');
+      lines.push('');
+
+      lines.push('■ 기본 정보');
+      lines.push('-'.repeat(80));
+      lines.push(`  종목                : ${data.ticker || 'N/A'}`);
+      lines.push(`  전략                : ${data.strategy || 'N/A'}`);
+      lines.push(`  백테스트 기간       : ${data.start_date || 'N/A'} ~ ${data.end_date || 'N/A'}`);
+      lines.push('');
+
+      // 요약 통계
+      if (data.summary_stats) {
+        const stats = data.summary_stats as any;
+        lines.push('■ 주요 성과 지표');
+        lines.push('-'.repeat(80));
+        lines.push(`  총 수익률           : ${typeof stats.total_return_pct === 'number' ? stats.total_return_pct.toFixed(2) : 'N/A'}%`);
+        lines.push(`  총 거래 수          : ${stats.total_trades || 0}회`);
+        lines.push(`  승률                : ${typeof stats.win_rate_pct === 'number' ? stats.win_rate_pct.toFixed(2) : 'N/A'}%`);
+        lines.push(`  최대 낙폭(MDD)      : ${typeof stats.max_drawdown_pct === 'number' ? stats.max_drawdown_pct.toFixed(2) : 'N/A'}%`);
+        lines.push(`  샤프 비율           : ${typeof stats.sharpe_ratio === 'number' ? stats.sharpe_ratio.toFixed(2) : 'N/A'}`);
+        lines.push(`  Profit Factor       : ${typeof stats.profit_factor === 'number' ? stats.profit_factor.toFixed(2) : 'N/A'}`);
+        if (typeof stats.volatility_pct === 'number') lines.push(`  변동성              : ${stats.volatility_pct.toFixed(2)}%`);
+        if (typeof stats.sortino_ratio === 'number') lines.push(`  소르티노 비율       : ${stats.sortino_ratio.toFixed(2)}`);
+        if (typeof stats.calmar_ratio === 'number') lines.push(`  칼마 비율           : ${stats.calmar_ratio.toFixed(2)}`);
+        if (typeof stats.alpha === 'number') lines.push(`  알파                : ${stats.alpha.toFixed(2)}`);
+        if (typeof stats.beta === 'number') lines.push(`  베타                : ${stats.beta.toFixed(2)}`);
+        lines.push('');
+      }
+
+      // 거래 내역
+      if (data.trade_markers && data.trade_markers.length > 0) {
+        lines.push('■ 거래 내역');
+        lines.push('-'.repeat(80));
+        lines.push(`  총 거래 횟수: ${data.trade_markers.length}회`);
+        lines.push('');
+        data.trade_markers.slice(0, 50).forEach((trade: any, idx) => {
+          lines.push(`  [거래 ${idx + 1}]`);
+          lines.push(`    날짜       : ${trade.date}`);
+          lines.push(`    타입       : ${trade.type === 'entry' ? '진입 (매수)' : '청산 (매도)'}`);
+          if (trade.price !== null && trade.price !== undefined && typeof trade.price === 'number') {
+            lines.push(`    가격       : $${trade.price.toFixed(2)}`);
+          }
+          if (trade.size) lines.push(`    수량       : ${trade.size}`);
+          if (trade.pnl_pct !== null && trade.pnl_pct !== undefined && typeof trade.pnl_pct === 'number') {
+            lines.push(`    손익률     : ${trade.pnl_pct.toFixed(2)}%`);
+          }
+          lines.push('');
+        });
+        if (data.trade_markers.length > 50) {
+          lines.push(`  ... 그 외 ${data.trade_markers.length - 50}개 거래 생략`);
+          lines.push('');
+        }
+      }
     }
+
+    // 환율 정보 (공통)
+    if ('exchange_rates' in data && data.exchange_rates && data.exchange_rates.length > 0) {
+      const rates = data.exchange_rates.filter((r: any) => r && typeof r.rate === 'number');
+
+      if (rates.length > 0) {
+        const firstRate = rates[0];
+        const lastRate = rates[rates.length - 1];
+        const maxRate = Math.max(...rates.map((r: any) => r.rate));
+        const minRate = Math.min(...rates.map((r: any) => r.rate));
+
+        lines.push('■ 환율 정보 (KRW/USD)');
+        lines.push('-'.repeat(80));
+        lines.push(`  시작 환율           : ₩${firstRate.rate.toFixed(2)}`);
+        lines.push(`  종료 환율           : ₩${lastRate.rate.toFixed(2)}`);
+        lines.push(`  최고 환율           : ₩${maxRate.toFixed(2)}`);
+        lines.push(`  최저 환율           : ₩${minRate.toFixed(2)}`);
+        lines.push(`  환율 변동           : ${((lastRate.rate - firstRate.rate) / firstRate.rate * 100).toFixed(2)}%`);
+        lines.push('');
+      }
+    }
+
+    lines.push('='.repeat(80));
+    lines.push('리포트 끝');
+    lines.push('='.repeat(80));
+
+    return lines.join('\n');
+  };
+
+  const downloadAsTextReport = () => {
     try {
-      const canvas = await html2canvas(resultsRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-      });
-      const dataUrl = canvas.toDataURL('image/png');
+      const reportText = generateReportText();
+      const blob = new Blob([reportText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `backtest-results-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = url;
+      link.download = `backtest-report-${new Date().toISOString().split('T')[0]}.txt`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Image download failed:', error);
-      alert('이미지 다운로드에 실패했습니다. 콘솔을 확인하세요.');
-    }
-  };
-
-  const downloadAsPDF = async () => {
-    if (!resultsRef.current) {
-      console.error('No element to capture');
-      return;
-    }
-    try {
-      const canvas = await html2canvas(resultsRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-      });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      // 한 페이지에 맞추기 위해 높이 조정
-      const pageHeight = 297;
-      if (imgHeight > pageHeight) {
-        // 여러 페이지로 나누기
-        let remainingHeight = imgHeight;
-        while (remainingHeight > 0) {
-          const sliceHeight = Math.min(remainingHeight, pageHeight);
-          const sliceY = imgHeight - remainingHeight;
-          pdf.addImage(imgData, 'PNG', 0, -sliceY, imgWidth, imgHeight, '', 'FAST');
-          remainingHeight -= sliceHeight;
-          if (remainingHeight > 0) {
-            pdf.addPage();
-          }
-        }
-      } else {
-        pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-      }
-
-      pdf.save(`backtest-results-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('PDF download failed:', error);
-      alert('PDF 다운로드에 실패했습니다. 콘솔을 확인하세요.');
+      console.error('Report download failed:', error);
+      alert('리포트 다운로드에 실패했습니다. 콘솔을 확인하세요.');
     }
   };
 
@@ -109,13 +206,9 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
       <div className="flex items-center justify-between">
         <ResultsHeader data={data} isPortfolio={isPortfolio} />
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={downloadAsImage}>
-            <FileImage className="w-4 h-4 mr-2" />
-            이미지 다운로드
-          </Button>
-          <Button variant="outline" size="sm" onClick={downloadAsPDF}>
-            <FileText className="w-4 h-4 mr-2" />
-            PDF 다운로드
+          <Button variant="outline" size="sm" onClick={downloadAsTextReport}>
+            <FileDown className="w-4 h-4 mr-2" />
+            리포트 다운로드
           </Button>
         </div>
       </div>
