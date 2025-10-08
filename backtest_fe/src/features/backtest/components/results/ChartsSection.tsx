@@ -238,17 +238,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     if (!chartData) return null;
     const cards: React.ReactNode[] = [
       (
-        <ResultBlock title="OHLC 차트" description="가격 변동과 거래 시그널을 확인하세요" key="single-ohlc">
-          <Suspense fallback={<ChartLoading height={360} />}>
-            <LazyOHLCChart
-              data={singleOhlcData as any}
-              indicators={(chartData.indicators ?? []) as any}
-              trades={singleTrades as any}
-            />
-          </Suspense>
-        </ResultBlock>
-      ),
-      (
         <ResultBlock title="누적 수익률" description="전략의 누적 수익률을 확인하세요" key="single-equity">
           <Suspense fallback={<ChartLoading height={360} />}>
             <LazyEquityChart data={singleEquityData as any} />
@@ -297,6 +286,19 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       <Suspense fallback={<ChartLoading height={260} />}>
         <LazyStatsSummary stats={statsPayload} />
       </Suspense>
+
+      {/* OHLC 차트 - 항상 한 행을 차지 */}
+      {chartData && (
+        <ResultBlock title="OHLC 차트" description="가격 변동과 거래 시그널을 확인하세요" key="single-ohlc">
+          <Suspense fallback={<ChartLoading height={360} />}>
+            <LazyOHLCChart
+              data={singleOhlcData as any}
+              indicators={(chartData.indicators ?? []) as any}
+              trades={singleTrades as any}
+            />
+          </Suspense>
+        </ResultBlock>
+      )}
 
       {/* 차트 레이아웃 토글 버튼 */}
       <div className="flex items-center justify-between">
