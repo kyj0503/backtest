@@ -90,11 +90,25 @@ const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
     addNewsCard([chartData.ticker], chartData.start_date, chartData.end_date);
   }
 
+  // 뉴스 섹션 분리 (전체 너비 사용)
+  const newsSection = sections.find(section => section.key === 'news');
+  const otherSections = sections.filter(section => section.key !== 'news');
+
   return (
-    <div className={cn('grid gap-6 xl:grid-cols-2', className)}>
-      {sections.map(({ key, node }) => (
-        <div key={key}>{node}</div>
-      ))}
+    <div className={cn('space-y-6', className)}>
+      {/* 다른 섹션들 (2열 그리드) */}
+      {otherSections.length > 0 && (
+        <div className="grid gap-6 xl:grid-cols-2">
+          {otherSections.map(({ key, node }) => (
+            <div key={key}>{node}</div>
+          ))}
+        </div>
+      )}
+
+      {/* 뉴스 섹션 (전체 너비) */}
+      {newsSection && (
+        <div>{newsSection.node}</div>
+      )}
     </div>
   );
 };
