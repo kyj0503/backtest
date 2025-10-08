@@ -326,7 +326,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       cards.push(
         <ResultBlock title="거래 내역" description="전략이 실행한 체결 신호" key="single-trades">
           <Suspense fallback={<ChartLoading height={360} />}>
-            <LazyTradesChart trades={singleTrades as any} />
+            <LazyTradesChart trades={singleTrades as any} showCard={false} />
           </Suspense>
         </ResultBlock>,
       );
