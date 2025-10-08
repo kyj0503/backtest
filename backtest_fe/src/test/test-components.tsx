@@ -5,15 +5,12 @@
 import { render, RenderOptions } from '@testing-library/react'
 import { ReactElement } from 'react'
 import { BrowserRouter } from 'react-router-dom'
-import { AuthProvider } from '@/features/auth/hooks/useAuth'
 
 // 커스텀 렌더 함수 - 공통 프로바이더들을 포함
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
+      {children}
     </BrowserRouter>
   )
 }
