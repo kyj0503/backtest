@@ -665,8 +665,11 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
         # 추가 데이터 수집 (환율, 벤치마크) - 백테스트 실행 전에 공통으로 수집
         additional_data = {}
         try:
+            logger.info(f"추가 데이터 수집 시작: {request.start_date} ~ {request.end_date}")
+            
             # 원달러 환율 데이터
             exchange_data = load_ticker_data("KRW=X", str(request.start_date), str(request.end_date))
+            logger.info(f"환율 데이터: {len(exchange_data) if exchange_data is not None else 0} 행")
             if exchange_data is not None and not exchange_data.empty:
                 exchange_rates = []
                 for date_idx, row in exchange_data.iterrows():
@@ -676,9 +679,11 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
                         "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
                     })
                 additional_data["exchange_rates"] = exchange_rates
+                logger.info(f"환율 데이터 수집 완료: {len(exchange_rates)} 개")
             
             # S&P 500 벤치마크 데이터
             sp500_data = load_ticker_data("^GSPC", str(request.start_date), str(request.end_date))
+            logger.info(f"S&P 500 데이터: {len(sp500_data) if sp500_data is not None else 0} 행")
             if sp500_data is not None and not sp500_data.empty:
                 benchmark_data = []
                 for date_idx, row in sp500_data.iterrows():
@@ -688,9 +693,11 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
                         "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
                     })
                 additional_data["sp500_benchmark"] = benchmark_data
+                logger.info(f"S&P 500 데이터 수집 완료: {len(benchmark_data)} 개")
             
             # 나스닥 벤치마크 데이터
             nasdaq_data = load_ticker_data("^IXIC", str(request.start_date), str(request.end_date))
+            logger.info(f"NASDAQ 데이터: {len(nasdaq_data) if nasdaq_data is not None else 0} 행")
             if nasdaq_data is not None and not nasdaq_data.empty:
                 nasdaq_benchmark = []
                 for date_idx, row in nasdaq_data.iterrows():
@@ -700,9 +707,12 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
                         "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
                     })
                 additional_data["nasdaq_benchmark"] = nasdaq_benchmark
+                logger.info(f"NASDAQ 데이터 수집 완료: {len(nasdaq_benchmark)} 개")
+            
+            logger.info(f"추가 데이터 수집 완료. 키: {list(additional_data.keys())}")
             
         except Exception as e:
-            logger.warning(f"추가 데이터 수집 실패: {str(e)}")
+            logger.error(f"추가 데이터 수집 실패: {str(e)}", exc_info=True)
             # 추가 데이터 수집 실패가 전체 백테스트를 실패시키지 않도록
         
         # 단일 종목 vs 포트폴리오 판별
