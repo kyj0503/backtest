@@ -1,6 +1,5 @@
 import React, { ChangeEvent } from 'react';
 import { Tooltip, FormSection } from '@/shared/components';
-import StockAutocomplete from '@/shared/components/StockAutocomplete';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -125,7 +124,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
           </TableHeader>
           <TableBody>
             {portfolio.map((stock, index) => (
-              <TableRow key={`${stock.symbol || 'empty'}_${index}`}>
+              <TableRow key={`stock_${index}`}>
                 <TableCell className="w-64">
                   <div className="space-y-2 max-w-full overflow-hidden">
                     {stock.assetType === ASSET_TYPES.CASH ? (
@@ -140,7 +139,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     ) : (
                       <>
                         <Select
-                          value={stock.symbol === '' ? 'CUSTOM' : stock.symbol}
+                          value={stock.symbol === '' || !PREDEFINED_STOCKS.slice(1).some(opt => opt.value === stock.symbol) ? 'CUSTOM' : stock.symbol}
                           onValueChange={(value) => {
                             if (value === 'CUSTOM') {
                               updateStock(index, 'symbol', '');
@@ -161,12 +160,18 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                             ))}
                           </SelectContent>
                         </Select>
-                        {(stock.symbol === '' || !PREDEFINED_STOCKS.some(opt => opt.value === stock.symbol)) && (
-                          <StockAutocomplete
+                        {(stock.symbol === '' || !PREDEFINED_STOCKS.slice(1).some(opt => opt.value === stock.symbol)) && (
+                          <Input
+                            type="text"
                             value={stock.symbol}
-                            onChange={(value: string) => updateStock(index, 'symbol', value)}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                              const upperValue = e.target.value.toUpperCase();
+                              updateStock(index, 'symbol', upperValue);
+                            }}
                             placeholder="종목 심볼 입력 (예: AAPL)"
-                            className=""
+                            maxLength={10}
+                            className="w-full"
+                            autoComplete="off"
                           />
                         )}
                       </>
