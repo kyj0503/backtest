@@ -805,8 +805,16 @@ async def execute_backtest(request: UnifiedBacktestRequest, request_obj: Request
             result = await portfolio_service.run_portfolio_backtest(portfolio_request)
             
             # 추가 데이터를 결과에 병합
+            logger.info(f"추가 데이터 키: {list(additional_data.keys())}")
+            logger.info(f"포트폴리오 서비스 결과 구조: {list(result.keys()) if isinstance(result, dict) else 'not a dict'}")
+            
             if "data" in result:
+                logger.info(f"result['data'] 병합 전 키: {list(result['data'].keys()) if isinstance(result['data'], dict) else 'not a dict'}")
                 result["data"].update(additional_data)
+                logger.info(f"result['data'] 병합 후 키: {list(result['data'].keys())}")
+            else:
+                logger.warning("result에 'data' 키가 없습니다. 전체 result에 병합합니다.")
+                result.update(additional_data)
             
             # 응답을 표준화된 형식으로 변환
             return {
