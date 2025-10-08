@@ -415,7 +415,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           key="exchange-rate"
         >
           <Suspense fallback={<ChartLoading height={260} />}>
-            <LazyExchangeRateChart startDate={startDate} endDate={endDate} />
+            <LazyExchangeRateChart startDate={startDate} endDate={endDate} showCard={false} />
           </Suspense>
         </ResultBlock>
       );
