@@ -11,16 +11,8 @@ import { Badge } from '@/shared/ui/badge';
 const BacktestPage: React.FC = () => {
   const { result: results, isLoading: loading, error, isPortfolioBacktest: isPortfolio, runBacktest, reset: clearError } = useBacktest();
 
-  const getErrorTitle = (err: any) => {
-    if (err && err.type) {
-        switch (err.type) {
-            case 'network': return '네트워크 오류';
-            case 'data_not_found': return '데이터 없음';
-            case 'validation': return '입력값 오류';
-            case 'rate_limit': return '요청 제한 초과';
-            default: return '오류가 발생했습니다';
-        }
-    }
+  const getErrorTitle = (err: string | null) => {
+    if (!err) return '오류가 발생했습니다';
     return '오류가 발생했습니다';
   };
 
@@ -81,12 +73,7 @@ const BacktestPage: React.FC = () => {
                 {getErrorTitle(error)}
               </AlertTitle>
               <AlertDescription className="mt-1">
-                {error.message}
-                {error.errorId && (
-                  <div className="text-xs mt-2 font-mono">
-                    오류 ID: {error.errorId}
-                  </div>
-                )}
+                {error}
               </AlertDescription>
             </div>
             <Button
@@ -120,7 +107,7 @@ const BacktestPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <BacktestResults 
-                data={results.data} 
+                data={results.data as any} 
                 isPortfolio={isPortfolio} 
               />
             </CardContent>
