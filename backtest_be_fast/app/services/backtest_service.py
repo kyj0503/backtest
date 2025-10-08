@@ -101,13 +101,6 @@ from .backtest import (
     validation_service
 )
 
-from app.domains.backtest.services.backtest_domain_service import BacktestDomainService
-from app.domains.backtest.services.strategy_domain_service import StrategyDomainService
-from app.domains.portfolio.services.portfolio_domain_service import PortfolioDomainService
-from app.domains.data.services.data_domain_service import DataDomainService
-from app.domains.data.value_objects.symbol import TickerInfo
-from app.domains.backtest.value_objects.date_range import DateRange
-
 logger = logging.getLogger(__name__)
 
 
@@ -144,13 +137,7 @@ class BacktestService:
         self.data_fetcher = data_fetcher
         self.strategy_service = strategy_service
 
-        # DDD 도메인 서비스 초기화
-        self.backtest_domain_service = BacktestDomainService()
-        self.strategy_domain_service = StrategyDomainService()
-        self.portfolio_domain_service = PortfolioDomainService()
-        self.data_domain_service = DataDomainService()
-        
-        logger.info("Enhanced 백테스트 서비스가 도메인 서비스와 함께 초기화되었습니다")
+        logger.info("백테스트 서비스가 초기화되었습니다")
     
     async def run_backtest(self, request: BacktestRequest) -> BacktestResult:
         """백테스트 실행 - Repository Pattern이 적용된 BacktestEngine에 위임"""
@@ -403,24 +390,22 @@ class BacktestService:
             }
     
     def _analyze_date_range(self, start_date: str, end_date: str) -> Dict[str, Any]:
-        """날짜 범위 도메인 분석"""
+        """날짜 범위 분석"""
         try:
-            # DateRange 값 객체 생성
             start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-            
-            date_range = DateRange(start_date_obj, end_date_obj)
-            
+            duration_days = (end_date_obj - start_date_obj).days
+
             return {
-                'is_valid': date_range.is_valid(),
-                'duration_days': date_range.duration_days(),
-                'duration_years': round(date_range.duration_days() / 365.25, 2),
+                'is_valid': start_date_obj < end_date_obj,
+                'duration_days': duration_days,
+                'duration_years': round(duration_days / 365.25, 2),
                 'start_date': start_date,
                 'end_date': end_date,
-                'contains_market_crash': self._check_market_events(date_range),
-                'season_analysis': self._analyze_seasonal_effects(date_range)
+                'contains_market_crash': self._check_market_events(start_date_obj, end_date_obj),
+                'season_analysis': self._analyze_seasonal_effects(start_date_obj, end_date_obj, duration_days)
             }
-            
+
         except Exception as e:
             logger.warning(f"날짜 범위 분석 실패: {str(e)}")
             return {
@@ -446,29 +431,27 @@ class BacktestService:
         
         return recommendations
     
-    def _check_market_events(self, date_range: DateRange) -> Dict[str, bool]:
+    def _check_market_events(self, start_date_obj, end_date_obj) -> Dict[str, bool]:
         """주요 시장 이벤트 포함 여부 확인"""
-        start_year = date_range.start_date.year
-        end_year = date_range.end_date.year
-        
+        start_year = start_date_obj.year
+        end_year = end_date_obj.year
+
         events = {
             'covid_crash_2020': 2020 >= start_year and 2020 <= end_year,
             'tech_bubble_2000': 2000 >= start_year and 2001 <= end_year,
             'financial_crisis_2008': 2008 >= start_year and 2009 <= end_year,
             'dot_com_recovery_2003': 2003 >= start_year and 2004 <= end_year
         }
-        
+
         return events
-    
-    def _analyze_seasonal_effects(self, date_range: DateRange) -> Dict[str, Any]:
+
+    def _analyze_seasonal_effects(self, start_date_obj, end_date_obj, duration_days: int) -> Dict[str, Any]:
         """계절성 효과 분석"""
-        duration_days = date_range.duration_days()
-        
         return {
             'covers_full_year': duration_days >= 365,
             'multiple_years': duration_days >= 730,
-            'start_month': date_range.start_date.month,
-            'end_month': date_range.end_date.month,
+            'start_month': start_date_obj.month,
+            'end_month': end_date_obj.month,
             'seasonal_bias_risk': 'Low' if duration_days >= 365 else 'High'
         }
     
