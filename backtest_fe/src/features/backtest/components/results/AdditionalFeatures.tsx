@@ -1,8 +1,10 @@
 import React, { ReactNode, Suspense } from 'react';
 import { ChartData, PortfolioData } from '../../model/backtest-result-types';
+import { FormLegend } from '@/shared/components';
 import { cn } from '@/shared/lib/core/utils';
 import {
   LazyExchangeRateChart,
+  LazyStockVolatilityNews,
 } from '../lazy/LazyChartComponents';
 import ChartLoading from '@/shared/components/ChartLoading';
 
@@ -54,16 +56,38 @@ const AdditionalFeatures: React.FC<AdditionalFeaturesProps> = ({
     });
   };
 
+  const addNewsCard = (symbols: string[], start: string, end: string) => {
+    sections.push({
+      key: 'news',
+      node: (
+        <FeatureBlock
+          title="주가 급등락 뉴스"
+          description="백테스트 기간 중 주요 뉴스 흐름"
+          actions={<FormLegend items={[{ label: symbols.join(' · '), tone: 'muted' }]} />}
+        >
+          <Suspense fallback={<ChartLoading height={260} />}>
+            <LazyStockVolatilityNews symbols={symbols} startDate={start} endDate={end} />
+          </Suspense>
+        </FeatureBlock>
+      ),
+    });
+  };
+
   if (isPortfolio && 'portfolio_composition' in data) {
     const portfolioData = data as PortfolioData;
-    const { portfolio_statistics } = portfolioData;
+    const { portfolio_statistics, portfolio_composition } = portfolioData;
+    const symbols = Array.from(
+      new Set(portfolio_composition.map(item => item.symbol.replace(/_\d+$/, ''))),
+    );
     addExchangeRateCard(portfolio_statistics.Start, portfolio_statistics.End);
+    addNewsCard(symbols, portfolio_statistics.Start, portfolio_statistics.End);
   } else {
     const chartData = data as ChartData;
     if (!chartData.ticker || !chartData.start_date || !chartData.end_date) {
       return null;
     }
     addExchangeRateCard(chartData.start_date, chartData.end_date);
+    addNewsCard([chartData.ticker], chartData.start_date, chartData.end_date);
   }
 
   return (
