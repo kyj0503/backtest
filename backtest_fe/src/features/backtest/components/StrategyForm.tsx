@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
-import { Sparkles } from 'lucide-react';
 import { STRATEGY_CONFIGS, StrategyParameter } from '../model/strategyConfig';
-import { FormField, FormLegend } from '@/shared/components';
+import { FormField } from '@/shared/components';
 
 export interface StrategyFormProps {
   selectedStrategy: string;
@@ -32,30 +31,13 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <FormField
-          label="투자 전략"
-          type="select"
-          value={selectedStrategy}
-          onChange={(value) => setSelectedStrategy(value.toString())}
-          options={strategyOptions}
-        />
-        <FormLegend
-          icon={<Sparkles className="h-3.5 w-3.5" />}
-          items={[
-            {
-              label: currentConfig?.description ?? '전략을 선택해 설명을 확인하세요',
-              tone: 'muted',
-            },
-            {
-              label: parameterEntries.length
-                ? `파라미터 ${parameterEntries.length}개`
-                : '추가 파라미터 없음',
-              tone: parameterEntries.length ? 'accent' : 'muted',
-            },
-          ]}
-        />
-      </div>
+      <FormField
+        label="투자 전략"
+        type="select"
+        value={selectedStrategy}
+        onChange={(value) => setSelectedStrategy(value.toString())}
+        options={strategyOptions}
+      />
 
       {parameterEntries.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
