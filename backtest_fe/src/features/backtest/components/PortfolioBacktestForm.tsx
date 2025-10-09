@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Loader2, TrendingUp } from 'lucide-react';
 import { BacktestRequest } from '../model/api-types';
 import { ASSET_TYPES } from '../model/strategyConfig';
@@ -6,7 +6,6 @@ import DateRangeForm from './DateRangeForm';
 import StrategyForm from './StrategyForm';
 import CommissionForm from './CommissionForm';
 import PortfolioForm from './PortfolioForm';
-import AdvancedSettingsForm, { AdvancedStockSettings } from './AdvancedSettingsForm';
 import { useBacktestForm } from '../hooks/useBacktestForm';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { FormSection } from '@/shared/components';
@@ -21,8 +20,6 @@ interface PortfolioBacktestFormProps {
 const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit, loading = false }) => {
   const { state, actions, helpers } = useBacktestForm();
   const { errors, validateForm, setErrors } = useFormValidation();
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [, setAdvancedSettings] = useState<AdvancedStockSettings[]>([]);
 
   const generateStrategyParams = () => {
     const strategyParams = state.strategy.strategyParams;
@@ -105,7 +102,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
 
         <FormSection
           title="백테스트 기간"
-          description="실행할 기간을 지정하세요. 종목별 커스텀 기간은 고급 설정에서 조정할 수 있습니다."
+          description="실행할 기간을 지정하세요."
         >
           <DateRangeForm
             startDate={state.dates.startDate}
@@ -139,32 +136,6 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
             />
           </FormSection>
         </div>
-
-        <FormSection
-          title="종목별 고급 설정"
-          description="포트폴리오에 종목을 추가한 후 개별 전략과 기간을 조정할 수 있습니다."
-        >
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowAdvancedSettings(true)}
-              disabled={state.portfolio.length === 0}
-            >
-              고급 설정 열기
-            </Button>
-          </div>
-
-          <AdvancedSettingsForm
-            portfolio={state.portfolio}
-            isVisible={showAdvancedSettings}
-            onClose={() => setShowAdvancedSettings(false)}
-            onApply={(settings) => {
-              setAdvancedSettings(settings);
-              setShowAdvancedSettings(false);
-            }}
-          />
-        </FormSection>
 
         {/* 제출 버튼 */}
         <div className="flex justify-end pt-4">
