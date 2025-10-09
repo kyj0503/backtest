@@ -18,6 +18,7 @@ from ....core.exceptions import (
 )
 from ....events.event_system import event_system_manager
 from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
+from ..decorators import handle_backtest_errors, handle_portfolio_errors
 import logging
 import traceback
 import pandas as pd
@@ -71,6 +72,7 @@ async def backtest_health():
     summary="백테스트 차트 데이터",
     description="백테스트 결과를 Recharts용 차트 데이터로 반환합니다. (DB 소스 우선 사용)"
 )
+@handle_backtest_errors
 async def get_chart_data(request: BacktestRequest):
     """
     백테스트 차트 데이터 API (v2 개선사항 적용)
@@ -107,72 +109,21 @@ async def get_chart_data(request: BacktestRequest):
     """
     # 모든 요청을 게스트로 처리합니다.
     
-    try:
-        # 실제 백테스트를 실행하여 정확한 통계를 얻습니다
-        backtest_result = await backtest_service.run_backtest(request)
+    # 실제 백테스트를 실행하여 정확한 통계를 얻습니다
+    backtest_result = await backtest_service.run_backtest(request)
 
-        chart_data = await backtest_service.generate_chart_data(
-            request, backtest_result
-        )
-        logger.info(
-            "차트 데이터 API 완료: %s, 데이터 포인트: %s",
-            request.ticker,
-            len(chart_data.ohlc_data),
-        )
+    chart_data = await backtest_service.generate_chart_data(
+        request, backtest_result
+    )
+    logger.info(
+        "차트 데이터 API 완료: %s, 데이터 포인트: %s",
+        request.ticker,
+        len(chart_data.ohlc_data),
+    )
 
-        # 히스토리 저장 기능은 제거되었습니다.
+    # 히스토리 저장 기능은 제거되었습니다.
 
-        return chart_data
-        
-    except ValueError as e:
-        from app.utils.user_messages import get_user_friendly_message, log_error_for_debugging
-
-        error_id = log_error_for_debugging(e, "차트 데이터 요청", {"ticker": request.ticker})
-        logger.error(f"[{error_id}] 차트 데이터 요청 오류: {str(e)}")
-
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=get_user_friendly_message("ValidationError", str(e))
-        )
-
-    except (DataNotFoundError, InvalidSymbolError, YFinanceRateLimitError, ValidationError) as e:
-        # 이미 적절한 HTTP 상태코드와 메시지를 가진 커스텀 예외들은 그대로 전파
-        # ValidationError는 422 Unprocessable Entity로 처리
-        if isinstance(e, ValidationError):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=str(e)
-            )
-        raise e
-        
-    except Exception as e:
-        from app.utils.user_messages import get_user_friendly_message, log_error_for_debugging
-        from app.core.exceptions import handle_yfinance_error
-        from app.utils.data_fetcher import InvalidSymbolError as DataFetcherInvalidSymbolError
-        
-        # InvalidSymbolError인지 먼저 확인
-        if isinstance(e, DataFetcherInvalidSymbolError) or "InvalidSymbolError" in str(type(e)) or "'는 유효하지 않은 종목 심볼입니다" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=str(e)
-            )
-        
-        error_id = log_error_for_debugging(e, "차트 데이터 생성", {
-            "ticker": request.ticker,
-            "start_date": str(request.start_date),
-            "end_date": str(request.end_date)
-        })
-        
-        # yfinance 관련 에러인지 확인
-        error_str = str(e).lower()
-        if any(keyword in error_str for keyword in ["yfinance", "yahoo", "ticker", "symbol", "no data"]):
-            raise handle_yfinance_error(e, request.ticker, str(request.start_date), str(request.end_date))
-        
-        logger.error(f"[{error_id}] 차트 데이터 생성 예상치 못한 오류: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"차트 데이터 생성 중 예상치 못한 오류가 발생했습니다. (오류 ID: {error_id})"
-        )
+    return chart_data
 
 
 @router.post(
@@ -181,6 +132,7 @@ async def get_chart_data(request: BacktestRequest):
     summary="포트폴리오 백테스트 실행",
     description="여러 종목으로 구성된 포트폴리오의 백테스트를 실행합니다."
 )
+@handle_portfolio_errors
 async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     """
     포트폴리오 백테스트 실행 API
@@ -207,55 +159,27 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     }
     ```
     """
-    try:
-        # 입력 검증
-        if not request.portfolio or len(request.portfolio) == 0:
-            raise ValidationError("포트폴리오가 비어있습니다. 최소 1개 종목을 추가해주세요.")
+    # 입력 검증
+    if not request.portfolio or len(request.portfolio) == 0:
+        raise ValidationError("포트폴리오가 비어있습니다. 최소 1개 종목을 추가해주세요.")
 
-        if len(request.portfolio) > 10:
-            raise ValidationError("포트폴리오는 최대 10개 종목까지 포함할 수 있습니다.")
-        
-        # 포트폴리오 백테스트 실행
-        result = await portfolio_service.run_portfolio_backtest(request)
-        
-        if result.get('status') == 'error':
-            # 서비스에서 반환된 에러 처리
-            error_message = result.get('error', '알 수 없는 오류가 발생했습니다.')
-            user_message = get_user_friendly_message("portfolio_backtest_error", error_message)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=user_message
-            )
-        
-        logger.info(f"포트폴리오 백테스트 API 완료: {len(request.portfolio)} 종목")
-        return result
-        
-    except (DataNotFoundError, InvalidSymbolError, YFinanceRateLimitError, ValidationError) as e:
-        # 사용자 친화적 오류 처리
-        user_message = get_user_friendly_message(type(e).__name__, str(e))
-        logger.warning(f"User error in portfolio backtest: {user_message}")
-        raise HTTPException(status_code=400, detail=user_message)
-        
-    except HTTPException:
-        # 이미 처리된 HTTP 예외는 재발생
-        raise
-        
-    except Exception as e:
-        # 예상하지 못한 오류 처리
-        error_id = log_error_for_debugging(e, "portfolio_backtest", {
-            "portfolio_size": len(request.portfolio) if request.portfolio else 0,
-            "strategy": getattr(request, 'strategy', 'buy_and_hold'),
-            "date_range": f"{request.start_date} to {request.end_date}"
-        })
-        
-        logger.error(f"Unexpected error in portfolio backtest [ID: {error_id}]: {str(e)}")
-        logger.debug(traceback.format_exc())
-        
-        user_message = get_user_friendly_message("unexpected_error", str(e))
+    if len(request.portfolio) > 10:
+        raise ValidationError("포트폴리오는 최대 10개 종목까지 포함할 수 있습니다.")
+    
+    # 포트폴리오 백테스트 실행
+    result = await portfolio_service.run_portfolio_backtest(request)
+    
+    if result.get('status') == 'error':
+        # 서비스에서 반환된 에러 처리
+        error_message = result.get('error', '알 수 없는 오류가 발생했습니다.')
+        user_message = get_user_friendly_message("portfolio_backtest_error", error_message)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"{user_message} (오류 ID: {error_id})"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=user_message
         )
+    
+    logger.info(f"포트폴리오 백테스트 API 완료: {len(request.portfolio)} 종목")
+    return result
 
 
 @router.get(
