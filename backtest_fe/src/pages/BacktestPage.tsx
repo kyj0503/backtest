@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertTriangle, TrendingUp, X, Loader2 } from 'lucide-react';
-import BacktestForm from '@/features/backtest/components/BacktestForm';
+import SingleStockForm from '@/features/backtest/components/SingleStockForm';
+import PortfolioBacktestForm from '@/features/backtest/components/PortfolioBacktestForm';
 import BacktestResults from '@/features/backtest/components/BacktestResults';
 import { useBacktest } from '@/features/backtest/hooks/useBacktest';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 
 const BacktestPage: React.FC = () => {
   const { result: results, isLoading: loading, error, isPortfolioBacktest: isPortfolio, runBacktest, reset: clearError } = useBacktest();
+  const [activeTab, setActiveTab] = useState<string>('single');
 
   const getErrorTitle = (err: string | null) => {
     if (!err) return '오류가 발생했습니다';
@@ -18,7 +21,7 @@ const BacktestPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background py-8">
-  <div className="mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-screen-2xl">
+      <div className="mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-screen-2xl">
         {/* Page Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -31,23 +34,47 @@ const BacktestPage: React.FC = () => {
             백테스트 실행
           </h2>
           <p className="text-muted-foreground">
-            투자 전략을 설정하고 백테스트를 실행해보세요
+            단일 종목 또는 포트폴리오 전략을 설정하고 백테스트를 실행해보세요
           </p>
         </div>
 
-        {/* Backtest Form */}
+        {/* Backtest Form with Tabs */}
         <Card className="mb-8 shadow-sm">
           <CardHeader>
             <CardTitle>백테스트 설정</CardTitle>
             <CardDescription>
-              포트폴리오 구성, 투자 전략, 백테스트 기간을 설정하세요
+              단일 종목 또는 포트폴리오 백테스트를 선택하세요
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <BacktestForm 
-              onSubmit={runBacktest} 
-              loading={loading} 
-            />
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
+                <TabsTrigger value="single" className="text-sm sm:text-base">
+                  단일 종목
+                </TabsTrigger>
+                <TabsTrigger value="portfolio" className="text-sm sm:text-base">
+                  포트폴리오
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="single" className="mt-0">
+                <div className="mb-4 p-4 bg-muted/50 rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>단일 종목 백테스트:</strong> 하나의 종목에 대한 투자 전략을 빠르게 테스트합니다.
+                  </p>
+                </div>
+                <SingleStockForm onSubmit={runBacktest} loading={loading} />
+              </TabsContent>
+
+              <TabsContent value="portfolio" className="mt-0">
+                <div className="mb-4 p-4 bg-muted/50 rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>포트폴리오 백테스트:</strong> 여러 종목으로 구성된 포트폴리오의 리밸런싱, 분산투자 전략을 테스트합니다.
+                  </p>
+                </div>
+                <PortfolioBacktestForm onSubmit={runBacktest} loading={loading} />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -100,15 +127,20 @@ const BacktestPage: React.FC = () => {
                     포트폴리오
                   </Badge>
                 )}
+                {!isPortfolio && (
+                  <Badge variant="secondary" className="ml-2">
+                    단일 종목
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 설정하신 전략에 따른 백테스트 분석 결과입니다
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <BacktestResults 
-                data={results.data as any} 
-                isPortfolio={isPortfolio} 
+              <BacktestResults
+                data={results.data as any}
+                isPortfolio={isPortfolio}
               />
             </CardContent>
           </Card>
@@ -125,8 +157,8 @@ const BacktestPage: React.FC = () => {
                 백테스트 설정을 완료하고 실행 버튼을 눌러주세요
               </CardTitle>
               <CardDescription className="text-base">
-                포트폴리오 구성, 투자 전략, 백테스트 기간을 설정한 후<br />
-                <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold mx-1">백테스트 실행</span> 
+                {activeTab === 'single' ? '종목 정보' : '포트폴리오 구성'}와 투자 전략, 백테스트 기간을 설정한 후<br />
+                <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold mx-1">백테스트 실행</span>
                 버튼을 클릭하면 결과를 확인할 수 있습니다.
               </CardDescription>
             </CardContent>

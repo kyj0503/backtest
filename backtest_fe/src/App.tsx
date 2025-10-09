@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useTheme } from '@/shared/hooks/useTheme';
 import Header from '@/components/Header';
 import HomePage from './pages/HomePage';
-import BacktestPage from './pages/BacktestPage';
+import SingleStockPage from './pages/SingleStockPage';
+import PortfolioPage from './pages/PortfolioPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from '@/shared/ui/sonner';
 
@@ -31,7 +32,10 @@ function App() {
           <main>
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/backtest" element={<BacktestPage />} />
+              <Route path="/single-stock" element={<SingleStockPage />} />
+              <Route path="/portfolio" element={<PortfolioPage />} />
+              {/* Legacy route redirect */}
+              <Route path="/backtest" element={<Navigate to="/single-stock" replace />} />
             </Routes>
           </main>
           <Toaster richColors position="top-right" closeButton />
