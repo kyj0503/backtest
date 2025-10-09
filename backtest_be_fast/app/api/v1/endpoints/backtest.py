@@ -9,7 +9,7 @@ from ....models.schemas import PortfolioBacktestRequest, PortfolioStock
 from ....services.backtest_service import backtest_service
 from ....services.portfolio_service import PortfolioService
 from ....services.yfinance_db import load_ticker_data
-from ....core.custom_exceptions import (
+from ....core.exceptions import (
     DataNotFoundError, 
     InvalidSymbolError, 
     YFinanceRateLimitError,
@@ -147,7 +147,7 @@ async def get_chart_data(request: BacktestRequest):
         
     except Exception as e:
         from app.utils.user_messages import get_user_friendly_message, log_error_for_debugging
-        from app.core.custom_exceptions import handle_yfinance_error
+        from app.core.exceptions import handle_yfinance_error
         from app.utils.data_fetcher import InvalidSymbolError as DataFetcherInvalidSymbolError
         
         # InvalidSymbolError인지 먼저 확인

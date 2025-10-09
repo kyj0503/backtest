@@ -106,7 +106,7 @@ class BacktestEngine:
 
             # custom ValidationError는 그대로 재발생시키도록 허용
             try:
-                from app.core.custom_exceptions import ValidationError
+                from app.core.exceptions import ValidationError
                 if isinstance(e, ValidationError):
                     raise e
             except Exception:
