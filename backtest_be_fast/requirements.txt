@@ -5,20 +5,10 @@ pydantic-settings==2.1.0
 backtesting>=0.3.0
 yfinance==0.2.65
 requests==2.31.0
-Pillow>=10.2.0
-matplotlib>=3.8.0
-bokeh>=3.0.0
 pandas>=2.0.0
-aiofiles==23.2.0
-structlog==23.2.0
 python-dotenv==1.0.0
-black==23.11.0
-isort==5.12.0
 python-multipart==0.0.6
 pytz>=2023.3
-psutil>=5.9.0
 
 SQLAlchemy>=2.0
 pymysql>=1.0.2
-email-validator>=2.2.0
-cryptography>=40.0
