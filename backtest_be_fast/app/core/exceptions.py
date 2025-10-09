@@ -1,14 +1,9 @@
-"""class BacktestError(Exception):
-
-통합된 예외 처리 시스템    """백테스트 관련 커스텀 예외 클래스"""
-
-백테스트 애플리케이션의 모든 커스텀 예외를 정의합니다.    def __init__(self, message: str, code: str = "BACKTEST_ERROR"):
-
-"""        self.message = message
-
-from fastapi import HTTPException, status        self.code = code
-
-from typing import Optional        super().__init__(self.message) 
+"""
+통합된 예외 처리 시스템
+백테스트 애플리케이션의 모든 커스텀 예외를 정의합니다.
+"""
+from fastapi import HTTPException, status
+from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
