@@ -8,7 +8,7 @@ from ....models.responses import BacktestResult, ErrorResponse, ChartDataRespons
 from ....models.schemas import PortfolioBacktestRequest, PortfolioStock
 from ....services.backtest_service import backtest_service
 from ....services.portfolio_service import PortfolioService
-from ....services.yfinance_db import load_ticker_data
+from ....services.data_service import data_service
 from ....core.exceptions import (
     DataNotFoundError, 
     InvalidSymbolError, 
@@ -220,8 +220,8 @@ async def get_stock_volatility_news(
                 }
             }
         
-        # 주가 데이터 조회
-        stock_data = load_ticker_data(ticker, start_date, end_date)
+        # 주가 데이터 조회 (DataService 사용)
+        stock_data = data_service.get_ticker_data_sync(ticker, start_date, end_date)
         
         if stock_data is None or stock_data.empty:
             return {
@@ -303,15 +303,8 @@ async def get_stock_data(
                 }
             }
         
-        # DB에서 데이터 로드 시도
-        df = load_ticker_data(ticker, start_date, end_date)
-        
-        if df is None or df.empty:
-            # DB에 없으면 yfinance에서 가져오기
-            df = data_fetcher.get_stock_data(ticker, start_date, end_date)
-            
-            if df is None or df.empty:
-                raise DataNotFoundError(f"'{ticker}' 종목의 데이터를 찾을 수 없습니다.")
+        # DataService를 통해 데이터 로드 (DB 우선, fallback to yfinance)
+        df = data_service.get_ticker_data_sync(ticker, start_date, end_date)
         
         # 데이터 변환
         price_data = []
@@ -375,8 +368,12 @@ async def get_exchange_rate(
     반환값: 날짜별 원달러 환율 데이터
     """
     try:
-        # 설정에서 환율 티커 가져오기
-        exchange_data = load_ticker_data(settings.exchange_rate_ticker, start_date, end_date)
+        # DataService를 통해 환율 데이터 조회
+        exchange_data = data_service.get_ticker_data_sync(
+            settings.exchange_rate_ticker, 
+            start_date, 
+            end_date
+        )
         
         if exchange_data is None or exchange_data.empty:
             return {
