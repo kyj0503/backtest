@@ -2,14 +2,14 @@ import React from 'react';
 import { AlertTriangle, TrendingUp, X, Loader2, Briefcase } from 'lucide-react';
 import PortfolioBacktestForm from '@/features/backtest/components/PortfolioBacktestForm';
 import BacktestResults from '@/features/backtest/components/BacktestResults';
-import { useBacktest } from '@/features/backtest/hooks/useBacktest';
+import { useBacktest } from '@/features/backtest/hooks/usePortfolioBacktest';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 
 const PortfolioPage: React.FC = () => {
-  const { result: results, isLoading: loading, error, isPortfolioBacktest: isPortfolio, runBacktest, reset: clearError } = useBacktest();
+  const { result: results, isLoading: loading, error, runBacktest, reset: clearError } = useBacktest();
 
   const getErrorTitle = (err: string | null) => {
     if (!err) return '오류가 발생했습니다';
@@ -23,24 +23,24 @@ const PortfolioPage: React.FC = () => {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Badge variant="outline" className="mb-4">
-              <Briefcase className="w-4 h-4 mr-1" />
-              포트폴리오 백테스팅
+              <TrendingUp className="w-4 h-4 mr-1" />
+              투자 전략 백테스팅
             </Badge>
           </div>
           <h2 className="text-3xl font-bold text-primary mb-4">
-            포트폴리오 백테스트
+            백테스트
           </h2>
           <p className="text-muted-foreground">
-            여러 종목으로 구성된 포트폴리오의 리밸런싱과 분산투자 전략을 테스트합니다
+            단일 종목 또는 여러 종목으로 구성된 포트폴리오의 투자 전략을 테스트합니다
           </p>
         </div>
 
         {/* Backtest Form */}
         <Card className="mb-8 shadow-sm">
           <CardHeader>
-            <CardTitle>포트폴리오 설정</CardTitle>
+            <CardTitle>백테스트 설정</CardTitle>
             <CardDescription>
-              포트폴리오 구성, 투자 전략, 백테스트 기간을 설정하세요
+              종목 구성, 투자 전략, 백테스트 기간을 설정하세요
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -92,18 +92,15 @@ const PortfolioPage: React.FC = () => {
               <CardTitle className="flex items-center">
                 <TrendingUp className="w-5 h-5 mr-2" />
                 백테스트 결과
-                <Badge variant="secondary" className="ml-2">
-                  포트폴리오
-                </Badge>
               </CardTitle>
               <CardDescription>
-                포트폴리오 구성에 따른 백테스트 분석 결과입니다
+                설정하신 구성과 전략에 따른 백테스트 분석 결과입니다
               </CardDescription>
             </CardHeader>
             <CardContent>
               <BacktestResults
                 data={results.data as any}
-                isPortfolio={isPortfolio}
+                isPortfolio={true}
               />
             </CardContent>
           </Card>
@@ -117,10 +114,10 @@ const PortfolioPage: React.FC = () => {
                 <Briefcase className="text-primary h-8 w-8" />
               </div>
               <CardTitle className="text-xl font-semibold mb-4">
-                포트폴리오를 구성하고 백테스트를 실행하세요
+                백테스트 설정을 완료하고 실행하세요
               </CardTitle>
               <CardDescription className="text-base">
-                포트폴리오 구성과 투자 전략, 백테스트 기간을 설정한 후<br />
+                종목 구성과 투자 전략, 백테스트 기간을 설정한 후<br />
                 <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold mx-1">백테스트 실행</span>
                 버튼을 클릭하면 결과를 확인할 수 있습니다.
               </CardDescription>

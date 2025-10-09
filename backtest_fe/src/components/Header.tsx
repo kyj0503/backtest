@@ -14,8 +14,7 @@ import {
 
 const navigationItems = [
   { href: '/', label: '홈' },
-  { href: '/single-stock', label: '단일 종목' },
-  { href: '/portfolio', label: '포트폴리오' },
+  { href: '/backtest', label: '백테스트' },
 ];
 
 const Header: React.FC = () => {
