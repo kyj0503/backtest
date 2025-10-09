@@ -243,6 +243,26 @@ export const getNaverNews = async (ticker: string, date: string, display = 10) =
   }
 };
 
+export const getLatestTickerNews = async (ticker: string, display = 10) => {
+  try {
+    const response = await fetch(
+      `/api/v1/naver-news/ticker/${ticker}?display=${display}`,
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error && typeof error === 'object' && 'message' in (error as Record<string, unknown>)) {
+      throw error as ApiError;
+    }
+    throw createNetworkError(error);
+  }
+};
+
 export const searchNews = async (query: string, display = 15) => {
   try {
     const response = await fetch(
