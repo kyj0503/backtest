@@ -336,13 +336,23 @@ async def search_news(
         raise HTTPException(status_code=500, detail=f"뉴스 검색 중 오류가 발생했습니다: {str(e)}")
 
 
-@router.get("/ticker/{ticker}", summary="종목별 뉴스 검색")
+@router.get("/ticker/{ticker}", summary="종목별 최신 뉴스 검색")
 async def get_ticker_news(
     ticker: str,
-    display: int = Query(10, description="검색 결과 수", ge=1, le=100)
+    display: int = Query(10, description="검색 결과 수", ge=1, le=100),
+    force_refresh: bool = Query(False, description="DB 캐시를 무시하고 API에서 새로 가져올지 여부")
 ):
     """
-    특정 종목의 뉴스 검색
+    특정 종목의 최신 뉴스 검색 (DB 캐싱 지원)
+    
+    - **ticker**: 종목 코드 (예: 005930.KS, AAPL)
+    - **display**: 검색 결과 수 (1-100)
+    - **force_refresh**: DB 캐시 무시 여부 (기본값: False)
+    
+    **동작 방식**:
+    1. DB에 24시간 이내의 최신 뉴스가 있으면 DB에서 반환
+    2. DB에 없으면 네이버 API를 통해 가져오고 DB에 저장 후 반환
+    3. force_refresh=true인 경우 DB 캐시를 무시하고 API에서 새로 가져옴
     """
     try:
         # 검색어 결정 (회사명으로 정확한 검색)
@@ -364,9 +374,43 @@ async def get_ticker_news(
                 # 해외 종목의 경우 티커 그대로 사용
                 query = f"{ticker} 주식"
         
-        news_list = news_service.search_news(query, display)
+        news_list = []
+        from_cache = False
         
-        logger.info(f"네이버 뉴스 검색 완료: {query} - {len(news_list)}건")
+        # DB 캐시 확인 (force_refresh가 False인 경우에만)
+        if not force_refresh:
+            try:
+                db_news = news_repository.get_latest_news(ticker, max_age_hours=24)
+                if db_news:
+                    # DB에서 가져온 뉴스를 API 응답 형식에 맞게 변환
+                    news_list = [
+                        {
+                            'title': item['title'],
+                            'link': item['link'],
+                            'description': item['description'],
+                            'pubDate': item['news_date']  # DB의 news_date를 pubDate로 매핑
+                        }
+                        for item in db_news
+                    ]
+                    # display 개수만큼만 반환
+                    news_list = news_list[:display]
+                    from_cache = True
+                    logger.info(f"DB 캐시에서 최신 뉴스 반환: {ticker} - {len(news_list)}건")
+            except Exception as e:
+                logger.warning(f"DB 캐시 조회 실패, API로 fallback: {e}")
+        
+        # DB에 없거나 force_refresh인 경우 API 호출
+        if not news_list or force_refresh:
+            news_list = news_service.search_news(query, display)
+            logger.info(f"API에서 최신 뉴스 조회: {query} - {len(news_list)}건")
+            
+            # API 결과를 DB에 저장
+            if news_list:
+                try:
+                    news_repository.save_latest_news(ticker, news_list, source="naver")
+                    logger.info(f"최신 뉴스 DB 저장 완료: {ticker} - {len(news_list)}건")
+                except Exception as e:
+                    logger.error(f"최신 뉴스 DB 저장 실패 (조회는 계속 진행): {e}")
         
         return {
             "status": "success",
@@ -375,6 +419,7 @@ async def get_ticker_news(
                 "ticker": ticker,
                 "query": query,
                 "total_count": len(news_list),
+                "from_cache": from_cache,
                 "news_list": news_list
             }
         }

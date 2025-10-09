@@ -170,6 +170,122 @@ class NewsRepository:
         finally:
             conn.close()
 
+    def get_latest_news(self, ticker: str, max_age_hours: int = 24) -> List[Dict[str, Any]]:
+        """
+        종목의 최신 뉴스를 조회합니다 (캐시된 최신 뉴스).
+        
+        Args:
+            ticker: 종목 티커
+            max_age_hours: 최대 캐시 유지 시간 (시간 단위, 기본 24시간)
+        
+        Returns:
+            뉴스 리스트 (캐시가 유효하지 않으면 빈 리스트)
+        """
+        conn = self._get_connection()
+
+        try:
+            # 최신 뉴스는 당일 날짜로 저장되므로 최근 데이터를 조회
+            # created_at이 max_age_hours 이내인 뉴스만 반환
+            query = text("""
+                SELECT ticker, news_date, title, link, description, source, created_at
+                FROM stock_news
+                WHERE ticker = :ticker
+                  AND created_at >= DATE_SUB(NOW(), INTERVAL :hours HOUR)
+                ORDER BY created_at DESC
+                LIMIT 100
+            """)
+
+            result = conn.execute(query, {
+                "ticker": ticker,
+                "hours": max_age_hours
+            })
+
+            news_list = []
+            for row in result:
+                news_list.append({
+                    "ticker": row[0],
+                    "news_date": row[1].strftime('%Y-%m-%d') if hasattr(row[1], 'strftime') else str(row[1]),
+                    "title": row[2],
+                    "link": row[3],
+                    "description": row[4],
+                    "source": row[5],
+                    "created_at": row[6].isoformat() if hasattr(row[6], 'isoformat') else str(row[6])
+                })
+
+            return news_list
+
+        except Exception as e:
+            logger.exception(f"최신 뉴스 조회 실패: {ticker}")
+            return []
+        finally:
+            conn.close()
+
+    def save_latest_news(self, ticker: str, news_list: List[Dict[str, Any]], source: str = "naver") -> int:
+        """
+        최신 뉴스를 DB에 저장합니다 (당일 날짜로 저장).
+        기존 최신 뉴스를 삭제하고 새로 저장합니다.
+
+        Args:
+            ticker: 종목 티커
+            news_list: 뉴스 리스트 [{'title', 'link', 'description', 'pubDate'}]
+            source: 뉴스 출처 (기본값: naver)
+
+        Returns:
+            저장된 뉴스 개수
+        """
+        if not news_list:
+            return 0
+
+        conn = self._get_connection()
+        trans = conn.begin()
+
+        try:
+            # 당일 날짜로 저장
+            from datetime import date
+            today = date.today()
+
+            # 기존 당일 뉴스 삭제 (같은 ticker의 오늘 날짜 뉴스만)
+            delete_query = text("""
+                DELETE FROM stock_news
+                WHERE ticker = :ticker 
+                  AND news_date = :news_date
+                  AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+            """)
+            conn.execute(delete_query, {"ticker": ticker, "news_date": today})
+
+            # 새 뉴스 데이터 삽입
+            insert_query = text("""
+                INSERT INTO stock_news (ticker, news_date, title, link, description, source)
+                VALUES (:ticker, :news_date, :title, :link, :description, :source)
+            """)
+
+            saved_count = 0
+            for news_item in news_list:
+                try:
+                    conn.execute(insert_query, {
+                        "ticker": ticker,
+                        "news_date": today,
+                        "title": news_item.get('title', ''),
+                        "link": news_item.get('link', ''),
+                        "description": news_item.get('description', ''),
+                        "source": source
+                    })
+                    saved_count += 1
+                except Exception as e:
+                    logger.warning(f"최신 뉴스 항목 저장 실패: {e}")
+                    continue
+
+            trans.commit()
+            logger.info(f"최신 뉴스 저장 완료: {ticker} - {saved_count}건")
+            return saved_count
+
+        except Exception as e:
+            trans.rollback()
+            logger.exception(f"최신 뉴스 저장 실패: {ticker}")
+            raise
+        finally:
+            conn.close()
+
     def delete_old_news(self, days_old: int = 90) -> int:
         """
         오래된 뉴스 데이터를 삭제합니다.
