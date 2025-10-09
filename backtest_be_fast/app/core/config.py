@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     
     # 외부 API 설정
     yahoo_finance_timeout: int = 30
+    exchange_rate_ticker: str = "KRW=X"  # 원달러 환율 티커
+    volatility_threshold_pct: float = 5.0  # 주가 변동성 기본 임계값 (%)
+    
     # 네이버 API 키 (환경변수 또는 .env에서 로드)
     naver_client_id: Optional[str] = Field(default=None, env="NAVER_CLIENT_ID")
     naver_client_secret: Optional[str] = Field(default=None, env="NAVER_CLIENT_SECRET")

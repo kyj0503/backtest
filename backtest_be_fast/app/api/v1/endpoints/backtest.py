@@ -16,6 +16,7 @@ from ....core.exceptions import (
     ValidationError,
     handle_yfinance_error
 )
+from ....core.config import settings
 from ....events.event_system import event_system_manager
 from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
 from ..decorators import handle_backtest_errors, handle_portfolio_errors
@@ -192,8 +193,11 @@ async def get_stock_volatility_news(
     ticker: str,
     start_date: str,
     end_date: str,
-    threshold: float = 5.0  # 기본 5% 임계값
+    threshold: float = None  # None이면 설정값 사용
 ):
+    # threshold가 지정되지 않으면 설정값 사용
+    if threshold is None:
+        threshold = settings.volatility_threshold_pct
     """
     주가 급등/급락일 뉴스 조회 API
     
@@ -371,8 +375,8 @@ async def get_exchange_rate(
     반환값: 날짜별 원달러 환율 데이터
     """
     try:
-        # KRW=X 티커로 원달러 환율 데이터 조회
-        exchange_data = load_ticker_data("KRW=X", start_date, end_date)
+        # 설정에서 환율 티커 가져오기
+        exchange_data = load_ticker_data(settings.exchange_rate_ticker, start_date, end_date)
         
         if exchange_data is None or exchange_data.empty:
             return {
