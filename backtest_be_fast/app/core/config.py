@@ -51,7 +51,13 @@ class Settings(BaseSettings):
     # 백테스팅 설정
     default_initial_cash: float = 10000.0
     max_backtest_duration_days: int = 3650  # 10년
+    max_backtest_duration_years: int = 5  # 포트폴리오 백테스트 최대 기간
     default_commission: float = 0.002  # 0.2%
+    
+    # 포트폴리오 설정
+    max_portfolio_items: int = 10  # 포트폴리오 최대 종목 수
+    max_symbol_length: int = 10  # 심볼 최대 길이
+    max_dca_periods: int = 60  # DCA 최대 기간 (개월)
     
     # 최적화 설정
     max_optimization_iterations: int = Field(default=1000, env="MAX_OPTIMIZATION_ITERATIONS")

@@ -136,16 +136,16 @@ class PlotRequest(BaseModel):
 
 class PortfolioAsset(BaseModel):
     """포트폴리오 자산 모델 (통합 백테스트용)"""
-    symbol: str = Field(..., min_length=1, max_length=10, description="주식 심볼 또는 자산 코드")
+    symbol: str = Field(..., min_length=1, max_length=settings.max_symbol_length, description="주식 심볼 또는 자산 코드")
     amount: float = Field(..., gt=0, description="투자 금액")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
-    dca_periods: Optional[int] = Field(12, ge=1, le=60, description="분할 매수 기간")
+    dca_periods: Optional[int] = Field(12, ge=1, le=settings.max_dca_periods, description="분할 매수 기간")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
 
 
 class UnifiedBacktestRequest(BaseModel):
     """통합 백테스트 요청 모델 (단일/포트폴리오 자동 구분)"""
-    portfolio: List[PortfolioAsset] = Field(..., min_items=1, max_items=10, description="포트폴리오 구성")
+    portfolio: List[PortfolioAsset] = Field(..., min_items=1, max_items=settings.max_portfolio_items, description="포트폴리오 구성")
     start_date: Union[date, str] = Field(..., description="백테스트 시작 날짜")
     end_date: Union[date, str] = Field(..., description="백테스트 종료 날짜")
     strategy: StrategyType = Field(StrategyType.BUY_AND_HOLD, description="사용할 전략")

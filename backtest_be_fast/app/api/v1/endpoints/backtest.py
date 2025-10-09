@@ -164,8 +164,8 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     if not request.portfolio or len(request.portfolio) == 0:
         raise ValidationError("포트폴리오가 비어있습니다. 최소 1개 종목을 추가해주세요.")
 
-    if len(request.portfolio) > 10:
-        raise ValidationError("포트폴리오는 최대 10개 종목까지 포함할 수 있습니다.")
+    if len(request.portfolio) > settings.max_portfolio_items:
+        raise ValidationError(f"포트폴리오는 최대 {settings.max_portfolio_items}개 종목까지 포함할 수 있습니다.")
     
     # 포트폴리오 백테스트 실행
     result = await portfolio_service.run_portfolio_backtest(request)

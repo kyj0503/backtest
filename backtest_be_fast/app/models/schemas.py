@@ -6,13 +6,16 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 import numpy as np
 
+from ..core.config import settings
+
+
 class PortfolioStock(BaseModel):
     """포트폴리오 종목 모델"""
-    symbol: str = Field(..., min_length=1, max_length=10, description="주식 심볼")
+    symbol: str = Field(..., min_length=1, max_length=settings.max_symbol_length, description="주식 심볼")
     amount: Optional[float] = Field(None, gt=0, description="투자 금액 (> 0, weight와 동시 입력 불가)")
     weight: Optional[float] = Field(None, ge=0, le=100, description="비중(%) (0~100, amount와 동시 입력 불가, 소수점 허용)")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
-    dca_periods: Optional[int] = Field(12, ge=1, le=60, description="분할 매수 기간 (개월)")
+    dca_periods: Optional[int] = Field(12, ge=1, le=settings.max_dca_periods, description="분할 매수 기간 (개월)")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
     custom_name: Optional[str] = Field(None, description="현금 자산의 커스텀 이름")
     @field_validator('amount', 'weight')
@@ -58,7 +61,7 @@ class PortfolioStock(BaseModel):
 
 class PortfolioBacktestRequest(BaseModel):
     """포트폴리오 백테스트 요청 모델"""
-    portfolio: List[PortfolioStock] = Field(..., min_length=1, max_length=10, description="포트폴리오 구성")
+    portfolio: List[PortfolioStock] = Field(..., min_length=1, max_length=settings.max_portfolio_items, description="포트폴리오 구성")
     start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
     end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
     commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
@@ -106,8 +109,8 @@ class PortfolioBacktestRequest(BaseModel):
             end = datetime.strptime(v, '%Y-%m-%d')
             if end < start:
                 raise ValueError('종료 날짜는 시작 날짜보다 이후여야 합니다.')
-            if (end - start).days > 365 * 5:  # 5년 제한
-                raise ValueError('백테스트 기간은 최대 5년으로 제한됩니다.')
+            if (end - start).days > 365 * settings.max_backtest_duration_years:
+                raise ValueError(f'백테스트 기간은 최대 {settings.max_backtest_duration_years}년으로 제한됩니다.')
         return v
 
  
