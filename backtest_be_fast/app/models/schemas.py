@@ -15,7 +15,7 @@ class PortfolioStock(BaseModel):
     amount: Optional[float] = Field(None, gt=0, description="투자 금액 (> 0, weight와 동시 입력 불가)")
     weight: Optional[float] = Field(None, ge=0, le=100, description="비중(%) (0~100, amount와 동시 입력 불가, 소수점 허용)")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
-    dca_periods: Optional[int] = Field(12, ge=1, le=settings.max_dca_periods, description="분할 매수 기간 (개월)")
+    dca_periods: Optional[int] = Field(settings.default_dca_periods, ge=1, le=settings.max_dca_periods, description="분할 매수 기간 (개월)")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
     custom_name: Optional[str] = Field(None, description="현금 자산의 커스텀 이름")
     @field_validator('amount', 'weight')

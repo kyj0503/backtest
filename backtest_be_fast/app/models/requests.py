@@ -139,7 +139,7 @@ class PortfolioAsset(BaseModel):
     symbol: str = Field(..., min_length=1, max_length=settings.max_symbol_length, description="주식 심볼 또는 자산 코드")
     amount: float = Field(..., gt=0, description="투자 금액")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
-    dca_periods: Optional[int] = Field(12, ge=1, le=settings.max_dca_periods, description="분할 매수 기간")
+    dca_periods: Optional[int] = Field(settings.default_dca_periods, ge=1, le=settings.max_dca_periods, description="분할 매수 기간")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
 
 

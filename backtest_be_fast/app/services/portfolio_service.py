@@ -14,16 +14,13 @@ from app.services.yfinance_db import load_ticker_data
 from app.services.backtest_service import backtest_service
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
-    DataNotFoundError, 
-    InvalidSymbolError, 
+    DataNotFoundError,
+    InvalidSymbolError,
     ValidationError
 )
-logger = logging.getLogger(__name__)
+from app.core.config import settings
 
-# 상수 정의
-DEFAULT_DCA_PERIODS = 12
-MAX_PORTFOLIO_ITEMS = 10
-DEFAULT_COMMISSION = 0.002
+logger = logging.getLogger(__name__)
 
 class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
