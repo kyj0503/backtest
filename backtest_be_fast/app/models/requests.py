@@ -11,9 +11,9 @@ from ..core.config import settings
 class StrategyType(str, Enum):
     """지원되는 전략 타입"""
     SMA_CROSSOVER = "sma_crossover"
-    RSI_STRATEGY = "rsi_strategy"
+    RSI = "rsi"
     BOLLINGER_BANDS = "bollinger_bands"
-    MACD_STRATEGY = "macd_strategy"
+    MACD = "macd"
     BUY_AND_HOLD = "buy_and_hold"
     EMA_CROSSOVER = "ema_crossover"
 
