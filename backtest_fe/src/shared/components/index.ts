@@ -21,9 +21,6 @@ export { default as Badge } from './Badge';
 export { default as Tooltip } from './Tooltip';
 export { default as Modal } from './Modal';
 export { default as Pagination } from './Pagination';
-export { default as SearchableSelect } from './SearchableSelect';
-export { default as DateRangePicker } from './DateRangePicker';
-export { default as ToggleSwitch } from './ToggleSwitch';
 
 export { default as ChartLoading } from './ChartLoading';
 export { default as PerformanceMonitor } from './PerformanceMonitor';
