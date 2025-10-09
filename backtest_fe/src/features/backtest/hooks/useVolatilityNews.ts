@@ -2,11 +2,10 @@ import { useState, useEffect } from 'react';
 import {
   VolatilityEvent,
   NewsItem,
-  getCompanyName,
 } from '../model/volatility-news-types';
 import {
   getStockVolatilityNews,
-  searchNews,
+  getNaverNews,
 } from '../api/backtestApi';
 
 interface UseVolatilityNewsParams {
@@ -97,23 +96,21 @@ export const useVolatilityNews = ({
   };
 
   const openNewsModal = async (_date: string, event: VolatilityEvent) => {
-    // _date 매개변수는 호환성을 위해 유지하지만, 현재는 회사명만으로 검색
     if (!canViewNews) {
       return;
     }
     setCurrentNewsEvent(event);
     setShowNewsModal(true);
     setNewsLoading(true);
-    
+
     try {
-      const companyName = getCompanyName(selectedStock);
-      
-      console.log(`뉴스 검색 시작: ${companyName} (${selectedStock})`);
-      
-      const response = await searchNews(companyName, 15);
-      
+      console.log(`뉴스 검색 시작: ${selectedStock}, 날짜: ${event.date}`);
+
+      // DB 캐싱이 구현된 엔드포인트 사용
+      const response = await getNaverNews(selectedStock, event.date, 50);
+
       if (response.status === 'success' && response.data && response.data.news_list) {
-        console.log(`${companyName}에 대한 뉴스 ${response.data.news_list.length}개를 찾았습니다.`);
+        console.log(`${selectedStock}에 대한 뉴스 ${response.data.news_list.length}개를 찾았습니다. (캐시 사용: ${response.data.from_cache || false})`);
         setNewsData(response.data.news_list);
       } else {
         console.warn('뉴스 검색 실패:', response);
