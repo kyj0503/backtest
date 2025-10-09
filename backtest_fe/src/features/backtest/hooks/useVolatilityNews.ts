@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import {
   VolatilityEvent,
   NewsItem,
-  getCompanyName,
 } from '../model/volatility-news-types';
 import {
   getStockVolatilityNews,
-  searchNews,
+  getNaverNews,
+  getLatestTickerNews,
 } from '../api/backtestApi';
 
 interface UseVolatilityNewsParams {
@@ -97,27 +97,35 @@ export const useVolatilityNews = ({
   };
 
   const openNewsModal = async (_date: string, event: VolatilityEvent) => {
-    // _date 매개변수는 호환성을 위해 유지하지만, 현재는 회사명만으로 검색
     if (!canViewNews) {
       return;
     }
     setCurrentNewsEvent(event);
     setShowNewsModal(true);
     setNewsLoading(true);
-    
+
     try {
-      const companyName = getCompanyName(selectedStock);
-      
-      console.log(`뉴스 검색 시작: ${companyName} (${selectedStock})`);
-      
-      const response = await searchNews(companyName, 15);
-      
-      if (response.status === 'success' && response.data && response.data.news_list) {
-        console.log(`${companyName}에 대한 뉴스 ${response.data.news_list.length}개를 찾았습니다.`);
-        setNewsData(response.data.news_list);
+      console.log(`뉴스 검색 시작: ${selectedStock}, 날짜: ${event.date}`);
+
+      // 1. 먼저 특정 날짜의 뉴스 조회 시도 (DB 캐싱 사용)
+      const dateResponse = await getNaverNews(selectedStock, event.date, 50);
+
+      if (dateResponse.status === 'success' && dateResponse.data && dateResponse.data.news_list && dateResponse.data.news_list.length > 0) {
+        console.log(`${selectedStock}의 ${event.date} 뉴스 ${dateResponse.data.news_list.length}개를 찾았습니다. (캐시 사용: ${dateResponse.data.from_cache || false})`);
+        setNewsData(dateResponse.data.news_list);
       } else {
-        console.warn('뉴스 검색 실패:', response);
-        setNewsData([]);
+        // 2. 특정 날짜에 뉴스가 없으면 최신 뉴스로 fallback
+        console.log(`${selectedStock}의 ${event.date} 뉴스가 없습니다. 최신 뉴스를 가져옵니다.`);
+
+        const latestResponse = await getLatestTickerNews(selectedStock, 15);
+
+        if (latestResponse.status === 'success' && latestResponse.data && latestResponse.data.news_list) {
+          console.log(`${selectedStock}의 최신 뉴스 ${latestResponse.data.news_list.length}개를 찾았습니다.`);
+          setNewsData(latestResponse.data.news_list);
+        } else {
+          console.warn('최신 뉴스 검색 실패:', latestResponse);
+          setNewsData([]);
+        }
       }
     } catch (err) {
       console.error('뉴스 데이터 가져오기 실패:', err);

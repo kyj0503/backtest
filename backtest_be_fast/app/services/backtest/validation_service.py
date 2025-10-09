@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 from app.models.requests import BacktestRequest
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
-from app.core.custom_exceptions import ValidationError
+from app.core.exceptions import ValidationError
 
 
 class ValidationService:

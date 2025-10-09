@@ -1,5 +1,5 @@
 -- =================================================================
--- yfinance 데이터 캐싱을 위한 데이터베이스 및 테이블 생성 DDL
+-- yfinance 데이터 캐싱 및 뉴스 데이터 저장을 위한 데이터베이스 및 테이블 생성 DDL
 -- 대상 DBMS: MySQL 8.0+
 -- =================================================================
 
@@ -15,11 +15,7 @@ USE stock_data_cache;
 -- 3. 테이블 생성
 -- 실행 시 오류를 방지하기 위해 기존 테이블이 있다면 삭제 후 재생성합니다.
 
-DROP TABLE IF EXISTS cache_metadata;
-DROP TABLE IF EXISTS exchange_rates;
-DROP TABLE IF EXISTS financial_statements;
-DROP TABLE IF EXISTS stock_splits;
-DROP TABLE IF EXISTS dividends;
+DROP TABLE IF EXISTS stock_news;
 DROP TABLE IF EXISTS daily_prices;
 DROP TABLE IF EXISTS stocks;
 
@@ -66,84 +62,23 @@ CREATE TABLE daily_prices (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT '일별 주가 정보 (OHLCV)';
 
 
--- === `dividends` 테이블: 배당 정보 ===
--- 배당금 지급 이력을 저장합니다.
-CREATE TABLE dividends (
+-- === `stock_news` 테이블: 종목별 뉴스 정보 ===
+-- 네이버 뉴스 API 등에서 가져온 종목 관련 뉴스를 캐싱합니다.
+CREATE TABLE stock_news (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    stock_id INT NOT NULL,
-    date DATE NOT NULL,
-    dividend DECIMAL(19, 4),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_stock_date (stock_id, date),
-    INDEX idx_date (date),
-    FOREIGN KEY (stock_id) REFERENCES stocks(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT '배당금 지급 이력';
-
-
--- === `stock_splits` 테이블: 주식 분할 정보 ===
--- 주식 분할 이벤트 이력을 저장합니다.
-CREATE TABLE stock_splits (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    stock_id INT NOT NULL,
-    date DATE NOT NULL,
-    split_ratio FLOAT NOT NULL,                  -- 분할 비율 (예: 2:1 분할 시 2.0)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_stock_date (stock_id, date),
-    INDEX idx_date (date),
-    FOREIGN KEY (stock_id) REFERENCES stocks(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT '주식 분할 이력';
-
-
--- === `financial_statements` 테이블: 재무제표 정보 ===
--- 손익계산서, 대차대조표, 현금흐름표 데이터를 JSON 형태로 저장합니다.
-CREATE TABLE financial_statements (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    stock_id INT NOT NULL,
-    report_type ENUM('income_statement', 'balance_sheet', 'cash_flow') NOT NULL, -- 재무제표 종류
-    period_type ENUM('annual', 'quarterly') NOT NULL, -- 기간 종류 (연간/분기별)
-    report_date DATE NOT NULL,                                                 -- 보고서 기준일
-    statement_data JSON NOT NULL,                                              -- 재무제표 전체 데이터
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_financial_report (stock_id, report_type, period_type, report_date),
-    INDEX idx_report_date (report_date),
-    FOREIGN KEY (stock_id) REFERENCES stocks(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT '재무제표 데이터';
-
-
--- === `exchange_rates` 테이블: 환율 정보 ===
--- KRW=X 등 환율 데이터를 캐싱합니다.
-CREATE TABLE exchange_rates (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    currency_pair VARCHAR(10) NOT NULL COMMENT '통화쌍 (예: KRW=X, EUR=X)',
-    date DATE NOT NULL COMMENT '날짜',
-    rate DECIMAL(19, 6) NOT NULL COMMENT '환율',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '생성일',
+    ticker VARCHAR(20) NOT NULL,                  -- 주식 티커 (예: AAPL, 005930.KS)
+    news_date DATE NOT NULL,                      -- 뉴스 날짜 (변동성 발생일)
+    title VARCHAR(500) NOT NULL,                  -- 뉴스 제목
+    link VARCHAR(1000),                           -- 뉴스 링크
+    description TEXT,                             -- 뉴스 요약
+    source VARCHAR(100),                          -- 뉴스 출처 (예: 네이버)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '저장일',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일',
-    UNIQUE KEY uq_currency_date (currency_pair, date),
-    INDEX idx_currency (currency_pair),
-    INDEX idx_date (date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='환율 정보';
-
-
--- === `cache_metadata` 테이블: 캐시 메타데이터 ===
--- 데이터 신선도 및 가져오기 상태를 관리합니다.
-CREATE TABLE cache_metadata (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    ticker VARCHAR(20) NOT NULL COMMENT '종목 심볼',
-    data_type ENUM('prices', 'info', 'dividends', 'splits', 'exchange') NOT NULL COMMENT '데이터 타입',
-    last_fetch TIMESTAMP NOT NULL COMMENT '마지막 가져온 시간',
-    next_update TIMESTAMP NULL COMMENT '다음 업데이트 예정 시간',
-    fetch_status ENUM('success', 'failed', 'partial') DEFAULT 'success' COMMENT '가져오기 상태',
-    error_message TEXT NULL COMMENT '오류 메시지',
-    fetch_count INT UNSIGNED DEFAULT 1 COMMENT '가져오기 횟수',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '생성일',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일',
-    UNIQUE KEY uq_ticker_type (ticker, data_type),
-    INDEX idx_next_update (next_update),
-    INDEX idx_last_fetch (last_fetch),
-    INDEX idx_fetch_status (fetch_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='데이터 캐시 메타정보';
+    INDEX idx_ticker (ticker),
+    INDEX idx_news_date (news_date),
+    INDEX idx_ticker_date (ticker, news_date),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT '종목별 뉴스 캐시';
 
 
 -- 스크립트 완료 --
@@ -153,11 +88,11 @@ SELECT '데이터베이스와 테이블 생성이 완료되었습니다.' AS mes
 SHOW TABLES;
 
 -- 인덱스 확인
-SELECT 
+SELECT
     TABLE_NAME,
     INDEX_NAME,
     COLUMN_NAME
-FROM information_schema.STATISTICS 
-WHERE TABLE_SCHEMA = 'stock_data_cache' 
-    AND TABLE_NAME IN ('stocks', 'daily_prices', 'dividends', 'stock_splits', 'exchange_rates', 'cache_metadata')
+FROM information_schema.STATISTICS
+WHERE TABLE_SCHEMA = 'stock_data_cache'
+    AND TABLE_NAME IN ('stocks', 'daily_prices', 'stock_news')
 ORDER BY TABLE_NAME, INDEX_NAME;

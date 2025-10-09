@@ -437,16 +437,9 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     if (!startDate || !endDate || newsSymbols.length === 0) return null;
 
     return (
-      <ResultBlock
-        title="주가 급등락 뉴스"
-        description="백테스트 기간 중 주요 뉴스 흐름"
-        actions={<FormLegend items={[{ label: newsSymbols.join(' · '), tone: 'muted' }]} />}
-        key="news"
-      >
-        <Suspense fallback={<ChartLoading height={260} />}>
-          <LazyStockVolatilityNews symbols={newsSymbols} startDate={startDate} endDate={endDate} />
-        </Suspense>
-      </ResultBlock>
+      <Suspense fallback={<ChartLoading height={260} />}>
+        <LazyStockVolatilityNews symbols={newsSymbols} startDate={startDate} endDate={endDate} />
+      </Suspense>
     );
   };
 

@@ -39,9 +39,9 @@ class StrategyService:
                     }
                 }
             },
-            'rsi_strategy': {
+            'rsi': {
                 'class': RSIStrategy,
-                'name': 'RSI Strategy',
+                'name': 'RSI',
                 'description': 'RSI 과매수/과매도 기반 전략',
                 'parameters': {
                     'rsi_period': {
@@ -88,9 +88,9 @@ class StrategyService:
                     }
                 }
             },
-            'macd_strategy': {
+            'macd': {
                 'class': MACDStrategy,
-                'name': 'MACD Strategy',
+                'name': 'MACD',
                 'description': 'MACD 교차 기반 전략',
                 'parameters': {
                     'fast_period': {
@@ -209,7 +209,7 @@ class StrategyService:
             if short_window >= long_window:
                 raise ValueError(f"SMA 전략에서 short_window({short_window})는 long_window({long_window})보다 작아야 합니다")
 
-        elif strategy_name == 'rsi_strategy':
+        elif strategy_name == 'rsi':
             rsi_overbought = validated_params.get('rsi_overbought', 70)
             rsi_oversold = validated_params.get('rsi_oversold', 30)
             if rsi_oversold >= rsi_overbought:

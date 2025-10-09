@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import ResultsHeader from './results/ResultsHeader';
 import ChartsSection from './results/ChartsSection';
 import { BacktestResultsProps } from '../model/backtest-result-types';
 import { AlertCircle, FileDown } from 'lucide-react';
@@ -201,21 +200,17 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
   }
 
   return (
-    <div ref={resultsRef} className="mx-auto w-full max-w-screen-2xl space-y-8">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <ResultsHeader data={data} isPortfolio={isPortfolio} />
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={downloadAsTextReport}>
-            <FileDown className="w-4 h-4 mr-2" />
-            리포트 다운로드
-          </Button>
-        </div>
+    <div ref={resultsRef} className="mx-auto w-full max-w-screen-2xl space-y-6">
+      {/* 리포트 다운로드 버튼 */}
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={downloadAsTextReport}>
+          <FileDown className="w-4 h-4 mr-2" />
+          리포트 다운로드
+        </Button>
       </div>
 
-      <section className="space-y-8 rounded-[32px] border border-border/40 bg-card/30 p-8 shadow-sm">
-        <ChartsSection data={data} isPortfolio={isPortfolio} />
-      </section>
+      {/* 차트 섹션 */}
+      <ChartsSection data={data} isPortfolio={isPortfolio} />
     </div>
   );
 };

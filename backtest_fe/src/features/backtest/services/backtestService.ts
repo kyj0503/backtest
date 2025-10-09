@@ -17,10 +17,10 @@ import {
 
 export class BacktestService {
   /**
-   * 통합 백테스트 실행
+   * 백테스트 실행 (단일 종목 또는 포트폴리오)
    */
   static async executeBacktest(request: BacktestRequest): Promise<UnifiedBacktestResponse> {
-    const response = await apiClient.post<UnifiedBacktestResponse>('/v1/backtest/execute', request);
+    const response = await apiClient.post<UnifiedBacktestResponse>('/v1/backtest/portfolio', request);
     return response.data;
   }
 
