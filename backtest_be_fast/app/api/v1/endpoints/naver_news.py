@@ -3,7 +3,8 @@
 """
 from fastapi import APIRouter, Query, HTTPException
 from ....core.config import settings
-from datetime import datetime, timedelta
+from ....repositories.news_repository import news_repository
+from datetime import datetime, timedelta, date as date_type
 from typing import List, Dict, Any
 import logging
 import os
@@ -429,20 +430,31 @@ async def get_ticker_news_by_date(
     ticker: str,
     start_date: str = Query(..., description="검색 시작일 (YYYY-MM-DD)", pattern=r"^\d{4}-\d{2}-\d{2}$"),
     end_date: str = Query(None, description="검색 종료일 (YYYY-MM-DD, 없으면 시작일과 동일)", pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    display: int = Query(50, description="검색 결과 수 (필터링 전)", ge=10, le=100)
+    display: int = Query(50, description="검색 결과 수 (필터링 전)", ge=10, le=100),
+    force_refresh: bool = Query(False, description="DB 캐시를 무시하고 API에서 새로 가져올지 여부")
 ):
     """
-    특정 종목의 특정 날짜 범위 뉴스 검색
-    
+    특정 종목의 특정 날짜 범위 뉴스 검색 (DB 캐싱 지원)
+
     - **ticker**: 종목 코드 (예: 005930.KS, AAPL)
     - **start_date**: 검색 시작일 (YYYY-MM-DD 형식)
     - **end_date**: 검색 종료일 (YYYY-MM-DD 형식, 없으면 시작일과 동일)
     - **display**: 검색 결과 수 (1-100)
+    - **force_refresh**: DB 캐시 무시 여부 (기본값: False)
+
+    **동작 방식**:
+    1. DB에 해당 종목/날짜의 뉴스가 있으면 DB에서 반환
+    2. DB에 없으면 네이버 API를 통해 가져오고 DB에 저장 후 반환
+    3. force_refresh=true인 경우 DB 캐시를 무시하고 API에서 새로 가져옴
     """
     try:
         # end_date가 없으면 start_date와 동일하게 설정
         if not end_date:
             end_date = start_date
+
+        # 날짜 객체로 변환
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
 
         # 검색어 결정 (회사명으로 정확한 검색)
         if ticker in NaverNewsService.TICKER_MAPPING:
@@ -462,11 +474,66 @@ async def get_ticker_news_by_date(
             else:
                 # 해외 종목의 경우 티커 그대로 사용
                 query = f"{ticker} 주식"
-        
-        news_list = news_service.search_news_by_date(query, start_date, end_date, display)
-        
-        logger.info(f"종목별 날짜 뉴스 검색 완료: {ticker}({query}) ({start_date}~{end_date}) - {len(news_list)}건")
-        
+
+        news_list = []
+        from_cache = False
+
+        # DB 캐시 확인 (force_refresh가 False인 경우에만)
+        if not force_refresh:
+            try:
+                db_news = news_repository.get_news_by_ticker_date(ticker, start_date_obj, end_date_obj)
+                if db_news:
+                    # DB에서 가져온 뉴스를 API 응답 형식에 맞게 변환
+                    news_list = [
+                        {
+                            'title': item['title'],
+                            'link': item['link'],
+                            'description': item['description'],
+                            'pubDate': item['news_date']  # DB의 news_date를 pubDate로 매핑
+                        }
+                        for item in db_news
+                    ]
+                    from_cache = True
+                    logger.info(f"DB 캐시에서 뉴스 반환: {ticker} ({start_date}~{end_date}) - {len(news_list)}건")
+            except Exception as e:
+                logger.warning(f"DB 캐시 조회 실패, API로 fallback: {e}")
+
+        # DB에 없거나 force_refresh인 경우 API 호출
+        if not news_list or force_refresh:
+            news_list = news_service.search_news_by_date(query, start_date, end_date, display)
+            logger.info(f"API에서 뉴스 조회: {ticker}({query}) ({start_date}~{end_date}) - {len(news_list)}건")
+
+            # API 결과를 DB에 저장 (날짜별로 분리하여 저장)
+            if news_list:
+                try:
+                    # 날짜별로 뉴스를 그룹화
+                    news_by_date = {}
+                    for news_item in news_list:
+                        # pubDate 파싱 및 날짜 추출
+                        try:
+                            import email.utils
+                            pub_timestamp = email.utils.parsedate_tz(news_item['pubDate'])
+                            if pub_timestamp:
+                                pub_dt = datetime.fromtimestamp(email.utils.mktime_tz(pub_timestamp))
+                                news_date = pub_dt.date()
+
+                                if news_date not in news_by_date:
+                                    news_by_date[news_date] = []
+                                news_by_date[news_date].append(news_item)
+                        except Exception:
+                            # 날짜 파싱 실패 시 start_date 사용
+                            if start_date_obj not in news_by_date:
+                                news_by_date[start_date_obj] = []
+                            news_by_date[start_date_obj].append(news_item)
+
+                    # 날짜별로 DB에 저장
+                    for news_date, date_news in news_by_date.items():
+                        news_repository.save_news(ticker, news_date, date_news, source="naver")
+
+                    logger.info(f"뉴스 DB 저장 완료: {ticker} - {len(news_list)}건")
+                except Exception as e:
+                    logger.error(f"뉴스 DB 저장 실패 (조회는 계속 진행): {e}")
+
         return {
             "status": "success",
             "message": f"{ticker}({query}) 관련 뉴스를 {start_date}~{end_date} 기간에서 {len(news_list)}건 조회했습니다.",
@@ -476,10 +543,11 @@ async def get_ticker_news_by_date(
                 "start_date": start_date,
                 "end_date": end_date,
                 "total_count": len(news_list),
+                "from_cache": from_cache,
                 "news_list": news_list
             }
         }
-        
+
     except Exception as e:
         logger.error(f"종목별 날짜 뉴스 검색 오류: {str(e)}")
         raise HTTPException(status_code=500, detail=f"종목별 날짜 뉴스 검색 중 오류가 발생했습니다: {str(e)}")
