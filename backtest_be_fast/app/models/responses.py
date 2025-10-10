@@ -246,6 +246,12 @@ class IndicatorData(BaseModel):
     data: List[Dict[str, Union[str, float]]] = Field(..., description="지표 데이터")
 
 
+class BenchmarkPoint(BaseModel):
+    """벤치마크 데이터 포인트"""
+    date: str = Field(..., description="날짜 (YYYY-MM-DD)")
+    close: float = Field(..., description="종가")
+
+
 class ChartDataResponse(BaseModel):
     """차트 데이터 응답 모델"""
     # 기본 정보
@@ -253,13 +259,17 @@ class ChartDataResponse(BaseModel):
     strategy: str = Field(..., description="전략명")
     start_date: str = Field(..., description="시작 날짜")
     end_date: str = Field(..., description="종료 날짜")
-    
+
     # 차트 데이터
     ohlc_data: List[ChartDataPoint] = Field(..., description="OHLC 캔들스틱 데이터")
     equity_data: List[EquityPoint] = Field(..., description="자산 곡선 데이터")
     trade_markers: List[TradeMarker] = Field(..., description="거래 마커")
     indicators: List[IndicatorData] = Field(..., description="기술 지표 데이터")
-    
+
+    # 벤치마크 데이터
+    sp500_benchmark: List[BenchmarkPoint] = Field(default_factory=list, description="S&P 500 벤치마크 데이터")
+    nasdaq_benchmark: List[BenchmarkPoint] = Field(default_factory=list, description="NASDAQ 벤치마크 데이터")
+
     # 통계 요약
     summary_stats: Dict[str, Any] = Field(..., description="주요 통계")
     
