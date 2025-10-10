@@ -3,7 +3,8 @@ export const getApiBaseUrl = (): string => {
   if (typeof envBase === 'string' && envBase.length > 0) {
     return envBase.replace(/\/$/, '');
   }
-  return '/api';
+  // 빈 문자열 반환: backtestService.ts에서 전체 경로(/api/v1/...)를 사용
+  return '';
 };
 
 export const buildApiUrl = (path: string): string => {
