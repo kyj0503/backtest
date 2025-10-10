@@ -1,29 +1,34 @@
+/**
+ * 전략 관련 훅
+ * 
+ * 전략 목록은 constants/strategies.ts에 하드코딩되어 있으므로
+ * API 호출 없이 즉시 반환합니다.
+ */
 
-import { useAsync } from '@/shared/hooks/useAsync';
-import { BacktestService } from '../services/backtestService';
-import { Strategy } from '../model/api-types';
+import { useMemo } from 'react';
+import { STRATEGIES, getStrategyByName, Strategy } from '../constants/strategies';
 
 export function useStrategies() {
-  return useAsync<Strategy[]>(
-    () => BacktestService.getStrategies(),
-    [],
-    {
-      onError: (error) => {
-        console.error('Failed to load strategies:', error);
-      }
-    }
-  );
+  const data = useMemo(() => STRATEGIES, []);
+  
+  return {
+    data,
+    loading: false,
+    error: null,
+    execute: () => Promise.resolve(data),
+  };
 }
 
 export function useStrategy(strategyName: string | null) {
-  return useAsync<Strategy>(
-    () => BacktestService.getStrategy(strategyName!),
-    [strategyName],
-    { 
-      immediate: !!strategyName,
-      onError: (error) => {
-        console.error(`Failed to load strategy ${strategyName}:`, error);
-      }
-    }
+  const data = useMemo(
+    () => (strategyName ? getStrategyByName(strategyName) : undefined),
+    [strategyName]
   );
+  
+  return {
+    data,
+    loading: false,
+    error: null,
+    execute: () => Promise.resolve(data),
+  };
 }

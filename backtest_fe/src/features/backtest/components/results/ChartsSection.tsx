@@ -16,12 +16,9 @@ import {
   LazyTradesChart,
   LazyStatsSummary,
   LazyStockPriceChart,
-  LazyExchangeRateChart,
-  LazyStockVolatilityNews,
 } from '../lazy/LazyChartComponents';
 import ChartLoading from '@/shared/components/ChartLoading';
-import { useStockData } from '../../hooks/useStockData';
-import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint } from '../../model/backtest-result-types';
+import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint, StockDataItem } from '../../model/backtest-result-types';
 import { FormLegend } from '@/shared/components';
 import { Loader2, Grid3X3, Grid } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -62,28 +59,24 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     [data, isPortfolio],
   );
 
-  const stockQuery = useMemo(
-    () => {
-      if (portfolioData) {
-        return {
-          symbols: portfolioData.portfolio_composition.map(item => item.symbol),
-          startDate: portfolioData.portfolio_statistics.Start,
-          endDate: portfolioData.portfolio_statistics.End,
-        };
+  // 통합 응답에서 주가 데이터 추출
+  const stocksData = useMemo(() => {
+    if (portfolioData?.stock_data) {
+      return Object.entries(portfolioData.stock_data).map(([symbol, data]) => ({
+        symbol,
+        data,
+      }));
+    }
+    if (chartData?.ticker && (data as any).stock_data) {
+      const stockData = (data as any).stock_data[chartData.ticker];
+      if (stockData) {
+        return [{ symbol: chartData.ticker, data: stockData }];
       }
-      if (chartData?.ticker) {
-        return {
-          symbols: [chartData.ticker],
-          startDate: chartData.start_date ?? '',
-          endDate: chartData.end_date ?? '',
-        };
-      }
-      return { symbols: [] as string[], startDate: '', endDate: '' };
-    },
-    [chartData, portfolioData],
-  );
+    }
+    return [];
+  }, [portfolioData, chartData, data]);
 
-  const { stocksData, loading: loadingStockData } = useStockData(stockQuery);
+  const loadingStockData = false; // 통합 응답이므로 별도 로딩 없음
 
   const formatCurrency = useMemo(
     () => (value: number): string => {
@@ -412,17 +405,47 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       );
     }
 
-    // 3. 환율 차트
-    if (startDate && endDate) {
+    // 3. 환율 차트 (통합 응답 데이터 사용)
+    const exchangeRates = portfolioData?.exchange_rates || (data as any).exchange_rates;
+    if (exchangeRates && exchangeRates.length > 0) {
+      const minRate = Math.min(...exchangeRates.map((d: any) => d.rate));
+      const maxRate = Math.max(...exchangeRates.map((d: any) => d.rate));
+      
       allCharts.push(
         <ResultBlock
           title="환율 추이"
           description="동일 기간의 원/달러 환율 변동"
           key="exchange-rate"
         >
-          <Suspense fallback={<ChartLoading height={260} />}>
-            <LazyExchangeRateChart startDate={startDate} endDate={endDate} showCard={false} />
-          </Suspense>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={exchangeRates}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value: any) => {
+                  const date = new Date(value);
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
+              />
+              <YAxis 
+                domain={[minRate - 50, maxRate + 50]}
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value: number) => `₩${value.toFixed(0)}`}
+              />
+              <Tooltip 
+                formatter={(value: number) => [`₩${value.toFixed(2)}`, '환율']}
+                labelFormatter={(label: string) => `날짜: ${label}`}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="rate" 
+                stroke="#10b981" 
+                strokeWidth={2} 
+                dot={false} 
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </ResultBlock>
       );
     }
@@ -432,14 +455,53 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
   const allChartCards = renderAllCharts();
 
-  // 뉴스 섹션 (별도 렌더링, 전체 너비)
+  // 뉴스 섹션 (통합 응답 데이터 사용)
   const renderNewsSection = () => {
-    if (!startDate || !endDate || newsSymbols.length === 0) return null;
+    const volatilityEvents = portfolioData?.volatility_events || (data as any).volatility_events;
+    if (!volatilityEvents || Object.keys(volatilityEvents).length === 0) return null;
 
     return (
-      <Suspense fallback={<ChartLoading height={260} />}>
-        <LazyStockVolatilityNews symbols={newsSymbols} startDate={startDate} endDate={endDate} />
-      </Suspense>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">급등/급락 이벤트</h3>
+        {Object.entries(volatilityEvents).map(([symbol, events]: [string, any[]]) => {
+          if (!events || events.length === 0) return null;
+          
+          return (
+            <ResultBlock
+              key={symbol}
+              title={`${symbol} 급등/급락 이벤트`}
+              description={`5% 이상 변동 이벤트 (최근 ${events.length}개)`}
+            >
+              <div className="space-y-2">
+                {events.slice(0, 5).map((event, idx) => (
+                  <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0">
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                        event.event_type === '급등' 
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100' 
+                          : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100'
+                      }`}>
+                        {event.event_type}
+                      </span>
+                      <span className="text-sm text-muted-foreground">{event.date}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`text-sm font-semibold ${
+                        event.daily_return > 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {event.daily_return > 0 ? '+' : ''}{event.daily_return.toFixed(2)}%
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        ${event.close_price.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ResultBlock>
+          );
+        })}
+      </div>
     );
   };
 
