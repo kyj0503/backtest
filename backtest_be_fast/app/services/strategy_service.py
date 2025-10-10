@@ -174,12 +174,24 @@ class StrategyService:
         """모든 전략 정보 반환"""
         result = {}
         for name, info in STRATEGIES.items():
+            # parameters의 type 필드를 문자열로 변환 (JSON 직렬화 가능하도록)
+            serializable_params = {}
+            for param_name, param_info in info['parameters'].items():
+                param_copy = param_info.copy()
+                if 'type' in param_copy and isinstance(param_copy['type'], type):
+                    param_copy['type'] = param_copy['type'].__name__
+                serializable_params[param_name] = param_copy
+            
             result[name] = {
                 'name': info['name'],
                 'description': info['description'],
-                'parameters': info['parameters']
+                'parameters': serializable_params
             }
         return result
+    
+    def get_available_strategies(self) -> Dict[str, Dict[str, Any]]:
+        """사용 가능한 전략 목록 반환 (get_all_strategies의 별칭)"""
+        return self.get_all_strategies()
     
     def validate_strategy_params(
         self, 

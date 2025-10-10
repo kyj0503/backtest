@@ -28,7 +28,7 @@ async def get_strategies():
     - 파라미터별 타입, 기본값, 범위
     """
     try:
-        strategies_data = strategy_service.get_all_strategies()
+        strategies_data = strategy_service.get_available_strategies()
         
         strategies = []
         for strategy_key, strategy_info in strategies_data.items():

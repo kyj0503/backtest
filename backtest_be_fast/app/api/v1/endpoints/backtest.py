@@ -31,62 +31,29 @@ portfolio_service = PortfolioService()
 
 
 @router.post(
-    "/execute",
-    response_model=ChartDataResponse,
+    "/portfolio",
     status_code=status.HTTP_200_OK,
-    summary="통합 백테스트 실행",
-    description="백테스트를 실행하고 결과를 Recharts용 차트 데이터로 반환합니다."
+    summary="포트폴리오 백테스트 실행",
+    description="여러 자산으로 구성된 포트폴리오의 백테스트를 실행합니다."
 )
-@handle_backtest_errors
-async def execute_backtest(request: BacktestRequest):
+@handle_portfolio_errors
+async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     """
-    통합 백테스트 실행 API
+    포트폴리오 백테스트 실행 API
     
-    백테스트를 실행하고 결과를 Recharts 라이브러리에서 사용할 수 있는 
-    JSON 형태의 차트 데이터로 반환합니다.
+    여러 자산(주식, 현금 등)으로 구성된 포트폴리오의 백테스트를 실행하고
+    리밸런싱을 포함한 성과를 분석합니다.
     
-    **반환 데이터:**
-    - **ohlc_data**: 캔들스틱 차트용 OHLC 데이터
-    - **equity_data**: 자산 곡선 데이터
-    - **trade_markers**: 거래 진입/청산 마커
-    - **indicators**: 기술 지표 데이터
-    - **summary_stats**: 주요 성과 지표
+    - **portfolio**: 포트폴리오 구성 (종목, 비중, 투자방식 등)
+    - **start_date**: 시작 날짜 (YYYY-MM-DD)
+    - **end_date**: 종료 날짜 (YYYY-MM-DD)
+    - **commission**: 수수료율 (0 ~ 0.1)
+    - **rebalance_frequency**: 리밸런싱 주기 (monthly, quarterly, yearly)
+    - **strategy**: 전략명 (기본: buy_and_hold)
     
-    **사용 예시 (React + Recharts):**
-    ```javascript
-    // 캔들스틱 차트
-    <ComposedChart data={chartData.ohlc_data}>
-      <XAxis dataKey="date" />
-      <YAxis />
-      <Bar dataKey="volume" />
-      <Line dataKey="close" />
-    </ComposedChart>
-    
-    // 자산 곡선
-    <LineChart data={chartData.equity_data}>
-      <Line dataKey="return_pct" stroke="#8884d8" />
-      <Line dataKey="drawdown_pct" stroke="#ff0000" />
-    </LineChart>
-    ```
-    
-    v2 개선사항: DB에서 데이터를 우선 사용하고, 없을 경우 yfinance 사용
-    로그인 사용자는 백테스트 히스토리가 자동으로 저장됩니다.
+    반환값: 포트폴리오 성과 지표, 자산별 수익률, 리밸런싱 내역 등
     """
-    # 모든 요청을 게스트로 처리합니다.
-    
-    # 실제 백테스트를 실행하여 정확한 통계를 얻습니다
-    backtest_result = await backtest_service.run_backtest(request)
-
-    chart_data = await backtest_service.generate_chart_data(
-        request, backtest_result
-    )
-    logger.info(
-        "백테스트 API 완료: %s, 데이터 포인트: %s",
-        request.ticker,
-        len(chart_data.ohlc_data),
-    )
-
-    return chart_data
+    return await portfolio_service.run_portfolio_backtest(request)
 
 
 @router.get(

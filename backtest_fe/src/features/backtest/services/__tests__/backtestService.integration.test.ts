@@ -62,7 +62,7 @@ describe('BacktestService (integration)', () => {
     }
 
     server.use(
-      http.post('http://localhost:3000/api/v1/backtest/execute', async ({ request }) => {
+      http.post('http://localhost:3000/api/v1/backtest/portfolio', async ({ request }) => {
         capturedBody = await request.json()
         return HttpResponse.json(mockResponse)
       })
@@ -76,7 +76,7 @@ describe('BacktestService (integration)', () => {
 
   it('propagates API failures as rejected promises', async () => {
     server.use(
-      http.post('http://localhost:3000/api/v1/backtest/execute', () => HttpResponse.json({ message: 'failed' }, { status: 500 }))
+      http.post('http://localhost:3000/api/v1/backtest/portfolio', () => HttpResponse.json({ message: 'failed' }, { status: 500 }))
     )
 
     await expect(BacktestService.executeBacktest(baseRequest)).rejects.toThrow('Request failed with status code 500')
