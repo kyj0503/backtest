@@ -559,12 +559,11 @@ class ChartDataService:
         
         total_return_pct = ((final_price / initial_price) - 1) * 100
         final_equity = initial_cash * (final_price / initial_price)
-        max_drawdown_pct = 0.0  # Buy & Hold 단순화
+        max_drawdown_pct = 0.0
         
-        # 테스트에서 기대하는 필드명으로 맞춤
         return {
             "total_return_pct": total_return_pct,
-            "sharpe_ratio": 0.0,  # 단순화
+            "sharpe_ratio": 0.0,
             "max_drawdown_pct": max_drawdown_pct,
             "total_trades": 1,  # Buy & Hold은 1번 거래
             "win_rate_pct": 100.0 if total_return_pct > 0 else 0.0,

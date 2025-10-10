@@ -15,7 +15,7 @@ from decimal import Decimal
 
 # Repository 패턴 import
 from app.repositories import backtest_repository, data_repository
-from app import strategy_registry
+from app.services.strategy_service import strategy_service
 
 # Monkey patch for pandas Timedelta compatibility issue
 def _patch_backtesting_stats():
@@ -169,11 +169,15 @@ class BacktestService:
     
     def get_available_strategies(self) -> Dict[str, Dict[str, Any]]:
         """사용 가능한 전략 목록"""
-        return strategy_registry.get_available_strategies()
+        return strategy_service.get_all_strategies()
     
     def validate_strategy_params(self, strategy_name: str, params: Dict[str, Any]) -> bool:
         """전략 파라미터 검증"""
-        return strategy_registry.validate_strategy_params(strategy_name, params)
+        try:
+            strategy_service.validate_strategy_params(strategy_name, params)
+            return True
+        except ValueError:
+            return False
     
     async def get_system_stats(self) -> Dict[str, Any]:
         """시스템 통계 정보"""
@@ -183,7 +187,7 @@ class BacktestService:
                 'data_cache': await self.data_repository.get_cache_stats()
             },
             'strategy_stats': {
-                'available_strategies': len(strategy_registry.get_available_strategies())
+                'available_strategies': len(strategy_service.get_all_strategies())
             }
         }
     

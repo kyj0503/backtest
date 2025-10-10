@@ -10,14 +10,15 @@ from app.models.requests import BacktestRequest
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
 from app.core.exceptions import ValidationError
+from app.repositories.data_repository import data_repository
 
 
 class ValidationService:
     """백테스트 요청 검증 및 유틸리티 전담 서비스"""
     
-    def __init__(self):
+    def __init__(self, data_repository_instance=None):
+        self.data_repository = data_repository_instance or data_repository
         self.data_fetcher = data_fetcher
-        self.strategy_service = strategy_service
         self.logger = logging.getLogger(__name__)
     
     def validate_backtest_request(self, request: BacktestRequest) -> None:
@@ -36,13 +37,13 @@ class ValidationService:
                 raise ValidationError("초기 현금은 0보다 커야 합니다")
             
             # 4. 전략 검증
-            if request.strategy not in self.strategy_service.get_all_strategies():
+            if request.strategy not in strategy_service.get_all_strategies():
                 raise ValidationError(f"지원하지 않는 전략: {request.strategy}")
             
             # 5. 전략 파라미터 검증
             if request.strategy_params:
                 try:
-                    self.strategy_service.validate_strategy_params(
+                    strategy_service.validate_strategy_params(
                         request.strategy, 
                         request.strategy_params
                     )
@@ -108,8 +109,8 @@ class ValidationService:
                 'Return [%]': buy_hold_return,
                 '# Trades': 1,
                 'Win Rate [%]': 100.0 if buy_hold_return > 0 else 0.0,
-                'Max. Drawdown [%]': 0.0,  # 단순화
-                'Sharpe Ratio': 0.0,      # 단순화
+                'Max. Drawdown [%]': 0.0,
+                'Sharpe Ratio': 0.0,
                 'Volatility [%]': volatility,
                 'Buy & Hold Return [%]': buy_hold_return,  # 실제 Buy & Hold 수익률
             }
