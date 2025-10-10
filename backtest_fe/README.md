@@ -88,10 +88,8 @@ src/
 │   ├── ui/                # shadcn/ui 컴포넌트
 │   └── components/        # 공통 컴포넌트
 ├── features/              # 기능별 모듈
-│   ├── auth/             # 인증/인가
 │   ├── backtest/         # 백테스트 기능
-│   ├── community/        # 커뮤니티 기능
-│   └── chat/             # 채팅 기능
+│   └── shared/           # 공통 기능(필요 시 분리)
 ├── pages/                # 페이지 컴포넌트
 ├── test/                 # 테스트 유틸리티
 └── themes/               # 테마 정의 파일
