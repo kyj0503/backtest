@@ -1,8 +1,11 @@
 import pandas as pd
 from types import SimpleNamespace
 
-from app.services.backtest.chart_data_service import chart_data_service
-from app.services.backtest.backtest_engine import BacktestEngine
+from faker import Faker
+import pytest
+
+from app.services.chart_data_service import chart_data_service
+from app.services.backtest_engine import BacktestEngine
 from app.models.requests import BacktestRequest, StrategyType
 
 

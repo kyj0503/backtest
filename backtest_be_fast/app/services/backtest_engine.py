@@ -14,8 +14,9 @@ from fastapi import HTTPException
 from app.models.requests import BacktestRequest
 from app.models.responses import BacktestResult
 from app.utils.data_fetcher import data_fetcher
+from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
-from app.services.backtest.validation_service import validation_service
+from app.services.validation_service import validation_service
 
 
 class BacktestEngine:

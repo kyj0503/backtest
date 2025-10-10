@@ -94,12 +94,10 @@ from app.core.config import settings
 from app.core.exceptions import ValidationError
 
 # 분리된 서비스들 import
-from .backtest import (
-    backtest_engine,
-    optimization_service, 
-    chart_data_service,
-    validation_service
-)
+from app.services.backtest_engine import backtest_engine
+from app.services.optimization_service import optimization_service
+from app.services.chart_data_service import chart_data_service
+from app.services.validation_service import validation_service
 
 logger = logging.getLogger(__name__)
 
