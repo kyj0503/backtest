@@ -17,7 +17,6 @@ from ....core.exceptions import (
     handle_yfinance_error
 )
 from ....core.config import settings
-from ....events.event_system import event_system_manager
 from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
 from ..decorators import handle_backtest_errors, handle_portfolio_errors
 import logging
