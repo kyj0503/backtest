@@ -15,12 +15,12 @@ const HomePage: React.FC = () => {
               투자 전략 검증 플랫폼
             </div>
 
-            <h1 className="text-6xl md:text-7xl font-bold tracking-tight">
-              <span className="bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
+            <h1 className="text-6xl md:text-7xl font-bold tracking-tight leading-tight">
+              <span className="text-foreground">
                 백테스트로
               </span>
               <br />
-              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <span className="text-primary">
                 전략을 검증하세요
               </span>
             </h1>
