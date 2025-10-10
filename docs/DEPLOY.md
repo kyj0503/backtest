@@ -125,27 +125,6 @@ DATABASE_URL=mysql+pymysql://root:your-mysql-password@localhost:3306/stock_data_
 VITE_API_BASE_URL=/api
 
 ########################################
-# Spring Boot
-########################################
-# 호스트 MySQL 사용
-SPRING_DATASOURCE_HOST=localhost
-SPRING_DATASOURCE_PORT=3306
-SPRING_DATASOURCE_USERNAME=root
-SPRING_DATASOURCE_PASSWORD=your-mysql-password
-SPRING_DATASOURCE_POOL_SIZE=20
-
-# JWT - 운영용 시크릿 생성: openssl rand -base64 64
-APP_SECURITY_JWT_SECRET=your-production-jwt-secret-at-least-64-bytes
-APP_SECURITY_JWT_ACCESS_TOKEN_EXPIRATION=PT15M
-APP_SECURITY_JWT_REFRESH_TOKEN_EXPIRATION=P7D
-APP_SECURITY_JWT_ISSUER=backtest-be-spring
-
-# 호스트 Redis 사용
-SPRING_REDIS_HOST=localhost
-SPRING_REDIS_PORT=6379
-SPRING_REDIS_PASSWORD=your-redis-password
-
-########################################
 # Redis
 ########################################
 REDIS_PASSWORD=your-redis-password
@@ -204,7 +183,7 @@ docker compose down
 docker compose restart
 
 # 특정 서비스만 재시작
-docker compose restart backtest_be_spring
+docker compose restart backtest_be_fast
 
 # 로그 확인
 docker compose logs -f
@@ -243,9 +222,6 @@ docker compose up -d --force-recreate
 # FastAPI 헬스체크
 curl http://localhost:8000/health
 
-# Spring Boot 헬스체크
-curl http://localhost:8080/actuator/health
-
 # 프론트엔드 확인
 curl http://localhost:80/
 ```
@@ -259,7 +235,7 @@ curl http://localhost:80/
 docker compose logs
 
 # 특정 서비스 로그 확인
-docker compose logs backtest_be_spring
+docker compose logs backtest_be_fast
 
 # 컨테이너 상태 확인
 docker compose ps -a
@@ -291,7 +267,6 @@ docker compose pull --ignore-pull-failures
 
 # 또는 이미지 직접 pull
 docker pull ghcr.io/capstone-backtest/backtest/backtest-be-fast:latest
-docker pull ghcr.io/capstone-backtest/backtest/backtest-be-spring:latest
 docker pull ghcr.io/capstone-backtest/backtest/backtest-fe:latest
 ```
 
@@ -303,7 +278,6 @@ docker pull ghcr.io/capstone-backtest/backtest/backtest-fe:latest
    sudo ufw allow 80/tcp
    sudo ufw allow 443/tcp
    sudo ufw allow 8000/tcp  # 필요시
-   sudo ufw allow 8080/tcp  # 필요시
    ```
 
 2. **시크릿 관리**
