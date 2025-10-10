@@ -18,7 +18,7 @@ import {
   LazyStockPriceChart,
 } from '../lazy/LazyChartComponents';
 import ChartLoading from '@/shared/components/ChartLoading';
-import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint, StockDataItem } from '../../model/backtest-result-types';
+import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint } from '../../model/backtest-result-types';
 import { FormLegend } from '@/shared/components';
 import { Grid3X3, Grid, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';

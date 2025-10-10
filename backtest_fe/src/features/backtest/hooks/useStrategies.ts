@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { STRATEGIES, getStrategyByName, Strategy } from '../constants/strategies';
+import { STRATEGIES, getStrategyByName } from '../constants/strategies';
 
 export function useStrategies() {
   const data = useMemo(() => STRATEGIES, []);
