@@ -30,52 +30,17 @@ router = APIRouter()
 portfolio_service = PortfolioService()
 
 
-
-@router.get(
-    "/health",
-    summary="백테스트 서비스 상태 확인",
-    description="백테스트 서비스의 상태를 확인합니다."
-)
-async def backtest_health():
-    """백테스트 서비스 헬스체크"""
-    try:
-        # 간단한 검증 로직
-        from ....utils.data_fetcher import data_fetcher
-        
-        # 샘플 티커로 간단 검증
-        is_healthy = data_fetcher.validate_ticker("AAPL")
-        
-        if is_healthy:
-            return {
-                "status": "healthy",
-                "message": "백테스트 서비스가 정상 작동 중입니다.",
-                "data_source": "Yahoo Finance 연결 정상"
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="데이터 소스 연결에 문제가 있습니다."
-            )
-            
-    except Exception as e:
-        logger.error(f"헬스체크 실패: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="백테스트 서비스 상태 확인 실패"
-        )
-
-
 @router.post(
-    "/chart-data",
+    "/execute",
     response_model=ChartDataResponse,
     status_code=status.HTTP_200_OK,
-    summary="백테스트 차트 데이터",
-    description="백테스트 결과를 Recharts용 차트 데이터로 반환합니다. (DB 소스 우선 사용)"
+    summary="통합 백테스트 실행",
+    description="백테스트를 실행하고 결과를 Recharts용 차트 데이터로 반환합니다."
 )
 @handle_backtest_errors
-async def get_chart_data(request: BacktestRequest):
+async def execute_backtest(request: BacktestRequest):
     """
-    백테스트 차트 데이터 API (v2 개선사항 적용)
+    통합 백테스트 실행 API
     
     백테스트를 실행하고 결과를 Recharts 라이브러리에서 사용할 수 있는 
     JSON 형태의 차트 데이터로 반환합니다.
@@ -116,70 +81,12 @@ async def get_chart_data(request: BacktestRequest):
         request, backtest_result
     )
     logger.info(
-        "차트 데이터 API 완료: %s, 데이터 포인트: %s",
+        "백테스트 API 완료: %s, 데이터 포인트: %s",
         request.ticker,
         len(chart_data.ohlc_data),
     )
 
-    # 히스토리 저장 기능은 제거되었습니다.
-
     return chart_data
-
-
-@router.post(
-    "/portfolio",
-    status_code=status.HTTP_200_OK,
-    summary="포트폴리오 백테스트 실행",
-    description="여러 종목으로 구성된 포트폴리오의 백테스트를 실행합니다."
-)
-@handle_portfolio_errors
-async def run_portfolio_backtest(request: PortfolioBacktestRequest):
-    """
-    포트폴리오 백테스트 실행 API
-    
-    - **portfolio**: 포트폴리오 구성 (종목과 비중/금액)
-    - **start_date**: 백테스트 시작 날짜 (YYYY-MM-DD)
-    - **end_date**: 백테스트 종료 날짜 (YYYY-MM-DD)
-    - **cash**: 초기 투자금액
-    - **commission**: 거래 수수료 (기본값: 0.002)
-    - **rebalance_frequency**: 리밸런싱 주기 (monthly, quarterly, yearly)
-    
-    **사용 예시:**
-    ```json
-    {
-        "portfolio": [
-            {"symbol": "AAPL", "amount": 4000, "investment_type": "lump_sum"},
-            {"symbol": "GOOGL", "amount": 3000, "investment_type": "dca", "dca_periods": 12},
-            {"symbol": "MSFT", "amount": 3000, "investment_type": "lump_sum"}
-        ],
-        "start_date": "2023-01-01",
-        "end_date": "2023-12-31",
-        "commission": 0.002,
-        "rebalance_frequency": "monthly"
-    }
-    ```
-    """
-    # 입력 검증
-    if not request.portfolio or len(request.portfolio) == 0:
-        raise ValidationError("포트폴리오가 비어있습니다. 최소 1개 종목을 추가해주세요.")
-
-    if len(request.portfolio) > settings.max_portfolio_items:
-        raise ValidationError(f"포트폴리오는 최대 {settings.max_portfolio_items}개 종목까지 포함할 수 있습니다.")
-    
-    # 포트폴리오 백테스트 실행
-    result = await portfolio_service.run_portfolio_backtest(request)
-    
-    if result.get('status') == 'error':
-        # 서비스에서 반환된 에러 처리
-        error_message = result.get('error', '알 수 없는 오류가 발생했습니다.')
-        user_message = get_user_friendly_message("portfolio_backtest_error", error_message)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=user_message
-        )
-    
-    logger.info(f"포트폴리오 백테스트 API 완료: {len(request.portfolio)} 종목")
-    return result
 
 
 @router.get(
