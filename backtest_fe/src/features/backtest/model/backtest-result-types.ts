@@ -97,6 +97,14 @@ export interface VolatilityEvent {
   event_type: '급등' | '급락';
 }
 
+export interface NewsItem {
+  title: string;
+  link: string;
+  description: string;
+  pubDate: string;
+  originallink?: string;
+}
+
 export interface PortfolioData {
   portfolio_statistics: PortfolioStatistics;
   individual_returns: Record<string, IndividualReturn>;
@@ -108,6 +116,7 @@ export interface PortfolioData {
   stock_data?: Record<string, Array<{ date: string; price: number; volume: number }>>;
   exchange_rates?: ExchangeRatePoint[];
   volatility_events?: Record<string, VolatilityEvent[]>;
+  latest_news?: Record<string, NewsItem[]>;
   sp500_benchmark?: BenchmarkPoint[];
   nasdaq_benchmark?: BenchmarkPoint[];
 }

@@ -20,9 +20,8 @@ import {
 import ChartLoading from '@/shared/components/ChartLoading';
 import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint, StockDataItem } from '../../model/backtest-result-types';
 import { FormLegend } from '@/shared/components';
-import { Loader2, Grid3X3, Grid, Newspaper } from 'lucide-react';
+import { Grid3X3, Grid, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
-import { BacktestService } from '../../services/backtestService';
 
 interface ChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -50,10 +49,6 @@ const ResultBlock: React.FC<{
 const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio }) => {
   // 차트 레이아웃 모드 상태 (true: 2열, false: 1열)
   const [isCompactView, setIsCompactView] = useState(true);
-  
-  // 뉴스 상태 관리
-  const [newsData, setNewsData] = useState<Record<string, any>>({});
-  const [loadingNews, setLoadingNews] = useState<Record<string, boolean>>({});
   
   const portfolioData = useMemo<PortfolioData | null>(
     () => (isPortfolio && 'portfolio_composition' in data ? (data as PortfolioData) : null),
@@ -169,23 +164,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       return { ...point, return_pct: returnPct };
     }) ?? [];
 
-  // 날짜 정보
-  const startDate = portfolioData
-    ? portfolioData.portfolio_statistics.Start
-    : chartData?.start_date ?? '';
-  const endDate = portfolioData
-    ? portfolioData.portfolio_statistics.End
-    : chartData?.end_date ?? '';
 
-  // 심볼 정보
-  const newsSymbols = useMemo(() => {
-    if (portfolioData) {
-      return Array.from(
-        new Set(portfolioData.portfolio_composition.map(item => item.symbol.replace(/_\d+$/, ''))),
-      );
-    }
-    return chartData?.ticker ? [chartData.ticker] : [];
-  }, [portfolioData, chartData?.ticker]);
 
   const renderPortfolioCharts = (): React.ReactNode[] | null => {
     if (!portfolioData) return null;
@@ -459,145 +438,100 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     return allCharts;
   };
 
-  const allChartCards = renderAllCharts();
-
-  // 뉴스 로드 함수
-  const loadNews = async (symbol: string, date: string) => {
-    const key = `${symbol}-${date}`;
-    
-    // 이미 로드되었으면 토글 (숨기기)
-    if (newsData[key]) {
-      setNewsData(prev => ({ ...prev, [key]: null }));
-      return;
-    }
-    
-    if (loadingNews[key]) return;
-
-    setLoadingNews(prev => ({ ...prev, [key]: true }));
-    
-    try {
-      // 종목명과 날짜로 뉴스 검색
-      const query = `${symbol} ${date}`;
-      const result = await BacktestService.searchNews(query, 5);
-      
-      // 백엔드 응답 구조: { status, message, data: { news_list: [...] } }
-      const newsList = (result as any)?.data?.news_list || (result as any)?.items || [];
-      
-      setNewsData(prev => ({
-        ...prev,
-        [key]: newsList
-      }));
-    } catch (error) {
-      console.error('뉴스 로드 실패:', error);
-      setNewsData(prev => ({
-        ...prev,
-        [key]: []
-      }));
-    } finally {
-      setLoadingNews(prev => ({ ...prev, [key]: false }));
-    }
-  };
-
-  // 뉴스 섹션 (통합 응답 데이터 사용)
-  const renderNewsSection = () => {
+  // 급등락 이벤트 카드 렌더링 함수 (차트 배열에 포함)
+  const renderVolatilityEventCards = () => {
     const volatilityEvents = portfolioData?.volatility_events || (data as any).volatility_events;
-    if (!volatilityEvents || Object.keys(volatilityEvents).length === 0) return null;
+    if (!volatilityEvents || Object.keys(volatilityEvents).length === 0) return [];
 
-    return (
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">급등/급락 이벤트</h3>
-        {Object.entries(volatilityEvents).map(([symbol, events]: [string, any[]]) => {
-          if (!events || events.length === 0) return null;
-          
-          return (
-            <ResultBlock
-              key={symbol}
-              title={`${symbol} 급등/급락 이벤트`}
-              description={`5% 이상 변동 이벤트 (최근 ${events.length}개)`}
-            >
-              <div className="space-y-3">
-                {events.slice(0, 5).map((event, idx) => {
-                  const newsKey = `${symbol}-${event.date}`;
-                  const hasNews = newsData[newsKey];
-                  const isLoadingNews = loadingNews[newsKey];
-                  
-                  return (
-                    <div key={idx} className="space-y-2">
-                      <div className="flex items-center justify-between border-b border-border/40 pb-2">
-                        <div className="flex items-center gap-3">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                            event.event_type === '급등' 
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100' 
-                              : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100'
-                          }`}>
-                            {event.event_type}
-                          </span>
-                          <span className="text-sm text-muted-foreground">{event.date}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-sm font-semibold ${
-                            event.daily_return > 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {event.daily_return > 0 ? '+' : ''}{event.daily_return.toFixed(2)}%
-                          </span>
-                          <span className="text-sm text-muted-foreground">
-                            ${event.close_price.toFixed(2)}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => loadNews(symbol, event.date)}
-                            disabled={isLoadingNews}
-                            className="text-xs"
-                          >
-                            {isLoadingNews ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : hasNews ? (
-                              '뉴스 숨기기'
-                            ) : (
-                              '뉴스 보기'
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* 뉴스 표시 */}
-                      {hasNews && hasNews.length > 0 && (
-                        <div className="pl-4 space-y-2">
-                          {hasNews.map((newsItem: any, newsIdx: number) => (
-                            <a
-                              key={newsIdx}
-                              href={newsItem.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block p-2 rounded hover:bg-muted/50 transition-colors"
-                            >
-                              <div className="text-sm font-medium text-primary hover:underline"
-                                dangerouslySetInnerHTML={{ __html: newsItem.title }}
-                              />
-                              <div className="text-xs text-muted-foreground mt-1"
-                                dangerouslySetInnerHTML={{ __html: newsItem.description }}
-                              />
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {hasNews && hasNews.length === 0 && (
-                        <div className="pl-4 text-sm text-muted-foreground">
-                          해당 날짜의 뉴스를 찾을 수 없습니다.
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+    return Object.entries(volatilityEvents).map(([symbol, events]) => {
+      const eventList = events as any[];
+      if (!eventList || eventList.length === 0) return null;
+      
+      return (
+        <ResultBlock
+          key={`volatility-${symbol}`}
+          title={`${symbol} 급등/급락 이벤트`}
+          description={`5% 이상 변동 이벤트 (최근 ${Math.min(eventList.length, 10)}개)`}
+        >
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {eventList.slice(0, 10).map((event: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0">
+                <div className="flex items-center gap-3">
+                  <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                    event.event_type === '급등' 
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100' 
+                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100'
+                  }`}>
+                    {event.event_type}
+                  </span>
+                  <span className="text-sm text-muted-foreground">{event.date}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-semibold ${
+                    event.daily_return > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {event.daily_return > 0 ? '+' : ''}{event.daily_return.toFixed(2)}%
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    ${event.close_price.toFixed(2)}
+                  </span>
+                </div>
               </div>
-            </ResultBlock>
-          );
-        })}
-      </div>
-    );
+            ))}
+          </div>
+        </ResultBlock>
+      );
+    }).filter(Boolean);
   };
+
+  // 최신 뉴스 카드 렌더링 함수 (차트 배열에 포함)
+  const renderLatestNewsCards = () => {
+    const latestNews = portfolioData?.latest_news || (data as any).latest_news;
+    if (!latestNews || Object.keys(latestNews).length === 0) return [];
+
+    return Object.entries(latestNews).map(([symbol, newsList]) => {
+      const newsArray = newsList as any[];
+      if (!newsArray || newsArray.length === 0) return null;
+      
+      return (
+        <ResultBlock
+          key={`news-${symbol}`}
+          title={`${symbol} 최신 뉴스`}
+          description={`최근 ${newsArray.length}개 뉴스`}
+        >
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {newsArray.map((newsItem: any, idx: number) => (
+              <a
+                key={idx}
+                href={newsItem.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-2 rounded hover:bg-muted/50 transition-colors border-b border-border/40 last:border-0"
+              >
+                <div 
+                  className="text-sm font-medium text-primary hover:underline"
+                  dangerouslySetInnerHTML={{ __html: newsItem.title }}
+                />
+                <div 
+                  className="text-xs text-muted-foreground mt-1"
+                  dangerouslySetInnerHTML={{ __html: newsItem.description }}
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  {newsItem.pubDate}
+                </div>
+              </a>
+            ))}
+          </div>
+        </ResultBlock>
+      );
+    }).filter(Boolean);
+  };
+
+  const allChartCards = [
+    ...renderAllCharts(),
+    ...renderVolatilityEventCards(),
+    ...renderLatestNewsCards(),
+  ];
 
   return (
     <div className="space-y-6">
@@ -634,7 +568,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         </Button>
       </div>
 
-      {/* 모든 분석 차트 (OHLC, 수익률, 주가, 거래내역, 벤치마크, 환율) */}
+      {/* 모든 분석 차트 (OHLC, 수익률, 주가, 거래내역, 벤치마크, 환율, 급등락, 뉴스) */}
       <div className={`grid gap-6 ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
         {allChartCards.map((card, index) => (
           <div key={index} className="flex flex-col">
@@ -642,9 +576,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           </div>
         ))}
       </div>
-
-      {/* 3. 뉴스 섹션 (전체 너비) */}
-      {renderNewsSection()}
     </div>
   );
 });

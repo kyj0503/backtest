@@ -19,6 +19,7 @@ from ....core.exceptions import (
 from ....core.config import settings
 from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
 from ..decorators import handle_backtest_errors, handle_portfolio_errors
+from .naver_news import NaverNewsService
 import logging
 import traceback
 import pandas as pd
@@ -28,6 +29,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 router = APIRouter()
 portfolio_service = PortfolioService()
+news_service = NaverNewsService()
 
 
 @router.post(
@@ -178,14 +180,28 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     except Exception as e:
         logger.warning(f"NASDAQ 벤치마크 데이터 수집 실패: {str(e)}")
     
-    # 7. 통합 응답 생성
+    # 7. 최신 뉴스 수집 (각 종목당 15개)
+    latest_news = {}
+    for symbol in symbols:
+        try:
+            # 티커를 한국어로 변환하여 검색
+            search_query = news_service.TICKER_MAPPING.get(symbol, symbol)
+            news_list = news_service.search_news(search_query, display=15)
+            latest_news[symbol] = news_list
+            logger.info(f"{symbol} 뉴스 {len(news_list)}개 수집 완료")
+        except Exception as e:
+            logger.warning(f"{symbol} 뉴스 수집 실패: {str(e)}")
+            latest_news[symbol] = []
+    
+    # 8. 통합 응답 생성
     backtest_result['data']['stock_data'] = stock_data
     backtest_result['data']['exchange_rates'] = exchange_rates
     backtest_result['data']['volatility_events'] = volatility_events
+    backtest_result['data']['latest_news'] = latest_news
     backtest_result['data']['sp500_benchmark'] = sp500_benchmark
     backtest_result['data']['nasdaq_benchmark'] = nasdaq_benchmark
     
-    logger.info(f"통합 백테스트 응답 생성 완료: {len(symbols)}개 종목, {len(exchange_rates)}개 환율 데이터")
+    logger.info(f"통합 백테스트 응답 생성 완료: {len(symbols)}개 종목, {len(exchange_rates)}개 환율, {len(latest_news)}개 종목 뉴스")
     
     return backtest_result
 
