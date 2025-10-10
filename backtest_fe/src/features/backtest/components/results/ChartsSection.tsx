@@ -342,7 +342,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <LineChart data={withBenchmarkReturn(sp500Benchmark)}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" tickFormatter={formatDateTick} />
-              <YAxis yAxisId="left" orientation="left" />
+              <YAxis yAxisId="left" orientation="left" tickFormatter={(value: number) => value.toFixed(0)} />
               <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
               <Tooltip
                 formatter={(value: number, name: string) => {
@@ -352,7 +352,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
                 }}
                 labelFormatter={(label: string) => `날짜: ${label}`}
               />
-              <Area yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" fillOpacity={0.15} fill="#3b82f6" />
+              <Line yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} dot={false} />
               <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -372,7 +372,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <LineChart data={withBenchmarkReturn(nasdaqBenchmark)}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" tickFormatter={formatDateTick} />
-              <YAxis yAxisId="left" orientation="left" />
+              <YAxis yAxisId="left" orientation="left" tickFormatter={(value: number) => value.toFixed(0)} />
               <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
               <Tooltip
                 formatter={(value: number, name: string) => {
@@ -382,7 +382,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
                 }}
                 labelFormatter={(label: string) => `날짜: ${label}`}
               />
-              <Area yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" fillOpacity={0.15} fill="#3b82f6" />
+              <Line yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} dot={false} />
               <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
