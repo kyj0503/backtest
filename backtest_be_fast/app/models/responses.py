@@ -100,42 +100,6 @@ class BacktestResult(BaseModel):
         }
 
 
-class OptimizationResult(BaseModel):
-    """최적화 결과 모델"""
-    ticker: str = Field(..., description="티커 심볼")
-    strategy: str = Field(..., description="최적화된 전략")
-    method: str = Field(..., description="사용된 최적화 방법")
-    total_iterations: int = Field(..., description="총 반복 횟수")
-    best_params: Dict[str, Any] = Field(..., description="최적 파라미터")
-    best_score: float = Field(..., description="최적 점수")
-    optimization_target: str = Field(..., description="최적화 대상 지표")
-    
-    # 최적 결과의 백테스트 통계
-    backtest_result: BacktestResult = Field(..., description="최적 파라미터의 백테스트 결과")
-    
-    # 최적화 메타데이터
-    execution_time_seconds: float = Field(..., description="최적화 실행 시간 (초)")
-    timestamp: datetime = Field(..., description="최적화 완료 시간")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "ticker": "AAPL",
-                "strategy": "sma_crossover",
-                "method": "grid",
-                "total_iterations": 100,
-                "best_params": {
-                    "short_window": 12,
-                    "long_window": 26
-                },
-                "best_score": 1.68,
-                "optimization_target": "SQN",
-                "execution_time_seconds": 45.2,
-                "timestamp": "2024-01-15T10:35:00"
-            }
-        }
-
-
 class StrategyInfo(BaseModel):
     """전략 정보 모델"""
     name: str = Field(..., description="전략 이름")

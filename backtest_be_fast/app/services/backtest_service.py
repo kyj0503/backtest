@@ -86,8 +86,8 @@ def _patch_backtesting_stats():
 # 패치 적용
 _patch_backtesting_stats()
 
-from app.models.requests import BacktestRequest, OptimizationRequest
-from app.models.responses import BacktestResult, OptimizationResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
+from app.models.requests import BacktestRequest
+from app.models.responses import BacktestResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
 from app.core.config import settings
@@ -95,7 +95,6 @@ from app.core.exceptions import ValidationError
 
 # 분리된 서비스들 import
 from app.services.backtest_engine import backtest_engine
-from app.services.optimization_service import optimization_service
 from app.services.chart_data_service import chart_data_service
 from app.services.validation_service import validation_service
 
@@ -108,7 +107,6 @@ class BacktestService:
     
     분리된 전담 서비스들에게 작업을 위임:
     - BacktestEngine: 백테스트 실행
-    - OptimizationService: 파라미터 최적화
     - ChartDataService: 차트 데이터 생성
     - ValidationService: 검증 및 유틸리티
     """
@@ -116,7 +114,6 @@ class BacktestService:
     def __init__(self):
         # 서비스들 직접 임포트
         self.backtest_engine = backtest_engine
-        self.optimization_service = optimization_service
         self.chart_data_service = chart_data_service
         self.validation_service = validation_service
         
@@ -135,10 +132,6 @@ class BacktestService:
     async def run_backtest(self, request: BacktestRequest) -> BacktestResult:
         """백테스트 실행 - Repository Pattern이 적용된 BacktestEngine에 위임"""
         return await self.backtest_engine.run_backtest(request)
-    
-    async def optimize_strategy(self, request: OptimizationRequest) -> OptimizationResult:
-        """전략 파라미터 최적화 - Repository Pattern이 적용된 OptimizationService에 위임"""
-        return await self.optimization_service.optimize_strategy(request)
     
     async def generate_chart_data(self, request: BacktestRequest, backtest_result: BacktestResult = None) -> ChartDataResponse:
         """차트 데이터 생성 - Repository Pattern이 적용된 ChartDataService에 위임"""

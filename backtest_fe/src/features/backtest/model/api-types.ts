@@ -225,30 +225,6 @@ export interface SystemInfo {
   api_status: 'healthy' | 'degraded' | 'down';
 }
 
-// 최적화 관련 타입
-export interface OptimizationRequest {
-  ticker: string;
-  strategy: string;
-  start_date: string;
-  end_date: string;
-  parameter_ranges: Record<string, {
-    min: number;
-    max: number;
-    step: number;
-  }>;
-  objective: 'return' | 'sharpe' | 'sortino' | 'calmar';
-}
-
-export interface OptimizationResult {
-  best_params: Record<string, any>;
-  best_score: number;
-  results: Array<{
-    params: Record<string, any>;
-    score: number;
-    stats: BacktestStats;
-  }>;
-}
-
 // HTTP 메서드 타입
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 

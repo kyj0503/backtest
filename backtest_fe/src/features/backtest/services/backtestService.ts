@@ -11,8 +11,6 @@ import {
   NewsResponse,
   ExchangeRateData,
   VolatilityData,
-  OptimizationRequest,
-  OptimizationResult,
 } from '../model/api-types';
 
 export class BacktestService {
@@ -37,14 +35,6 @@ export class BacktestService {
    */
   static async getStrategy(strategyName: string): Promise<Strategy> {
     const response = await apiClient.get<Strategy>(`/api/v1/strategies/${strategyName}`);
-    return response.data;
-  }
-
-  /**
-   * 최적화 실행
-   */
-  static async runOptimization(request: OptimizationRequest): Promise<OptimizationResult> {
-    const response = await apiClient.post<OptimizationResult>('/api/v1/optimize/run', request);
     return response.data;
   }
 
