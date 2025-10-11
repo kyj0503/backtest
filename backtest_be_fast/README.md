@@ -1,11 +1,11 @@
 # FastAPI 백엔드 (backtest_be_fast)
 
-백테스트 실행, 결과 저장, 이벤트 처리 및 API 제공을 담당한다.
+백테스트 실행, 결과 저장 및 API 제공을 담당한다.
 
 주요 기능
 - HTTP API (FastAPI)
 - 백테스트 실행 엔진 래퍼
-- CQRS 및 이벤트 기반 작업
+- 다양한 기술적 분석 전략 지원
 - MySQL, Redis 연동
 
 ## 요구 사항
@@ -60,6 +60,7 @@ docker compose -f compose.dev.yaml run --rm backtest_be_fast pytest -v
 
 ## 개발자 참고
 - 설정: `app/core/config.py` (`Settings`)
-- 디렉터리: `app/api`, `app/services`, `app/domains`, `app/repositories`, `app/events`, `app/cqrs`
+- 디렉터리: `app/api`, `app/services`, `app/domains`, `app/repositories`, `app/strategies`, `app/models`
+- 전략 등록: `app/strategy_registry.py`
 
 자세한 내용: `docs/Development.md`, `docs/Test.md`, `docs/Architecture.md`

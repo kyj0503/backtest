@@ -88,10 +88,8 @@ src/
 │   ├── ui/                # shadcn/ui 컴포넌트
 │   └── components/        # 공통 컴포넌트
 ├── features/              # 기능별 모듈
-│   ├── auth/             # 인증/인가
 │   ├── backtest/         # 백테스트 기능
-│   ├── community/        # 커뮤니티 기능
-│   └── chat/             # 채팅 기능
+│   └── shared/           # 공통 기능(필요 시 분리)
 ├── pages/                # 페이지 컴포넌트
 ├── test/                 # 테스트 유틸리티
 └── themes/               # 테마 정의 파일
@@ -104,23 +102,15 @@ src/
 ```bash
 VITE_API_BASE_URL=/api
 API_PROXY_TARGET=http://backtest_be_fast:8000
-SPRING_PROXY_TARGET=http://host.docker.internal:8080
 FASTAPI_PROXY_TARGET=http://backtest_be_fast:8000
 VITE_APP_VERSION=1.0.0
-REDIS_PASSWORD=change-me-dev-redis-pass
 ```
-
-환경 변수는 `import.meta.env`로 접근한다. Compose 사용 시 `REDIS_PASSWORD`가 명령 치환에 사용되므로 필요하면 `export REDIS_PASSWORD=...`로 미리 노출한다.
 
 ## 프록시 설정
 
 개발 중 CORS 문제 해결을 위한 프록시가 구성되어 있습니다 (vite.config.ts):
 
-- `/api/auth` → Spring Boot (포트 8080)
-- `/api/users` → Spring Boot
-- `/api/chat` → Spring Boot
 - `/api/v1/backtest` → FastAPI (포트 8000)
-- `/ws` → WebSocket (Spring Boot)
 
 ## 테스트
 

@@ -17,9 +17,9 @@ from ....core.exceptions import (
     handle_yfinance_error
 )
 from ....core.config import settings
-from ....events.event_system import event_system_manager
 from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
 from ..decorators import handle_backtest_errors, handle_portfolio_errors
+from .naver_news import NaverNewsService
 import logging
 import traceback
 import pandas as pd
@@ -29,381 +29,184 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 router = APIRouter()
 portfolio_service = PortfolioService()
-
-
-
-@router.get(
-    "/health",
-    summary="백테스트 서비스 상태 확인",
-    description="백테스트 서비스의 상태를 확인합니다."
-)
-async def backtest_health():
-    """백테스트 서비스 헬스체크"""
-    try:
-        # 간단한 검증 로직
-        from ....utils.data_fetcher import data_fetcher
-        
-        # 샘플 티커로 간단 검증
-        is_healthy = data_fetcher.validate_ticker("AAPL")
-        
-        if is_healthy:
-            return {
-                "status": "healthy",
-                "message": "백테스트 서비스가 정상 작동 중입니다.",
-                "data_source": "Yahoo Finance 연결 정상"
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="데이터 소스 연결에 문제가 있습니다."
-            )
-            
-    except Exception as e:
-        logger.error(f"헬스체크 실패: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="백테스트 서비스 상태 확인 실패"
-        )
-
-
-@router.post(
-    "/chart-data",
-    response_model=ChartDataResponse,
-    status_code=status.HTTP_200_OK,
-    summary="백테스트 차트 데이터",
-    description="백테스트 결과를 Recharts용 차트 데이터로 반환합니다. (DB 소스 우선 사용)"
-)
-@handle_backtest_errors
-async def get_chart_data(request: BacktestRequest):
-    """
-    백테스트 차트 데이터 API (v2 개선사항 적용)
-    
-    백테스트를 실행하고 결과를 Recharts 라이브러리에서 사용할 수 있는 
-    JSON 형태의 차트 데이터로 반환합니다.
-    
-    **반환 데이터:**
-    - **ohlc_data**: 캔들스틱 차트용 OHLC 데이터
-    - **equity_data**: 자산 곡선 데이터
-    - **trade_markers**: 거래 진입/청산 마커
-    - **indicators**: 기술 지표 데이터
-    - **summary_stats**: 주요 성과 지표
-    
-    **사용 예시 (React + Recharts):**
-    ```javascript
-    // 캔들스틱 차트
-    <ComposedChart data={chartData.ohlc_data}>
-      <XAxis dataKey="date" />
-      <YAxis />
-      <Bar dataKey="volume" />
-      <Line dataKey="close" />
-    </ComposedChart>
-    
-    // 자산 곡선
-    <LineChart data={chartData.equity_data}>
-      <Line dataKey="return_pct" stroke="#8884d8" />
-      <Line dataKey="drawdown_pct" stroke="#ff0000" />
-    </LineChart>
-    ```
-    
-    v2 개선사항: DB에서 데이터를 우선 사용하고, 없을 경우 yfinance 사용
-    로그인 사용자는 백테스트 히스토리가 자동으로 저장됩니다.
-    """
-    # 모든 요청을 게스트로 처리합니다.
-    
-    # 실제 백테스트를 실행하여 정확한 통계를 얻습니다
-    backtest_result = await backtest_service.run_backtest(request)
-
-    chart_data = await backtest_service.generate_chart_data(
-        request, backtest_result
-    )
-    logger.info(
-        "차트 데이터 API 완료: %s, 데이터 포인트: %s",
-        request.ticker,
-        len(chart_data.ohlc_data),
-    )
-
-    # 히스토리 저장 기능은 제거되었습니다.
-
-    return chart_data
+news_service = NaverNewsService()
 
 
 @router.post(
     "/portfolio",
     status_code=status.HTTP_200_OK,
-    summary="포트폴리오 백테스트 실행",
-    description="여러 종목으로 구성된 포트폴리오의 백테스트를 실행합니다."
+    summary="포트폴리오 백테스트 실행 (통합 응답)",
+    description="여러 자산으로 구성된 포트폴리오의 백테스트를 실행하고 모든 필요한 데이터를 한번에 반환합니다."
 )
 @handle_portfolio_errors
 async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     """
-    포트폴리오 백테스트 실행 API
+    포트폴리오 백테스트 실행 API (통합 응답)
     
-    - **portfolio**: 포트폴리오 구성 (종목과 비중/금액)
-    - **start_date**: 백테스트 시작 날짜 (YYYY-MM-DD)
-    - **end_date**: 백테스트 종료 날짜 (YYYY-MM-DD)
-    - **cash**: 초기 투자금액
-    - **commission**: 거래 수수료 (기본값: 0.002)
+    백테스트 실행 후 프론트엔드에서 필요한 모든 데이터를 하나의 응답으로 통합하여 반환합니다:
+    - 백테스트 결과 (수익률, 통계 등)
+    - 주가 데이터 (각 종목)
+    - 환율 데이터
+    - 급등/급락 이벤트 & 뉴스
+    - 벤치마크 데이터 (S&P 500, NASDAQ)
+    
+    이를 통해 프론트엔드에서의 추가 API 호출을 제거하고 성능을 개선합니다.
+    
+    **요청 파라미터**:
+    - **portfolio**: 포트폴리오 구성 (종목, 비중, 투자방식 등)
+    - **start_date**: 시작 날짜 (YYYY-MM-DD)
+    - **end_date**: 종료 날짜 (YYYY-MM-DD)
+    - **commission**: 수수료율 (0 ~ 0.1)
     - **rebalance_frequency**: 리밸런싱 주기 (monthly, quarterly, yearly)
+    - **strategy**: 전략명 (기본: buy_and_hold)
     
-    **사용 예시:**
+    **통합 응답**:
     ```json
     {
-        "portfolio": [
-            {"symbol": "AAPL", "amount": 4000, "investment_type": "lump_sum"},
-            {"symbol": "GOOGL", "amount": 3000, "investment_type": "dca", "dca_periods": 12},
-            {"symbol": "MSFT", "amount": 3000, "investment_type": "lump_sum"}
-        ],
-        "start_date": "2023-01-01",
-        "end_date": "2023-12-31",
-        "commission": 0.002,
-        "rebalance_frequency": "monthly"
+      "status": "success",
+      "data": {
+        "portfolio_statistics": { ... },
+        "equity_curve": { ... },
+        "individual_returns": { ... },
+        "stock_data": { "AAPL": [...], "GOOGL": [...] },
+        "exchange_rates": [...],
+        "volatility_events": { "AAPL": [...] },
+        "sp500_benchmark": [...],
+        "nasdaq_benchmark": [...]
+      }
     }
     ```
     """
-    # 입력 검증
-    if not request.portfolio or len(request.portfolio) == 0:
-        raise ValidationError("포트폴리오가 비어있습니다. 최소 1개 종목을 추가해주세요.")
-
-    if len(request.portfolio) > settings.max_portfolio_items:
-        raise ValidationError(f"포트폴리오는 최대 {settings.max_portfolio_items}개 종목까지 포함할 수 있습니다.")
+    # 1. 백테스트 실행
+    backtest_result = await portfolio_service.run_portfolio_backtest(request)
     
-    # 포트폴리오 백테스트 실행
-    result = await portfolio_service.run_portfolio_backtest(request)
+    if backtest_result.get('status') != 'success':
+        return backtest_result
     
-    if result.get('status') == 'error':
-        # 서비스에서 반환된 에러 처리
-        error_message = result.get('error', '알 수 없는 오류가 발생했습니다.')
-        user_message = get_user_friendly_message("portfolio_backtest_error", error_message)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=user_message
-        )
+    # 2. 추가 데이터 수집을 위한 준비
+    symbols = list(set([item.symbol for item in request.portfolio if item.symbol.upper() not in ['CASH', '현금']]))
+    start_date = request.start_date
+    end_date = request.end_date
     
-    logger.info(f"포트폴리오 백테스트 API 완료: {len(request.portfolio)} 종목")
-    return result
-
-
-@router.get(
-    "/stock-volatility-news/{ticker}",
-    status_code=status.HTTP_200_OK,
-    summary="주가 급등/급락일 뉴스 조회",
-    description="지정된 기간 중 주가가 5% 이상 변동한 날의 뉴스를 조회합니다."
-)
-async def get_stock_volatility_news(
-    ticker: str,
-    start_date: str,
-    end_date: str,
-    threshold: float = None  # None이면 설정값 사용
-):
-    # threshold가 지정되지 않으면 설정값 사용
-    if threshold is None:
-        threshold = settings.volatility_threshold_pct
-    """
-    주가 급등/급락일 뉴스 조회 API
+    # 3. 주가 데이터 수집 (병렬)
+    stock_data = {}
+    for symbol in symbols:
+        try:
+            df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
+            if df is not None and not df.empty:
+                stock_data[symbol] = [
+                    {
+                        'date': date.strftime('%Y-%m-%d'),
+                        'price': float(row['Close']),
+                        'volume': int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
+                    }
+                    for date, row in df.iterrows()
+                ]
+        except Exception as e:
+            logger.warning(f"주가 데이터 수집 실패: {symbol} - {str(e)}")
+            stock_data[symbol] = []
     
-    - **ticker**: 주식 티커 심볼 (예: AAPL, GOOGL)
-    - **start_date**: 시작 날짜 (YYYY-MM-DD)
-    - **end_date**: 종료 날짜 (YYYY-MM-DD)
-    - **threshold**: 변동 임계값 (기본값: 5.0%)
-    
-    반환값: 급등/급락일과 관련 뉴스
-    """
+    # 4. 환율 데이터 수집
+    exchange_rates = []
     try:
-        # 현금 자산은 변동성 없음
-        if ticker.upper() in ['CASH', '현금']:
-            return {
-                "status": "success",
-                "data": {
-                    "symbol": ticker,
-                    "volatility_events": [],
-                    "news_summary": "현금 자산은 가격 변동이 없습니다."
-                }
-            }
-        
-        # 주가 데이터 조회 (DataService 사용)
-        stock_data = data_service.get_ticker_data_sync(ticker, start_date, end_date)
-        
-        if stock_data is None or stock_data.empty:
-            return {
-                "status": "error",
-                "message": f"'{ticker}' 주가 데이터를 찾을 수 없습니다.",
-                "data": {"volatility_events": []}
-            }
-        
-        # 일일 수익률 계산
-        stock_data['daily_return'] = stock_data['Close'].pct_change() * 100
-        
-        # 급등/급락일 찾기 (절댓값 기준)
-        volatility_events = []
-        significant_moves = stock_data[abs(stock_data['daily_return']) >= threshold].copy()
-        
-        for date, row in significant_moves.iterrows():
-            volatility_events.append({
-                "date": date.strftime('%Y-%m-%d'),
-                "daily_return": float(row['daily_return']),
-                "close_price": float(row['Close']),
-                "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0,
-                "event_type": "급등" if row['daily_return'] > 0 else "급락"
-            })
-        
-        # 날짜순 정렬 (최근순)
-        volatility_events.sort(key=lambda x: x['date'], reverse=True)
-        
-        # 상위 10개 이벤트만 반환
-        volatility_events = volatility_events[:10]
-        
-        return {
-            "status": "success",
-            "data": {
-                "symbol": ticker,
-                "threshold": threshold,
-                "period": f"{start_date} ~ {end_date}",
-                "total_events": len(volatility_events),
-                "volatility_events": volatility_events
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"주가 변동성 분석 중 오류: {str(e)}")
-        return {
-            "status": "error", 
-            "message": f"주가 변동성 분석 실패: {str(e)}",
-            "data": {"volatility_events": []}
-        }
-
-
-@router.get(
-    "/stock-data/{ticker}",
-    status_code=status.HTTP_200_OK,
-    summary="주가 데이터 조회",
-    description="지정된 기간의 주가 데이터를 조회합니다."
-)
-async def get_stock_data(
-    ticker: str,
-    start_date: str,
-    end_date: str
-):
-    """
-    주가 데이터 조회 API
-    
-    - **ticker**: 주식 티커 심볼 (예: AAPL, GOOGL)
-    - **start_date**: 시작 날짜 (YYYY-MM-DD)
-    - **end_date**: 종료 날짜 (YYYY-MM-DD)
-    
-    반환값: 날짜별 주가, 거래량 데이터
-    """
-    try:
-        # 현금 자산은 주가 데이터 없음
-        if ticker.upper() in ['CASH', '현금']:
-            return {
-                "status": "success",
-                "data": {
-                    "symbol": ticker,
-                    "price_data": []
-                }
-            }
-        
-        # DataService를 통해 데이터 로드 (DB 우선, fallback to yfinance)
-        df = data_service.get_ticker_data_sync(ticker, start_date, end_date)
-        
-        # 데이터 변환
-        price_data = []
-        for date, row in df.iterrows():
-            price_data.append({
-                "date": date.strftime('%Y-%m-%d'),
-                "price": float(row['Close']),
-                "volume": int(row['Volume']) if 'Volume' in row and not pd.isna(row['Volume']) else 0
-            })
-        
-        return {
-            "status": "success",
-            "data": {
-                "symbol": ticker,
-                "price_data": price_data
-            }
-        }
-        
-    except DataNotFoundError as e:
-        error_id = log_error_for_debugging(e, "get_stock_data", {
-            "ticker": ticker,
-            "date_range": f"{start_date} to {end_date}"
-        })
-        
-        user_message = get_user_friendly_message("data_not_found", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{user_message} (오류 ID: {error_id})"
-        )
-        
-    except Exception as e:
-        error_id = log_error_for_debugging(e, "get_stock_data", {
-            "ticker": ticker,
-            "date_range": f"{start_date} to {end_date}"
-        })
-        
-        logger.error(f"Unexpected error in get_stock_data [ID: {error_id}]: {str(e)}")
-        user_message = get_user_friendly_message("unexpected_error", str(e))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"{user_message} (오류 ID: {error_id})"
-        )
-
-
-@router.get(
-    "/exchange-rate",
-    status_code=status.HTTP_200_OK,
-    summary="원달러 환율 데이터 조회",
-    description="지정된 기간의 원달러 환율 데이터를 조회합니다."
-)
-async def get_exchange_rate(
-    start_date: str,
-    end_date: str
-):
-    """
-    원달러 환율 데이터 조회 API
-    
-    - **start_date**: 시작 날짜 (YYYY-MM-DD)
-    - **end_date**: 종료 날짜 (YYYY-MM-DD)
-    
-    반환값: 날짜별 원달러 환율 데이터
-    """
-    try:
-        # DataService를 통해 환율 데이터 조회
         exchange_data = data_service.get_ticker_data_sync(
-            settings.exchange_rate_ticker, 
-            start_date, 
+            settings.exchange_rate_ticker,
+            start_date,
             end_date
         )
-        
-        if exchange_data is None or exchange_data.empty:
-            return {
-                "status": "error",
-                "message": "환율 데이터를 가져올 수 없습니다.",
-                "data": {"exchange_rates": []}
-            }
-        
-        # 데이터 변환
-        exchange_rates = []
-        for date, row in exchange_data.iterrows():
-            exchange_rates.append({
-                "date": date.strftime('%Y-%m-%d'),
-                "rate": float(row['Close']),
-                "volume": int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
-            })
-        
-        return {
-            "status": "success",
-            "data": {
-                "base_currency": "USD",
-                "target_currency": "KRW", 
-                "exchange_rates": exchange_rates
-            }
-        }
-        
+        if exchange_data is not None and not exchange_data.empty:
+            exchange_rates = [
+                {
+                    'date': date.strftime('%Y-%m-%d'),
+                    'rate': float(row['Close'])
+                }
+                for date, row in exchange_data.iterrows()
+            ]
     except Exception as e:
-        logger.error(f"환율 데이터 조회 중 오류: {str(e)}")
-        return {
-            "status": "error",
-            "message": f"환율 데이터 조회 실패: {str(e)}",
-            "data": {"exchange_rates": []}
-        } 
+        logger.warning(f"환율 데이터 수집 실패: {str(e)}")
+    
+    # 5. 급등/급락 이벤트 수집 (5% 이상 변동)
+    volatility_events = {}
+    for symbol in symbols:
+        try:
+            df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
+            if df is not None and not df.empty:
+                df['daily_return'] = df['Close'].pct_change() * 100
+                significant_moves = df[abs(df['daily_return']) >= 5.0].copy()
+                
+                events = []
+                for date, row in significant_moves.iterrows():
+                    events.append({
+                        'date': date.strftime('%Y-%m-%d'),
+                        'daily_return': float(row['daily_return']),
+                        'close_price': float(row['Close']),
+                        'volume': int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0,
+                        'event_type': '급등' if row['daily_return'] > 0 else '급락'
+                    })
+                
+                events.sort(key=lambda x: x['date'], reverse=True)
+                volatility_events[symbol] = events[:10]  # 상위 10개만
+        except Exception as e:
+            logger.warning(f"급등락 이벤트 수집 실패: {symbol} - {str(e)}")
+            volatility_events[symbol] = []
+    
+    # 6. 벤치마크 데이터 수집 (S&P 500, NASDAQ)
+    sp500_benchmark = []
+    nasdaq_benchmark = []
+    
+    try:
+        sp500_data = data_service.get_ticker_data_sync('^GSPC', start_date, end_date)
+        if sp500_data is not None and not sp500_data.empty:
+            sp500_benchmark = [
+                {
+                    'date': date.strftime('%Y-%m-%d'),
+                    'close': float(row['Close'])
+                }
+                for date, row in sp500_data.iterrows()
+            ]
+    except Exception as e:
+        logger.warning(f"S&P 500 벤치마크 데이터 수집 실패: {str(e)}")
+    
+    try:
+        nasdaq_data = data_service.get_ticker_data_sync('^IXIC', start_date, end_date)
+        if nasdaq_data is not None and not nasdaq_data.empty:
+            nasdaq_benchmark = [
+                {
+                    'date': date.strftime('%Y-%m-%d'),
+                    'close': float(row['Close'])
+                }
+                for date, row in nasdaq_data.iterrows()
+            ]
+    except Exception as e:
+        logger.warning(f"NASDAQ 벤치마크 데이터 수집 실패: {str(e)}")
+    
+    # 7. 최신 뉴스 수집 (각 종목당 15개)
+    latest_news = {}
+    for symbol in symbols:
+        try:
+            # 티커를 한국어로 변환하여 검색
+            search_query = news_service.TICKER_MAPPING.get(symbol, symbol)
+            news_list = news_service.search_news(search_query, display=15)
+            latest_news[symbol] = news_list
+            logger.info(f"{symbol} 뉴스 {len(news_list)}개 수집 완료")
+        except Exception as e:
+            logger.warning(f"{symbol} 뉴스 수집 실패: {str(e)}")
+            latest_news[symbol] = []
+    
+    # 8. 통합 응답 생성
+    backtest_result['data']['stock_data'] = stock_data
+    backtest_result['data']['exchange_rates'] = exchange_rates
+    backtest_result['data']['volatility_events'] = volatility_events
+    backtest_result['data']['latest_news'] = latest_news
+    backtest_result['data']['sp500_benchmark'] = sp500_benchmark
+    backtest_result['data']['nasdaq_benchmark'] = nasdaq_benchmark
+    
+    logger.info(f"통합 백테스트 응답 생성 완료: {len(symbols)}개 종목, {len(exchange_rates)}개 환율, {len(latest_news)}개 종목 뉴스")
+    
+    return backtest_result
+
+
+# ========================================
+# 아래 엔드포인트들은 더 이상 사용하지 않습니다.
+# 모든 데이터는 POST /portfolio 엔드포인트의 통합 응답에 포함됩니다.
+# ========================================

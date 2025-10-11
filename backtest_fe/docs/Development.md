@@ -18,7 +18,6 @@ Vite 개발 서버는 포트 5173에서 실행되며 Docker 컨테이너에서�
 ```bash
 VITE_API_BASE_URL=/api
 API_PROXY_TARGET=http://backtest_be_fast:8000
-SPRING_PROXY_TARGET=http://host.docker.internal:8080
 FASTAPI_PROXY_TARGET=http://backtest_be_fast:8000
 VITE_APP_VERSION=1.0.0
 REDIS_PASSWORD=change-me-dev-redis-pass
@@ -33,27 +32,19 @@ Compose는 `REDIS_PASSWORD`를 명령 치환에 사용하므로 필요하면 `ex
 ```ts
 server: {
   proxy: {
-    '/api/auth': { target: SPRING_TARGET, changeOrigin: true },
-    '/api/users': { target: SPRING_TARGET, changeOrigin: true },
-    '/api/chat': { target: SPRING_TARGET, changeOrigin: true },
-    '/ws': { target: SPRING_TARGET, changeOrigin: true, ws: true },
-    '/api/v1/backtest': { target: FASTAPI_TARGET, changeOrigin: true },
-    '/api': { target: SPRING_TARGET, changeOrigin: true }
+    '/api/v1/backtest': { target: FASTAPI_TARGET, changeOrigin: true }
   }
 }
 ```
 
-`SPRING_TARGET`, `FASTAPI_TARGET`은 각각 `SPRING_PROXY_TARGET`, `FASTAPI_PROXY_TARGET` 환경 변수로 설정한다.
+`FASTAPI_TARGET`은 `FASTAPI_PROXY_TARGET` 환경 변수로 설정한다.
 
 ## 폴더 구조
 
 ```
 src/
 ├── features/
-│   ├── auth/
 │   ├── backtest/
-│   ├── chat/
-│   └── community/
 ├── pages/
 ├── shared/
 │   ├── api/

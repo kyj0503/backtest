@@ -7,19 +7,20 @@
 - (선택) Docker, Docker Compose
 
 ## 디렉터리
-- `app/api/` API 라우터
-- `app/services/` 비즈니스 로직
-- `app/cqrs/` 명령/쿼리 핸들러
-- `app/domains/` 도메인 모델
-- `app/repositories/` 데이터 액세스
-- `app/events/` 이벤트 시스템
+- `app/api/` - API 라우터
+- `app/services/` - 비즈니스 로직
+- `app/domains/` - 도메인 모델
+- `app/repositories/` - 데이터 액세스
+- `app/strategies/` - 백테스팅 전략 구현
+- `app/models/` - Pydantic 모델
+- `app/strategy_registry.py` - 전략 레지스트리
 
 ## 로컬 실행
 ```bash
 cd backtest_be_fast
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-test.txt
 python run_server.py
 ```
 

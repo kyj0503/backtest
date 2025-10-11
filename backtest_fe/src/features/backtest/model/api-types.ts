@@ -225,30 +225,6 @@ export interface SystemInfo {
   api_status: 'healthy' | 'degraded' | 'down';
 }
 
-// 최적화 관련 타입
-export interface OptimizationRequest {
-  ticker: string;
-  strategy: string;
-  start_date: string;
-  end_date: string;
-  parameter_ranges: Record<string, {
-    min: number;
-    max: number;
-    step: number;
-  }>;
-  objective: 'return' | 'sharpe' | 'sortino' | 'calmar';
-}
-
-export interface OptimizationResult {
-  best_params: Record<string, any>;
-  best_score: number;
-  results: Array<{
-    params: Record<string, any>;
-    score: number;
-    stats: BacktestStats;
-  }>;
-}
-
 // HTTP 메서드 타입
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -268,10 +244,7 @@ export interface UnifiedBacktestResult extends Partial<ChartDataResponse>, Parti
 
 // API 엔드포인트 타입
 export type ApiEndpoint = 
-  | '/api/v1/backtest/run'
-  | '/api/v1/backtest/chart-data'
-  | '/api/v1/backtest/portfolio'
-  | '/api/v1/backtest/execute'  // 새로운 통합 엔드포인트
+  | '/api/v1/backtest/portfolio'  // 통합 백테스트 엔드포인트
   | '/api/v1/strategies'
   | '/api/v1/naver-news/search'
   | '/api/v1/yfinance/exchange-rate'

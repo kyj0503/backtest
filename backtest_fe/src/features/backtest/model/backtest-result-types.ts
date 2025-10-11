@@ -89,13 +89,34 @@ export interface ChartData {
   nasdaq_benchmark?: BenchmarkPoint[];
 }
 
+export interface VolatilityEvent {
+  date: string;
+  daily_return: number;
+  close_price: number;
+  volume: number;
+  event_type: '급등' | '급락';
+}
+
+export interface NewsItem {
+  title: string;
+  link: string;
+  description: string;
+  pubDate: string;
+  originallink?: string;
+}
+
 export interface PortfolioData {
   portfolio_statistics: PortfolioStatistics;
   individual_returns: Record<string, IndividualReturn>;
   portfolio_composition: Stock[];
   equity_curve: Record<string, number>;
   daily_returns: Record<string, number>;
+  
+  // 통합 응답 데이터 (별도 API 호출 불필요)
+  stock_data?: Record<string, Array<{ date: string; price: number; volume: number }>>;
   exchange_rates?: ExchangeRatePoint[];
+  volatility_events?: Record<string, VolatilityEvent[]>;
+  latest_news?: Record<string, NewsItem[]>;
   sp500_benchmark?: BenchmarkPoint[];
   nasdaq_benchmark?: BenchmarkPoint[];
 }

@@ -13,9 +13,9 @@ import traceback
 from fastapi import HTTPException
 from decimal import Decimal
 
-# Repository와 Factory 패턴 import
+# Repository 패턴 import
 from app.repositories import backtest_repository, data_repository
-from app.factories import strategy_factory, service_factory
+from app.services.strategy_service import strategy_service
 
 # Monkey patch for pandas Timedelta compatibility issue
 def _patch_backtesting_stats():
@@ -86,50 +86,40 @@ def _patch_backtesting_stats():
 # 패치 적용
 _patch_backtesting_stats()
 
-from app.models.requests import BacktestRequest, OptimizationRequest
-from app.models.responses import BacktestResult, OptimizationResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
+from app.models.requests import BacktestRequest
+from app.models.responses import BacktestResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
 from app.core.config import settings
 from app.core.exceptions import ValidationError
 
 # 분리된 서비스들 import
-from .backtest import (
-    backtest_engine,
-    optimization_service, 
-    chart_data_service,
-    validation_service
-)
+from app.services.backtest_engine import backtest_engine
+from app.services.chart_data_service import chart_data_service
+from app.services.validation_service import validation_service
 
 logger = logging.getLogger(__name__)
 
 
 class BacktestService:
     """
-    백테스팅 서비스 클래스 (Repository Pattern 및 Factory Pattern 적용)
+    백테스팅 서비스 클래스
     
-    이제 Repository와 Factory를 통해 의존성을 주입받고,
-    분리된 전담 서비스들에게 작업을 위임합니다:
-    - BacktestEngine: 백테스트 실행 (Repository 주입)
-    - OptimizationService: 파라미터 최적화 (Repository 주입)
-    - ChartDataService: 차트 데이터 생성 (Repository 주입)
+    분리된 전담 서비스들에게 작업을 위임:
+    - BacktestEngine: 백테스트 실행
+    - ChartDataService: 차트 데이터 생성
     - ValidationService: 검증 및 유틸리티
     """
     
-    def __init__(self, service_factory_instance=None):
-        # Factory Pattern을 통한 서비스 생성
-        self.service_factory = service_factory_instance or service_factory
+    def __init__(self):
+        # 서비스들 직접 임포트
+        self.backtest_engine = backtest_engine
+        self.chart_data_service = chart_data_service
+        self.validation_service = validation_service
         
-        # Repository Pattern을 통한 의존성 주입된 서비스들
-        self.backtest_engine = self.service_factory.create_backtest_engine()
-        self.optimization_service = self.service_factory.create_optimization_service()
-        self.chart_data_service = self.service_factory.create_chart_data_service()
-        self.validation_service = self.service_factory.create_validation_service()
-        
-        # Repository 직접 접근 (필요시)
+        # Repository 접근
         self.backtest_repository = backtest_repository
         self.data_repository = data_repository
-        self.strategy_factory = strategy_factory
         
         # 호환성을 위해 기존 속성들 유지
         from app.utils.data_fetcher import data_fetcher
@@ -142,10 +132,6 @@ class BacktestService:
     async def run_backtest(self, request: BacktestRequest) -> BacktestResult:
         """백테스트 실행 - Repository Pattern이 적용된 BacktestEngine에 위임"""
         return await self.backtest_engine.run_backtest(request)
-    
-    async def optimize_strategy(self, request: OptimizationRequest) -> OptimizationResult:
-        """전략 파라미터 최적화 - Repository Pattern이 적용된 OptimizationService에 위임"""
-        return await self.optimization_service.optimize_strategy(request)
     
     async def generate_chart_data(self, request: BacktestRequest, backtest_result: BacktestResult = None) -> ChartDataResponse:
         """차트 데이터 생성 - Repository Pattern이 적용된 ChartDataService에 위임"""
@@ -173,12 +159,16 @@ class BacktestService:
         return await self.data_repository.get_stock_data(ticker, start_date, end_date)
     
     def get_available_strategies(self) -> Dict[str, Dict[str, Any]]:
-        """사용 가능한 전략 목록 (Factory Pattern)"""
-        return self.strategy_factory.get_available_strategies()
+        """사용 가능한 전략 목록"""
+        return strategy_service.get_all_strategies()
     
     def validate_strategy_params(self, strategy_name: str, params: Dict[str, Any]) -> bool:
-        """전략 파라미터 검증 (Factory Pattern)"""
-        return self.strategy_factory.validate_strategy_params(strategy_name, params)
+        """전략 파라미터 검증"""
+        try:
+            strategy_service.validate_strategy_params(strategy_name, params)
+            return True
+        except ValueError:
+            return False
     
     async def get_system_stats(self) -> Dict[str, Any]:
         """시스템 통계 정보"""
@@ -187,10 +177,8 @@ class BacktestService:
                 'backtest_cache': await self.backtest_repository.get_stats() if hasattr(self.backtest_repository, 'get_stats') else {},
                 'data_cache': await self.data_repository.get_cache_stats()
             },
-            'service_stats': self.service_factory.get_service_stats(),
             'strategy_stats': {
-                'available_strategies': len(self.strategy_factory.get_available_strategies()),
-                'factory_type': type(self.strategy_factory).__name__
+                'available_strategies': len(strategy_service.get_all_strategies())
             }
         }
     
@@ -204,5 +192,5 @@ class BacktestService:
         return self.validation_service.safe_int(value, default)
 
 
-# 전역 인스턴스 (Repository Pattern과 Factory Pattern 적용)
+# 전역 인스턴스
 backtest_service = BacktestService()

@@ -18,10 +18,10 @@ class EMAStrategy(Strategy):
         self.ema_slow = self.I(self._ema, close, self.slow_window)
 
     def next(self):
-        if crossover(self.ema_fast, self.ema_slow):
+        if crossover(self.ema_fast, self.ema_slow) and not self.position:
             self.buy()
-        elif crossover(self.ema_slow, self.ema_fast):
-            self.sell()
+        elif crossover(self.ema_slow, self.ema_fast) and self.position:
+            self.position.close()
 
     @staticmethod
     def _ema(values, period: int):

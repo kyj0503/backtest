@@ -16,14 +16,11 @@ import {
   LazyTradesChart,
   LazyStatsSummary,
   LazyStockPriceChart,
-  LazyExchangeRateChart,
-  LazyStockVolatilityNews,
 } from '../lazy/LazyChartComponents';
 import ChartLoading from '@/shared/components/ChartLoading';
-import { useStockData } from '../../hooks/useStockData';
 import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint } from '../../model/backtest-result-types';
 import { FormLegend } from '@/shared/components';
-import { Loader2, Grid3X3, Grid } from 'lucide-react';
+import { Grid3X3, Grid, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 
 interface ChartsSectionProps {
@@ -52,6 +49,7 @@ const ResultBlock: React.FC<{
 const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio }) => {
   // 차트 레이아웃 모드 상태 (true: 2열, false: 1열)
   const [isCompactView, setIsCompactView] = useState(true);
+  
   const portfolioData = useMemo<PortfolioData | null>(
     () => (isPortfolio && 'portfolio_composition' in data ? (data as PortfolioData) : null),
     [data, isPortfolio],
@@ -62,28 +60,24 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     [data, isPortfolio],
   );
 
-  const stockQuery = useMemo(
-    () => {
-      if (portfolioData) {
-        return {
-          symbols: portfolioData.portfolio_composition.map(item => item.symbol),
-          startDate: portfolioData.portfolio_statistics.Start,
-          endDate: portfolioData.portfolio_statistics.End,
-        };
+  // 통합 응답에서 주가 데이터 추출
+  const stocksData = useMemo(() => {
+    if (portfolioData?.stock_data) {
+      return Object.entries(portfolioData.stock_data).map(([symbol, data]) => ({
+        symbol,
+        data,
+      }));
+    }
+    if (chartData?.ticker && (data as any).stock_data) {
+      const stockData = (data as any).stock_data[chartData.ticker];
+      if (stockData) {
+        return [{ symbol: chartData.ticker, data: stockData }];
       }
-      if (chartData?.ticker) {
-        return {
-          symbols: [chartData.ticker],
-          startDate: chartData.start_date ?? '',
-          endDate: chartData.end_date ?? '',
-        };
-      }
-      return { symbols: [] as string[], startDate: '', endDate: '' };
-    },
-    [chartData, portfolioData],
-  );
+    }
+    return [];
+  }, [portfolioData, chartData, data]);
 
-  const { stocksData, loading: loadingStockData } = useStockData(stockQuery);
+  const loadingStockData = false; // 통합 응답이므로 별도 로딩 없음
 
   const formatCurrency = useMemo(
     () => (value: number): string => {
@@ -170,23 +164,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       return { ...point, return_pct: returnPct };
     }) ?? [];
 
-  // 날짜 정보
-  const startDate = portfolioData
-    ? portfolioData.portfolio_statistics.Start
-    : chartData?.start_date ?? '';
-  const endDate = portfolioData
-    ? portfolioData.portfolio_statistics.End
-    : chartData?.end_date ?? '';
 
-  // 심볼 정보
-  const newsSymbols = useMemo(() => {
-    if (portfolioData) {
-      return Array.from(
-        new Set(portfolioData.portfolio_composition.map(item => item.symbol.replace(/_\d+$/, ''))),
-      );
-    }
-    return chartData?.ticker ? [chartData.ticker] : [];
-  }, [portfolioData, chartData?.ticker]);
 
   const renderPortfolioCharts = (): React.ReactNode[] | null => {
     if (!portfolioData) return null;
@@ -364,7 +342,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <LineChart data={withBenchmarkReturn(sp500Benchmark)}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" tickFormatter={formatDateTick} />
-              <YAxis yAxisId="left" orientation="left" />
+              <YAxis yAxisId="left" orientation="left" tickFormatter={(value: number) => value.toFixed(0)} />
               <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
               <Tooltip
                 formatter={(value: number, name: string) => {
@@ -374,7 +352,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
                 }}
                 labelFormatter={(label: string) => `날짜: ${label}`}
               />
-              <Area yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" fillOpacity={0.15} fill="#3b82f6" />
+              <Line yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} dot={false} />
               <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -394,7 +372,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <LineChart data={withBenchmarkReturn(nasdaqBenchmark)}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" tickFormatter={formatDateTick} />
-              <YAxis yAxisId="left" orientation="left" />
+              <YAxis yAxisId="left" orientation="left" tickFormatter={(value: number) => value.toFixed(0)} />
               <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
               <Tooltip
                 formatter={(value: number, name: string) => {
@@ -404,7 +382,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
                 }}
                 labelFormatter={(label: string) => `날짜: ${label}`}
               />
-              <Area yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" fillOpacity={0.15} fill="#3b82f6" />
+              <Line yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} dot={false} />
               <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
             </LineChart>
           </ResponsiveContainer>
@@ -412,17 +390,47 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       );
     }
 
-    // 3. 환율 차트
-    if (startDate && endDate) {
+    // 3. 환율 차트 (통합 응답 데이터 사용)
+    const exchangeRates = portfolioData?.exchange_rates || (data as any).exchange_rates;
+    if (exchangeRates && exchangeRates.length > 0) {
+      const minRate = Math.min(...exchangeRates.map((d: any) => d.rate));
+      const maxRate = Math.max(...exchangeRates.map((d: any) => d.rate));
+      
       allCharts.push(
         <ResultBlock
           title="환율 추이"
           description="동일 기간의 원/달러 환율 변동"
           key="exchange-rate"
         >
-          <Suspense fallback={<ChartLoading height={260} />}>
-            <LazyExchangeRateChart startDate={startDate} endDate={endDate} showCard={false} />
-          </Suspense>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={exchangeRates}>
+              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value: any) => {
+                  const date = new Date(value);
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
+              />
+              <YAxis 
+                domain={[minRate - 50, maxRate + 50]}
+                tick={{ fontSize: 12 }}
+                tickFormatter={(value: number) => `₩${value.toFixed(0)}`}
+              />
+              <Tooltip 
+                formatter={(value: number) => [`₩${value.toFixed(2)}`, '환율']}
+                labelFormatter={(label: string) => `날짜: ${label}`}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="rate" 
+                stroke="#10b981" 
+                strokeWidth={2} 
+                dot={false} 
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </ResultBlock>
       );
     }
@@ -430,18 +438,100 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     return allCharts;
   };
 
-  const allChartCards = renderAllCharts();
+  // 급등락 이벤트 카드 렌더링 함수 (차트 배열에 포함)
+  const renderVolatilityEventCards = () => {
+    const volatilityEvents = portfolioData?.volatility_events || (data as any).volatility_events;
+    if (!volatilityEvents || Object.keys(volatilityEvents).length === 0) return [];
 
-  // 뉴스 섹션 (별도 렌더링, 전체 너비)
-  const renderNewsSection = () => {
-    if (!startDate || !endDate || newsSymbols.length === 0) return null;
-
-    return (
-      <Suspense fallback={<ChartLoading height={260} />}>
-        <LazyStockVolatilityNews symbols={newsSymbols} startDate={startDate} endDate={endDate} />
-      </Suspense>
-    );
+    return Object.entries(volatilityEvents).map(([symbol, events]) => {
+      const eventList = events as any[];
+      if (!eventList || eventList.length === 0) return null;
+      
+      return (
+        <ResultBlock
+          key={`volatility-${symbol}`}
+          title={`${symbol} 급등/급락 이벤트`}
+          description={`5% 이상 변동 이벤트 (최근 ${Math.min(eventList.length, 10)}개)`}
+        >
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {eventList.slice(0, 10).map((event: any, idx: number) => (
+              <div key={idx} className="flex items-center justify-between border-b border-border/40 pb-2 last:border-0">
+                <div className="flex items-center gap-3">
+                  <span className={`px-2 py-1 text-xs font-semibold rounded ${
+                    event.event_type === '급등' 
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100' 
+                      : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-100'
+                  }`}>
+                    {event.event_type}
+                  </span>
+                  <span className="text-sm text-muted-foreground">{event.date}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-semibold ${
+                    event.daily_return > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {event.daily_return > 0 ? '+' : ''}{event.daily_return.toFixed(2)}%
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    ${event.close_price.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ResultBlock>
+      );
+    }).filter(Boolean);
   };
+
+  // 최신 뉴스 카드 렌더링 함수 (차트 배열에 포함)
+  const renderLatestNewsCards = () => {
+    const latestNews = portfolioData?.latest_news || (data as any).latest_news;
+    if (!latestNews || Object.keys(latestNews).length === 0) return [];
+
+    return Object.entries(latestNews).map(([symbol, newsList]) => {
+      const newsArray = newsList as any[];
+      if (!newsArray || newsArray.length === 0) return null;
+      
+      return (
+        <ResultBlock
+          key={`news-${symbol}`}
+          title={`${symbol} 최신 뉴스`}
+          description={`최근 ${newsArray.length}개 뉴스`}
+        >
+          <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            {newsArray.map((newsItem: any, idx: number) => (
+              <a
+                key={idx}
+                href={newsItem.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-2 rounded hover:bg-muted/50 transition-colors border-b border-border/40 last:border-0"
+              >
+                <div 
+                  className="text-sm font-medium text-primary hover:underline"
+                  dangerouslySetInnerHTML={{ __html: newsItem.title }}
+                />
+                <div 
+                  className="text-xs text-muted-foreground mt-1"
+                  dangerouslySetInnerHTML={{ __html: newsItem.description }}
+                />
+                <div className="text-xs text-muted-foreground mt-1">
+                  {newsItem.pubDate}
+                </div>
+              </a>
+            ))}
+          </div>
+        </ResultBlock>
+      );
+    }).filter(Boolean);
+  };
+
+  const allChartCards = [
+    ...renderAllCharts(),
+    ...renderVolatilityEventCards(),
+    ...renderLatestNewsCards(),
+  ];
 
   return (
     <div className="space-y-6">
@@ -478,7 +568,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         </Button>
       </div>
 
-      {/* 모든 분석 차트 (OHLC, 수익률, 주가, 거래내역, 벤치마크, 환율) */}
+      {/* 모든 분석 차트 (OHLC, 수익률, 주가, 거래내역, 벤치마크, 환율, 급등락, 뉴스) */}
       <div className={`grid gap-6 ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
         {allChartCards.map((card, index) => (
           <div key={index} className="flex flex-col">
@@ -486,9 +576,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           </div>
         ))}
       </div>
-
-      {/* 3. 뉴스 섹션 (전체 너비) */}
-      {renderNewsSection()}
     </div>
   );
 });

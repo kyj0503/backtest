@@ -7,8 +7,8 @@ import { http, HttpResponse } from 'msw'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 export const handlers = [
-  // 백테스트 실행 API
-  http.post(`${API_BASE_URL}/api/v1/backtest/run`, () => {
+  // 백테스트 실행 API (통합 엔드포인트)
+  http.post(`${API_BASE_URL}/api/v1/backtest/portfolio`, () => {
     return HttpResponse.json({
       status: 'success',
       backtest_type: 'single_stock',

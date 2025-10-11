@@ -34,7 +34,7 @@ class MACDStrategy(Strategy):
         if (len(self.macd_line) > 1 and len(self.signal_line) > 1 and
             not np.isnan(self.macd_line[-1]) and not np.isnan(self.signal_line[-1])):
             
-            if crossover(self.macd_line, self.signal_line):
+            if crossover(self.macd_line, self.signal_line) and not self.position:
                 self.buy()
-            elif crossover(self.signal_line, self.macd_line):
-                self.sell()
+            elif crossover(self.signal_line, self.macd_line) and self.position:
+                self.position.close()

@@ -104,26 +104,20 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className = "" }) => {
   const availableThemes = getAvailableThemes();
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          테마 설정
-          <div className="flex items-center gap-2">
-            <Button
-              variant={isDarkMode ? "default" : "outline"}
-              size="sm"
-              onClick={toggleDarkMode}
-              className="text-xs"
-            >
-              {isDarkMode ? '🌙 다크' : '☀️ 라이트'}
-            </Button>
-          </div>
-        </CardTitle>
-        <p className="text-sm text-muted-foreground">
-          원하는 디자인 테마를 선택하세요. 테마는 자동으로 저장됩니다.
-        </p>
-      </CardHeader>
-      <CardContent>
+    <div className={className}>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          테마는 자동으로 저장됩니다
+        </div>
+        <Button
+          variant={isDarkMode ? "default" : "outline"}
+          size="sm"
+          onClick={toggleDarkMode}
+        >
+          {isDarkMode ? '🌙 다크' : '☀️ 라이트'}
+        </Button>
+      </div>
+      <div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {availableThemes.map((theme) => (
             <ThemePreview
@@ -143,8 +137,8 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className = "" }) => {
             <div>저장 위치: 브라우저 로컬 스토리지</div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

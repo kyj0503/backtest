@@ -40,16 +40,17 @@ class RSIStrategy(Strategy):
         return rsi.fillna(50)  # NaN 값을 50으로 채움
 
     def next(self):
-        if len(self.rsi) > self.rsi_period:  # 충분한 데이터가 있을 때만 실행
+        if len(self.rsi) > self.rsi_period:
             current_rsi = self.rsi[-1]
 
-            # 과매도 구간에서 매수
             if current_rsi < self.rsi_oversold and not self.position:
-                self.buy(size=self.position_size)
+                price = self.data.Close[-1]
+                size = int((self.equity * self.position_size) / price)
+                if size > 0:
+                    self.buy(size=size)
 
-            # 과매수 구간에서 매도
             elif current_rsi > self.rsi_overbought and self.position:
-                self.sell(size=self.position.size)
+                self.position.close()
 
 
 class AggressiveRSIStrategy(RSIStrategy):

@@ -71,7 +71,6 @@ def _get_engine() -> Engine:
             db_port = settings.database_port or os.getenv("DATABASE_PORT", "3306")
             db_user = settings.database_user or os.getenv("DATABASE_USER", "root")
             db_pass = settings.database_password or os.getenv("DATABASE_PASSWORD", "password")
-            # Use DATABASE_NAME if provided, otherwise keep legacy 'stock_data_cache'
             db_name = settings.database_name or os.getenv("DATABASE_NAME", "stock_data_cache")
             db_url = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}?charset=utf8mb4"
         except Exception:

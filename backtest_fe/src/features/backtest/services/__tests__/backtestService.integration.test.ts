@@ -5,8 +5,6 @@ import { BacktestService } from '../backtestService'
 import type {
   BacktestRequest,
   UnifiedBacktestResponse,
-  OptimizationRequest,
-  OptimizationResult,
   NewsResponse,
 } from '../../model/api-types'
 
@@ -62,7 +60,7 @@ describe('BacktestService (integration)', () => {
     }
 
     server.use(
-      http.post('http://localhost:3000/api/v1/backtest/execute', async ({ request }) => {
+      http.post('http://localhost:3000/api/v1/backtest/portfolio', async ({ request }) => {
         capturedBody = await request.json()
         return HttpResponse.json(mockResponse)
       })
@@ -76,7 +74,7 @@ describe('BacktestService (integration)', () => {
 
   it('propagates API failures as rejected promises', async () => {
     server.use(
-      http.post('http://localhost:3000/api/v1/backtest/execute', () => HttpResponse.json({ message: 'failed' }, { status: 500 }))
+      http.post('http://localhost:3000/api/v1/backtest/portfolio', () => HttpResponse.json({ message: 'failed' }, { status: 500 }))
     )
 
     await expect(BacktestService.executeBacktest(baseRequest)).rejects.toThrow('Request failed with status code 500')
@@ -114,39 +112,5 @@ describe('BacktestService (integration)', () => {
 
     expect(result).toEqual(mockNews)
     expect(capturedQueries).toEqual({ query: 'AAPL', display: '5' })
-  })
-
-  it('posts optimization payloads and returns the response body', async () => {
-    let optimizationBody: OptimizationRequest | undefined
-
-    const mockOptimization: OptimizationResult = {
-      best_params: { short_window: 10, long_window: 40 },
-      best_score: 1.6,
-      results: [],
-    }
-
-    server.use(
-      http.post('http://localhost:3000/api/v1/optimize/run', async ({ request }) => {
-        optimizationBody = await request.json()
-        return HttpResponse.json(mockOptimization)
-      })
-    )
-
-    const request: OptimizationRequest = {
-      ticker: 'AAPL',
-      strategy: 'sma_crossover',
-      start_date: '2023-01-01',
-      end_date: '2023-12-31',
-      parameter_ranges: {
-        short_window: { min: 5, max: 20, step: 5 },
-        long_window: { min: 20, max: 60, step: 10 },
-      },
-      objective: 'sharpe',
-    }
-
-    const result = await BacktestService.runOptimization(request)
-
-    expect(optimizationBody).toEqual(request)
-    expect(result).toEqual(mockOptimization)
   })
 })

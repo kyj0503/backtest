@@ -1,10 +1,11 @@
 import React, { ChangeEvent } from 'react';
-import { Tooltip, FormSection } from '@/shared/components';
+import { FormSection } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -92,17 +93,24 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
           >
             + 종목 추가
           </Button>
-          <Tooltip content="현금을 포트폴리오에 추가 (무위험 자산)">
-            <Button
-              type="button"
-              onClick={addCash}
-              disabled={portfolio.length >= 10}
-              variant="outline"
-              className="rounded-full border-green-300 text-green-700 hover:bg-green-50"
-            >
-              현금 추가
-            </Button>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  onClick={addCash}
+                  disabled={portfolio.length >= 10}
+                  variant="outline"
+                  className="rounded-full border-green-300 text-green-700 hover:bg-green-50"
+                >
+                  현금 추가
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>현금을 포트폴리오에 추가 (무위험 자산)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <span className="text-xs text-muted-foreground">
             {portfolio.length}/10 자산
           </span>

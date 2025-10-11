@@ -33,6 +33,9 @@ class BollingerBandsStrategy(Strategy):
         return sma - (std_dev * std)
     
     def next(self):
+        if len(self.data) < self.period:
+            return
+        
         if (len(self.upper_band) > 0 and len(self.lower_band) > 0 and 
             not np.isnan(self.upper_band[-1]) and not np.isnan(self.lower_band[-1])):
             
@@ -41,4 +44,4 @@ class BollingerBandsStrategy(Strategy):
             if current_price < self.lower_band[-1] and not self.position:
                 self.buy()
             elif current_price > self.upper_band[-1] and self.position:
-                self.sell()
+                self.position.close()

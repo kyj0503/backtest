@@ -9,8 +9,8 @@ import numpy as np
 
 from app.models.requests import BacktestRequest
 from app.models.responses import (
-    BacktestResult, ChartDataResponse, ChartDataPoint, 
-    EquityPoint, TradeMarker, IndicatorData
+    BacktestResult, ChartDataResponse, ChartDataPoint,
+    EquityPoint, TradeMarker, IndicatorData, BenchmarkPoint
 )
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
@@ -135,7 +135,11 @@ class ChartDataService:
                         )
                 except Exception as e:
                     self.logger.warning(f"벤치마크 계산 중 오류({benchmark_ticker}): {e}")
-            
+
+            # 7. 벤치마크 데이터 생성 (S&P 500, NASDAQ)
+            sp500_benchmark = await self._generate_benchmark_data("^GSPC", request.start_date, request.end_date)
+            nasdaq_benchmark = await self._generate_benchmark_data("^IXIC", request.start_date, request.end_date)
+
             return ChartDataResponse(
                 ticker=request.ticker,
                 strategy=request.strategy,
@@ -145,6 +149,8 @@ class ChartDataService:
                 equity_data=equity_data,
                 trade_markers=trade_markers,
                 indicators=indicators,
+                sp500_benchmark=sp500_benchmark,
+                nasdaq_benchmark=nasdaq_benchmark,
                 summary_stats=backtest_stats
             )
             
@@ -167,6 +173,25 @@ class ChartDataService:
             raise ValidationError(f"'{ticker}' 종목의 가격 데이터를 찾을 수 없습니다.")
 
         return data
+
+    async def _generate_benchmark_data(self, ticker: str, start_date, end_date) -> List[BenchmarkPoint]:
+        """벤치마크 데이터 생성 (S&P 500, NASDAQ 등)"""
+        try:
+            data = await self._get_price_data(ticker, start_date, end_date)
+            benchmark_data = []
+
+            for idx, row in data.iterrows():
+                benchmark_data.append(BenchmarkPoint(
+                    date=idx.strftime('%Y-%m-%d'),
+                    close=self.safe_float(row['Close'])
+                ))
+
+            self.logger.info(f"{ticker} 벤치마크 데이터 생성 완료: {len(benchmark_data)} 포인트")
+            return benchmark_data
+
+        except Exception as e:
+            self.logger.warning(f"{ticker} 벤치마크 데이터 생성 실패: {e}")
+            return []
     
     def _generate_ohlc_data(self, data: pd.DataFrame) -> List[ChartDataPoint]:
         """OHLC 데이터 생성"""
@@ -534,12 +559,11 @@ class ChartDataService:
         
         total_return_pct = ((final_price / initial_price) - 1) * 100
         final_equity = initial_cash * (final_price / initial_price)
-        max_drawdown_pct = 0.0  # Buy & Hold 단순화
+        max_drawdown_pct = 0.0
         
-        # 테스트에서 기대하는 필드명으로 맞춤
         return {
             "total_return_pct": total_return_pct,
-            "sharpe_ratio": 0.0,  # 단순화
+            "sharpe_ratio": 0.0,
             "max_drawdown_pct": max_drawdown_pct,
             "total_trades": 1,  # Buy & Hold은 1번 거래
             "win_rate_pct": 100.0 if total_return_pct > 0 else 0.0,

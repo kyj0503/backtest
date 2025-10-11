@@ -1,4 +1,4 @@
-# Environment files (모든 시크릿은 루트의 .env와 .env.local에서 관리)
+# Environment files
 .env
 
 # Python
@@ -7,5 +7,6 @@ __pycache__/
 
 # Node
 node_modules/
+
 .vscode/launch.json
 .vscode/settings.json
