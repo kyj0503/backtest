@@ -455,10 +455,11 @@ class PortfolioService:
             백테스트 결과
         """
         try:
-            logger.info(f"포트폴리오 백테스트 시작: 전략={request.strategy}, 종목수={len(request.portfolio)}")
+            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+            logger.info(f"포트폴리오 백테스트 시작: 전략={strategy_name}, 종목수={len(request.portfolio)}")
             
             # 전략이 buy_and_hold가 아닌 경우 개별 종목별로 전략 백테스트 실행
-            if request.strategy != "buy_and_hold":
+            if strategy_name != "buy_and_hold":
                 return await self.run_strategy_portfolio_backtest(request)
             else:
                 return await self.run_buy_and_hold_portfolio_backtest(request)
@@ -492,7 +493,8 @@ class PortfolioService:
             else:
                 raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             
-            logger.info(f"전략 기반 백테스트: {request.strategy}, 총 투자금액: ${total_amount:,.2f}")
+            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+            logger.info(f"전략 기반 백테스트: {strategy_name}, 총 투자금액: ${total_amount:,.2f}")
             
             # 각 종목별로 전략 백테스트 실행 (중복 종목 지원)
             for idx, item in enumerate(request.portfolio):
@@ -542,12 +544,13 @@ class PortfolioService:
                 logger.info(f"종목 {symbol} (#{idx+1}) 전략 백테스트 실행 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
                 
                 # 개별 종목 백테스트 요청 생성
+                strategy_value = strategy_name  # 이미 위에서 변환한 strategy_name 사용
                 backtest_req = BacktestRequest(
                     ticker=symbol,
                     start_date=request.start_date,
                     end_date=request.end_date,
                     initial_cash=amount,
-                    strategy=request.strategy,
+                    strategy=strategy_value,
                     strategy_params=request.strategy_params or {}
                 )
                 

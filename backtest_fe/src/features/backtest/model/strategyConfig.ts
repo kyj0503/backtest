@@ -15,12 +15,12 @@ export interface StrategyConfig {
 }
 
 export const STRATEGY_CONFIGS: Record<string, StrategyConfig> = {
-  buy_and_hold: {
+  buy_hold_strategy: {
     name: '매수 후 보유',
     description: '매수 후 보유 전략 - 파라미터 없음',
     parameters: {}
   },
-  sma_crossover: {
+  sma_strategy: {
     name: '단순이동평균 교차',
     description: '단기/장기 이동평균선 교차 기반 매매',
     parameters: {
@@ -67,7 +67,7 @@ export const STRATEGY_CONFIGS: Record<string, StrategyConfig> = {
       }
     }
   },
-  bollinger_bands: {
+  bollinger_strategy: {
     name: '볼린저 밴드',
     description: '볼린저 밴드 기반 매매',
     parameters: {
@@ -115,7 +115,7 @@ export const STRATEGY_CONFIGS: Record<string, StrategyConfig> = {
       }
     }
   },
-  ema_crossover: {
+  ema_strategy: {
     name: 'EMA 교차',
     description: '지수 이동평균선 교차 기반 매매',
     parameters: {

@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 
 STRATEGIES: Dict[str, Dict[str, Any]] = {
-    'sma_crossover': {
+    'sma_strategy': {
         'class': SMAStrategy,
         'name': 'Simple Moving Average Crossover',
         'description': 'SMA 단기/장기 이동평균 교차 전략',
@@ -105,7 +105,7 @@ STRATEGIES: Dict[str, Dict[str, Any]] = {
         },
         'constraints': ['rsi_oversold < rsi_overbought']
     },
-    'bollinger_bands': {
+    'bollinger_strategy': {
         'class': BollingerBandsStrategy,
         'name': 'Bollinger Bands Strategy',
         'description': '볼린저 밴드 기반 전략',
@@ -156,7 +156,7 @@ STRATEGIES: Dict[str, Dict[str, Any]] = {
         },
         'constraints': ['fast_period < slow_period']
     },
-    'ema_crossover': {
+    'ema_strategy': {
         'class': EMAStrategy,
         'name': 'EMA Crossover Strategy',
         'description': 'EMA 단기/장기 이동평균 교차 전략',
@@ -178,7 +178,7 @@ STRATEGIES: Dict[str, Dict[str, Any]] = {
         },
         'constraints': ['fast_window < slow_window']
     },
-    'buy_and_hold': {
+    'buy_hold_strategy': {
         'class': BuyAndHoldStrategy,
         'name': 'Buy and Hold Strategy',
         'description': '매수 후 보유 전략',

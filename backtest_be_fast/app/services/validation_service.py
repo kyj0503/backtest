@@ -69,14 +69,15 @@ class ValidationService:
                 raise ValidationError("초기 현금은 0보다 커야 합니다")
             
             # 4. 전략 검증
-            if request.strategy not in strategy_service.get_all_strategies():
+            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+            if strategy_name not in strategy_service.get_all_strategies():
                 raise ValidationError(f"지원하지 않는 전략: {request.strategy}")
             
             # 5. 전략 파라미터 검증
             if request.strategy_params:
                 try:
                     strategy_service.validate_strategy_params(
-                        request.strategy, 
+                        strategy_name, 
                         request.strategy_params
                     )
                 except ValueError as ve:

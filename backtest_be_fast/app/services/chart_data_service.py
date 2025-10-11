@@ -97,10 +97,11 @@ class ChartDataService:
         """
         try:
             # 전략 파라미터 검증 (전략이 buy_and_hold가 아닐 때만)
-            if request.strategy != "buy_and_hold":
+            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+            if strategy_name != "buy_and_hold":
                 try:
                     self.strategy_service.validate_strategy_params(
-                        request.strategy, 
+                        strategy_name, 
                         request.strategy_params or {}
                     )
                 except ValueError as ve:
@@ -124,11 +125,11 @@ class ChartDataService:
             
             # 3. 거래 마커 생성
             trade_log = backtest_result.trade_log if backtest_result else []
-            trade_markers = self._generate_trade_markers(data, request.strategy, trade_log)
+            trade_markers = self._generate_trade_markers(data, strategy_name, trade_log)
             self.logger.info(f"거래 마커 생성 완료: {len(trade_markers)} 개")
             
             # 4. 기술 지표 데이터 생성
-            indicators = self._generate_indicators(data, request.strategy, request.strategy_params or {})
+            indicators = self._generate_indicators(data, strategy_name, request.strategy_params or {})
             self.logger.info(f"기술 지표 생성 완료: {len(indicators)} 개")
             
             # 5. 백테스트 통계 계산
@@ -180,7 +181,7 @@ class ChartDataService:
 
             return ChartDataResponse(
                 ticker=request.ticker,
-                strategy=request.strategy,
+                strategy=strategy_name,
                 start_date=request.start_date.strftime('%Y-%m-%d') if hasattr(request.start_date, 'strftime') else str(request.start_date),
                 end_date=request.end_date.strftime('%Y-%m-%d') if hasattr(request.end_date, 'strftime') else str(request.end_date),
                 ohlc_data=ohlc_data,

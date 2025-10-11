@@ -10,12 +10,12 @@ from ..core.config import settings
 
 class StrategyType(str, Enum):
     """지원되는 전략 타입"""
-    SMA_CROSSOVER = "sma_crossover"
-    RSI = "rsi"
-    BOLLINGER_BANDS = "bollinger_bands"
-    MACD = "macd"
-    BUY_AND_HOLD = "buy_and_hold"
-    EMA_CROSSOVER = "ema_crossover"
+    SMA_STRATEGY = "sma_strategy"
+    RSI_STRATEGY = "rsi_strategy"
+    BOLLINGER_STRATEGY = "bollinger_strategy"
+    MACD_STRATEGY = "macd_strategy"
+    BUY_HOLD_STRATEGY = "buy_hold_strategy"
+    EMA_STRATEGY = "ema_strategy"
 
 
 class BacktestRequest(BaseModel):
@@ -100,7 +100,7 @@ class UnifiedBacktestRequest(BaseModel):
     portfolio: List[PortfolioAsset] = Field(..., min_items=1, max_items=settings.max_portfolio_items, description="포트폴리오 구성")
     start_date: Union[date, str] = Field(..., description="백테스트 시작 날짜")
     end_date: Union[date, str] = Field(..., description="백테스트 종료 날짜")
-    strategy: StrategyType = Field(StrategyType.BUY_AND_HOLD, description="사용할 전략")
+    strategy: StrategyType = Field(StrategyType.BUY_HOLD_STRATEGY, description="사용할 전략")
     strategy_params: Optional[Dict[str, Any]] = Field(default=None, description="전략 파라미터")
     commission: float = Field(default=0.002, ge=0, le=0.1, description="거래 수수료")
     rebalance_frequency: Optional[str] = Field("monthly", description="리밸런싱 주기")

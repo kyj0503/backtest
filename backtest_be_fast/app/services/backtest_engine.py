@@ -90,7 +90,8 @@ class BacktestEngine:
             self.logger.info(f"데이터 범위: {data.index[0]} ~ {data.index[-1]}")
             
             # 전략 클래스 가져오기
-            strategy_class = self._build_strategy(request.strategy, request.strategy_params)
+            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+            strategy_class = self._build_strategy(strategy_name, request.strategy_params)
 
             self.logger.info(f"전략 클래스: {strategy_class.__name__}")
             self.logger.info(f"초기 자본: ${request.initial_cash}")
