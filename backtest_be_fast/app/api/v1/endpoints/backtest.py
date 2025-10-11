@@ -10,8 +10,8 @@ import logging
 from ....schemas.schemas import PortfolioBacktestRequest
 from ....services.portfolio_service import PortfolioService
 from ....services.unified_data_service import unified_data_service
+from ....services.news_service import news_service
 from ..decorators import handle_portfolio_errors
-from .naver_news import NaverNewsService
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,6 @@ router = APIRouter()
 
 # 서비스 초기화
 portfolio_service = PortfolioService()
-news_service = NaverNewsService()
 
 # 통합 데이터 서비스에 뉴스 서비스 주입
 unified_data_service.news_service = news_service
