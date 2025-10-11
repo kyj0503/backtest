@@ -7,8 +7,8 @@ from datetime import datetime, date
 import pandas as pd
 import numpy as np
 
-from app.models.requests import BacktestRequest
-from app.models.responses import (
+from app.schemas.requests import BacktestRequest
+from app.schemas.responses import (
     BacktestResult, ChartDataResponse, ChartDataPoint,
     EquityPoint, TradeMarker, IndicatorData, BenchmarkPoint
 )

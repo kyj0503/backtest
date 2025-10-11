@@ -7,7 +7,7 @@ Controller 역할: 요청 검증 및 응답 반환만 수행
 from fastapi import APIRouter, status
 import logging
 
-from ....models.schemas import PortfolioBacktestRequest
+from ....schemas.schemas import PortfolioBacktestRequest
 from ....services.portfolio_service import PortfolioService
 from ....services.unified_data_service import unified_data_service
 from ..decorators import handle_portfolio_errors

@@ -7,7 +7,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 
-from app.models.responses import BacktestResult
+from app.schemas.responses import BacktestResult
 
 
 class BacktestRepositoryInterface(ABC):

@@ -10,7 +10,7 @@ from datetime import datetime
 
 from .core.config import settings
 from .api.v1.api import api_router
-from .models.responses import HealthResponse
+from .schemas.responses import HealthResponse
 
 # 로깅 설정
 logging.basicConfig(

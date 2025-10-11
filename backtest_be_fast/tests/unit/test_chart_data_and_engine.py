@@ -6,7 +6,7 @@ import pytest
 
 from app.services.chart_data_service import chart_data_service
 from app.services.backtest_engine import BacktestEngine
-from app.models.requests import BacktestRequest, StrategyType
+from app.schemas.requests import BacktestRequest, StrategyType
 
 
 def _sample_price_frame():

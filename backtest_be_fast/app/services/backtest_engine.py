@@ -11,8 +11,8 @@ import numpy as np
 from backtesting import Backtest
 from fastapi import HTTPException
 
-from app.models.requests import BacktestRequest
-from app.models.responses import BacktestResult
+from app.schemas.requests import BacktestRequest
+from app.schemas.responses import BacktestResult
 from app.utils.data_fetcher import data_fetcher
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service

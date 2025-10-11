@@ -86,8 +86,8 @@ def _patch_backtesting_stats():
 # 패치 적용
 _patch_backtesting_stats()
 
-from app.models.requests import BacktestRequest
-from app.models.responses import BacktestResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
+from app.schemas.requests import BacktestRequest
+from app.schemas.responses import BacktestResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
 from app.core.config import settings

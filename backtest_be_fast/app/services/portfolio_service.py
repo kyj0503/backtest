@@ -8,8 +8,8 @@ from datetime import datetime, timedelta, date
 import logging
 from decimal import Decimal
 
-from app.models.schemas import PortfolioBacktestRequest, PortfolioStock
-from app.models.requests import BacktestRequest
+from app.schemas.schemas import PortfolioBacktestRequest, PortfolioStock
+from app.schemas.requests import BacktestRequest
 from app.services.yfinance_db import load_ticker_data
 from app.services.backtest_service import backtest_service
 from app.utils.serializers import recursive_serialize
