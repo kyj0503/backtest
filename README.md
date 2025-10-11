@@ -102,3 +102,10 @@ docker volume rm backtest_fe_node_modules backtest_be_fast_venv || true
 # 불필요 볼륨 정리(주의)
 docker volume prune -f
 ```
+
+| 레이어 | Spring 비교 | 역할 |
+| --- | --- | --- |
+| api/ | @RestController | HTTP 요청/응답 처리 |
+| schemas/ | DTO | API 입출력 모델 정의 |
+| repositories/ | @Repository + 캐싱 로직 | 데이터 소스 추상화 + 캐싱 전략 |
+| services/ | @Service | 비즈니스 로직 |

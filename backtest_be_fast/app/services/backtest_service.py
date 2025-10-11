@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from decimal import Decimal
 
 # Repository 패턴 import
-from app.repositories import backtest_repository, data_repository
+from app.repositories import data_repository
 from app.services.strategy_service import strategy_service
 
 # Monkey patch for pandas Timedelta compatibility issue
@@ -118,7 +118,6 @@ class BacktestService:
         self.validation_service = validation_service
         
         # Repository 접근
-        self.backtest_repository = backtest_repository
         self.data_repository = data_repository
         
         # 호환성을 위해 기존 속성들 유지
@@ -141,19 +140,7 @@ class BacktestService:
         """백테스트 요청 검증 - ValidationService에 위임"""
         return self.validation_service.validate_backtest_request(request)
     
-    # Repository를 활용한 새로운 메서드들
-    async def save_backtest_result(self, result: BacktestResult) -> str:
-        """백테스트 결과 저장"""
-        return await self.backtest_repository.save_result(result)
-    
-    async def get_backtest_result(self, result_id: str) -> Optional[BacktestResult]:
-        """백테스트 결과 조회"""
-        return await self.backtest_repository.get_result(result_id)
-    
-    async def list_backtest_results(self, limit: int = 10) -> List[BacktestResult]:
-        """최근 백테스트 결과 목록 조회"""
-        return await self.backtest_repository.list_results(limit)
-    
+    # Repository를 활용한 메서드들
     async def get_cached_stock_data(self, ticker: str, start_date, end_date) -> pd.DataFrame:
         """캐시된 주식 데이터 조회"""
         return await self.data_repository.get_stock_data(ticker, start_date, end_date)
@@ -174,7 +161,6 @@ class BacktestService:
         """시스템 통계 정보"""
         return {
             'repository_stats': {
-                'backtest_cache': await self.backtest_repository.get_stats() if hasattr(self.backtest_repository, 'get_stats') else {},
                 'data_cache': await self.data_repository.get_cache_stats()
             },
             'strategy_stats': {
