@@ -1,6 +1,31 @@
 """
-통합된 예외 처리 시스템
-백테스트 애플리케이션의 모든 커스텀 예외를 정의합니다.
+예외 처리 시스템
+
+**역할**:
+- 애플리케이션의 모든 커스텀 예외 클래스 정의
+- HTTP 상태 코드와 예외를 매핑
+- 일관된 에러 응답 형식 제공
+
+**예외 계층**:
+- BacktestException: 기본 예외 클래스
+- DataNotFoundError: 데이터 조회 실패 (404)
+- InvalidSymbolError: 잘못된 종목 심볼 (400)
+- ValidationError: 입력 검증 실패 (422)
+- StrategyNotFoundError: 전략 미존재 (404)
+- BacktestExecutionError: 백테스트 실행 실패 (500)
+
+**사용 패턴**:
+```python
+# 서비스 레이어에서 예외 발생
+raise DataNotFoundError("티커 AAPL 데이터를 찾을 수 없습니다")
+
+# 에러 핸들러에서 자동으로 HTTP 응답으로 변환
+```
+
+**연관 컴포넌트**:
+- Backend: app/main.py (전역 에러 핸들러)
+- Backend: app/api/v1/decorators.py (에러 처리 데코레이터)
+- Backend: app/services/*.py (예외 발생 지점)
 """
 from fastapi import HTTPException, status
 from typing import Optional

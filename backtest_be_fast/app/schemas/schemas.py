@@ -1,5 +1,37 @@
 """
 포트폴리오 백테스트 관련 스키마
+
+**역할**:
+- 포트폴리오 백테스트 요청/응답 데이터 모델 정의
+- 복잡한 포트폴리오 구성 검증
+- Pydantic을 사용한 타입 안전성 제공
+
+**주요 모델**:
+1. PortfolioStock: 개별 종목 설정
+   - symbol: 종목 심볼
+   - amount: 투자 금액 또는 비중
+   - investment_type: lump_sum(일시불) / dca(분할매수)
+   - asset_type: stock(주식) / cash(현금)
+
+2. PortfolioBacktestRequest: 포트폴리오 백테스트 요청
+   - assets: 포트폴리오 구성 종목 리스트
+   - start_date, end_date: 백테스트 기간
+   - rebalance_frequency: 리밸런싱 주기
+   - commission: 거래 수수료
+
+**검증 규칙**:
+- 총 비중 = 100% (비중 기반 모드)
+- 자산 개수: 1~10개
+- 날짜 범위: start_date < end_date
+- 금액/비중: 양수
+
+**의존성**:
+- pydantic: 데이터 검증
+
+**연관 컴포넌트**:
+- Backend: app/api/v1/endpoints/backtest.py (요청 모델)
+- Backend: app/services/portfolio_service.py (데이터 사용)
+- Frontend: src/features/backtest/model/backtest-types.ts (TypeScript 타입)
 """
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any

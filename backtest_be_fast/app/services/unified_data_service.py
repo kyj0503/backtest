@@ -1,12 +1,34 @@
 """
-통합 데이터 수집 서비스
+데이터 수집 서비스
 
-백테스트 실행 후 프론트엔드에서 필요한 모든 추가 데이터를 수집하는 서비스입니다.
-- 주가 데이터
-- 환율 데이터 및 통계
-- 급등/급락 이벤트
-- 벤치마크 데이터 (S&P 500, NASDAQ)
-- 최신 뉴스
+**역할**:
+- 백테스트 실행 후 프론트엔드가 필요로 하는 모든 추가 데이터를 한 번에 수집
+- 여러 데이터 소스로부터 데이터를 병렬로 가져와 응답 시간 최적화
+
+**수집 데이터 목록**:
+1. stock_data: 개별 종목의 주가 데이터 (OHLCV)
+2. exchange_rate: USD/KRW 환율 데이터 및 통계 (시작/종료/최고/최저)
+3. surge_plunge: 급등/급락 이벤트 (5% 이상 변동)
+4. benchmarks: 벤치마크 지수 (S&P 500, NASDAQ)
+5. news: 종목 관련 최신 뉴스 (네이버 검색 API)
+
+**주요 기능**:
+- collect_all_data(): 모든 데이터를 병렬로 수집하여 딕셔너리로 반환
+- 에러 발생 시 빈 데이터 반환으로 백테스트 결과는 보존
+
+**의존성**:
+- app/services/data_service.py: 주가 데이터 조회
+- app/services/news_service.py: 뉴스 데이터 조회
+- app/utils/data_fetcher.py: 환율/벤치마크 데이터 페칭
+
+**연관 컴포넌트**:
+- Backend: app/api/v1/endpoints/backtest.py (데이터 수집 호출)
+- Frontend: src/features/backtest/components/ResultDisplay.tsx (데이터 표시)
+- Frontend: src/features/backtest/hooks/useBacktestResult.ts (데이터 처리)
+
+**최적화**:
+- 병렬 요청으로 전체 응답 시간 단축
+- 개별 데이터 소스 실패 시에도 나머지 데이터 반환
 """
 import logging
 import pandas as pd

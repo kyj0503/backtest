@@ -1,8 +1,36 @@
 """
 백테스팅 API 엔드포인트
 
-Controller 역할: 요청 검증 및 응답 반환만 수행
-비즈니스 로직은 서비스 레이어에 위임
+**역할**:
+- FastAPI 라우터로 백테스트 관련 HTTP 엔드포인트 제공
+- 요청 검증 및 응답 반환만 수행 (Controller 역할)
+- 비즈니스 로직은 서비스 레이어에 위임
+
+**엔드포인트**:
+- POST /api/v1/backtest: 백테스트 실행 및 모든 데이터 반환
+
+**요청 흐름**:
+1. 클라이언트 → FastAPI → 이 엔드포인트
+2. 요청 검증 (Pydantic 모델)
+3. 서비스 레이어 호출
+4. 응답 직렬화 및 반환
+
+**에러 처리**:
+- @handle_portfolio_errors 데코레이터로 일관된 에러 응답
+
+**의존성**:
+- app/services/portfolio_service.py: 백테스트 실행
+- app/services/unified_data_service.py: 추가 데이터 수집
+- app/services/news_service.py: 뉴스 데이터 조회
+
+**연관 컴포넌트**:
+- Backend: app/api/v1/api.py (라우터 등록)
+- Backend: app/schemas/schemas.py (요청/응답 스키마)
+- Frontend: src/features/backtest/api/backtestService.ts (API 클라이언트)
+
+**아키텍처 패턴**:
+- Controller-Service-Repository 패턴
+- 얇은 컨트롤러: 비즈니스 로직 없이 조율만 수행
 """
 from fastapi import APIRouter, status
 import logging

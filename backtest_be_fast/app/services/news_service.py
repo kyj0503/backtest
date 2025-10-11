@@ -1,11 +1,34 @@
 """
-네이버 뉴스 검색 서비스
+뉴스 검색 서비스
 
-비즈니스 로직:
-- 네이버 검색 API 호출
+**역할**:
+- 네이버 검색 API를 사용하여 종목 관련 뉴스 수집
 - HTML 태그 제거 및 텍스트 정리
-- 뉴스 관련성 필터링
-- 날짜별 뉴스 검색
+- 뉴스 관련성 필터링 및 날짜별 검색
+
+**주요 기능**:
+1. search_news(): 특정 종목의 최신 뉴스 검색
+   - 네이버 검색 API 호출
+   - HTML 태그 제거 (<b>, &quot; 등)
+   - 뉴스 메타데이터 파싱 (제목, 링크, 설명, 날짜)
+2. 뉴스 필터링: 관련성 낮은 뉴스 제외
+3. 날짜별 검색: 특정 기간의 뉴스만 조회
+
+**API 설정**:
+- 네이버 검색 API 키: 환경 변수 (NAVER_CLIENT_ID, NAVER_CLIENT_SECRET)
+- 요청 제한: 분당 100건, 일일 25,000건
+
+**의존성**:
+- app/repositories/news_repository.py: DB에 뉴스 저장 (선택적)
+- app/core/config.py: API 키 설정
+
+**연관 컴포넌트**:
+- Backend: app/services/unified_data_service.py (뉴스 수집 호출)
+- Backend: app/api/v1/endpoints/backtest.py (뉴스 데이터 응답)
+- Frontend: src/features/backtest/components/NewsSection.tsx (뉴스 표시)
+
+**외부 API**:
+- Naver Search API: https://developers.naver.com/docs/serviceapi/search/news/news.md
 """
 import logging
 import urllib.request

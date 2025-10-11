@@ -1,5 +1,29 @@
 """
 API 서버 설정 관리
+
+**역할**:
+- 환경 변수를 통한 애플리케이션 설정 관리
+- pydantic-settings를 사용한 타입 안전 설정
+- 데이터베이스, CORS, API 경로 등 모든 설정 중앙화
+
+**주요 설정**:
+1. API 설정: 버전, 경로 prefix (/api/v1)
+2. 서버 설정: 호스트, 포트
+3. 데이터베이스: MySQL 연결 정보
+4. CORS: 프론트엔드 허용 도메인
+5. 로그: 로그 레벨 설정
+
+**환경 변수**:
+- 프로젝트 루트의 .env 파일에서 로드
+- CORS_ORIGINS: JSON 배열 또는 쉼표로 구분된 문자열
+
+**연관 컴포넌트**:
+- Backend: app/main.py (설정 사용)
+- Docker: compose.dev.yaml (환경 변수 주입)
+- Database: database/schema.sql (스키마 정의)
+
+**싱글톤 패턴**:
+- `settings` 객체는 모듈 로드 시 한 번만 생성됨
 """
 from typing import Optional
 from pydantic_settings import BaseSettings

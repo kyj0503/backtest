@@ -1,6 +1,30 @@
 """
 RSI 전략 (Relative Strength Index Strategy)
-다양한 RSI 기반 매매 전략들
+
+**역할**:
+- RSI(상대강도지수) 지표를 사용한 역추세 매매 전략
+- 과매도/과매수 구간에서 반대 방향 포지션 진입
+
+**전략 로직**:
+1. RSI < oversold (예: 30): 과매도 → 매수
+2. RSI > overbought (예: 70): 과매수 → 매도
+
+**파라미터**:
+- rsi_period: RSI 계산 기간 (기본값: 14일)
+- rsi_oversold: 과매도 기준선 (기본값: 30)
+- rsi_overbought: 과매수 기준선 (기본값: 70)
+
+**RSI 계산**:
+- RSI = 100 - (100 / (1 + RS))
+- RS = 평균 상승폭 / 평균 하락폭
+
+**사용 사례**:
+- 단기 과열/침체 구간 매매
+- 변동성 큰 종목에 효과적
+
+**의존성**:
+- pandas, numpy: RSI 계산
+- backtesting.py: Strategy 베이스 클래스
 """
 import pandas as pd
 import numpy as np
@@ -8,7 +32,11 @@ from backtesting import Strategy
 
 
 class RSIStrategy(Strategy):
-    """기본 RSI 전략 - 개선된 버전"""
+    """
+    RSI 기반 매매 전략
+    
+    RSI(Relative Strength Index) 지표를 사용하여 과매도/과매수 구간에서 매매하는 전략
+    """
     rsi_period = 14
     rsi_overbought = 70
     rsi_oversold = 30

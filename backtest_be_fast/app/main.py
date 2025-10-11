@@ -1,5 +1,27 @@
 """
 FastAPI 애플리케이션 메인 진입점
+
+**역할**:
+- FastAPI 애플리케이션 인스턴스 생성 및 설정
+- CORS 미들웨어 설정으로 프론트엔드와의 통신 허용
+- API 라우터 등록 및 헬스 체크 엔드포인트 제공
+- 애플리케이션 생명주기 관리 (시작/종료)
+
+**주요 기능**:
+1. CORS 설정: 프론트엔드(React)와의 크로스 오리진 요청 허용
+2. API 라우팅: /api/v1 경로로 모든 백테스트 API 제공
+3. 헬스 체크: /health 엔드포인트로 서버 상태 확인
+4. 에러 핸들링: 전역 예외 처리기 등록
+
+**연관 컴포넌트**:
+- Backend: app/core/config.py (환경 설정)
+- Backend: app/api/v1/api.py (API 라우터)
+- Frontend: backtest_fe/vite.config.ts (프록시 설정)
+- Docker: compose.dev.yaml (컨테이너 설정)
+
+**실행 방법**:
+- 개발: `docker compose -f compose.dev.yaml up backtest-be-fast`
+- 로컬: `uvicorn app.main:app --reload`
 """
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException

@@ -1,5 +1,41 @@
 """
 전략 관리 서비스
+
+**역할**:
+- 백테스트 전략 클래스 관리 및 생성
+- 전략 파라미터 검증
+- 전략 목록 제공
+
+**주요 기능**:
+1. get_strategy_class(): 전략 이름으로 클래스 반환
+2. validate_strategy_params(): 전략 파라미터 유효성 검사
+3. get_strategy_list(): 지원하는 전략 목록 및 설명
+
+**지원 전략**:
+- buy_and_hold: 매수 후 보유
+- sma_crossover: 이동평균 교차
+- rsi: RSI 지표 기반
+- bollinger_bands: 볼린저 밴드
+- macd: MACD 지표
+- ema_crossover: 지수 이동평균 교차
+
+**Factory Pattern**:
+- 전략 이름을 받아 해당 전략 클래스 인스턴스 생성
+- 런타임에 전략 선택 가능
+
+**의존성**:
+- app/strategies/*.py: 모든 전략 클래스
+- backtesting.Strategy: 베이스 클래스
+
+**연관 컴포넌트**:
+- Backend: app/services/backtest_service.py (전략 실행)
+- Backend: app/api/v1/endpoints/backtest.py (전략 선택)
+- Frontend: src/features/backtest/components/StrategySelector.tsx (전략 UI)
+
+**파라미터 검증 규칙**:
+- SMA: short_window < long_window
+- RSI: 0 < period < 100, 0 < oversold < overbought < 100
+- Bollinger: period > 0, num_std_dev > 0
 """
 from typing import Dict, Any, Type
 import logging

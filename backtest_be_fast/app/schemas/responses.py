@@ -1,5 +1,42 @@
 """
 API 응답 모델 정의
+
+**역할**:
+- FastAPI 엔드포인트의 응답 데이터 모델 정의
+- JSON 직렬화 형식 명시
+- API 문서 자동 생성
+
+**주요 모델**:
+1. BacktestResult: 백테스트 결과
+   - total_return_pct: 총 수익률
+   - sharpe_ratio: 샤프 비율
+   - max_drawdown: 최대 낙폭
+   - trade_log: 거래 내역
+
+2. ChartDataResponse: 차트 데이터
+   - ohlc_data: OHLC 캔들 데이터
+   - equity_data: 자산 곡선 데이터
+   - indicators: 기술 지표 데이터
+
+3. HealthResponse: 헬스 체크 응답
+   - status: healthy / unhealthy
+   - timestamp: 응답 시간
+
+4. ErrorResponse: 에러 응답
+   - error: 에러 메시지
+   - detail: 상세 정보
+
+**사용 패턴**:
+- FastAPI가 자동으로 Pydantic 모델을 JSON으로 직렬화
+- 타입 힌팅으로 IDE 자동완성 지원
+
+**의존성**:
+- pydantic: 데이터 검증 및 직렬화
+
+**연관 컴포넌트**:
+- Backend: app/api/v1/endpoints/backtest.py (응답 모델 사용)
+- Backend: app/services/backtest_service.py (데이터 생성)
+- Frontend: src/features/backtest/model/api-types.ts (TypeScript 인터페이스)
 """
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Union

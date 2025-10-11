@@ -1,5 +1,44 @@
 """
 포트폴리오 백테스트 서비스
+
+**역할**:
+- 여러 종목으로 구성된 포트폴리오의 백테스트 실행
+- 분할 매수(DCA) 전략 지원
+- 리밸런싱 로직 구현
+- 포트폴리오 수익률 및 통계 계산
+
+**주요 기능**:
+1. run_portfolio_backtest(): 메인 백테스트 실행 메서드
+   - 단일 종목 → backtest_service로 위임
+   - 다중 종목 → 전략에 따라 분기
+2. run_buy_and_hold_portfolio_backtest(): Buy & Hold 전략 백테스트
+3. run_strategy_portfolio_backtest(): 기술적 전략 백테스트
+4. calculate_dca_portfolio_returns(): DCA 투자 수익률 계산
+5. calculate_portfolio_statistics(): 샤프 비율, 최대 낙폭 등 통계
+
+**지원 투자 방식**:
+- lump_sum: 일시불 투자 (전액 한 번에 투자)
+- dca: 분할 매수 (Dollar Cost Averaging, 정기적으로 나누어 투자)
+
+**리밸런싱**:
+- 주기적으로 포트폴리오 비중을 원래대로 조정
+- 지원 주기: monthly, quarterly, annually, none
+
+**의존성**:
+- app/services/backtest_service.py: 단일 종목 백테스트
+- app/services/yfinance_db.py: 주가 데이터 로딩
+- app/repositories/backtest_repository.py: 백테스트 결과 저장
+
+**연관 컴포넌트**:
+- Backend: app/api/v1/endpoints/backtest.py (API 엔드포인트)
+- Frontend: src/features/backtest/components/PortfolioForm.tsx (포트폴리오 설정)
+- Frontend: src/features/backtest/hooks/useBacktestForm.ts (폼 상태 관리)
+
+**통계 지표**:
+- 총 수익률, 연환산 수익률
+- 샤프 비율: 위험 대비 수익률
+- 최대 낙폭(Max Drawdown): 최고점 대비 최대 하락폭
+- 승률, 평균 수익/손실
 """
 import pandas as pd
 import numpy as np

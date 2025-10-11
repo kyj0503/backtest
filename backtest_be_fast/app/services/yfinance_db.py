@@ -1,5 +1,41 @@
 """
-MySQL 저장 유틸리티 (간단한 SQLAlchemy 사용)
+yfinance 데이터 MySQL 저장 서비스
+
+**역할**:
+- yfinance API로 수집한 주가 데이터를 MySQL DB에 저장
+- DB 우선 조회 전략으로 외부 API 호출 최소화
+- 누락된 기간 데이터 자동 보완
+
+**주요 기능**:
+1. load_ticker_data(): 주가 데이터 조회 (DB 우선)
+   - DB에서 먼저 조회
+   - 누락 기간이 있으면 yfinance로 보완
+   - 새로 가져온 데이터를 DB에 저장
+2. save_ticker_data(): DataFrame을 DB에 저장
+3. get_date_range(): DB에 저장된 데이터 범위 조회
+
+**DB 스키마**:
+- 테이블: daily_prices
+- 컬럼: ticker, date, open, high, low, close, volume, adj_close
+- 복합 기본키: (ticker, date)
+
+**최적화 전략**:
+- 배치 삽입: 대량 데이터를 한 번에 저장
+- 중복 방지: ON DUPLICATE KEY UPDATE
+- 날짜 범위 캐싱: 불필요한 API 호출 방지
+
+**의존성**:
+- SQLAlchemy: DB 연결 및 쿼리
+- yfinance: 외부 데이터 소스
+- pandas: 데이터 처리
+
+**연관 컴포넌트**:
+- Backend: app/repositories/data_repository.py (Repository 패턴)
+- Backend: app/services/data_service.py (데이터 로딩)
+- Database: database/schema.sql (테이블 정의)
+
+**환경 설정**:
+- DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME: 환경 변수
 """
 import os
 import json
