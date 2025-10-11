@@ -48,22 +48,22 @@ router = APIRouter()
 # 서비스 초기화
 portfolio_service = PortfolioService()
 
-# 통합 데이터 서비스에 뉴스 서비스 주입
+# 데이터 서비스에 뉴스 서비스 주입
 unified_data_service.news_service = news_service
 
 
 @router.post(
     "",
     status_code=status.HTTP_200_OK,
-    summary="포트폴리오 백테스트 실행 (통합 응답)",
+    summary="포트폴리오 백테스트 실행",
     description="여러 자산으로 구성된 포트폴리오의 백테스트를 실행하고 모든 필요한 데이터를 한번에 반환합니다."
 )
 @handle_portfolio_errors
 async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     """
-    포트폴리오 백테스트 실행 API (통합 응답)
+    포트폴리오 백테스트 실행 API
     
-    백테스트 실행 후 프론트엔드에서 필요한 모든 데이터를 하나의 응답으로 통합하여 반환합니다:
+    백테스트 실행 후 프론트엔드에서 필요한 모든 데이터를 하나의 응답으로 반환합니다:
     - 백테스트 결과 (수익률, 통계 등)
     - 주가 데이터 (각 종목)
     - 환율 데이터 및 통계
@@ -78,7 +78,7 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     - **rebalance_frequency**: 리밸런싱 주기 (monthly, quarterly, yearly)
     - **strategy**: 전략명 (기본: buy_and_hold)
     
-    **통합 응답**:
+    **응답 형식**:
     ```json
     {
       "status": "success",
@@ -111,7 +111,7 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     ]
     symbols = list(set(symbols))  # 중복 제거
     
-    # 3. 통합 데이터 수집 (통합 데이터 서비스 위임)
+    # 3. 추가 데이터 수집 (데이터 서비스 위임)
     unified_data = unified_data_service.collect_all_unified_data(
         symbols=symbols,
         start_date=request.start_date,

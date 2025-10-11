@@ -1,6 +1,32 @@
 """
 뉴스 Repository
-DB에서 뉴스 데이터를 관리합니다.
+
+**역할**:
+- 뉴스 데이터의 데이터베이스 접근 로직 캡슐화
+- 뉴스 조회, 저장, 검색 기능 제공
+- Repository Pattern으로 비즈니스 로직과 데이터 접근 분리
+
+**주요 기능**:
+1. save_news(): 뉴스 데이터를 DB에 저장
+2. get_news_by_ticker(): 특정 종목의 뉴스 조회
+3. get_news_by_date(): 날짜별 뉴스 조회
+4. search_news(): 키워드로 뉴스 검색
+
+**DB 스키마**:
+- 테이블: news
+- 컬럼: ticker, date, title, link, description, pubDate, source
+
+**의존성**:
+- SQLAlchemy: DB 연결 및 쿼리
+- app/services/yfinance_db.py: DB 엔진 획득
+
+**연관 컴포넌트**:
+- Backend: app/services/news_service.py (뉴스 서비스)
+- Backend: app/services/unified_data_service.py (데이터 수집)
+- Database: database/schema.sql (테이블 정의)
+
+**아키텍처 패턴**:
+- Repository Pattern: 데이터 접근 추상화
 """
 import logging
 from typing import List, Dict, Any, Optional

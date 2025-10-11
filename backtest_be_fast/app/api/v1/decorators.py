@@ -1,6 +1,48 @@
 """
 API 엔드포인트용 데코레이터 모듈
-중복된 에러 처리 로직을 데코레이터로 통합
+
+**역할**:
+- API 엔드포인트의 에러 처리 로직을 데코레이터로 중앙화
+- 중복 코드 제거 및 일관된 에러 응답 형식 제공
+- 로깅 및 모니터링 지원
+
+**주요 데코레이터**:
+1. @handle_portfolio_errors: 포트폴리오 백테스트 에러 처리
+   - DataNotFoundError → 404
+   - InvalidSymbolError → 400
+   - ValidationError → 422
+   - 기타 예외 → 500
+
+**에러 응답 형식**:
+```json
+{
+  "error": "에러 유형",
+  "detail": "상세 메시지",
+  "timestamp": "2023-01-01T00:00:00"
+}
+```
+
+**사용 패턴**:
+```python
+@router.post("/backtest")
+@handle_portfolio_errors
+async def run_backtest(request: BacktestRequest):
+    # 비즈니스 로직
+    pass
+```
+
+**의존성**:
+- app/core/exceptions.py: 커스텀 예외 클래스
+- FastAPI: HTTPException
+
+**연관 컴포넌트**:
+- Backend: app/api/v1/endpoints/backtest.py (데코레이터 사용)
+- Backend: app/core/exceptions.py (예외 정의)
+
+**장점**:
+- DRY 원칙: 중복 코드 제거
+- 일관성: 모든 엔드포인트에서 동일한 에러 형식
+- 유지보수성: 에러 처리 로직 수정 시 한 곳만 변경
 """
 from functools import wraps
 import logging

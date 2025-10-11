@@ -81,21 +81,4 @@ class RSIStrategy(Strategy):
                 self.position.close()
 
 
-class AggressiveRSIStrategy(RSIStrategy):
-    """
-    보다 공격적인 RSI 전략
-    더 넓은 RSI 범위와 100% 포지션 사용
-    """
-    rsi_oversold = 25       # 더 낮은 과매도 기준
-    rsi_overbought = 75     # 더 높은 과매수 기준
-    position_size = 1.0     # 100% 포지션
 
-
-class ConservativeRSIStrategy(RSIStrategy):
-    """
-    보수적인 RSI 전략
-    더 좁은 RSI 범위와 50% 포지션 사용
-    """
-    rsi_oversold = 35       # 더 높은 과매도 기준
-    rsi_overbought = 65     # 더 낮은 과매수 기준
-    position_size = 0.5     # 50% 포지션
