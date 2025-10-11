@@ -392,16 +392,11 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
     // 3. 환율 차트 (통합 응답 데이터 사용)
     const exchangeRates = portfolioData?.exchange_rates || (data as any).exchange_rates;
+    const exchangeStats = portfolioData?.exchange_stats || (data as any).exchange_stats;
     if (exchangeRates && exchangeRates.length > 0) {
       const minRate = Math.min(...exchangeRates.map((d: any) => d.rate));
       const maxRate = Math.max(...exchangeRates.map((d: any) => d.rate));
-
-      // 최고점, 최저점, 시작점, 종료점 계산
-      const startRate = exchangeRates[0].rate;
-      const endRate = exchangeRates[exchangeRates.length - 1].rate;
-      const maxRateData = exchangeRates.find((d: any) => d.rate === maxRate);
-      const minRateData = exchangeRates.find((d: any) => d.rate === minRate);
-
+      
       allCharts.push(
         <ResultBlock
           title="환율 추이"
@@ -412,78 +407,78 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={exchangeRates}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                <XAxis
-                  dataKey="date"
+                <XAxis 
+                  dataKey="date" 
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value: any) => {
                     const date = new Date(value);
                     return `${date.getMonth() + 1}/${date.getDate()}`;
                   }}
                 />
-                <YAxis
+                <YAxis 
                   domain={[minRate - 50, maxRate + 50]}
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value: number) => `₩${value.toFixed(0)}`}
                 />
-                <Tooltip
+                <Tooltip 
                   formatter={(value: number) => [`₩${value.toFixed(2)}`, '환율']}
                   labelFormatter={(label: string) => `날짜: ${label}`}
                 />
-                <Line
-                  type="monotone"
-                  dataKey="rate"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  dot={false}
+                <Line 
+                  type="monotone" 
+                  dataKey="rate" 
+                  stroke="#10b981" 
+                  strokeWidth={2} 
+                  dot={false} 
                 />
               </LineChart>
             </ResponsiveContainer>
 
             {/* 환율 주요 지점 정보 */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">시작점</div>
-                <div className="text-sm font-semibold text-foreground">
-                  ₩{startRate.toFixed(2)}
+            {exchangeStats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">시작점</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    ₩{exchangeStats.start_point?.rate?.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {exchangeStats.start_point?.date ? new Date(exchangeStats.start_point.date).toLocaleDateString('ko-KR') : ''}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {new Date(exchangeRates[0].date).toLocaleDateString('ko-KR')}
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">종료점</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    ₩{exchangeStats.end_point?.rate?.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {exchangeStats.end_point?.date ? new Date(exchangeStats.end_point.date).toLocaleDateString('ko-KR') : ''}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">최고점</div>
+                  <div className="text-sm font-semibold text-green-600">
+                    ₩{exchangeStats.high_point?.rate?.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {exchangeStats.high_point?.date ? new Date(exchangeStats.high_point.date).toLocaleDateString('ko-KR') : ''}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-muted-foreground mb-1">최저점</div>
+                  <div className="text-sm font-semibold text-red-600">
+                    ₩{exchangeStats.low_point?.rate?.toFixed(2)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {exchangeStats.low_point?.date ? new Date(exchangeStats.low_point.date).toLocaleDateString('ko-KR') : ''}
+                  </div>
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">종료점</div>
-                <div className="text-sm font-semibold text-foreground">
-                  ₩{endRate.toFixed(2)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {new Date(exchangeRates[exchangeRates.length - 1].date).toLocaleDateString('ko-KR')}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">최고점</div>
-                <div className="text-sm font-semibold text-green-600">
-                  ₩{maxRate.toFixed(2)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {maxRateData ? new Date(maxRateData.date).toLocaleDateString('ko-KR') : ''}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-muted-foreground mb-1">최저점</div>
-                <div className="text-sm font-semibold text-red-600">
-                  ₩{minRate.toFixed(2)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {minRateData ? new Date(minRateData.date).toLocaleDateString('ko-KR') : ''}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </ResultBlock>
       );
-    }
-
-    return allCharts;
+    }    return allCharts;
   };
 
   // 급등락 이벤트 카드 렌더링 함수 (차트 배열에 포함)

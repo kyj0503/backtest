@@ -1,35 +1,28 @@
 """
-백테스팅 API
+백테스팅 API 엔드포인트
+
+Controller 역할: 요청 검증 및 응답 반환만 수행
+비즈니스 로직은 서비스 레이어에 위임
 """
-from fastapi import APIRouter, HTTPException, status, Request
-from typing import Optional
-from ....models.requests import BacktestRequest, UnifiedBacktestRequest
-from ....models.responses import BacktestResult, ErrorResponse, ChartDataResponse
-from ....models.schemas import PortfolioBacktestRequest, PortfolioStock
-from ....services.backtest_service import backtest_service
-from ....services.portfolio_service import PortfolioService
-from ....services.data_service import data_service
-from ....core.exceptions import (
-    DataNotFoundError, 
-    InvalidSymbolError, 
-    YFinanceRateLimitError,
-    ValidationError,
-    handle_yfinance_error
-)
-from ....core.config import settings
-from ....utils.user_messages import get_user_friendly_message, log_error_for_debugging
-from ..decorators import handle_backtest_errors, handle_portfolio_errors
-from .naver_news import NaverNewsService
+from fastapi import APIRouter, status
 import logging
-import traceback
-import pandas as pd
-from datetime import datetime
+
+from ....models.schemas import PortfolioBacktestRequest
+from ....services.portfolio_service import PortfolioService
+from ....services.unified_data_service import unified_data_service
+from ..decorators import handle_portfolio_errors
+from .naver_news import NaverNewsService
 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# 서비스 초기화
 portfolio_service = PortfolioService()
 news_service = NaverNewsService()
+
+# 통합 데이터 서비스에 뉴스 서비스 주입
+unified_data_service.news_service = news_service
 
 
 @router.post(
@@ -46,11 +39,9 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     백테스트 실행 후 프론트엔드에서 필요한 모든 데이터를 하나의 응답으로 통합하여 반환합니다:
     - 백테스트 결과 (수익률, 통계 등)
     - 주가 데이터 (각 종목)
-    - 환율 데이터
+    - 환율 데이터 및 통계
     - 급등/급락 이벤트 & 뉴스
     - 벤치마크 데이터 (S&P 500, NASDAQ)
-    
-    이를 통해 프론트엔드에서의 추가 API 호출을 제거하고 성능을 개선합니다.
     
     **요청 파라미터**:
     - **portfolio**: 포트폴리오 구성 (종목, 비중, 투자방식 등)
@@ -70,143 +61,40 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
         "individual_returns": { ... },
         "stock_data": { "AAPL": [...], "GOOGL": [...] },
         "exchange_rates": [...],
+        "exchange_stats": {...},
         "volatility_events": { "AAPL": [...] },
+        "latest_news": { "AAPL": [...] },
         "sp500_benchmark": [...],
         "nasdaq_benchmark": [...]
       }
     }
     ```
     """
-    # 1. 백테스트 실행
+    # 1. 백테스트 실행 (포트폴리오 서비스 위임)
     backtest_result = await portfolio_service.run_portfolio_backtest(request)
     
     if backtest_result.get('status') != 'success':
         return backtest_result
     
-    # 2. 추가 데이터 수집을 위한 준비
-    symbols = list(set([item.symbol for item in request.portfolio if item.symbol.upper() not in ['CASH', '현금']]))
-    start_date = request.start_date
-    end_date = request.end_date
+    # 2. 종목 심볼 추출 (현금 제외)
+    symbols = [
+        item.symbol 
+        for item in request.portfolio 
+        if item.symbol.upper() not in ['CASH', '현금']
+    ]
+    symbols = list(set(symbols))  # 중복 제거
     
-    # 3. 주가 데이터 수집 (병렬)
-    stock_data = {}
-    for symbol in symbols:
-        try:
-            df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
-            if df is not None and not df.empty:
-                stock_data[symbol] = [
-                    {
-                        'date': date.strftime('%Y-%m-%d'),
-                        'price': float(row['Close']),
-                        'volume': int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0
-                    }
-                    for date, row in df.iterrows()
-                ]
-        except Exception as e:
-            logger.warning(f"주가 데이터 수집 실패: {symbol} - {str(e)}")
-            stock_data[symbol] = []
+    # 3. 통합 데이터 수집 (통합 데이터 서비스 위임)
+    unified_data = unified_data_service.collect_all_unified_data(
+        symbols=symbols,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        include_news=True,
+        news_display_count=15
+    )
     
-    # 4. 환율 데이터 수집
-    exchange_rates = []
-    try:
-        exchange_data = data_service.get_ticker_data_sync(
-            settings.exchange_rate_ticker,
-            start_date,
-            end_date
-        )
-        if exchange_data is not None and not exchange_data.empty:
-            exchange_rates = [
-                {
-                    'date': date.strftime('%Y-%m-%d'),
-                    'rate': float(row['Close'])
-                }
-                for date, row in exchange_data.iterrows()
-            ]
-    except Exception as e:
-        logger.warning(f"환율 데이터 수집 실패: {str(e)}")
-    
-    # 5. 급등/급락 이벤트 수집 (5% 이상 변동)
-    volatility_events = {}
-    for symbol in symbols:
-        try:
-            df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
-            if df is not None and not df.empty:
-                df['daily_return'] = df['Close'].pct_change() * 100
-                significant_moves = df[abs(df['daily_return']) >= 5.0].copy()
-                
-                events = []
-                for date, row in significant_moves.iterrows():
-                    events.append({
-                        'date': date.strftime('%Y-%m-%d'),
-                        'daily_return': float(row['daily_return']),
-                        'close_price': float(row['Close']),
-                        'volume': int(row.get('Volume', 0)) if pd.notna(row.get('Volume', 0)) else 0,
-                        'event_type': '급등' if row['daily_return'] > 0 else '급락'
-                    })
-                
-                events.sort(key=lambda x: x['date'], reverse=True)
-                volatility_events[symbol] = events[:10]  # 상위 10개만
-        except Exception as e:
-            logger.warning(f"급등락 이벤트 수집 실패: {symbol} - {str(e)}")
-            volatility_events[symbol] = []
-    
-    # 6. 벤치마크 데이터 수집 (S&P 500, NASDAQ)
-    sp500_benchmark = []
-    nasdaq_benchmark = []
-    
-    try:
-        sp500_data = data_service.get_ticker_data_sync('^GSPC', start_date, end_date)
-        if sp500_data is not None and not sp500_data.empty:
-            sp500_benchmark = [
-                {
-                    'date': date.strftime('%Y-%m-%d'),
-                    'close': float(row['Close'])
-                }
-                for date, row in sp500_data.iterrows()
-            ]
-    except Exception as e:
-        logger.warning(f"S&P 500 벤치마크 데이터 수집 실패: {str(e)}")
-    
-    try:
-        nasdaq_data = data_service.get_ticker_data_sync('^IXIC', start_date, end_date)
-        if nasdaq_data is not None and not nasdaq_data.empty:
-            nasdaq_benchmark = [
-                {
-                    'date': date.strftime('%Y-%m-%d'),
-                    'close': float(row['Close'])
-                }
-                for date, row in nasdaq_data.iterrows()
-            ]
-    except Exception as e:
-        logger.warning(f"NASDAQ 벤치마크 데이터 수집 실패: {str(e)}")
-    
-    # 7. 최신 뉴스 수집 (각 종목당 15개)
-    latest_news = {}
-    for symbol in symbols:
-        try:
-            # 티커를 한국어로 변환하여 검색
-            search_query = news_service.TICKER_MAPPING.get(symbol, symbol)
-            news_list = news_service.search_news(search_query, display=15)
-            latest_news[symbol] = news_list
-            logger.info(f"{symbol} 뉴스 {len(news_list)}개 수집 완료")
-        except Exception as e:
-            logger.warning(f"{symbol} 뉴스 수집 실패: {str(e)}")
-            latest_news[symbol] = []
-    
-    # 8. 통합 응답 생성
-    backtest_result['data']['stock_data'] = stock_data
-    backtest_result['data']['exchange_rates'] = exchange_rates
-    backtest_result['data']['volatility_events'] = volatility_events
-    backtest_result['data']['latest_news'] = latest_news
-    backtest_result['data']['sp500_benchmark'] = sp500_benchmark
-    backtest_result['data']['nasdaq_benchmark'] = nasdaq_benchmark
-    
-    logger.info(f"통합 백테스트 응답 생성 완료: {len(symbols)}개 종목, {len(exchange_rates)}개 환율, {len(latest_news)}개 종목 뉴스")
+    # 4. 응답 데이터 병합
+    backtest_result['data'].update(unified_data)
     
     return backtest_result
 
-
-# ========================================
-# 아래 엔드포인트들은 더 이상 사용하지 않습니다.
-# 모든 데이터는 POST /portfolio 엔드포인트의 통합 응답에 포함됩니다.
-# ========================================
