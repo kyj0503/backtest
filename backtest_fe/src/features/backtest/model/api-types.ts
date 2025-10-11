@@ -244,7 +244,7 @@ export interface UnifiedBacktestResult extends Partial<ChartDataResponse>, Parti
 
 // API 엔드포인트 타입
 export type ApiEndpoint = 
-  | '/api/v1/backtest/portfolio'  // 통합 백테스트 엔드포인트
+  | '/api/v1/backtest'  // 통합 백테스트 엔드포인트
   | '/api/v1/strategies'
   | '/api/v1/naver-news/search'
   | '/api/v1/yfinance/exchange-rate'
