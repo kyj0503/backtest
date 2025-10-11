@@ -22,6 +22,7 @@ import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint } from '.
 import { FormLegend } from '@/shared/components';
 import { Grid3X3, Grid, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import TradeSignalsChart from '../TradeSignalsChart';
 
 interface ChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -314,6 +315,15 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           </Suspense>
         </ResultBlock>,
       );
+      
+      // 매매신호 그래프 추가
+      cards.push(
+        <ResultBlock title="매매신호 그래프" description="시간순 매수/매도 신호를 가격과 함께 확인하세요" key="trade-signals">
+          <Suspense fallback={<ChartLoading height={400} />}>
+            <TradeSignalsChart trades={singleTrades} />
+          </Suspense>
+        </ResultBlock>,
+      );
     }
 
     return cards;
@@ -392,7 +402,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
     // 3. 환율 차트 (통합 응답 데이터 사용)
     const exchangeRates = portfolioData?.exchange_rates || (data as any).exchange_rates;
-    const exchangeStats = portfolioData?.exchange_stats || (data as any).exchange_stats;
+    const exchangeStats = (data as any).exchange_stats;
     if (exchangeRates && exchangeRates.length > 0) {
       const minRate = Math.min(...exchangeRates.map((d: any) => d.rate));
       const maxRate = Math.max(...exchangeRates.map((d: any) => d.rate));
