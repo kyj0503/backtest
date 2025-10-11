@@ -109,3 +109,4 @@ docker volume prune -f
 | schemas/ | DTO | API 입출력 모델 정의 |
 | repositories/ | @Repository + 캐싱 로직 | 데이터 소스 추상화 + 캐싱 전략 |
 | services/ | @Service | 비즈니스 로직 |
+

@@ -26,7 +26,7 @@ unified_data_service.news_service = news_service
 
 
 @router.post(
-    "/portfolio",
+    "",
     status_code=status.HTTP_200_OK,
     summary="포트폴리오 백테스트 실행 (통합 응답)",
     description="여러 자산으로 구성된 포트폴리오의 백테스트를 실행하고 모든 필요한 데이터를 한번에 반환합니다."

@@ -12,7 +12,6 @@ from app.core.exceptions import (
     YFinanceRateLimitError,
     ValidationError
 )
-from app.utils.user_messages import get_user_friendly_message, log_error_for_debugging
 
 logger = logging.getLogger(__name__)
 
