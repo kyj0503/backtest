@@ -23,7 +23,10 @@ import { FormLegend } from '@/shared/components';
 import { Grid3X3, Grid, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import TradeSignalsChart from '../TradeSignalsChart';
-import UnifiedInfoSection from './UnifiedInfoSection';
+import VolatilityEventsSection from './VolatilityEventsSection';
+import LatestNewsSection from './LatestNewsSection';
+import BenchmarkIndexChart from './BenchmarkIndexChart';
+import BenchmarkReturnsChart from './BenchmarkReturnsChart';
 
 interface ChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -151,11 +154,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     return result;
   }, [data]);
 
-  const formatDateTick = (value: string) => {
-    const date = new Date(value);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-  };
-
   const withBenchmarkReturn = (points: any[]) =>
     points?.map((point, index) => {
       if (index === 0) {
@@ -240,7 +238,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             <FormLegend
               items={[
                 { label: `${portfolio_composition.length}개 구성 자산`, tone: 'accent' },
-                { label: '동일 축으로 비교', tone: 'muted' },
               ]}
             />
           }
@@ -340,64 +337,25 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       allCharts.push(...baseCharts);
     }
 
-    // 2. 벤치마크 차트
-    if (sp500Benchmark.length > 0) {
+    // 2. 지수 벤치마크 차트 (S&P 500 + NASDAQ)
+    if (sp500Benchmark.length > 0 || nasdaqBenchmark.length > 0) {
       allCharts.push(
-        <ResultBlock
-          title="S&P 500 벤치마크"
-          description="지수 수준과 일일 수익률을 함께 확인하세요"
-          actions={<FormLegend items={[{ label: '좌측: 지수 · 우측: 일일 수익률', tone: 'muted' }]} />}
-          key="sp500"
-        >
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={withBenchmarkReturn(sp500Benchmark)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tickFormatter={formatDateTick} />
-              <YAxis yAxisId="left" orientation="left" tickFormatter={(value: number) => value.toFixed(0)} />
-              <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
-              <Tooltip
-                formatter={(value: number, name: string) => {
-                  if (name === 'close') return [value.toFixed(2), '지수'];
-                  if (name === 'return_pct') return [`${value.toFixed(2)}%`, '일일 수익률'];
-                  return [value, name];
-                }}
-                labelFormatter={(label: string) => `날짜: ${label}`}
-              />
-              <Line yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} dot={false} />
-              <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ResultBlock>
+        <BenchmarkIndexChart
+          sp500Data={sp500Benchmark}
+          nasdaqData={nasdaqBenchmark}
+          key="benchmark-index"
+        />
       );
     }
 
-    if (nasdaqBenchmark.length > 0) {
+    // 3. 일일 수익률 벤치마크 차트 (S&P 500 + NASDAQ)
+    if (sp500Benchmark.length > 0 || nasdaqBenchmark.length > 0) {
       allCharts.push(
-        <ResultBlock
-          title="NASDAQ 벤치마크"
-          description="지수 수준과 일일 수익률을 함께 확인하세요"
-          actions={<FormLegend items={[{ label: '좌측: 지수 · 우측: 일일 수익률', tone: 'muted' }]} />}
-          key="nasdaq"
-        >
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={withBenchmarkReturn(nasdaqBenchmark)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tickFormatter={formatDateTick} />
-              <YAxis yAxisId="left" orientation="left" tickFormatter={(value: number) => value.toFixed(0)} />
-              <YAxis yAxisId="right" orientation="right" tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
-              <Tooltip
-                formatter={(value: number, name: string) => {
-                  if (name === 'close') return [value.toFixed(2), '지수'];
-                  if (name === 'return_pct') return [`${value.toFixed(2)}%`, '일일 수익률'];
-                  return [value, name];
-                }}
-                labelFormatter={(label: string) => `날짜: ${label}`}
-              />
-              <Line yAxisId="left" type="monotone" dataKey="close" stroke="#3b82f6" strokeWidth={2} dot={false} />
-              <Line yAxisId="right" type="monotone" dataKey="return_pct" stroke="#ef4444" strokeWidth={1.5} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ResultBlock>
+        <BenchmarkReturnsChart
+          sp500Data={withBenchmarkReturn(sp500Benchmark)}
+          nasdaqData={withBenchmarkReturn(nasdaqBenchmark)}
+          key="benchmark-returns"
+        />
       );
     }
 
@@ -538,9 +496,13 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         ))}
       </div>
 
-      {/* 3. 통합 정보 섹션 (급등락 이벤트 + 최신 뉴스) */}
-      <UnifiedInfoSection
+      {/* 3. 급등락 이벤트 섹션 */}
+      <VolatilityEventsSection
         volatilityEvents={portfolioData?.volatility_events || (data as any).volatility_events || {}}
+      />
+
+      {/* 4. 최신 뉴스 섹션 */}
+      <LatestNewsSection
         latestNews={portfolioData?.latest_news || (data as any).latest_news || {}}
       />
     </div>
