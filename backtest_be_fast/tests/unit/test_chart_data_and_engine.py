@@ -127,7 +127,7 @@ def test_convert_result_to_response_includes_alpha_beta_and_trade_log(monkeypatc
         start_date='2024-01-01',
         end_date='2024-01-04',
         initial_cash=10000.0,
-        strategy=StrategyType.SMA_CROSSOVER,
+        strategy=StrategyType.SMA_STRATEGY,
         strategy_params={},
         commission=0.0,
         spread=0.0,

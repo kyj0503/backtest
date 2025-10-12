@@ -51,21 +51,27 @@ class TestBacktestEndpoint:
         
         # Then
         assert response.status_code == 200
-        data = response.json()
+        response_json = response.json()
         
         # 응답 구조 검증
-        assert "portfolio_stats" in data
-        assert "individual_stats" in data
-        assert "benchmark_data" in data
-        assert "exchange_rate_data" in data
-        assert "news_data" in data
+        assert "status" in response_json
+        assert response_json["status"] == "success"
+        assert "data" in response_json
+        
+        data = response_json["data"]
+        assert "portfolio_statistics" in data
+        assert "individual_returns" in data
+        assert "sp500_benchmark" in data
+        assert "exchange_rates" in data
+        assert "latest_news" in data
         
         # 백테스트 결과 검증
-        portfolio_stats = data["portfolio_stats"]
-        assert "total_return" in portfolio_stats
-        assert "max_drawdown" in portfolio_stats
-        assert "sharpe_ratio" in portfolio_stats
-        assert "num_trades" in portfolio_stats
+        portfolio_stats = data["portfolio_statistics"]
+        assert "Total_Return" in portfolio_stats
+        assert "Max_Drawdown" in portfolio_stats
+        assert "Sharpe_Ratio" in portfolio_stats
+        assert "Initial_Value" in portfolio_stats
+        assert "Final_Value" in portfolio_stats
     
     # Given: SMA 전략 백테스트 요청
     # When: POST /api/v1/backtest 호출
@@ -96,8 +102,13 @@ class TestBacktestEndpoint:
         
         # Then
         assert response.status_code == 200
-        data = response.json()
-        assert data["portfolio_stats"]["num_trades"] >= 0
+        response_json = response.json()
+        assert response_json["status"] == "success"
+        data = response_json["data"]
+        portfolio_stats = data["portfolio_statistics"]
+        # 포트폴리오 통계 검증
+        assert "Total_Return" in portfolio_stats
+        assert "Sharpe_Ratio" in portfolio_stats
     
     # Given: 다중 자산 포트폴리오 백테스트 요청
     # When: POST /api/v1/backtest 호출
@@ -122,13 +133,16 @@ class TestBacktestEndpoint:
         
         # Then
         assert response.status_code == 200
-        data = response.json()
+        response_json = response.json()
+        assert response_json["status"] == "success"
+        data = response_json["data"]
         
         # 개별 자산 통계 검증
-        individual_stats = data["individual_stats"]
-        assert len(individual_stats) == 3
+        individual_returns = data["individual_returns"]
+        assert len(individual_returns) == 3
         
-        symbols = {stat["symbol"] for stat in individual_stats}
+        # individual_returns는 dict of dicts 형태 (키: 'AAPL_0', 'GOOGL_1', 'MSFT_2')
+        symbols = {stat["symbol"] for stat in individual_returns.values()}
         assert symbols == {"AAPL", "GOOGL", "MSFT"}
     
     # Given: 잘못된 날짜 형식
@@ -189,9 +203,10 @@ class TestBacktestEndpoint:
     
     # Given: 유효하지 않은 전략명
     # When: POST /api/v1/backtest 호출
-    # Then: 422 Unprocessable Entity
-    def test_invalid_strategy_returns_422(self):
-        """유효하지 않은 전략명 시 422 에러 반환 검증"""
+    # Then: 200 with error status (unified response format)
+    @pytest.mark.integration
+    def test_invalid_strategy_returns_error(self):
+        """유효하지 않은 전략명 시 에러 응답 반환 검증"""
         # Given
         payload = {
             "portfolio": [{"symbol": "AAPL", "amount": 10000.0}],
@@ -204,7 +219,11 @@ class TestBacktestEndpoint:
         response = client.post("/api/v1/backtest", json=payload)
         
         # Then
-        assert response.status_code == 422
+        assert response.status_code == 200
+        response_json = response.json()
+        # Unified response format에서 에러는 status="error"로 반환
+        assert response_json["status"] == "error"
+        assert "message" in response_json or "error" in response_json
     
     # Given: RSI 전략 및 파라미터
     # When: POST /api/v1/backtest 호출
@@ -230,8 +249,10 @@ class TestBacktestEndpoint:
         
         # Then
         assert response.status_code == 200
-        data = response.json()
-        assert "portfolio_stats" in data
+        response_json = response.json()
+        assert response_json["status"] == "success"
+        data = response_json["data"]
+        assert "portfolio_statistics" in data
     
     # Given: 벤치마크 데이터 포함 요청
     # When: POST /api/v1/backtest 호출
@@ -252,13 +273,15 @@ class TestBacktestEndpoint:
         
         # Then
         assert response.status_code == 200
-        data = response.json()
+        response_json = response.json()
+        assert response_json["status"] == "success"
+        data = response_json["data"]
         
-        benchmark_data = data["benchmark_data"]
-        assert "sp500" in benchmark_data
-        assert "nasdaq" in benchmark_data
-        assert len(benchmark_data["sp500"]) > 0
-        assert len(benchmark_data["nasdaq"]) > 0
+        # 벤치마크 데이터 검증
+        assert "sp500_benchmark" in data
+        assert "nasdaq_benchmark" in data
+        assert len(data["sp500_benchmark"]) > 0
+        assert len(data["nasdaq_benchmark"]) > 0
 
 
 class TestHealthCheck:
