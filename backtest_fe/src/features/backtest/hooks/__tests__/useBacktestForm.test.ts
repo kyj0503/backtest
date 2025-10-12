@@ -17,7 +17,7 @@ describe('useBacktestForm', () => {
     const { result } = renderHook(() => useBacktestForm())
 
     act(() => {
-      result.current.actions.setSelectedStrategy('sma_crossover')
+      result.current.actions.setSelectedStrategy('sma_strategy')
     })
 
     await waitFor(() => {

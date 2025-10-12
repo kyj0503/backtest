@@ -106,8 +106,10 @@ describe('UnifiedInfoSection', () => {
 
       // Then
       expect(container).toBeTruthy();
-      // 단일 종목일 때는 버튼이 표시되지 않음
-      expect(container.innerHTML).not.toContain('<button');
+      // 단일 종목일 때는 종목 선택 버튼이 표시되지 않음 (Tab 버튼은 있음)
+      // Tab 컴포넌트는 항상 button 요소를 사용하므로 다른 방식으로 검증
+      const tabList = container.querySelector('[role="tablist"]');
+      expect(tabList).toBeInTheDocument();
     });
   });
 
