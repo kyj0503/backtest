@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 // https://vitejs.dev/config/
-const target = process.env.API_PROXY_TARGET || 'http://localhost:8001'
 // When running inside Docker Compose, use service hostnames on the shared network.
 const FASTAPI_TARGET = process.env.FASTAPI_PROXY_TARGET || 'http://localhost:8000';
 
