@@ -447,7 +447,37 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           </div>
         </ResultBlock>
       );
-    }    return allCharts;
+    }
+
+    // 4. 급등락 이벤트
+    const volatilityEvents = portfolioData?.volatility_events || (data as any).volatility_events || {};
+    const hasVolatilityEvents = Object.keys(volatilityEvents).some(
+      symbol => volatilityEvents[symbol] && volatilityEvents[symbol].length > 0
+    );
+    if (hasVolatilityEvents) {
+      allCharts.push(
+        <VolatilityEventsSection
+          volatilityEvents={volatilityEvents}
+          key="volatility-events"
+        />
+      );
+    }
+
+    // 5. 최신 뉴스
+    const latestNews = portfolioData?.latest_news || (data as any).latest_news || {};
+    const hasNews = Object.keys(latestNews).some(
+      symbol => latestNews[symbol] && latestNews[symbol].length > 0
+    );
+    if (hasNews) {
+      allCharts.push(
+        <LatestNewsSection
+          latestNews={latestNews}
+          key="latest-news"
+        />
+      );
+    }
+
+    return allCharts;
   };
 
   const allChartCards = renderAllCharts();
@@ -487,7 +517,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         </Button>
       </div>
 
-      {/* 모든 분석 차트 (OHLC, 수익률, 주가, 거래내역, 벤치마크, 환율) */}
+      {/* 모든 분석 차트 (OHLC, 수익률, 주가, 거래내역, 벤치마크, 환율, 급등락, 뉴스) */}
       <div className={`grid gap-6 ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
         {allChartCards.map((card, index) => (
           <div key={index} className="flex flex-col">
@@ -495,16 +525,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           </div>
         ))}
       </div>
-
-      {/* 3. 급등락 이벤트 섹션 */}
-      <VolatilityEventsSection
-        volatilityEvents={portfolioData?.volatility_events || (data as any).volatility_events || {}}
-      />
-
-      {/* 4. 최신 뉴스 섹션 */}
-      <LatestNewsSection
-        latestNews={portfolioData?.latest_news || (data as any).latest_news || {}}
-      />
     </div>
   );
 });
