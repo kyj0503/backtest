@@ -121,14 +121,3 @@ export const formatPercent = (value: number): string => {
 export const formatPrice = (value: number): string => {
   return `$${value.toFixed(2)}`;
 };
-
-export const getApiBaseUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    if (window.location.hostname === 'localhost') {
-      return 'http://localhost:8001';
-    } else {
-      return `${window.location.protocol}//${window.location.hostname}:8001`;
-    }
-  }
-  return 'http://localhost:8001';
-};
