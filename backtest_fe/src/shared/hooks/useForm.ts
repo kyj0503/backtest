@@ -9,7 +9,7 @@ type ValidationRule<T> = {
   [K in keyof T]?: (value: T[K]) => string | null;
 };
 
-export function useForm<T extends Record<string, any>>(
+export function useForm<T extends Record<string, unknown>>(
   initialData: T,
   validationRules: ValidationRule<T> = {}
 ) {

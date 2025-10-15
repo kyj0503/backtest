@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { STRATEGY_CONFIGS, StrategyParameter } from '../model/strategyConfig';
+import { StrategyParamValue } from '../model/api-types';
 import { FormField } from '@/shared/components';
 
 export interface StrategyFormProps {
   selectedStrategy: string;
   setSelectedStrategy: (strategy: string) => void;
-  strategyParams: Record<string, string | number>;
-  updateStrategyParam: (key: string, value: string) => void;
+  strategyParams: Record<string, StrategyParamValue>;
+  updateStrategyParam: (key: string, value: StrategyParamValue) => void;
 }
 
 const StrategyForm: React.FC<StrategyFormProps> = ({
@@ -41,19 +42,24 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
 
       {parameterEntries.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
-          {parameterEntries.map(([key, param]) => (
-            <FormField
-              key={key}
-              label={param.description || key}
-              type="number"
-              value={strategyParams[key] ?? param.default}
-              onChange={(value) => updateStrategyParam(key, value.toString())}
-              min={param.min}
-              max={param.max}
-              step={param.step}
-              helpText={`기본값 ${param.default} · 범위 ${param.min}~${param.max}`}
-            />
-          ))}
+          {parameterEntries.map(([key, param]) => {
+            const currentValue = strategyParams[key] ?? param.default;
+            const displayValue = typeof currentValue === 'string' || typeof currentValue === 'number' ? currentValue : param.default;
+
+            return (
+              <FormField
+                key={key}
+                label={param.description || key}
+                type="number"
+                value={displayValue}
+                onChange={(value) => updateStrategyParam(key, value.toString())}
+                min={param.min}
+                max={param.max}
+                step={param.step}
+                helpText={`기본값 ${param.default} · 범위 ${param.min}~${param.max}`}
+              />
+            );
+          })}
         </div>
       )}
     </div>

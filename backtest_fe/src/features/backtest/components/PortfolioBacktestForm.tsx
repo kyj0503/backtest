@@ -13,7 +13,7 @@ import { Button } from '@/shared/ui/button';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 
 interface PortfolioBacktestFormProps {
-  onSubmit: (request: BacktestRequest) => Promise<any>;
+  onSubmit: (request: BacktestRequest) => Promise<unknown>;
   loading?: boolean;
 }
 
@@ -23,11 +23,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
 
   const generateStrategyParams = () => {
     const strategyParams = state.strategy.strategyParams;
-    const params: Record<string, any> = {};
-    Object.entries(strategyParams).forEach(([key, value]) => {
-      params[key] = typeof value === 'string' ? parseInt(value) || value : value;
-    });
-    return params;
+    return strategyParams;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

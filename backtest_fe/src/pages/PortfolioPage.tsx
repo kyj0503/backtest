@@ -99,7 +99,7 @@ const PortfolioPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <BacktestResults
-                data={results.data as any}
+                data={results.data}
                 isPortfolio={true}
               />
             </CardContent>

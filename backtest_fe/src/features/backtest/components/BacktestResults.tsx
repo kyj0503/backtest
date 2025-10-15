@@ -1,8 +1,24 @@
 import React, { useRef } from 'react';
 import ChartsSection from './results/ChartsSection';
-import { BacktestResultsProps } from '../model/backtest-result-types';
+import { BacktestResultsProps, TradeMarker, ExchangeRatePoint } from '../model/backtest-result-types';
 import { AlertCircle, FileDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+
+// Summary stats 타입 정의 (동적 필드를 가진 타입)
+interface SummaryStats {
+  total_return_pct?: number;
+  total_trades?: number;
+  win_rate_pct?: number;
+  max_drawdown_pct?: number;
+  sharpe_ratio?: number;
+  profit_factor?: number;
+  volatility_pct?: number;
+  sortino_ratio?: number;
+  calmar_ratio?: number;
+  alpha?: number;
+  beta?: number;
+  [key: string]: unknown;
+}
 
 const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) => {
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -84,7 +100,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
 
       // 요약 통계
       if (data.summary_stats) {
-        const stats = data.summary_stats as any;
+        const stats = data.summary_stats as SummaryStats;
         lines.push('■ 주요 성과 지표');
         lines.push('-'.repeat(80));
         lines.push(`  총 수익률           : ${typeof stats.total_return_pct === 'number' ? stats.total_return_pct.toFixed(2) : 'N/A'}%`);
@@ -107,14 +123,14 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
         lines.push('-'.repeat(80));
         lines.push(`  총 거래 횟수: ${data.trade_markers.length}회`);
         lines.push('');
-        data.trade_markers.slice(0, 50).forEach((trade: any, idx) => {
+        data.trade_markers.slice(0, 50).forEach((trade: TradeMarker, idx) => {
           lines.push(`  [거래 ${idx + 1}]`);
           lines.push(`    날짜       : ${trade.date}`);
           lines.push(`    타입       : ${trade.type === 'entry' ? '진입 (매수)' : '청산 (매도)'}`);
           if (trade.price !== null && trade.price !== undefined && typeof trade.price === 'number') {
             lines.push(`    가격       : $${trade.price.toFixed(2)}`);
           }
-          if (trade.size) lines.push(`    수량       : ${trade.size}`);
+          if (trade.quantity) lines.push(`    수량       : ${trade.quantity}`);
           if (trade.pnl_pct !== null && trade.pnl_pct !== undefined && typeof trade.pnl_pct === 'number') {
             lines.push(`    손익률     : ${trade.pnl_pct.toFixed(2)}%`);
           }
@@ -129,13 +145,13 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
 
     // 환율 정보 (공통)
     if ('exchange_rates' in data && data.exchange_rates && data.exchange_rates.length > 0) {
-      const rates = data.exchange_rates.filter((r: any) => r && typeof r.rate === 'number');
+      const rates = data.exchange_rates.filter((r): r is ExchangeRatePoint => r !== null && typeof r.rate === 'number');
 
       if (rates.length > 0) {
         const firstRate = rates[0];
         const lastRate = rates[rates.length - 1];
-        const maxRate = Math.max(...rates.map((r: any) => r.rate));
-        const minRate = Math.min(...rates.map((r: any) => r.rate));
+        const maxRate = Math.max(...rates.map((r) => r.rate));
+        const minRate = Math.min(...rates.map((r) => r.rate));
 
         lines.push('■ 환율 정보 (KRW/USD)');
         lines.push('-'.repeat(80));

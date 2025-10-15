@@ -8,7 +8,7 @@ interface Trade {
   type: 'entry' | 'exit';
   pnl_pct?: number;
   price?: number;
-  [key: string]: any;
+  [key: string]: string | number | undefined;
 }
 
 interface TradesChartProps {

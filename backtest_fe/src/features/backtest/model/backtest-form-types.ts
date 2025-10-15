@@ -1,4 +1,5 @@
 import { AssetType } from './strategyConfig';
+import { StrategyParamValue } from './api-types';
 
 export interface Stock {
   symbol: string;
@@ -20,7 +21,7 @@ export interface BacktestFormState {
   };
   strategy: {
     selectedStrategy: string;
-    strategyParams: Record<string, any>;
+    strategyParams: Record<string, StrategyParamValue>;
   };
   settings: {
     rebalanceFrequency: string;
@@ -42,8 +43,8 @@ export type BacktestFormAction =
   | { type: 'SET_START_DATE'; payload: string }
   | { type: 'SET_END_DATE'; payload: string }
   | { type: 'SET_STRATEGY'; payload: string }
-  | { type: 'SET_STRATEGY_PARAMS'; payload: Record<string, any> }
-  | { type: 'UPDATE_STRATEGY_PARAM'; payload: { key: string; value: string } }
+  | { type: 'SET_STRATEGY_PARAMS'; payload: Record<string, StrategyParamValue> }
+  | { type: 'UPDATE_STRATEGY_PARAM'; payload: { key: string; value: StrategyParamValue } }
   | { type: 'SET_REBALANCE_FREQUENCY'; payload: string }
   | { type: 'SET_COMMISSION'; payload: number }
   | { type: 'SET_ERRORS'; payload: string[] }

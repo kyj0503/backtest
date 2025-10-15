@@ -118,8 +118,15 @@ export const formatDrawdown = (value: number): string => {
 };
 
 // 숫자 검증 및 파싱
-export const isValidNumber = (value: any): boolean => {
-  return !isNaN(parseFloat(value)) && isFinite(value);
+export const isValidNumber = (value: unknown): boolean => {
+  if (typeof value === 'number') {
+    return !isNaN(value) && isFinite(value);
+  }
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return !isNaN(num) && isFinite(num);
+  }
+  return false;
 };
 
 export const parseNumber = (value: string): number | null => {

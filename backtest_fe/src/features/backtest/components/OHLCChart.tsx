@@ -20,7 +20,7 @@ interface OHLCData {
   low: number;
   close: number;
   volume: number;
-  [key: string]: any;
+  [key: string]: string | number;
 }
 
 interface Indicator {
@@ -50,7 +50,7 @@ const OHLCChart: React.FC<OHLCChartProps> = memo(({ data, indicators, trades }) 
   // 데이터 병합 로직 메모이제이션
   const mergedData = useMemo(() => {
     return safeData.map(ohlc => {
-      const point: any = { 
+      const point: Record<string, string | number> = {
         ...ohlc,
         open: Number(ohlc.open) || 0,
         high: Number(ohlc.high) || 0,
@@ -58,9 +58,9 @@ const OHLCChart: React.FC<OHLCChartProps> = memo(({ data, indicators, trades }) 
         close: Number(ohlc.close) || 0,
         volume: Number(ohlc.volume) || 0
       };
-      
+
       safeIndicators.forEach(indicator => {
-        const indicatorPoint = indicator.data?.find((d: any) => d.date === ohlc.date);
+        const indicatorPoint = indicator.data?.find(d => d.date === ohlc.date);
         if (indicatorPoint) {
           point[indicator.name] = Number(indicatorPoint.value) || 0;
         }

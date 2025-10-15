@@ -60,7 +60,12 @@ const TradeSignalsChart: React.FC<TradeSignalsChartProps> = memo(({ trades }) =>
   };
 
   // 툴팁 커스텀 렌더러
-  const CustomTooltip = ({ active, payload }: any) => {
+  interface TooltipProps {
+    active?: boolean;
+    payload?: Array<{ payload: { date: string; price: number; type: string; quantity: number; pnl_pct?: number } }>;
+  }
+
+  const CustomTooltip = ({ active, payload }: TooltipProps) => {
     if (!active || !payload || payload.length === 0) return null;
 
     const data = payload[0].payload;

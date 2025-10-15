@@ -1,3 +1,5 @@
+import { StrategyParamValue } from '../model/api-types';
+
 export interface UseBacktestFormReturn {
   state: BacktestFormState;
   actions: {
@@ -8,7 +10,7 @@ export interface UseBacktestFormReturn {
     setStartDate: (date: string) => void;
     setEndDate: (date: string) => void;
     setSelectedStrategy: (strategy: string) => void;
-    updateStrategyParam: (key: string, value: string) => void;
+    updateStrategyParam: (key: string, value: StrategyParamValue) => void;
     setRebalanceFrequency: (frequency: string) => void;
     setCommission: (commission: number) => void;
     setErrors: (errors: string[]) => void;
@@ -23,14 +25,14 @@ export interface UseBacktestFormReturn {
   };
 }
 import { useReducer, useEffect } from 'react';
-import { STRATEGY_CONFIGS } from '../model/strategyConfig';
+import { STRATEGY_CONFIGS, StrategyParameter } from '../model/strategyConfig';
 import { BacktestFormState, Stock, initialBacktestFormState } from '../model/backtest-form-types';
 import { backtestFormReducer, backtestFormHelpers } from '../model/backtestFormReducer';
 
 
 export const useBacktestForm = (initialState?: Partial<BacktestFormState>): UseBacktestFormReturn => {
   const [state, dispatch] = useReducer(
-    backtestFormReducer, 
+    backtestFormReducer,
     { ...initialBacktestFormState, ...initialState }
   );
 
@@ -38,9 +40,9 @@ export const useBacktestForm = (initialState?: Partial<BacktestFormState>): UseB
   useEffect(() => {
     const config = STRATEGY_CONFIGS[state.strategy.selectedStrategy as keyof typeof STRATEGY_CONFIGS];
     if (config && config.parameters) {
-      const defaultParams: Record<string, any> = {};
-      Object.entries(config.parameters).forEach(([key, param]) => {
-        defaultParams[key] = (param as any).default;
+      const defaultParams: Record<string, number> = {};
+      Object.entries(config.parameters).forEach(([key, param]: [string, StrategyParameter]) => {
+        defaultParams[key] = param.default;
       });
       dispatch({ type: 'SET_STRATEGY_PARAMS', payload: defaultParams });
     } else {
@@ -86,7 +88,7 @@ export const useBacktestForm = (initialState?: Partial<BacktestFormState>): UseB
       dispatch({ type: 'SET_STRATEGY', payload: strategy });
     },
 
-    updateStrategyParam: (key: string, value: string) => {
+    updateStrategyParam: (key: string, value: StrategyParamValue) => {
       dispatch({ type: 'UPDATE_STRATEGY_PARAM', payload: { key, value } });
     },
 
