@@ -61,13 +61,13 @@ class SMACrossStrategy(Strategy):
     sma_long : int
         장기 이동평균 기간 (기본값: 20)
     position_size : float
-        포지션 크기 (0.1 ~ 1.0, 기본값: 0.5)
+        포지션 크기 (0.1 ~ 1.0, 기본값: 0.95)
     """
 
     # 전략 파라미터 정의
     sma_short = 10
     sma_long = 20
-    position_size = 0.5
+    position_size = 0.95
 
     def init(self):
         """
