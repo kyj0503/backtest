@@ -36,26 +36,21 @@ class BollingerBandsStrategy(Strategy):
     period = 20
     std_dev = 2
     position_size = 0.95  # 95% 포지션 사용
-    
+
     def init(self):
         close = self.data.Close
+        # 중심선 (SMA) 계산
         self.sma = self.I(SMA, close, self.period)
-        self.upper_band = self.I(self._upper_band, close, self.period, self.std_dev)
-        self.lower_band = self.I(self._lower_band, close, self.period, self.std_dev)
-    
-    def _upper_band(self, close: pd.Series, period: int, std_dev: float) -> pd.Series:
-        """상단 볼린저 밴드 계산"""
+        # 표준편차 계산
+        self.std = self.I(self._std, close, self.period)
+        # 상단/하단 밴드 계산 (SMA와 STD 재사용)
+        self.upper_band = self.I(lambda: self.sma + (self.std_dev * self.std))
+        self.lower_band = self.I(lambda: self.sma - (self.std_dev * self.std))
+
+    def _std(self, close: pd.Series, period: int) -> pd.Series:
+        """표준편차 계산"""
         close = pd.Series(close)
-        sma = close.rolling(window=period).mean()
-        std = close.rolling(window=period).std()
-        return sma + (std_dev * std)
-    
-    def _lower_band(self, close: pd.Series, period: int, std_dev: float) -> pd.Series:
-        """하단 볼린저 밴드 계산"""
-        close = pd.Series(close)
-        sma = close.rolling(window=period).mean()
-        std = close.rolling(window=period).std()
-        return sma - (std_dev * std)
+        return close.rolling(window=period).std()
     
     def next(self):
         if len(self.data) < self.period:
