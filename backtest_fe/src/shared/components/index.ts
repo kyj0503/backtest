@@ -15,3 +15,4 @@ export type { ErrorMessageProps } from './ErrorMessage';
 
 export { default as ChartLoading } from './ChartLoading';
 export { default as PerformanceMonitor } from './PerformanceMonitor';
+export { default as FinancialTermTooltip } from './FinancialTermTooltip';
