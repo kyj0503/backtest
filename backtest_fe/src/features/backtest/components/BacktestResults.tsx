@@ -70,7 +70,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
       lines.push(`  상승일수            : ${stats.Positive_Days}일`);
       lines.push(`  하락일수            : ${stats.Negative_Days}일`);
       lines.push(`  승률                : ${stats.Win_Rate.toFixed(2)}%`);
-      lines.push(`  Profit Factor       : ${stats.Profit_Factor.toFixed(2)}`);
+      lines.push(`  프로핏 팩터         : ${stats.Profit_Factor.toFixed(2)}`);
       lines.push(`  연속 상승 최대      : ${stats.Max_Consecutive_Gains}일`);
       lines.push(`  연속 하락 최대      : ${stats.Max_Consecutive_Losses}일`);
       lines.push('');
@@ -108,7 +108,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
         lines.push(`  승률                : ${typeof stats.win_rate_pct === 'number' ? stats.win_rate_pct.toFixed(2) : 'N/A'}%`);
         lines.push(`  최대 낙폭(MDD)      : ${typeof stats.max_drawdown_pct === 'number' ? stats.max_drawdown_pct.toFixed(2) : 'N/A'}%`);
         lines.push(`  샤프 비율           : ${typeof stats.sharpe_ratio === 'number' ? stats.sharpe_ratio.toFixed(2) : 'N/A'}`);
-        lines.push(`  Profit Factor       : ${typeof stats.profit_factor === 'number' ? stats.profit_factor.toFixed(2) : 'N/A'}`);
+        lines.push(`  프로핏 팩터         : ${typeof stats.profit_factor === 'number' ? stats.profit_factor.toFixed(2) : 'N/A'}`);
         if (typeof stats.volatility_pct === 'number') lines.push(`  변동성              : ${stats.volatility_pct.toFixed(2)}%`);
         if (typeof stats.sortino_ratio === 'number') lines.push(`  소르티노 비율       : ${stats.sortino_ratio.toFixed(2)}`);
         if (typeof stats.calmar_ratio === 'number') lines.push(`  칼마 비율           : ${stats.calmar_ratio.toFixed(2)}`);

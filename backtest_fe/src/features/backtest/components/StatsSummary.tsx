@@ -82,7 +82,7 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
       description: '리스크 대비 성과 지표 (Sharpe)',
     },
     {
-      label: 'Profit Factor',
+      label: '프로핏 팩터',
       value: numberValue(stats.profit_factor ?? stats.Profit_Factor, 1).toFixed(2),
       tone:
         numberValue(stats.profit_factor ?? stats.Profit_Factor, 1) >= 1.5
