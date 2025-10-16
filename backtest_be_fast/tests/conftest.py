@@ -143,16 +143,6 @@ def mock_data_repository():
 
 
 @pytest.fixture
-def mock_backtest_repository():
-    """Mock 백테스트 리포지토리"""
-    repo = Mock()
-    repo.save = AsyncMock(return_value={"id": 1, "status": "completed"})
-    repo.get_by_id = AsyncMock(return_value={"id": 1, "symbol": "AAPL"})
-    repo.get_by_user_id = AsyncMock(return_value=[])
-    return repo
-
-
-@pytest.fixture
 def mock_yfinance_service():
     """Mock Yahoo Finance 서비스"""
     service = Mock()

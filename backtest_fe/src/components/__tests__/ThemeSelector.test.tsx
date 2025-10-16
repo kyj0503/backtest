@@ -116,11 +116,13 @@ describe('ThemeSelector', () => {
     vi.clearAllMocks()
   })
 
-  it('displays headings and helper text', () => {
+  it('displays helper text and current theme info', () => {
     render(<ThemeSelector />)
 
-    expect(screen.getByRole('heading', { name: /테마 설정/ })).toBeInTheDocument()
-    expect(screen.getByText(/원하는 디자인 테마를 선택하세요/)).toBeInTheDocument()
+    // Helper text 확인
+    expect(screen.getByText(/테마는 자동으로 저장됩니다/)).toBeInTheDocument()
+    // 현재 테마 정보 확인
+    expect(screen.getByText(/현재 테마 정보/)).toBeInTheDocument()
   })
 
   it('lists available themes with active indicator', () => {

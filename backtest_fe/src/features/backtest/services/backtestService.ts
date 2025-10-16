@@ -18,7 +18,7 @@ export class BacktestService {
    * 백테스트 실행 (단일 종목 또는 포트폴리오)
    */
   static async executeBacktest(request: BacktestRequest): Promise<UnifiedBacktestResponse> {
-    const response = await apiClient.post<UnifiedBacktestResponse>('/api/v1/backtest/portfolio', request);
+    const response = await apiClient.post<UnifiedBacktestResponse>('/api/v1/backtest', request);
     return response.data;
   }
 

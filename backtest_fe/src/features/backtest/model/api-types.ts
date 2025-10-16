@@ -1,7 +1,10 @@
 // API 타입 정의 - 통합 및 확장
 
+// 전략 파라미터 값 타입
+export type StrategyParamValue = string | number | boolean;
+
 // 공통 응답 인터페이스
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -9,7 +12,7 @@ export interface ApiResponse<T = any> {
 }
 
 // 페이지네이션 응답
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   items: T[];
   total: number;
   page: number;
@@ -21,7 +24,7 @@ export interface PaginatedResponse<T = any> {
 export interface ApiError {
   code: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 // 포트폴리오 구성 요소
@@ -39,7 +42,7 @@ export interface BacktestRequest {
   start_date: string;
   end_date: string;
   strategy: string;
-  strategy_params?: Record<string, any>;
+  strategy_params?: Record<string, StrategyParamValue>;
   commission?: number;
   rebalance_frequency?: string;
 }
@@ -63,6 +66,7 @@ export interface BacktestStats {
   benchmark_ticker?: string;
   benchmark_total_return_pct?: number;
   alpha_vs_benchmark_pct?: number;
+  [key: string]: unknown;
 }
 
 // 포트폴리오 통계 (포트폴리오 백테스트용)
@@ -91,6 +95,7 @@ export interface ChartDataPoint {
   low: number;
   close: number;
   volume: number;
+  [key: string]: unknown;
 }
 
 // 포트폴리오 차트 데이터 (필드명이 다름)
@@ -109,6 +114,7 @@ export interface EquityPoint {
   equity: number;
   return_pct: number;
   drawdown_pct: number;
+  [key: string]: unknown;
 }
 
 export interface TradeMarker {
@@ -130,6 +136,7 @@ export interface IndicatorData {
     date: string;
     value: number;
   }>;
+  [key: string]: unknown;
 }
 
 // 단일 종목 백테스트 응답
@@ -173,7 +180,7 @@ export interface Strategy {
 export interface StrategyParameter {
   name: string;
   type: 'int' | 'float' | 'str' | 'bool' | 'select';
-  default: any;
+  default: StrategyParamValue;
   description: string;
   min?: number;
   max?: number;
@@ -244,7 +251,7 @@ export interface UnifiedBacktestResult extends Partial<ChartDataResponse>, Parti
 
 // API 엔드포인트 타입
 export type ApiEndpoint = 
-  | '/api/v1/backtest/portfolio'  // 통합 백테스트 엔드포인트
+  | '/api/v1/backtest'  // 통합 백테스트 엔드포인트
   | '/api/v1/strategies'
   | '/api/v1/naver-news/search'
   | '/api/v1/yfinance/exchange-rate'

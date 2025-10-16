@@ -1,6 +1,40 @@
 """
-데이터 캐시 관리 Repository
-yfinance 데이터 캐시 및 관리 로직 분리
+데이터 Repository
+
+**역할**:
+- 주가 데이터 접근을 위한 Repository 패턴 구현
+- 데이터 소스 추상화 (DB, yfinance API, 메모리 캐시)
+- 데이터 캐싱 전략 구현으로 성능 최적화
+
+**주요 기능**:
+1. get_stock_data(): 주식 데이터 조회
+   - 메모리 캐시 우선 확인
+   - DB 조회
+   - yfinance API fallback
+2. invalidate_cache(): 캐시 무효화
+3. get_cache_stats(): 캐시 통계 조회
+
+**캐싱 전략**:
+- 3단계 캐싱: 메모리 → DB → yfinance API
+- TTL (Time To Live): 메모리 캐시 만료 시간
+- 캐시 키: f"{ticker}:{start_date}:{end_date}"
+
+**인터페이스**:
+- DataRepositoryInterface: 추상 인터페이스 정의
+- DataRepository: 구현 클래스
+
+**의존성**:
+- app/services/yfinance_db.py: yfinance 데이터 로딩
+- app/utils/data_fetcher.py: 데이터 페칭 유틸리티
+
+**연관 컴포넌트**:
+- Backend: app/services/data_service.py (Repository 사용)
+- Backend: app/services/backtest_service.py (데이터 조회)
+- Database: database/schema.sql (daily_prices 테이블)
+
+**아키텍처 패턴**:
+- Repository Pattern: 데이터 접근 로직 캡슐화
+- Strategy Pattern: 다양한 데이터 소스 전략
 """
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, date

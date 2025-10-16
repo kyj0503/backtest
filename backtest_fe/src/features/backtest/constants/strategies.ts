@@ -22,13 +22,13 @@ export interface Strategy {
 
 export const STRATEGIES: Strategy[] = [
   {
-    name: 'buy_and_hold',
+    name: 'buy_hold_strategy',
     displayName: 'Buy & Hold',
     description: '매수 후 보유 전략 - 초기에 매수하여 종료일까지 보유',
     parameters: {},
   },
   {
-    name: 'sma_crossover',
+    name: 'sma_strategy',
     displayName: 'SMA 크로스오버',
     description: 'SMA 단기/장기 이동평균 교차 전략',
     parameters: {
@@ -77,7 +77,7 @@ export const STRATEGIES: Strategy[] = [
     },
   },
   {
-    name: 'bollinger_bands',
+    name: 'bollinger_strategy',
     displayName: '볼린저 밴드',
     description: '볼린저 밴드 돌파 전략',
     parameters: {
@@ -126,7 +126,7 @@ export const STRATEGIES: Strategy[] = [
     },
   },
   {
-    name: 'ema_crossover',
+    name: 'ema_strategy',
     displayName: 'EMA 크로스오버',
     description: 'EMA 단기/장기 지수이동평균 교차 전략',
     parameters: {

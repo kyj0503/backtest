@@ -1,104 +1,56 @@
-개발 스택 가이드
+# Backtest (Full-stack 금융 백테스트 플랫폼)
 
-개발/운영 모두 Docker Compose로 FastAPI 백엔드와 React 프론트엔드를 함께 실행할 수 있다.
+이 레포지토리는 FastAPI 기반 백엔드(`backtest_be_fast`)와 React/TypeScript 프론트엔드(`backtest_fe`)로 구성된 금융 백테스팅 플랫폼입니다. 개발은 Docker를 사용한 컨테이너 환경에서 진행하도록 구성되어 있으며, 핫 리로드가 활성화되어 있어 코드 변경 시 자동 반영됩니다.
 
-실행
+## 요구사항
+
+- Docker 및 Docker Compose
+
+## 빠른 시작 (Docker 개발 환경)
+
+아래 명령은 프로젝트 루트에서 실행합니다. 개발용 Docker Compose 파일을 사용하여 백엔드 및 프론트엔드를 빌드하고 핫 리로드와 함께 실행합니다.
+
 ```bash
-cd /backtest  # 또는 프로젝트 루트로 이동
+# 개발 컨테이너 빌드 및 실행 (핫 리로드 포함)
 docker compose -f compose.dev.yaml up -d --build
+
+# 백엔드 로그 확인
+docker compose -f compose.dev.yaml logs -f backtest-be-fast
+
+# 서비스 접근
+# 프론트엔드: http://localhost:5173
+# 백엔드 API: http://localhost:8000
+# API 문서: http://localhost:8000/api/v1/docs
 ```
 
-중지
+컨테이너를 중지하려면:
+
 ```bash
 docker compose -f compose.dev.yaml down
 ```
 
-완전 제거(컨테이너/이미지/볼륨)
-```bash
-# --rmi all, --volumes는 로컬 이미지와 볼륨을 제거한다
-docker compose -f compose.dev.yaml down --rmi all --volumes --remove-orphans
-```
+## 개별 서비스
 
-상태 확인
-```bash
-# 관련 컨테이너 상태 확인
-docker ps --filter "name=backtest" --format "table {{.Names}}\t{{.Status}}"
+- 백엔드
+  - 경로: `backtest_be_fast/`
+  - 주요 명령: `run_server.py` (컨테이너 또는 로컬 Python에서 실행 가능)
+  - 의존성: `requirements.txt`, 테스트용 `requirements-test.txt`
 
-# Compose 병합 설정 확인
-docker compose -f compose.dev.yaml config
-```
+- 프론트엔드
+  - 경로: `backtest_fe/`
+  - 주요 명령: `npm run dev` (또는 `pnpm`/`yarn` 사용 시 각 툴의 명령)
+  - 설정: Vite + React + TypeScript
 
-개별 컨테이너 제어
-```bash
-# 서비스 단위 실행/중지/삭제
-docker compose -f compose.dev.yaml up -d backtest_be_fast backtest_fe
-docker compose -f compose.dev.yaml stop backtest_be_fast backtest_fe
-docker compose -f compose.dev.yaml rm -f backtest_be_fast backtest_fe
-```
+## 테스트
 
-환경 변수
-- **모든 환경 변수는 루트 디렉토리의 `.env` 파일에서만 관리한다.**
-- 서브 폴더(`backtest_be_fast/`, `backtest_fe/`)에는 `.env` 파일을 만들지 않는다.
-- `.env` 파일은 git에 추적되지 않으므로 각 환경에서 직접 생성해야 한다.
-
-## 운영 서버 배포
-
-운영 서버에서는 호스트에 설치된 데이터베이스를 사용합니다.
-
-### 초기 설정 (1회만)
+- 백엔드: pytest를 사용합니다. 컨테이너 내부 또는 로컬 가상환경에서 실행하세요.
 
 ```bash
-# 1. 운영 서버 디렉터리 생성
-sudo mkdir -p /opt/backtest/backend
-cd /opt/backtest/backend
-
-# 2. 환경 파일 생성
-sudo nano .env
-
-# 3. compose 파일 복사 (git 저장소에서)
-sudo cp /path/to/repo/compose.server.yaml ./compose.yaml
+# 예: 로컬에서 빠르게 유닛 테스트 실행
+# cd backtest_be_fast
+# pytest tests/unit
 ```
 
-### 스택 관리
+## 환경 변수
 
-```bash
-cd /opt/backtest/backend
-
-# 스택 시작
-docker compose up -d
-
-# 스택 중지
-docker compose down
-
-# 스택 재시작
-docker compose restart
-
-# 로그 확인
-docker compose logs -f
-
-# 상태 확인
-docker compose ps
-```
-
-### 이미지 업데이트
-
-```bash
-cd /opt/backtest/backend
-
-# 최신 이미지 pull
-docker compose pull
-
-# 스택 재배포 (무중단)
-docker compose up -d
-
-# 또는 Jenkins CI/CD 파이프라인 사용
-```
-
-볼륨 정리
-```bash
-# 프로젝트 볼륨만 삭제
-docker volume rm backtest_fe_node_modules backtest_be_fast_venv || true
-
-# 불필요 볼륨 정리(주의)
-docker volume prune -f
-```
+- 프로젝트 루트의 `.env` 파일(또는 환경 변수)을 사용합니다. 백엔드와 프론트엔드 모두 개발용 환경 변수를 `compose.dev.yaml`에서 참조합니다.

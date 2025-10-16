@@ -1,5 +1,5 @@
 import React, { ChangeEvent } from 'react';
-import { FormSection } from '@/shared/components';
+import { FormSection, FinancialTermTooltip } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -69,7 +69,11 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
           </div>
           {portfolioInputMode === 'weight' && (
             <div className="flex items-center gap-2 rounded-full bg-muted/40 px-3 py-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">전체 투자금액($)</Label>
+              <Label className="text-xs font-medium text-muted-foreground">
+                <FinancialTermTooltip term="투자 금액">
+                  전체 투자금액($)
+                </FinancialTermTooltip>
+              </Label>
               <Input
                 type="number"
                 min={1000}
@@ -122,11 +126,27 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
           <Table className="text-sm">
             <TableHeader>
             <TableRow>
-              <TableHead className="w-64">종목/자산</TableHead>
-              <TableHead className="w-32">투자 금액 ($)</TableHead>
+              <TableHead className="w-64">
+                <FinancialTermTooltip term="종목">
+                  종목/자산
+                </FinancialTermTooltip>
+              </TableHead>
+              <TableHead className="w-32">
+                <FinancialTermTooltip term="투자 금액">
+                  투자 금액 ($)
+                </FinancialTermTooltip>
+              </TableHead>
               <TableHead className="w-28">투자 방식</TableHead>
-              <TableHead className="w-24">자산 타입</TableHead>
-              <TableHead className="w-24">비중 (%)</TableHead>
+              <TableHead className="w-24">
+                <FinancialTermTooltip term="자산">
+                  자산 타입
+                </FinancialTermTooltip>
+              </TableHead>
+              <TableHead className="w-24">
+                <FinancialTermTooltip term="투자 비중">
+                  비중 (%)
+                </FinancialTermTooltip>
+              </TableHead>
               <TableHead className="w-20">작업</TableHead>
             </TableRow>
           </TableHeader>

@@ -1,10 +1,37 @@
 """
-중앙화된 데이터 로딩 서비스
+데이터 로딩 서비스
 
-모든 데이터 로딩 로직을 통합하여 단일 책임 원칙을 준수합니다.
-- DB 우선, fallback to yfinance 패턴 통합
-- 캐시 관리 중앙화
-- 테스트 용이성 향상
+**역할**:
+- 주가 데이터 조회를 위한 단일 진입점 제공
+- DB 우선 조회 후 yfinance로 fallback하는 전략 구현
+- 데이터 소스 추상화로 테스트 용이성 향상
+
+**주요 기능**:
+1. get_ticker_data(): 주식 데이터 조회
+   - DB에서 먼저 조회 시도
+   - 데이터가 없으면 yfinance API 호출
+   - 조회한 데이터를 DB에 캐싱
+2. 에러 핸들링: 데이터 조회 실패 시 예외 발생
+
+**데이터 소스 우선순위**:
+1. MySQL 데이터베이스 (캐시, 빠름)
+2. yfinance API (외부, 느림)
+
+**의존성**:
+- app/repositories/data_repository.py: DB 접근
+- app/services/yfinance_db.py: yfinance 데이터 로딩
+- app/utils/data_fetcher.py: 데이터 페칭 유틸리티
+
+**연관 컴포넌트**:
+- Backend: app/services/backtest_service.py (데이터 사용)
+- Backend: app/services/portfolio_service.py (포트폴리오 데이터 로드)
+- Database: database/schema.sql (daily_prices 테이블)
+
+**사용 예**:
+```python
+data_service = DataService()
+df = await data_service.get_ticker_data("AAPL", "2023-01-01", "2023-12-31")
+```
 """
 from typing import Union
 from datetime import date

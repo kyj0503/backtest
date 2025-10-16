@@ -1,22 +1,23 @@
 import { useCallback } from 'react';
-import { STRATEGY_CONFIGS } from '../model/strategyConfig';
+import { STRATEGY_CONFIGS, StrategyConfig, StrategyParameter } from '../model/strategyConfig';
+import { StrategyParamValue } from '../model/api-types';
 
 export interface StrategyParam {
   key: string;
   label: string;
-  value: any;
+  value: StrategyParamValue;
   min: number;
   max: number;
-  default: any;
+  default: number;
   description?: string;
 }
 
 export interface UseStrategyParamsReturn {
-  getStrategyConfig: (strategy: string) => any;
-  getDefaultParams: (strategy: string) => Record<string, any>;
-  getStrategyParams: (strategy: string, currentParams: Record<string, any>) => StrategyParam[];
-  updateParam: (currentParams: Record<string, any>, key: string, value: string) => Record<string, any>;
-  validateParams: (strategy: string, params: Record<string, any>) => string[];
+  getStrategyConfig: (strategy: string) => StrategyConfig | undefined;
+  getDefaultParams: (strategy: string) => Record<string, number>;
+  getStrategyParams: (strategy: string, currentParams: Record<string, StrategyParamValue>) => StrategyParam[];
+  updateParam: (currentParams: Record<string, StrategyParamValue>, key: string, value: string) => Record<string, StrategyParamValue>;
+  validateParams: (strategy: string, params: Record<string, StrategyParamValue>) => string[];
   getParamLabel: (key: string) => string;
 }
 
@@ -25,23 +26,22 @@ export const useStrategyParams = (): UseStrategyParamsReturn => {
     return STRATEGY_CONFIGS[strategy as keyof typeof STRATEGY_CONFIGS];
   }, []);
 
-  const getDefaultParams = useCallback((strategy: string): Record<string, any> => {
+  const getDefaultParams = useCallback((strategy: string): Record<string, number> => {
     const config = getStrategyConfig(strategy);
     if (!config || !config.parameters) return {};
 
-    const defaultParams: Record<string, any> = {};
-    Object.entries(config.parameters).forEach(([key, param]) => {
-      defaultParams[key] = (param as any).default;
+    const defaultParams: Record<string, number> = {};
+    Object.entries(config.parameters).forEach(([key, param]: [string, StrategyParameter]) => {
+      defaultParams[key] = param.default;
     });
     return defaultParams;
   }, [getStrategyConfig]);
 
-  const getStrategyParams = useCallback((strategy: string, currentParams: Record<string, any>): StrategyParam[] => {
+  const getStrategyParams = useCallback((strategy: string, currentParams: Record<string, StrategyParamValue>): StrategyParam[] => {
     const config = getStrategyConfig(strategy);
     if (!config || !config.parameters) return [];
 
-    return Object.entries(config.parameters).map(([key, paramConfig]) => {
-      const param = paramConfig as any;
+    return Object.entries(config.parameters).map(([key, param]: [string, StrategyParameter]) => {
       return {
         key,
         label: getParamLabel(key),
@@ -54,21 +54,20 @@ export const useStrategyParams = (): UseStrategyParamsReturn => {
     });
   }, [getStrategyConfig]);
 
-  const updateParam = useCallback((currentParams: Record<string, any>, key: string, value: string): Record<string, any> => {
+  const updateParam = useCallback((currentParams: Record<string, StrategyParamValue>, key: string, value: string): Record<string, StrategyParamValue> => {
     return {
       ...currentParams,
       [key]: value
     };
   }, []);
 
-  const validateParams = useCallback((strategy: string, params: Record<string, any>): string[] => {
+  const validateParams = useCallback((strategy: string, params: Record<string, StrategyParamValue>): string[] => {
     const config = getStrategyConfig(strategy);
     const errors: string[] = [];
 
     if (!config || !config.parameters) return errors;
 
-    Object.entries(config.parameters).forEach(([key, paramConfig]) => {
-      const param = paramConfig as any;
+    Object.entries(config.parameters).forEach(([key, param]: [string, StrategyParameter]) => {
       const value = params[key];
 
       if (value === undefined || value === null || value === '') {

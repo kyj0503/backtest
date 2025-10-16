@@ -1,5 +1,39 @@
 """
 백테스트 실행 엔진
+
+**역할**:
+- backtesting.py 라이브러리를 래핑하여 백테스트 실행
+- 백테스트 결과를 표준 형식으로 변환
+- 거래 로그 및 통계 생성
+
+**주요 기능**:
+1. run_backtest(): 백테스트 메인 실행 메서드
+   - 데이터 로드
+   - 전략 적용
+   - 결과 계산
+2. extract_trade_log(): 거래 내역 추출
+3. calculate_statistics(): 백테스트 통계 계산
+
+**백테스트 파이프라인**:
+1. 데이터 로드 (yfinance or DB)
+2. Backtest 인스턴스 생성
+3. 전략 클래스 적용
+4. 백테스트 실행
+5. 결과 추출 및 직렬화
+
+**의존성**:
+- backtesting.py: 백테스팅 라이브러리
+- app/utils/data_fetcher.py: 데이터 조회
+- app/services/strategy_service.py: 전략 관리
+
+**연관 컴포넌트**:
+- Backend: app/services/backtest_service.py (서비스 레이어)
+- Backend: app/api/v1/endpoints/backtest.py (API 엔드포인트)
+
+**통계 지표**:
+- 총 거래 수, 승률, 총 수익률
+- 샤프 비율, 소르티노 비율
+- 최대 낙폭, 평균 거래 수익
 """
 import logging
 from datetime import datetime
@@ -11,8 +45,8 @@ import numpy as np
 from backtesting import Backtest
 from fastapi import HTTPException
 
-from app.models.requests import BacktestRequest
-from app.models.responses import BacktestResult
+from app.schemas.requests import BacktestRequest
+from app.schemas.responses import BacktestResult
 from app.utils.data_fetcher import data_fetcher
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
@@ -56,7 +90,8 @@ class BacktestEngine:
             self.logger.info(f"데이터 범위: {data.index[0]} ~ {data.index[-1]}")
             
             # 전략 클래스 가져오기
-            strategy_class = self._build_strategy(request.strategy, request.strategy_params)
+            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+            strategy_class = self._build_strategy(strategy_name, request.strategy_params)
 
             self.logger.info(f"전략 클래스: {strategy_class.__name__}")
             self.logger.info(f"초기 자본: ${request.initial_cash}")

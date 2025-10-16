@@ -1,6 +1,29 @@
 """
-백테스팅 실행 서비스 (리팩터링된 버전)
-Repository Pattern과 Factory Pattern 적용
+백테스팅 실행 서비스
+
+**역할**:
+- backtesting.py 라이브러리를 사용하여 단일 종목 백테스트 실행
+- 백테스트 결과를 프론트엔드가 사용할 수 있는 형식으로 변환
+- pandas Timedelta 호환성 문제 해결을 위한 Monkey Patch 적용
+
+**주요 기능**:
+1. 백테스트 실행: 주어진 전략과 파라미터로 백테스트 수행
+2. 통계 계산: 수익률, 샤프 비율, 최대 낙폭 등 성과 지표 계산
+3. 거래 로그 변환: 백테스트 거래 기록을 JSON 직렬화 가능한 형식으로 변환
+
+**의존성**:
+- app/repositories/data_repository.py: 주가 데이터 조회
+- app/services/strategy_service.py: 백테스트 전략 검증
+- backtesting.py: 외부 백테스팅 라이브러리
+
+**연관 컴포넌트**:
+- Backend: app/api/v1/endpoints/backtest.py (API 엔드포인트)
+- Backend: app/services/portfolio_service.py (포트폴리오 백테스트)
+- Frontend: src/features/backtest/api/backtestService.ts (API 클라이언트)
+
+**아키텍처 패턴**:
+- Repository Pattern: 데이터 접근은 repository를 통해서만 수행
+- Factory Pattern: 전략 객체 생성은 strategy_factory를 통해 수행
 """
 import time
 import signal
@@ -14,7 +37,7 @@ from fastapi import HTTPException
 from decimal import Decimal
 
 # Repository 패턴 import
-from app.repositories import backtest_repository, data_repository
+from app.repositories import data_repository
 from app.services.strategy_service import strategy_service
 
 # Monkey patch for pandas Timedelta compatibility issue
@@ -86,8 +109,8 @@ def _patch_backtesting_stats():
 # 패치 적용
 _patch_backtesting_stats()
 
-from app.models.requests import BacktestRequest
-from app.models.responses import BacktestResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
+from app.schemas.requests import BacktestRequest
+from app.schemas.responses import BacktestResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
 from app.core.config import settings
@@ -118,7 +141,6 @@ class BacktestService:
         self.validation_service = validation_service
         
         # Repository 접근
-        self.backtest_repository = backtest_repository
         self.data_repository = data_repository
         
         # 호환성을 위해 기존 속성들 유지
@@ -141,19 +163,7 @@ class BacktestService:
         """백테스트 요청 검증 - ValidationService에 위임"""
         return self.validation_service.validate_backtest_request(request)
     
-    # Repository를 활용한 새로운 메서드들
-    async def save_backtest_result(self, result: BacktestResult) -> str:
-        """백테스트 결과 저장"""
-        return await self.backtest_repository.save_result(result)
-    
-    async def get_backtest_result(self, result_id: str) -> Optional[BacktestResult]:
-        """백테스트 결과 조회"""
-        return await self.backtest_repository.get_result(result_id)
-    
-    async def list_backtest_results(self, limit: int = 10) -> List[BacktestResult]:
-        """최근 백테스트 결과 목록 조회"""
-        return await self.backtest_repository.list_results(limit)
-    
+    # Repository를 활용한 메서드들
     async def get_cached_stock_data(self, ticker: str, start_date, end_date) -> pd.DataFrame:
         """캐시된 주식 데이터 조회"""
         return await self.data_repository.get_stock_data(ticker, start_date, end_date)
@@ -174,7 +184,6 @@ class BacktestService:
         """시스템 통계 정보"""
         return {
             'repository_stats': {
-                'backtest_cache': await self.backtest_repository.get_stats() if hasattr(self.backtest_repository, 'get_stats') else {},
                 'data_cache': await self.data_repository.get_cache_stats()
             },
             'strategy_stats': {

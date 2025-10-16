@@ -1,5 +1,43 @@
 """
 차트 데이터 생성 서비스
+
+**역할**:
+- 백테스트 결과를 프론트엔드 차트 라이브러리(Recharts)가 사용할 수 있는 형식으로 변환
+- OHLC, 자산 곡선, 기술 지표, 거래 마커 등 다양한 차트 데이터 생성
+
+**주요 기능**:
+1. generate_chart_data(): 메인 차트 데이터 생성 메서드
+   - 입력: BacktestRequest (백테스트 설정)
+   - 출력: ChartDataResponse (모든 차트 데이터 포함)
+
+2. 데이터 생성 메서드:
+   - _generate_ohlc_data(): OHLC 캔들스틱 차트 데이터
+   - _generate_equity_data(): 자산 가치 곡선 데이터
+   - _generate_trade_markers(): 매수/매도 거래 표시
+   - _generate_indicators(): 기술 지표 데이터 (SMA, RSI, Bollinger, MACD, EMA)
+   - _generate_benchmark_data(): 벤치마크 지수 데이터
+
+**지원 기술 지표**:
+- SMA (단순 이동평균): 추세 파악
+- RSI (상대강도지수): 과매수/과매도 판단
+- Bollinger Bands: 변동성 측정
+- MACD (이동평균수렴확산): 매매 시그널
+- EMA (지수 이동평균): 최근 가격 중시
+
+**의존성**:
+- app/services/strategy_service.py: 전략 파라미터 검증
+- app/utils/data_fetcher.py: 주가 데이터 조회
+- pandas, numpy: 데이터 처리 및 지표 계산
+
+**연관 컴포넌트**:
+- Backend: app/api/v1/endpoints/backtest.py (차트 데이터 응답)
+- Frontend: src/features/backtest/components/ChartDisplay.tsx (차트 렌더링)
+- Frontend: src/shared/components/charts/ (개별 차트 컴포넌트)
+
+**출력 형식**:
+- JSON 직렬화 가능한 리스트/딕셔너리
+- 날짜는 ISO 8601 문자열 형식
+- NaN/Infinity는 None으로 변환
 """
 import logging
 from typing import List, Dict, Any, Optional
@@ -7,8 +45,8 @@ from datetime import datetime, date
 import pandas as pd
 import numpy as np
 
-from app.models.requests import BacktestRequest
-from app.models.responses import (
+from app.schemas.requests import BacktestRequest
+from app.schemas.responses import (
     BacktestResult, ChartDataResponse, ChartDataPoint,
     EquityPoint, TradeMarker, IndicatorData, BenchmarkPoint
 )
@@ -58,11 +96,12 @@ class ChartDataService:
            - 높을수록 좋지만 수익 크기도 함께 고려해야 함
         """
         try:
-            # 전략 파라미터 검증 (전략이 buy_and_hold가 아닐 때만)
-            if request.strategy != "buy_and_hold":
+            # 전략 파라미터 검증 (전략이 buy_hold_strategy가 아닐 때만)
+            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+            if strategy_name != "buy_hold_strategy":
                 try:
                     self.strategy_service.validate_strategy_params(
-                        request.strategy, 
+                        strategy_name, 
                         request.strategy_params or {}
                     )
                 except ValueError as ve:
@@ -86,11 +125,11 @@ class ChartDataService:
             
             # 3. 거래 마커 생성
             trade_log = backtest_result.trade_log if backtest_result else []
-            trade_markers = self._generate_trade_markers(data, request.strategy, trade_log)
+            trade_markers = self._generate_trade_markers(data, strategy_name, trade_log)
             self.logger.info(f"거래 마커 생성 완료: {len(trade_markers)} 개")
             
             # 4. 기술 지표 데이터 생성
-            indicators = self._generate_indicators(data, request.strategy, request.strategy_params or {})
+            indicators = self._generate_indicators(data, strategy_name, request.strategy_params or {})
             self.logger.info(f"기술 지표 생성 완료: {len(indicators)} 개")
             
             # 5. 백테스트 통계 계산
@@ -142,7 +181,7 @@ class ChartDataService:
 
             return ChartDataResponse(
                 ticker=request.ticker,
-                strategy=request.strategy,
+                strategy=strategy_name,
                 start_date=request.start_date.strftime('%Y-%m-%d') if hasattr(request.start_date, 'strftime') else str(request.start_date),
                 end_date=request.end_date.strftime('%Y-%m-%d') if hasattr(request.end_date, 'strftime') else str(request.end_date),
                 ohlc_data=ohlc_data,
@@ -240,7 +279,7 @@ class ChartDataService:
         markers: List[TradeMarker] = []
 
         if not trade_log:
-            if strategy == "buy_and_hold" and not data.empty:
+            if strategy == "buy_hold_strategy" and not data.empty:
                 first_date = data.index[0]
                 first_price = float(data['Close'].iloc[0])
                 markers.append(TradeMarker(

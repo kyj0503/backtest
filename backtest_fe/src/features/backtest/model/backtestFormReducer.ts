@@ -201,7 +201,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           endDate: '2024-12-31'
         },
         strategy: {
-          selectedStrategy: 'buy_and_hold',
+          selectedStrategy: 'buy_hold_strategy',
           strategyParams: {}
         },
         settings: {

@@ -1,3 +1,32 @@
+"""
+JSON 직렬화 유틸리티
+
+**역할**:
+- Python 객체를 JSON 직렬화 가능한 형태로 변환
+- NaN, Infinity 등 특수 값 처리
+- 재귀적 직렬화로 중첩된 객체 처리
+
+**주요 기능**:
+- recursive_serialize(): 모든 타입의 객체를 JSON 호환 형식으로 변환
+
+**처리 타입**:
+- float: NaN → "NaN", Infinity → "Infinity"
+- pandas/numpy 타입: Python 네이티브 타입으로 변환
+- dict, list: 재귀적으로 모든 요소 직렬화
+- datetime: ISO 8601 문자열 변환
+
+**사용 사례**:
+- 백테스트 결과를 API 응답으로 변환
+- 데이터베이스 저장 전 객체 정규화
+
+**의존성**:
+- pandas, numpy: 특수 타입 감지
+
+**연관 컴포넌트**:
+- Backend: app/services/backtest_service.py (결과 직렬화)
+- Backend: app/api/v1/endpoints/backtest.py (응답 변환)
+"""
+
 import pandas as pd
 import numpy as np
 

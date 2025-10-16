@@ -1,5 +1,5 @@
 import React from 'react';
-import { FormField } from '@/shared/components';
+import { FormField, FinancialTermTooltip } from '@/shared/components';
 
 export interface CommissionFormProps {
   rebalanceFrequency: string;
@@ -24,7 +24,11 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <FormField
-        label="리밸런싱 주기"
+        label={
+          <FinancialTermTooltip term="리밸런싱 주기">
+            리밸런싱 주기
+          </FinancialTermTooltip>
+        }
         type="select"
         value={rebalanceFrequency}
         onChange={(value) => setRebalanceFrequency(value as string)}
@@ -33,7 +37,11 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
       />
 
       <FormField
-        label="거래 수수료 (%)"
+        label={
+          <FinancialTermTooltip term="거래 수수료">
+            거래 수수료 (%)
+          </FinancialTermTooltip>
+        }
         type="number"
         value={commission}
         onChange={(value) => setCommission(value as number)}

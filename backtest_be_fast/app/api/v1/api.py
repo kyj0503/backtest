@@ -1,13 +1,17 @@
 """
-API v1 라우터 통합
+API v1 라우터
 
-단일 엔드포인트 아키텍처:
-- POST /backtest/portfolio: 백테스트 실행 및 모든 데이터 통합 응답
-- 전략 목록은 프론트엔드에 하드코딩
+**역할**:
+- FastAPI의 APIRouter를 사용하여 v1 API 엔드포인트 관리
+- 백테스트 관련 모든 엔드포인트를 하나의 라우터로 구성
+
+**엔드포인트**:
+- POST /api/v1/backtest: 백테스트 실행 및 필요한 모든 데이터 응답
+- 전략 목록은 프론트엔드에서 관리
 - 주가/환율/뉴스 데이터는 백테스트 응답에 포함
 """
 from fastapi import APIRouter
-from .endpoints import backtest, naver_news
+from .endpoints import backtest
 
 api_router = APIRouter()
 
@@ -16,12 +20,5 @@ api_router.include_router(
     backtest.router,
     prefix="/backtest",
     tags=["백테스팅"]
-)
-
-# 네이버 뉴스 API (참고용 - 백테스트 응답에는 뉴스가 포함되지 않음)
-api_router.include_router(
-    naver_news.router,
-    prefix="/naver-news",
-    tags=["네이버 뉴스 검색"]
 )
 

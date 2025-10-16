@@ -13,7 +13,7 @@ import { Button } from '@/shared/ui/button';
 import { Alert, AlertDescription } from '@/shared/ui/alert';
 
 interface PortfolioBacktestFormProps {
-  onSubmit: (request: BacktestRequest) => Promise<any>;
+  onSubmit: (request: BacktestRequest) => Promise<unknown>;
   loading?: boolean;
 }
 
@@ -23,11 +23,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
 
   const generateStrategyParams = () => {
     const strategyParams = state.strategy.strategyParams;
-    const params: Record<string, any> = {};
-    Object.entries(strategyParams).forEach(([key, value]) => {
-      params[key] = typeof value === 'string' ? parseInt(value) || value : value;
-    });
-    return params;
+    return strategyParams;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,7 +53,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
         portfolio: portfolioData,
         start_date: state.dates.startDate,
         end_date: state.dates.endDate,
-        strategy: state.strategy.selectedStrategy || 'buy_and_hold',
+        strategy: state.strategy.selectedStrategy || 'buy_hold_strategy',
         strategy_params: params,
         commission: state.settings.commission / 100, // 퍼센트를 소수점으로 변환 (0.2 -> 0.002)
         rebalance_frequency: state.settings.rebalanceFrequency

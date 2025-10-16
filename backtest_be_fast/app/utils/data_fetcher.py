@@ -1,5 +1,35 @@
 """
 주식 데이터 수집 유틸리티
+
+**역할**:
+- yfinance API를 사용하여 주가, 환율, 벤치마크 데이터 수집
+- 데이터 페칭 로직 캡슐화 및 재사용
+- 에러 처리 및 재시도 로직 포함
+
+**주요 기능**:
+1. fetch_ticker_data(): 주식 데이터 다운로드
+2. fetch_exchange_rate(): 환율 데이터 (USD/KRW=X)
+3. fetch_benchmark(): 벤치마크 지수 (^GSPC, ^IXIC)
+4. 데이터 검증 및 정제
+
+**외부 API**:
+- yfinance: Yahoo Finance 데이터 소스
+- 제한사항: 무료 API, 요청 제한 있음
+
+**의존성**:
+- yfinance: 주가 데이터 다운로드
+- pandas: 데이터 처리
+
+**연관 컴포넌트**:
+- Backend: app/services/data_service.py (데이터 로딩)
+- Backend: app/services/unified_data_service.py (추가 데이터 수집)
+- Backend: app/repositories/data_repository.py (데이터 캐싱)
+
+**사용 예**:
+```python
+fetcher = DataFetcher()
+df = await fetcher.fetch_ticker_data("AAPL", "2023-01-01", "2023-12-31")
+```
 """
 import yfinance as yf
 import pandas as pd

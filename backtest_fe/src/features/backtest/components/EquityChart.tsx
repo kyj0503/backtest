@@ -6,7 +6,7 @@ interface EquityChartData {
   date: string;
   return_pct: number;
   drawdown_pct: number;
-  [key: string]: any;
+  [key: string]: string | number;
 }
 
 interface EquityChartProps {

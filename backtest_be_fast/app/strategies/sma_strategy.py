@@ -1,5 +1,30 @@
 """
 단순 이동평균 교차 전략 (SMA Crossover Strategy)
+
+**역할**:
+- backtesting.py의 Strategy 클래스를 상속하여 SMA 교차 전략 구현
+- 단기 이동평균선이 장기 이동평균선을 상향/하향 돌파할 때 매매
+
+**전략 로직**:
+1. 골든 크로스(Golden Cross): 단기 MA가 장기 MA를 상향 돌파 → 매수 시그널
+2. 데드 크로스(Death Cross): 단기 MA가 장기 MA를 하향 돌파 → 매도 시그널
+
+**파라미터**:
+- short_window: 단기 이동평균 기간 (기본값: 20일)
+- long_window: 장기 이동평균 기간 (기본값: 50일)
+
+**사용 예**:
+- 20일선과 50일선의 교차로 매매
+- 빠른 추세 전환 포착
+
+**의존성**:
+- backtesting.py: Strategy 베이스 클래스
+- pandas: 이동평균 계산
+
+**연관 컴포넌트**:
+- Backend: app/services/backtest_service.py (전략 실행)
+- Backend: app/services/strategy_service.py (파라미터 검증)
+- Frontend: src/features/backtest/components/StrategySelector.tsx (전략 선택)
 """
 import pandas as pd
 from backtesting import Strategy
@@ -36,13 +61,13 @@ class SMACrossStrategy(Strategy):
     sma_long : int
         장기 이동평균 기간 (기본값: 20)
     position_size : float
-        포지션 크기 (0.1 ~ 1.0, 기본값: 0.5)
+        포지션 크기 (0.1 ~ 1.0, 기본값: 0.95)
     """
 
     # 전략 파라미터 정의
     sma_short = 10
     sma_long = 20
-    position_size = 0.5
+    position_size = 0.95
 
     def init(self):
         """

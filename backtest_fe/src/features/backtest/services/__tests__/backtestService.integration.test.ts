@@ -14,7 +14,7 @@ const baseRequest: BacktestRequest = {
   ],
   start_date: '2023-01-01',
   end_date: '2023-12-31',
-  strategy: 'buy_and_hold',
+  strategy: 'buy_hold_strategy',
   strategy_params: { window: 20 },
   commission: 0.002,
   rebalance_frequency: 'monthly',
@@ -41,7 +41,7 @@ describe('BacktestService (integration)', () => {
       backtest_type: 'single_stock',
       data: {
         ticker: 'AAPL',
-        strategy: 'buy_and_hold',
+        strategy: 'buy_hold_strategy',
         start_date: '2023-01-01',
         end_date: '2023-12-31',
         ohlc_data: [],
@@ -60,7 +60,7 @@ describe('BacktestService (integration)', () => {
     }
 
     server.use(
-      http.post('http://localhost:3000/api/v1/backtest/portfolio', async ({ request }) => {
+      http.post('http://localhost:3000/api/v1/backtest', async ({ request }) => {
         capturedBody = await request.json()
         return HttpResponse.json(mockResponse)
       })
@@ -74,7 +74,7 @@ describe('BacktestService (integration)', () => {
 
   it('propagates API failures as rejected promises', async () => {
     server.use(
-      http.post('http://localhost:3000/api/v1/backtest/portfolio', () => HttpResponse.json({ message: 'failed' }, { status: 500 }))
+      http.post('http://localhost:3000/api/v1/backtest', () => HttpResponse.json({ message: 'failed' }, { status: 500 }))
     )
 
     await expect(BacktestService.executeBacktest(baseRequest)).rejects.toThrow('Request failed with status code 500')
