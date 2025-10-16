@@ -37,6 +37,7 @@ class MACDStrategy(Strategy):
     fast_period = 12
     slow_period = 26
     signal_period = 9
+    position_size = 0.95  # 95% 포지션 사용
     
     def init(self):
         close = self.data.Close
@@ -59,7 +60,12 @@ class MACDStrategy(Strategy):
         if (len(self.macd_line) > 1 and len(self.signal_line) > 1 and
             not np.isnan(self.macd_line[-1]) and not np.isnan(self.signal_line[-1])):
             
+            # MACD 선이 시그널 선을 상향 돌파: 매수
             if crossover(self.macd_line, self.signal_line) and not self.position:
-                self.buy()
+                price = self.data.Close[-1]
+                size = int((self.equity * self.position_size) / price)
+                if size > 0:
+                    self.buy(size=size)
+            # MACD 선이 시그널 선을 하향 돌파: 매도
             elif crossover(self.signal_line, self.macd_line) and self.position:
                 self.position.close()

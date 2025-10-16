@@ -35,6 +35,7 @@ class BollingerBandsStrategy(Strategy):
     """볼린저 밴드 전략"""
     period = 20
     std_dev = 2
+    position_size = 0.95  # 95% 포지션 사용
     
     def init(self):
         close = self.data.Close
@@ -65,7 +66,17 @@ class BollingerBandsStrategy(Strategy):
             
             current_price = self.data.Close[-1]
             
+            # 가격이 하단 밴드 아래로 떨어짐: 과매도 → 매수
             if current_price < self.lower_band[-1] and not self.position:
-                self.buy()
-            elif current_price > self.upper_band[-1] and self.position:
-                self.position.close()
+                price = self.data.Close[-1]
+                size = int((self.equity * self.position_size) / price)
+                if size > 0:
+                    self.buy(size=size)
+            # 가격이 상단 밴드 위로 올라감 또는 중심선(SMA) 복귀: 매도
+            elif self.position:
+                if current_price > self.upper_band[-1]:
+                    # 과매수 구간: 매도
+                    self.position.close()
+                elif current_price >= self.sma[-1] and len(self.sma) > 1:
+                    # 하단에서 매수했으므로 중심선 복귀 시 이익 실현
+                    self.position.close()

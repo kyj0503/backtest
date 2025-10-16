@@ -34,6 +34,7 @@ class EMAStrategy(Strategy):
 
     fast_window = 12
     slow_window = 26
+    position_size = 0.95  # 95% 포지션 사용
 
     def init(self):
         close = self.data.Close
@@ -41,8 +42,13 @@ class EMAStrategy(Strategy):
         self.ema_slow = self.I(self._ema, close, self.slow_window)
 
     def next(self):
+        # 빠른 EMA가 느린 EMA를 상향 돌파: 골든크로스 → 매수
         if crossover(self.ema_fast, self.ema_slow) and not self.position:
-            self.buy()
+            price = self.data.Close[-1]
+            size = int((self.equity * self.position_size) / price)
+            if size > 0:
+                self.buy(size=size)
+        # 빠른 EMA가 느린 EMA를 하향 돌파: 데드크로스 → 매도
         elif crossover(self.ema_slow, self.ema_fast) and self.position:
             self.position.close()
 

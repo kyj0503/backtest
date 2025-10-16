@@ -71,14 +71,22 @@ class RSIStrategy(Strategy):
         if len(self.rsi) > self.rsi_period:
             current_rsi = self.rsi[-1]
 
+            # 포지션이 없을 때: RSI 과매도 구간에서 매수
             if current_rsi < self.rsi_oversold and not self.position:
                 price = self.data.Close[-1]
                 size = int((self.equity * self.position_size) / price)
                 if size > 0:
                     self.buy(size=size)
 
-            elif current_rsi > self.rsi_overbought and self.position:
-                self.position.close()
+            # 포지션이 있을 때: RSI 과매수 구간 또는 중립선(50) 복귀 시 매도
+            elif self.position:
+                # 방법 1: 과매수 구간 도달 시 매도
+                if current_rsi > self.rsi_overbought:
+                    self.position.close()
+                # 방법 2: RSI가 중립선(50)을 상향 돌파하면 매도 (이익 실현)
+                # 과매도에서 매수했으므로, 50 이상 회복 시 수익 실현이 합리적
+                elif current_rsi >= 50 and len(self.rsi) > 1 and self.rsi[-2] < 50:
+                    self.position.close()
 
 
 
