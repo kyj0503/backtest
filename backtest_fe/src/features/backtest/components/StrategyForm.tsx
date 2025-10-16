@@ -1,7 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { STRATEGY_CONFIGS, StrategyParameter } from '../model/strategyConfig';
 import { StrategyParamValue } from '../model/api-types';
 import { FormField } from '@/shared/components';
+import { Button } from '@/shared/ui/button';
+import { HelpCircle } from 'lucide-react';
+import StrategyHelpModal from './StrategyHelpModal';
 
 export interface StrategyFormProps {
   selectedStrategy: string;
@@ -16,6 +19,8 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
   strategyParams,
   updateStrategyParam
 }) => {
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+
   const strategyOptions = useMemo(
     () =>
       Object.entries(STRATEGY_CONFIGS).map(([id, config]) => ({
@@ -32,13 +37,33 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
 
   return (
     <div className="space-y-6">
-      <FormField
-        label="투자 전략"
-        type="select"
-        value={selectedStrategy}
-        onChange={(value) => setSelectedStrategy(value.toString())}
-        options={strategyOptions}
-      />
+      <div className="flex items-end gap-3">
+        <div className="flex-1">
+          <FormField
+            label="투자 전략"
+            type="select"
+            value={selectedStrategy}
+            onChange={(value) => setSelectedStrategy(value.toString())}
+            options={strategyOptions}
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          onClick={() => setIsHelpModalOpen(true)}
+          className="flex items-center gap-2 whitespace-nowrap"
+        >
+          <HelpCircle className="w-4 h-4" />
+          전략 도움말
+        </Button>
+      </div>
+
+      {currentConfig && (
+        <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
+          {currentConfig.description}
+        </div>
+      )}
 
       {parameterEntries.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
@@ -62,6 +87,12 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
           })}
         </div>
       )}
+
+      <StrategyHelpModal
+        strategyId={selectedStrategy}
+        open={isHelpModalOpen}
+        onOpenChange={setIsHelpModalOpen}
+      />
     </div>
   );
 };

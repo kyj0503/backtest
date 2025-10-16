@@ -195,5 +195,5 @@ export const DEFAULT_VALUES = {
   COMMISSION: 0.2, // 퍼센트
   DCA_PERIODS: 12,
   REBALANCE_FREQUENCY: 'monthly',
-  STRATEGY: 'buy_and_hold'
+  STRATEGY: 'buy_hold_strategy'
 };

@@ -53,7 +53,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
         portfolio: portfolioData,
         start_date: state.dates.startDate,
         end_date: state.dates.endDate,
-        strategy: state.strategy.selectedStrategy || 'buy_and_hold',
+        strategy: state.strategy.selectedStrategy || 'buy_hold_strategy',
         strategy_params: params,
         commission: state.settings.commission / 100, // 퍼센트를 소수점으로 변환 (0.2 -> 0.002)
         rebalance_frequency: state.settings.rebalanceFrequency

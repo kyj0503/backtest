@@ -14,7 +14,7 @@ export const handlers = [
       backtest_type: 'single_stock',
       data: {
         ticker: 'AAPL',
-        strategy: 'buy_and_hold',
+        strategy: 'buy_hold_strategy',
         start_date: '2023-01-01',
         end_date: '2023-12-31',
         ohlc_data: [
@@ -50,7 +50,7 @@ export const handlers = [
       {
         id: 1,
         ticker: 'AAPL',
-        strategy: 'buy_and_hold',
+        strategy: 'buy_hold_strategy',
         start_date: '2023-01-01',
         end_date: '2023-12-31',
         total_return_pct: 15.5,
@@ -80,7 +80,7 @@ export const handlers = [
   http.get(`${API_BASE_URL}/api/v1/strategies`, () => {
     return HttpResponse.json([
       {
-        name: 'buy_and_hold',
+        name: 'buy_hold_strategy',
         description: 'Simple buy and hold strategy',
         parameters: [],
         category: 'basic'

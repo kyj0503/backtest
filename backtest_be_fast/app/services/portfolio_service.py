@@ -457,9 +457,9 @@ class PortfolioService:
         try:
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
             logger.info(f"포트폴리오 백테스트 시작: 전략={strategy_name}, 종목수={len(request.portfolio)}")
-            
-            # 전략이 buy_and_hold가 아닌 경우 개별 종목별로 전략 백테스트 실행
-            if strategy_name != "buy_and_hold":
+
+            # 전략이 buy_hold_strategy가 아닌 경우 개별 종목별로 전략 백테스트 실행
+            if strategy_name != "buy_hold_strategy":
                 return await self.run_strategy_portfolio_backtest(request)
             else:
                 return await self.run_buy_and_hold_portfolio_backtest(request)

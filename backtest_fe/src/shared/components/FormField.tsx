@@ -5,7 +5,7 @@ import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 
 export interface FormFieldProps {
-  label: string;
+  label: React.ReactNode;
   type?: 'text' | 'number' | 'date' | 'select' | 'textarea';
   value: string | number;
   onChange: (value: string | number) => void;

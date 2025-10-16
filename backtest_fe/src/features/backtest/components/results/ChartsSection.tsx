@@ -305,7 +305,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       ),
     ];
 
-    if (singleTrades.length > 0 && chartData.strategy !== 'buy_and_hold') {
+    if (singleTrades.length > 0 && chartData.strategy !== 'buy_hold_strategy') {
       cards.push(
         <ResultBlock title="거래 내역" description="전략이 실행한 체결 신호" key="single-trades">
           <Suspense fallback={<ChartLoading height={360} />}>

@@ -96,9 +96,9 @@ class ChartDataService:
            - 높을수록 좋지만 수익 크기도 함께 고려해야 함
         """
         try:
-            # 전략 파라미터 검증 (전략이 buy_and_hold가 아닐 때만)
+            # 전략 파라미터 검증 (전략이 buy_hold_strategy가 아닐 때만)
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
-            if strategy_name != "buy_and_hold":
+            if strategy_name != "buy_hold_strategy":
                 try:
                     self.strategy_service.validate_strategy_params(
                         strategy_name, 
@@ -279,7 +279,7 @@ class ChartDataService:
         markers: List[TradeMarker] = []
 
         if not trade_log:
-            if strategy == "buy_and_hold" and not data.empty:
+            if strategy == "buy_hold_strategy" and not data.empty:
                 first_date = data.index[0]
                 first_price = float(data['Close'].iloc[0])
                 markers.append(TradeMarker(
