@@ -61,8 +61,8 @@ export const initialBacktestFormState: BacktestFormState = {
     dcaPeriods: 12 
   }],
   dates: {
-    startDate: '2023-01-01',
-    endDate: '2024-12-31'
+    startDate: '2025-01-01',
+    endDate: '2025-10-31'
   },
   strategy: {
     selectedStrategy: 'buy_hold_strategy',
