@@ -1,5 +1,5 @@
-import React from 'react';
-import { Loader2, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { Loader2, TrendingUp, AlertCircle } from 'lucide-react';
 import { BacktestRequest } from '../model/api-types';
 import { ASSET_TYPES } from '../model/strategyConfig';
 import DateRangeForm from './DateRangeForm';
@@ -10,7 +10,13 @@ import { useBacktestForm } from '../hooks/useBacktestForm';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { FormSection } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
-import { Alert, AlertDescription } from '@/shared/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog';
 
 interface PortfolioBacktestFormProps {
   onSubmit: (request: BacktestRequest) => Promise<unknown>;
@@ -20,6 +26,7 @@ interface PortfolioBacktestFormProps {
 const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit, loading = false }) => {
   const { state, actions, helpers } = useBacktestForm();
   const { errors, validateForm, setErrors } = useFormValidation();
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
   const generateStrategyParams = () => {
     const strategyParams = state.strategy.strategyParams;
@@ -33,6 +40,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
     const isFormValid = validateForm(state);
     if (!isFormValid) {
       actions.setLoading(false);
+      setShowErrorModal(true);  // 에러 모달 표시
       return;
     }
 
@@ -68,25 +76,44 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
       console.error('백테스트 실행 중 오류:', error);
       const errorMessage = error instanceof Error ? error.message : '백테스트 실행 중 오류가 발생했습니다.';
       setErrors([errorMessage]);
+      setShowErrorModal(true);  // 에러 모달 표시
     } finally {
       actions.setLoading(false);
     }
   };
 
+  const allErrors = [...errors, ...state.ui.errors];
+
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
-      {(errors.length > 0 || state.ui.errors.length > 0) && (
-        <Alert variant="destructive" className="mb-2">
-          <AlertDescription>
-            <h3 className="text-sm font-semibold">입력 오류</h3>
-            <ul className="mt-2 space-y-1 text-sm">
-              {[...errors, ...state.ui.errors].map((error, index) => (
-                <li key={index}>• {error}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* 에러 모달 */}
+      <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              입력 오류
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="mt-4">
+                <ul className="space-y-2 text-sm text-foreground">
+                  {allErrors.map((error, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <span className="text-destructive">•</span>
+                      <span>{error}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6 flex justify-end">
+                  <Button onClick={() => setShowErrorModal(false)}>
+                    확인
+                  </Button>
+                </div>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <PortfolioForm
