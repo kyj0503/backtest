@@ -23,22 +23,22 @@ export const FormSection = ({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-2xl border border-border/70 bg-card/60 shadow-sm backdrop-blur-sm',
+        'overflow-hidden rounded-2xl border-2 border-border/70 bg-card/60 shadow-md hover:shadow-lg transition-shadow duration-200 backdrop-blur-sm',
         className,
       )}
     >
-      <header className="flex flex-col gap-4 border-b border-border/60 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-lg font-semibold leading-tight text-foreground">{title}</h3>
+      <header className="flex flex-col gap-4 border-b-2 border-border/60 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1.5">
+          <h3 className="text-xl font-bold leading-tight text-foreground">{title}</h3>
           {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
           ) : null}
         </div>
         {actions ? <div className="flex items-center gap-3 sm:min-w-[200px] sm:justify-end">{actions}</div> : null}
       </header>
-      <div className={cn('px-5 py-5', contentClassName)}>{children}</div>
+      <div className={cn('px-6 py-6', contentClassName)}>{children}</div>
       {footer ? (
-        <footer className="border-t border-border/60 bg-card/60 px-5 py-4 text-sm text-muted-foreground">
+        <footer className="border-t-2 border-border/60 bg-card/60 px-6 py-5 text-sm text-muted-foreground">
           {footer}
         </footer>
       ) : null}
