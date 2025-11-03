@@ -39,6 +39,8 @@ from typing import Optional
 import logging
 from pathlib import Path
 import os
+import time
+
 class DataNotFoundError(Exception):
     """데이터를 찾을 수 없을 때 발생하는 예외"""
     pass

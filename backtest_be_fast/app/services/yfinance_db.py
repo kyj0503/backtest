@@ -239,12 +239,63 @@ def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
         conn.close()
 
 
-def load_ticker_data(ticker: str, start_date=None, end_date=None) -> pd.DataFrame:
+def load_ticker_data(ticker: str, start_date=None, end_date=None, max_retries: int = 3, retry_delay: float = 2.0) -> pd.DataFrame:
     """DB에서 ticker의 daily_prices를 조회해 pandas DataFrame으로 반환합니다.
 
     start_date/end_date는 date 또는 문자열(YYYY-MM-DD)을 받을 수 있습니다.
     반환 DataFrame은 DatetimeIndex(날짜)와 컬럼 ['Open','High','Low','Close','Adj_Close','Volume']를 가집니다.
+    
+    Args:
+        ticker: 종목 심볼
+        start_date: 시작 날짜
+        end_date: 종료 날짜
+        max_retries: 최대 재시도 횟수 (기본 3회)
+        retry_delay: 재시도 간 대기 시간 (초, 기본 2초)
+    
+    Returns:
+        DataFrame: 주가 데이터
+        
+    Raises:
+        ValueError: 모든 재시도 실패 시
     """
+    import time
+    
+    last_exception = None
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            logger.info(f"[시도 {attempt}/{max_retries}] {ticker} 데이터 로드 중... ({start_date} ~ {end_date})")
+            
+            # 실제 데이터 로드 로직
+            df = _load_ticker_data_internal(ticker, start_date, end_date)
+            
+            if df is not None and not df.empty:
+                logger.info(f"[성공] {ticker} 데이터 로드 완료: {len(df)}행 (시도 {attempt}회)")
+                return df
+            else:
+                logger.warning(f"[시도 {attempt}/{max_retries}] {ticker} 데이터가 비어있음")
+                last_exception = ValueError(f"{ticker} 데이터가 비어있습니다")
+                
+        except Exception as e:
+            logger.warning(f"[시도 {attempt}/{max_retries}] {ticker} 데이터 로드 실패: {str(e)}")
+            last_exception = e
+        
+        # 마지막 시도가 아니면 대기 후 재시도
+        if attempt < max_retries:
+            wait_time = retry_delay * attempt  # 점진적 증가 (2초, 4초, 6초...)
+            logger.info(f"[재시도 대기] {wait_time}초 후 {ticker} 데이터 재시도...")
+            time.sleep(wait_time)
+    
+    # 모든 재시도 실패
+    error_msg = f"[실패] {ticker} 데이터 로드 실패 (총 {max_retries}회 시도)"
+    if last_exception:
+        error_msg += f": {str(last_exception)}"
+    logger.error(error_msg)
+    raise ValueError(error_msg)
+
+
+def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> pd.DataFrame:
+    """실제 데이터 로드 로직 (내부용)"""
     engine = _get_engine()
     conn = engine.connect()
     try:
