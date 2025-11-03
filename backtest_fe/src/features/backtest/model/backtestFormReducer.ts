@@ -194,7 +194,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           symbol: '', 
           amount: 10000, 
           investmentType: 'lump_sum',
-          dcaPeriods: 12 
+          dcaFrequency: 'monthly' 
         }],
         dates: {
           startDate: '2023-01-01',
@@ -228,7 +228,7 @@ export const backtestFormHelpers = {
     amount: 10000,
     weight: undefined,
     investmentType: 'lump_sum',
-    dcaPeriods: 12,
+    dcaFrequency: 'monthly',
     assetType: ASSET_TYPES.STOCK
   }),
 
@@ -237,7 +237,7 @@ export const backtestFormHelpers = {
     amount: 10000,
     weight: undefined,
     investmentType: 'lump_sum',
-    dcaPeriods: 12,
+    dcaFrequency: 'monthly',
     assetType: ASSET_TYPES.CASH
   }),
 
@@ -269,8 +269,8 @@ export const backtestFormHelpers = {
       if (stock.amount < 100) {
         errors.push(`${index + 1}번째 종목의 투자 금액은 최소 $100 이상이어야 합니다.`);
       }
-      if (stock.investmentType === 'dca' && (!stock.dcaPeriods || stock.dcaPeriods < 1)) {
-        errors.push(`${index + 1}번째 종목의 DCA 기간을 설정해주세요.`);
+      if (stock.investmentType === 'dca' && !stock.dcaFrequency) {
+        errors.push(`${index + 1}번째 종목의 DCA 투자 주기를 선택해주세요.`);
       }
     });
 

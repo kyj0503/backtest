@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, TrendingUp, AlertCircle } from 'lucide-react';
+import axios from 'axios';
 import { BacktestRequest } from '../model/api-types';
 import { ASSET_TYPES } from '../model/strategyConfig';
 import DateRangeForm from './DateRangeForm';
@@ -74,8 +75,40 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
       });
     } catch (error) {
       console.error('백테스트 실행 중 오류:', error);
-      const errorMessage = error instanceof Error ? error.message : '백테스트 실행 중 오류가 발생했습니다.';
-      setErrors([errorMessage]);
+      
+      // 백엔드 검증 에러 메시지 추출
+      let errorMessages: string[] = [];
+      
+      if (axios.isAxiosError(error) && error.response) {
+        const responseData = error.response.data;
+        
+        // Pydantic ValidationError 처리
+        if (responseData?.detail) {
+          if (Array.isArray(responseData.detail)) {
+            // Pydantic validation errors
+            errorMessages = responseData.detail.map((err: any) => {
+              if (err.msg) {
+                return err.msg;
+              }
+              return JSON.stringify(err);
+            });
+          } else if (typeof responseData.detail === 'string') {
+            errorMessages = [responseData.detail];
+          }
+        } else if (responseData?.message) {
+          errorMessages = [responseData.message];
+        } else if (responseData?.error) {
+          errorMessages = [responseData.error];
+        }
+      }
+      
+      // 에러 메시지가 없으면 기본 메시지
+      if (errorMessages.length === 0) {
+        const defaultMessage = error instanceof Error ? error.message : '백테스트 실행 중 오류가 발생했습니다.';
+        errorMessages = [defaultMessage];
+      }
+      
+      setErrors(errorMessages);
       setShowErrorModal(true);  // 에러 모달 표시
     } finally {
       actions.setLoading(false);
