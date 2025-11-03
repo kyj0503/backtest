@@ -38,15 +38,21 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
 
     try {
       // 포트폴리오 데이터 준비 (백엔드 API 스키마에 맞춘 변환)
-      const portfolioData = state.portfolio.map(stock => ({
-        symbol: stock.symbol.toUpperCase(),
-        amount: stock.amount,
-        // include optional weight if user provided it
-        weight: typeof stock.weight === 'number' ? stock.weight : undefined,
-        investment_type: stock.investmentType,
-        dca_periods: stock.dcaPeriods || 12,
-        asset_type: stock.assetType || ASSET_TYPES.STOCK
-      }));
+      const portfolioData = state.portfolio.map(stock => {
+        // amount와 weight는 동시에 보낼 수 없음 (백엔드 검증)
+        const hasWeight = typeof stock.weight === 'number';
+        
+        return {
+          symbol: stock.symbol.toUpperCase(),
+          // 비중 기준일 때는 amount를 보내지 않음
+          ...(hasWeight ? {} : { amount: stock.amount }),
+          // 금액 기준일 때는 weight를 보내지 않음
+          ...(hasWeight ? { weight: stock.weight } : {}),
+          investment_type: stock.investmentType,
+          dca_periods: stock.dcaPeriods || 12,
+          asset_type: stock.assetType || ASSET_TYPES.STOCK
+        };
+      });
 
       const params = generateStrategyParams();
       await onSubmit({
