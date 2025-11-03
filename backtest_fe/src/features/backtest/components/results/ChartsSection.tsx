@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  ReferenceLine,
 } from 'recharts';
 import {
   LazyOHLCChart,
@@ -27,6 +28,8 @@ import VolatilityEventsSection from './VolatilityEventsSection';
 import LatestNewsSection from './LatestNewsSection';
 import BenchmarkIndexChart from './BenchmarkIndexChart';
 import BenchmarkReturnsChart from './BenchmarkReturnsChart';
+import RebalanceHistoryTable from './RebalanceHistoryTable';
+import WeightHistoryChart from './WeightHistoryChart';
 
 interface ChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -175,7 +178,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       (
         <ResultBlock
           title="누적 자산 가치"
-          description="기간 동안 누적 자산 가치 변화를 확인하세요"
+          description="기간 동안 누적 자산 가치 변화를 확인하세요 (리밸런싱 시점 표시)"
           key="portfolio-equity"
         >
           <ResponsiveContainer width="100%" height={360}>
@@ -199,6 +202,21 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
                 formatter={(value: number) => [formatCurrency(value), isMultipleStocks ? '포트폴리오 가치' : '자산 가치']}
                 labelFormatter={(label: string) => `날짜: ${label}`}
               />
+              {/* 리밸런싱 마커 */}
+              {portfolioData?.rebalance_history?.map((event, idx) => (
+                <ReferenceLine
+                  key={idx}
+                  x={event.date}
+                  stroke="#f97316"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  label={{
+                    value: '⚖️',
+                    position: 'top',
+                    fontSize: 16,
+                  }}
+                />
+              ))}
               <Area type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2} fill="url(#portfolioValue)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -474,6 +492,35 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           latestNews={latestNews}
           key="latest-news"
         />
+      );
+    }
+
+    // 6. 리밸런싱 히스토리 테이블
+    if (portfolioData?.rebalance_history && portfolioData.rebalance_history.length > 0) {
+      allCharts.push(
+        <ResultBlock
+          title="리밸런싱 히스토리"
+          description="포트폴리오 리밸런싱 이벤트 상세 내역"
+          key="rebalance-history"
+        >
+          <RebalanceHistoryTable rebalanceHistory={portfolioData.rebalance_history} />
+        </ResultBlock>
+      );
+    }
+
+    // 7. 포트폴리오 비중 변화 차트
+    if (portfolioData?.weight_history && portfolioData.weight_history.length > 0) {
+      allCharts.push(
+        <ResultBlock
+          title="포트폴리오 비중 변화"
+          description="시간에 따른 각 종목의 비중 변화 (스택 영역 차트)"
+          key="weight-history"
+        >
+          <WeightHistoryChart
+            weightHistory={portfolioData.weight_history}
+            portfolioComposition={portfolioData.portfolio_composition}
+          />
+        </ResultBlock>
       );
     }
 

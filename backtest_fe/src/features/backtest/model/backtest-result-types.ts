@@ -105,13 +105,37 @@ export interface NewsItem {
   originallink?: string;
 }
 
+export interface RebalanceTrade {
+  symbol: string;
+  action: 'buy' | 'sell';
+  shares: number;
+  price: number;
+}
+
+export interface RebalanceEvent {
+  date: string;
+  trades: RebalanceTrade[];
+  weights_before: Record<string, number>;
+  weights_after: Record<string, number>;
+  commission_cost?: number;
+}
+
+export interface WeightHistoryPoint {
+  date: string;
+  [symbol: string]: number | string; // symbol별 비중 + date
+}
+
 export interface PortfolioData {
   portfolio_statistics: PortfolioStatistics;
   individual_returns: Record<string, IndividualReturn>;
   portfolio_composition: Stock[];
   equity_curve: Record<string, number>;
   daily_returns: Record<string, number>;
-  
+
+  // 리밸런싱 데이터
+  rebalance_history?: RebalanceEvent[];
+  weight_history?: WeightHistoryPoint[];
+
   // 통합 응답 데이터 (별도 API 호출 불필요)
   stock_data?: Record<string, Array<{ date: string; price: number; volume: number }>>;
   exchange_rates?: ExchangeRatePoint[];
