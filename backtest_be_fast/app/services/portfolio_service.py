@@ -235,6 +235,8 @@ class PortfolioService:
         is_first_day = True
         available_cash = cash_amount  # 사용 가능한 현금
         total_trades = 0  # 총 거래 횟수 추적
+        rebalance_history = []  # 리밸런싱 히스토리
+        weight_history = []  # 포트폴리오 비중 변화 이력
 
         for current_date in date_range:
             if current_date.date() < start_date_obj.date():
@@ -313,10 +315,18 @@ class PortfolioService:
                 )
 
                 if total_stock_value > 0:
+                    # 리밸런싱 전 비중 계산
+                    weights_before = {}
+                    for unique_key in shares.keys():
+                        if unique_key in current_prices:
+                            current_value = shares[unique_key] * current_prices[unique_key]
+                            weights_before[dca_info[unique_key]['symbol']] = current_value / total_stock_value
+
                     # 목표 비중대로 재조정
                     new_shares = {}
                     total_commission_cost = 0
                     trades_in_rebalance = 0
+                    rebalance_trades = []  # 이번 리밸런싱의 거래 내역
 
                     for unique_key, target_weight in target_weights.items():
                         if unique_key not in current_prices:
@@ -326,10 +336,28 @@ class PortfolioService:
                         price = current_prices[unique_key]
                         target_value = total_stock_value * target_weight
                         current_value = shares[unique_key] * price
+                        symbol = dca_info[unique_key]['symbol']
 
                         # 매도/매수가 발생했는지 확인 (0.01% 이상 차이나면 거래로 간주)
                         if abs(target_value - current_value) / total_stock_value > 0.0001:
                             trades_in_rebalance += 1
+
+                            # 거래 내역 기록
+                            shares_diff = (target_value / price) - shares[unique_key]
+                            if shares_diff > 0:
+                                rebalance_trades.append({
+                                    'symbol': symbol,
+                                    'action': 'buy',
+                                    'shares': abs(shares_diff),
+                                    'price': price
+                                })
+                            else:
+                                rebalance_trades.append({
+                                    'symbol': symbol,
+                                    'action': 'sell',
+                                    'shares': abs(shares_diff),
+                                    'price': price
+                                })
 
                         # 매도/매수 금액
                         trade_value = abs(target_value - current_value)
@@ -346,6 +374,28 @@ class PortfolioService:
                     else:
                         shares = new_shares
 
+                    # 리밸런싱 후 비중 계산
+                    weights_after = {}
+                    new_total_value = sum(
+                        shares[key] * current_prices[key]
+                        for key in shares.keys()
+                        if key in current_prices
+                    )
+                    for unique_key in shares.keys():
+                        if unique_key in current_prices:
+                            new_value = shares[unique_key] * current_prices[unique_key]
+                            weights_after[dca_info[unique_key]['symbol']] = new_value / new_total_value
+
+                    # 리밸런싱 히스토리에 추가
+                    if rebalance_trades:  # 실제 거래가 발생한 경우만
+                        rebalance_history.append({
+                            'date': current_date.strftime('%Y-%m-%d'),
+                            'trades': rebalance_trades,
+                            'weights_before': weights_before,
+                            'weights_after': weights_after,
+                            'commission_cost': total_commission_cost
+                        })
+
                     total_trades += trades_in_rebalance  # 리밸런싱 거래 추가
 
             # 포트폴리오 가치 계산
@@ -353,6 +403,21 @@ class PortfolioService:
             for unique_key in shares.keys():
                 if unique_key in current_prices:
                     current_portfolio_value += shares[unique_key] * current_prices[unique_key]
+
+            # 현재 포트폴리오 비중 기록
+            current_weights = {'date': current_date.strftime('%Y-%m-%d')}
+            total_stock_value = sum(
+                shares[key] * current_prices[key]
+                for key in shares.keys()
+                if key in current_prices
+            )
+            if total_stock_value > 0:
+                for unique_key in shares.keys():
+                    if unique_key in current_prices:
+                        symbol = dca_info[unique_key]['symbol']
+                        stock_value = shares[unique_key] * current_prices[unique_key]
+                        current_weights[symbol] = stock_value / total_stock_value
+            weight_history.append(current_weights)
 
             # 수익률 계산
             if prev_portfolio_value > 0:
@@ -386,6 +451,8 @@ class PortfolioService:
 
         # 메타데이터 저장
         result.attrs['total_trades'] = total_trades
+        result.attrs['rebalance_history'] = rebalance_history
+        result.attrs['weight_history'] = weight_history
 
         return result
     
@@ -1079,6 +1146,10 @@ class PortfolioService:
                     'win_rate': 100.0 if returns['return'] > 0 else 0.0
                 })
 
+            # 리밸런싱 히스토리와 비중 변화 데이터 추출
+            rebalance_history = portfolio_result.attrs.get('rebalance_history', [])
+            weight_history = portfolio_result.attrs.get('weight_history', [])
+
             # 결과 포맷팅
             result = {
                 'status': 'success',
@@ -1093,7 +1164,7 @@ class PortfolioService:
                     'portfolio_composition': [
                         {
                             'symbol': dca_info[unique_key]['symbol'],  # unique_key에서 실제 symbol 추출
-                            'weight': amount / total_amount, 
+                            'weight': amount / total_amount,
                             'amount': amount,
                             'investment_type': dca_info[unique_key]['investment_type'],
                             'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None
@@ -1107,7 +1178,9 @@ class PortfolioService:
                     'daily_returns': {
                         date.strftime('%Y-%m-%d'): return_val * 100
                         for date, return_val in portfolio_result['Daily_Return'].items()
-                    }
+                    },
+                    'rebalance_history': rebalance_history,
+                    'weight_history': weight_history
                 }
             }
             
