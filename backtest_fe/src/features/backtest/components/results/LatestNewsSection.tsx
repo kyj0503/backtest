@@ -56,26 +56,16 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
       {/* 종목 선택 버튼 (여러 종목일 때만 표시) */}
       {allSymbols.length > 1 && (
         <div className="flex flex-wrap gap-2 mb-4">
-          {allSymbols.map(symbol => {
-            const newsCount = latestNews?.[symbol]?.length || 0;
-
-            return (
-              <Button
-                key={symbol}
-                variant={selectedSymbol === symbol ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedSymbol(symbol)}
-                className="flex items-center gap-2"
-              >
-                {symbol}
-                {newsCount > 0 && (
-                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                    {newsCount}
-                  </span>
-                )}
-              </Button>
-            );
-          })}
+          {allSymbols.map(symbol => (
+            <Button
+              key={symbol}
+              variant={selectedSymbol === symbol ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedSymbol(symbol)}
+            >
+              {symbol}
+            </Button>
+          ))}
         </div>
       )}
 
