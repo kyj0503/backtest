@@ -20,7 +20,6 @@ import {
 } from '../lazy/LazyChartComponents';
 import ChartLoading from '@/shared/components/ChartLoading';
 import { ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint } from '../../model/backtest-result-types';
-import { FormLegend } from '@/shared/components';
 import { Grid3X3, Grid, Loader2 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import TradeSignalsChart from '../TradeSignalsChart';
@@ -252,13 +251,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         <ResultBlock
           title="개별 자산 주가"
           description="포트폴리오 구성 자산들의 가격 흐름"
-          actions={
-            <FormLegend
-              items={[
-                { label: `${portfolio_composition.length}개 구성 자산`, tone: 'accent' },
-              ]}
-            />
-          }
           key="portfolio-prices"
         >
           {loadingStockData ? (
