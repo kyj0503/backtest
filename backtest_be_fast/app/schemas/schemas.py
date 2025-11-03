@@ -33,7 +33,7 @@
 - Backend: app/services/portfolio_service.py (데이터 사용)
 - Frontend: src/features/backtest/model/backtest-types.ts (TypeScript 타입)
 """
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import numpy as np
@@ -144,5 +144,24 @@ class PortfolioBacktestRequest(BaseModel):
             if (end - start).days > 365 * settings.max_backtest_duration_years:
                 raise ValueError(f'백테스트 기간은 최대 {settings.max_backtest_duration_years}년으로 제한됩니다.')
         return v
+    
+    @model_validator(mode='after')
+    def validate_dca_periods_against_backtest_period(self):
+        """DCA 기간이 백테스트 기간보다 짧거나 같은지 검증"""
+        start = datetime.strptime(self.start_date, '%Y-%m-%d')
+        end = datetime.strptime(self.end_date, '%Y-%m-%d')
+        backtest_days = (end - start).days
+        backtest_months = backtest_days / 30.44  # 평균 월 일수
+        
+        for idx, item in enumerate(self.portfolio):
+            if item.investment_type == 'dca' and item.dca_periods:
+                # 약간의 여유를 두어 반올림 오차 허용 (0.5개월)
+                if item.dca_periods > backtest_months + 0.5:
+                    raise ValueError(
+                        f'{idx + 1}번째 종목({item.symbol}): DCA 기간({item.dca_periods}개월)이 '
+                        f'백테스트 기간({backtest_days}일, 약 {backtest_months:.1f}개월)보다 깁니다. '
+                        f'DCA 기간은 백테스트 기간보다 짧거나 같아야 합니다.'
+                    )
+        return self
 
  
