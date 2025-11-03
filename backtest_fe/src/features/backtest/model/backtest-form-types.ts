@@ -1,4 +1,4 @@
-import { AssetType } from './strategyConfig';
+import { AssetType, DcaFrequency } from './strategyConfig';
 import { StrategyParamValue } from './api-types';
 
 export interface Stock {
@@ -7,7 +7,7 @@ export interface Stock {
   // Optional allocation weight in percent (0-100). If provided, UI will treat allocation as weight-based
   weight?: number;
   investmentType: 'lump_sum' | 'dca';
-  dcaPeriods?: number;
+  dcaFrequency?: DcaFrequency;  // DCA 주기 프리셋
   assetType?: AssetType;
 }
 
@@ -58,7 +58,7 @@ export const initialBacktestFormState: BacktestFormState = {
     symbol: '', 
     amount: 10000, 
     investmentType: 'lump_sum',
-    dcaPeriods: 12 
+    dcaFrequency: 'monthly' 
   }],
   dates: {
     startDate: '2025-01-01',

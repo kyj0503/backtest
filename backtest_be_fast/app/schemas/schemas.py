@@ -40,6 +40,14 @@ import numpy as np
 
 from ..core.config import settings
 
+# DCA 주기 프리셋
+DCA_FREQUENCY_MAP = {
+    'monthly': 1,       # 매달
+    'bimonthly': 2,     # 격달
+    'quarterly': 3,     # 분기
+    'semiannually': 6,  # 반년
+    'annually': 12      # 매년
+}
 
 class PortfolioStock(BaseModel):
     """포트폴리오 종목 모델"""
@@ -47,7 +55,7 @@ class PortfolioStock(BaseModel):
     amount: Optional[float] = Field(None, gt=0, description="투자 금액 (> 0, weight와 동시 입력 불가)")
     weight: Optional[float] = Field(None, ge=0, le=100, description="비중(%) (0~100, amount와 동시 입력 불가, 소수점 허용)")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
-    dca_periods: Optional[int] = Field(settings.default_dca_periods, ge=1, le=settings.max_dca_periods, description="분할 매수 기간 (개월)")
+    dca_frequency: Optional[str] = Field("monthly", description="DCA 주기 (monthly, bimonthly, quarterly, semiannually, annually)")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
     custom_name: Optional[str] = Field(None, description="현금 자산의 커스텀 이름")
     @field_validator('amount', 'weight')
@@ -89,6 +97,13 @@ class PortfolioStock(BaseModel):
     def validate_asset_type(cls, v):
         if v not in ['stock', 'cash']:
             raise ValueError('자산 타입은 stock 또는 cash만 가능합니다.')
+        return v
+    
+    @field_validator('dca_frequency')
+    @classmethod
+    def validate_dca_frequency(cls, v):
+        if v not in DCA_FREQUENCY_MAP:
+            raise ValueError(f'DCA 주기는 {", ".join(DCA_FREQUENCY_MAP.keys())} 중 하나여야 합니다.')
         return v
 
 class PortfolioBacktestRequest(BaseModel):
@@ -146,21 +161,32 @@ class PortfolioBacktestRequest(BaseModel):
         return v
     
     @model_validator(mode='after')
-    def validate_dca_periods_against_backtest_period(self):
-        """DCA 기간이 백테스트 기간보다 짧거나 같은지 검증"""
+    def validate_dca_frequency_against_backtest_period(self):
+        """DCA 주기가 백테스트 기간보다 짧거나 같은지 검증"""
         start = datetime.strptime(self.start_date, '%Y-%m-%d')
         end = datetime.strptime(self.end_date, '%Y-%m-%d')
         backtest_days = (end - start).days
         backtest_months = backtest_days / 30.44  # 평균 월 일수
         
         for idx, item in enumerate(self.portfolio):
-            if item.investment_type == 'dca' and item.dca_periods:
-                # 약간의 여유를 두어 반올림 오차 허용 (0.5개월)
-                if item.dca_periods > backtest_months + 0.5:
+            if item.investment_type == 'dca' and item.dca_frequency:
+                # DCA 주기를 개월 수로 변환
+                dca_months = DCA_FREQUENCY_MAP.get(item.dca_frequency, 1)
+                
+                # DCA 주기가 백테스트 기간보다 길면 에러
+                if dca_months > backtest_months:
+                    frequency_labels = {
+                        'monthly': '매달',
+                        'bimonthly': '격달',
+                        'quarterly': '매 분기',
+                        'semiannually': '반년마다',
+                        'annually': '매년'
+                    }
+                    frequency_label = frequency_labels.get(item.dca_frequency, item.dca_frequency)
                     raise ValueError(
-                        f'{idx + 1}번째 종목({item.symbol}): DCA 기간({item.dca_periods}개월)이 '
-                        f'백테스트 기간({backtest_days}일, 약 {backtest_months:.1f}개월)보다 깁니다. '
-                        f'DCA 기간은 백테스트 기간보다 짧거나 같아야 합니다.'
+                        f'{idx + 1}번째 종목({item.symbol}): DCA 주기가 "{frequency_label} 투자"({dca_months}개월)인데, '
+                        f'백테스트 기간이 {backtest_days}일(약 {backtest_months:.1f}개월)밖에 안됩니다. '
+                        f'DCA 주기는 백테스트 기간보다 짧아야 합니다.'
                     )
         return self
 

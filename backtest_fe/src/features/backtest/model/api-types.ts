@@ -33,7 +33,7 @@ export interface PortfolioStock {
   amount?: number;  // 금액 기준 (amount와 weight는 배타적)
   weight?: number;  // 비중 기준 (amount와 weight는 배타적)
   investment_type?: 'lump_sum' | 'dca';
-  dca_periods?: number;
+  dca_frequency?: 'monthly' | 'bimonthly' | 'quarterly' | 'semiannually' | 'annually';
   asset_type?: 'stock' | 'cash';
 }
 
