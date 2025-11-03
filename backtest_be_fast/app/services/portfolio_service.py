@@ -160,7 +160,9 @@ class PortfolioService:
         # 포트폴리오 가치 시뮬레이션
         portfolio_values = []
         daily_returns = []
+        cumulative_invested = []  # 누적 투자 원금 추적
         prev_portfolio_value = 0
+        prev_invested = 0
         
         for current_date in date_range:
             if current_date.date() < start_date_obj.date():
@@ -169,8 +171,9 @@ class PortfolioService:
                 break
                 
             current_portfolio_value = cash_amount  # 현금부터 시작
+            current_invested = cash_amount  # 현재까지 투자된 원금 (초기값)
             
-            # 각 포트폴리오 항목의 현재 가치 계산 (중복 종목 지원)
+            # 각 포트폴리오 항목의 현재 가치 및 투자 원금 계산 (중복 종목 지원)
             for unique_key, amount in amounts.items():
                 if dca_info[unique_key].get('asset_type') == 'cash':
                     continue
@@ -194,20 +197,17 @@ class PortfolioService:
                     
                     if investment_type == 'lump_sum':
                         # 일시불 투자: 시작일에 전액 투자
-                        if current_date.date() == start_date_obj.date():
+                        if current_date.date() >= start_date_obj.date():
                             # 시작 가격으로 주식 수량 계산
-                            start_price = price_data['Close'].iloc[0] if not price_data.empty else current_price
-                            shares = amount / start_price
-                        else:
-                            # 이전에 계산된 주식 수량 유지 (간단히 첫날 기준으로 계산)
                             first_price_data = df[df.index.date >= start_date_obj.date()]
                             if not first_price_data.empty:
                                 start_price = first_price_data['Close'].iloc[0]
                                 shares = amount / start_price
+                                stock_value = shares * current_price
+                                current_portfolio_value += stock_value
+                                current_invested += amount  # 원금 추가
                             else:
                                 shares = 0
-                        
-                        stock_value = shares * current_price
                         
                     else:  # DCA
                         # 분할 매수: 매월 일정 금액씩 투자
@@ -231,22 +231,34 @@ class PortfolioService:
                                 total_shares += shares_bought
                         
                         stock_value = total_shares * current_price
-                    
-                    current_portfolio_value += stock_value
+                        current_portfolio_value += stock_value
+                        # DCA 원금: 현재까지 투자된 개월 수 × 월 투자금
+                        current_invested += monthly_amount * months_invested
                     
                 except Exception as e:
                     logger.warning(f"포트폴리오 항목 {unique_key} (종목: {symbol}) 가치 계산 오류 ({current_date}): {e}")
                     continue
             
-            # 일일 수익률 계산
-            if prev_portfolio_value > 0:
-                daily_return = (current_portfolio_value - prev_portfolio_value) / prev_portfolio_value
+            # 일일 수익률 계산 (투자금 유입 제외)
+            # TWR (Time-Weighted Return) 방식: (현재가치 - 이전가치 - 신규투자금) / (이전가치 + 신규투자금)
+            cash_flow = current_invested - prev_invested  # 오늘 유입된 투자금
+            
+            if prev_portfolio_value > 0 or cash_flow > 0:
+                # 투자금 유입을 고려한 순수 수익률 계산
+                # 분모에 신규 투자금을 더해서 정규화
+                denominator = prev_portfolio_value + cash_flow
+                if denominator > 0:
+                    daily_return = (current_portfolio_value - prev_portfolio_value - cash_flow) / denominator
+                else:
+                    daily_return = 0.0
             else:
                 daily_return = 0.0
             
             portfolio_values.append(current_portfolio_value / total_amount)  # 정규화된 가치
             daily_returns.append(daily_return)
+            cumulative_invested.append(current_invested)
             prev_portfolio_value = current_portfolio_value
+            prev_invested = current_invested
         
         # 결과 DataFrame 생성
         valid_dates = [d for d in date_range if start_date_obj.date() <= d.date() <= end_date_obj.date()]
