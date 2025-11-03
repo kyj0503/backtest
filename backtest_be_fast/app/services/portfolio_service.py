@@ -750,11 +750,15 @@ class PortfolioService:
             # 분할 매수 정보 수집 (중복 종목 지원)
             dca_info = {}
             
+            # DCA 주기 매핑
+            from ..schemas.schemas import DCA_FREQUENCY_MAP
+            
             for idx, item in enumerate(request.portfolio):
                 symbol = item.symbol
                 amount = amounts[f"{symbol}_{idx}"]
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
-                dca_periods = getattr(item, 'dca_periods', 12)
+                dca_frequency = getattr(item, 'dca_frequency', 'monthly')
+                dca_periods = DCA_FREQUENCY_MAP.get(dca_frequency, 1)  # 주기를 개월 수로 변환
                 asset_type = getattr(item, 'asset_type', 'stock')  # 자산 타입 확인
                 # 중복 종목을 위한 고유 키 생성
                 unique_key = f"{symbol}_{idx}"
@@ -762,6 +766,7 @@ class PortfolioService:
                 dca_info[unique_key] = {
                     'symbol': symbol,
                     'investment_type': investment_type,
+                    'dca_frequency': dca_frequency,
                     'dca_periods': dca_periods,
                     'monthly_amount': amount / dca_periods if investment_type == 'dca' else amount,
                     'asset_type': asset_type

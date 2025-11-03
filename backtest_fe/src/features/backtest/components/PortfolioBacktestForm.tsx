@@ -49,7 +49,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
           // 금액 기준일 때는 weight를 보내지 않음
           ...(hasWeight ? { weight: stock.weight } : {}),
           investment_type: stock.investmentType,
-          dca_periods: stock.dcaPeriods || 12,
+          dca_frequency: stock.dcaFrequency || 'monthly',
           asset_type: stock.assetType || ASSET_TYPES.STOCK
         };
       });

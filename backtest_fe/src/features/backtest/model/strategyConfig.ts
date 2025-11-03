@@ -175,12 +175,27 @@ export const INVESTMENT_TYPE_OPTIONS = [
   { value: 'dca', label: '분할 매수 (DCA)' }
 ];
 
+// DCA 주기 프리셋
+export type DcaFrequency = 'monthly' | 'bimonthly' | 'quarterly' | 'semiannually' | 'annually';
+
+export const DCA_FREQUENCY_OPTIONS = [
+  { value: 'monthly', label: '매달 투자', months: 1 },
+  { value: 'bimonthly', label: '격달로 투자', months: 2 },
+  { value: 'quarterly', label: '매 분기 투자', months: 3 },
+  { value: 'semiannually', label: '반년마다 투자', months: 6 },
+  { value: 'annually', label: '매년 투자', months: 12 }
+] as const;
+
+// DCA 주기(개월)를 가져오는 헬퍼 함수
+export const getDcaMonths = (frequency: DcaFrequency): number => {
+  const option = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === frequency);
+  return option?.months || 1;
+};
+
 // 유효성 검증 규칙
 export const VALIDATION_RULES = {
   MIN_AMOUNT: 100,
   MAX_AMOUNT: 1000000,
-  MIN_DCA_PERIODS: 1,
-  MAX_DCA_PERIODS: 60,
   MAX_PORTFOLIO_SIZE: 10,
   MIN_COMMISSION: 0,
   MAX_COMMISSION: 5,
@@ -193,7 +208,7 @@ export const DEFAULT_VALUES = {
   END_DATE: '2024-12-31',
   INITIAL_AMOUNT: 10000,
   COMMISSION: 0.2, // 퍼센트
-  DCA_PERIODS: 12,
+  DCA_FREQUENCY: 'monthly' as DcaFrequency,
   REBALANCE_FREQUENCY: 'monthly',
   STRATEGY: 'buy_hold_strategy'
 };

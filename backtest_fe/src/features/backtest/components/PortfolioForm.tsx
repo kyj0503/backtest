@@ -16,7 +16,20 @@ import {
   TableRow,
 } from '@/shared/ui/table';
 import { Stock, PortfolioInputMode } from '../model/backtest-form-types';
-import { PREDEFINED_STOCKS, ASSET_TYPES } from '../model/strategyConfig';
+import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths } from '../model/strategyConfig';
+
+// DCA 프리뷰 컴포넌트
+const DcaPreview: React.FC<{ stock: Stock }> = ({ stock }) => {
+  const dcaMonths = getDcaMonths(stock.dcaFrequency || 'monthly');
+  const monthlyAmount = Math.round(stock.amount / dcaMonths);
+  const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
+  
+  return (
+    <p className="text-xs text-muted-foreground mt-1">
+      {frequencyLabel}: 총 {dcaMonths}회, 회당 ${monthlyAmount.toLocaleString()}
+    </p>
+  );
+};
 
 export interface PortfolioFormProps {
   portfolio: Stock[];
@@ -232,21 +245,25 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                       </SelectContent>
                     </Select>
                     {stock.investmentType === 'dca' && (
-                      <Input
-                        type="number"
-                        value={stock.dcaPeriods || 12}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => updateStock(index, 'dcaPeriods', e.target.value)}
-                        min="1"
-                        max="60"
-                        placeholder="개월 수"
-                        className="w-full"
-                      />
+                      <Select
+                        value={stock.dcaFrequency || 'monthly'}
+                        onValueChange={(value) => updateStock(index, 'dcaFrequency', value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">매달 투자</SelectItem>
+                          <SelectItem value="bimonthly">격달로 투자</SelectItem>
+                          <SelectItem value="quarterly">매 분기 투자</SelectItem>
+                          <SelectItem value="semiannually">반년마다 투자</SelectItem>
+                          <SelectItem value="annually">매년 투자</SelectItem>
+                        </SelectContent>
+                      </Select>
                     )}
                   </div>
-                  {stock.investmentType === 'dca' && stock.dcaPeriods && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      월 ${Math.round(stock.amount / stock.dcaPeriods)}씩 {stock.dcaPeriods}개월
-                    </p>
+                  {stock.investmentType === 'dca' && stock.dcaFrequency && (
+                    <DcaPreview stock={stock} />
                   )}
                 </TableCell>
                 <TableCell className="w-24">
