@@ -192,12 +192,12 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
   // 데이터 유효성 검사
   if (!data) {
     return (
-      <div className="mx-auto max-w-[1600px] rounded-[32px] border border-border/40 bg-card/30 p-12 text-center shadow-sm">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100">
-          <AlertCircle className="h-8 w-8 text-yellow-600" />
+      <div className="mx-auto max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-sm p-16 text-center shadow-lg">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-yellow-100 shadow-md">
+          <AlertCircle className="h-10 w-10 text-yellow-600" />
         </div>
-        <h3 className="text-xl font-semibold mb-2">데이터가 없습니다</h3>
-        <p className="text-sm text-muted-foreground">백테스트를 실행해 주세요.</p>
+        <h3 className="text-2xl font-bold mb-3">데이터가 없습니다</h3>
+        <p className="text-base text-muted-foreground">백테스트를 실행해 주세요.</p>
       </div>
     );
   }
@@ -205,12 +205,12 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
   // 포트폴리오 데이터 유효성 검사
   if (isPortfolio && (!('portfolio_composition' in data) || !data.portfolio_composition)) {
     return (
-      <div className="mx-auto max-w-[1600px] rounded-[32px] border border-border/40 bg-card/30 p-12 text-center shadow-sm">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100">
-          <AlertCircle className="h-8 w-8 text-yellow-600" />
+      <div className="mx-auto max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-sm p-16 text-center shadow-lg">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-yellow-100 shadow-md">
+          <AlertCircle className="h-10 w-10 text-yellow-600" />
         </div>
-        <h3 className="text-xl font-semibold mb-2">포트폴리오 데이터가 없습니다</h3>
-        <p className="text-sm text-muted-foreground">유효한 포트폴리오를 구성해 주세요.</p>
+        <h3 className="text-2xl font-bold mb-3">포트폴리오 데이터가 없습니다</h3>
+        <p className="text-base text-muted-foreground">유효한 포트폴리오를 구성해 주세요.</p>
       </div>
     );
   }
@@ -219,7 +219,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
     <div ref={resultsRef} className="mx-auto w-full max-w-screen-2xl space-y-6">
       {/* 리포트 다운로드 버튼 */}
       <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={downloadAsTextReport}>
+        <Button variant="outline" size="default" onClick={downloadAsTextReport} className="shadow-sm">
           <FileDown className="w-4 h-4 mr-2" />
           리포트 다운로드
         </Button>

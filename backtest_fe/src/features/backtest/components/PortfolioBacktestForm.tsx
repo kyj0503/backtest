@@ -121,24 +121,28 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
       {/* 에러 모달 */}
       <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-3 text-destructive text-2xl">
+              <div className="p-2 rounded-xl bg-destructive/10">
+                <AlertCircle className="h-6 w-6" />
+              </div>
               입력 오류
             </DialogTitle>
             <DialogDescription asChild>
-              <div className="mt-4">
-                <ul className="space-y-2 text-sm text-foreground">
-                  {allErrors.map((error, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="text-destructive">•</span>
-                      <span>{error}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6 flex justify-end">
-                  <Button onClick={() => setShowErrorModal(false)}>
+              <div className="mt-6">
+                <div className="rounded-xl bg-destructive/5 p-5 border-2 border-destructive/20">
+                  <ul className="space-y-3 text-sm text-foreground">
+                    {allErrors.map((error, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <span className="text-destructive font-bold text-base mt-0.5">•</span>
+                        <span className="leading-relaxed">{error}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="mt-8 flex justify-end">
+                  <Button size="lg" onClick={() => setShowErrorModal(false)}>
                     확인
                   </Button>
                 </div>
@@ -200,21 +204,21 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
         </div>
 
         {/* 제출 버튼 */}
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-6">
           <Button
             type="submit"
             disabled={loading || state.ui.isLoading}
             size="lg"
-            className="min-w-[200px]"
+            className="min-w-[240px] shadow-md hover:shadow-xl"
           >
             {(loading || state.ui.isLoading) ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 백테스트 실행 중...
               </>
             ) : (
               <>
-                <TrendingUp className="mr-2 h-4 w-4" />
+                <TrendingUp className="mr-2 h-5 w-5" />
                 백테스트 실행
               </>
             )}
