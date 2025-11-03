@@ -30,7 +30,8 @@ export interface ApiError {
 // 포트폴리오 구성 요소
 export interface PortfolioStock {
   symbol: string;
-  amount: number;
+  amount?: number;  // 금액 기준 (amount와 weight는 배타적)
+  weight?: number;  // 비중 기준 (amount와 weight는 배타적)
   investment_type?: 'lump_sum' | 'dca';
   dca_periods?: number;
   asset_type?: 'stock' | 'cash';
