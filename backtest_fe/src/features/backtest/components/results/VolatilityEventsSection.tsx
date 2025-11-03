@@ -42,6 +42,23 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
   // 데이터가 없으면 렌더링하지 않음
   if (allSymbols.length === 0) return null;
 
+  // 구글 검색 함수
+  const searchGoogleNews = (symbol: string, dateString: string) => {
+    // 날짜를 한국어 형식으로 변환 (YYYY-MM-DD -> YYYY년 M월 D일)
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const koreanDate = `${year}년 ${month}월 ${day}일`;
+
+    // 구글 검색 쿼리 생성
+    const query = `${symbol} ${koreanDate} 뉴스`;
+    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+
+    // 새 탭에서 열기
+    window.open(googleUrl, '_blank');
+  };
+
   return (
     <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -105,6 +122,14 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
                 <span className="text-sm text-muted-foreground">
                   ${event.close_price.toFixed(2)}
                 </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => searchGoogleNews(selectedSymbol, event.date)}
+                  className="text-xs h-7 px-2"
+                >
+                  뉴스 확인
+                </Button>
               </div>
             </div>
           ))}
