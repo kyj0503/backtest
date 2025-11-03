@@ -95,6 +95,74 @@ class DCACalculator:
         
         return 0, 0, 0
 
+class RebalanceHelper:
+    """리밸런싱 유틸리티"""
+
+    @staticmethod
+    def is_rebalance_date(current_date: datetime, prev_date: datetime, frequency: str) -> bool:
+        """
+        현재 날짜가 리밸런싱 날짜인지 확인
+
+        Args:
+            current_date: 현재 날짜
+            prev_date: 이전 날짜
+            frequency: 리밸런싱 주기 (monthly, quarterly, annually, none)
+
+        Returns:
+            리밸런싱 실행 여부
+        """
+        if frequency == 'none':
+            return False
+
+        # 첫 날은 리밸런싱하지 않음 (초기 매수이므로)
+        if prev_date is None:
+            return False
+
+        if frequency == 'monthly':
+            # 월이 바뀌었는지 확인
+            return current_date.month != prev_date.month
+        elif frequency == 'quarterly':
+            # 분기가 바뀌었는지 확인 (1, 4, 7, 10월)
+            curr_quarter = (current_date.month - 1) // 3
+            prev_quarter = (prev_date.month - 1) // 3
+            return curr_quarter != prev_quarter
+        elif frequency == 'annually':
+            # 연도가 바뀌었는지 확인
+            return current_date.year != prev_date.year
+
+        return False
+
+    @staticmethod
+    def calculate_target_weights(amounts: Dict[str, float], dca_info: Dict[str, Dict]) -> Dict[str, float]:
+        """
+        목표 비중 계산 (현금 제외)
+
+        Args:
+            amounts: 각 종목의 투자 금액
+            dca_info: DCA 정보
+
+        Returns:
+            각 종목의 목표 비중 (합이 1.0)
+        """
+        # 현금 제외한 총 투자금 계산
+        stock_amounts = {
+            k: v for k, v in amounts.items()
+            if dca_info[k].get('asset_type') != 'cash'
+        }
+
+        total_stock_amount = sum(stock_amounts.values())
+
+        if total_stock_amount == 0:
+            return {}
+
+        # 목표 비중 계산
+        target_weights = {
+            k: v / total_stock_amount
+            for k, v in stock_amounts.items()
+        }
+
+        return target_weights
+
 class PortfolioService:
     """포트폴리오 백테스트 서비스"""
     def __init__(self):
@@ -108,166 +176,206 @@ class PortfolioService:
         dca_info: Dict[str, Dict],
         start_date: str,
         end_date: str,
-        rebalance_frequency: str = "monthly"
+        rebalance_frequency: str = "monthly",
+        commission: float = 0.0
     ) -> pd.DataFrame:
         """
-        분할 매수(DCA)를 고려한 포트폴리오 수익률을 계산합니다.
-        
+        분할 매수(DCA)와 리밸런싱을 고려한 포트폴리오 수익률을 계산합니다.
+
         Args:
             portfolio_data: 각 종목의 가격 데이터 {symbol: DataFrame}
             amounts: 각 종목의 총 투자 금액 {symbol: amount}
             dca_info: 분할 매수 정보 {symbol: {investment_type, dca_periods, monthly_amount}}
             start_date: 시작 날짜
             end_date: 종료 날짜
-            rebalance_frequency: 리밸런싱 주기
-            
+            rebalance_frequency: 리밸런싱 주기 (monthly, quarterly, annually, none)
+            commission: 거래 수수료율 (예: 0.002 = 0.2%)
+
         Returns:
             포트폴리오 가치와 수익률이 포함된 DataFrame
         """
-        # 현금 처리: asset_type이 'cash'인 항목들은 수익률 0%로 처리
+        # 현금 처리
         cash_amount = 0
         for unique_key, amount in amounts.items():
             if dca_info[unique_key].get('asset_type') == 'cash':
                 cash_amount += amount
-        
+
         stock_amounts = {k: v for k, v in amounts.items() if dca_info[k].get('asset_type') != 'cash'}
-        
-        # 모든 주식 종목의 날짜 범위를 통합
+
+        # 날짜 범위 설정
         all_dates = set()
         for unique_key, df in portfolio_data.items():
-            # 현금 자산 제외
             if dca_info.get(unique_key, {}).get('asset_type') != 'cash':
                 all_dates.update(df.index)
-        
+
         if not all_dates and cash_amount == 0:
             raise ValueError("유효한 데이터가 없습니다.")
-        
-        # 현금만 있는 경우 처리
+
         if not all_dates and cash_amount > 0:
-            # 기본 날짜 범위 생성 (1일)
             today = datetime.now().date()
             date_range = pd.DatetimeIndex([today])
         else:
             date_range = pd.DatetimeIndex(sorted(all_dates))
-        
-        # 총 투자 금액 계산
+
         total_amount = sum(amounts.values())
-        
-        # 시작/종료 날짜 파싱
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
-        
-        # 포트폴리오 가치 시뮬레이션
+
+        # 목표 비중 계산 (리밸런싱용)
+        target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
+
+        # 각 종목의 주식 수 추적
+        shares = {key: 0.0 for key in stock_amounts.keys()}
+
+        # 시뮬레이션 변수
         portfolio_values = []
         daily_returns = []
-        cumulative_invested = []  # 누적 투자 원금 추적
         prev_portfolio_value = 0
-        prev_invested = 0
-        
+        prev_date = None
+        is_first_day = True
+        available_cash = cash_amount  # 사용 가능한 현금
+        total_trades = 0  # 총 거래 횟수 추적
+
         for current_date in date_range:
             if current_date.date() < start_date_obj.date():
                 continue
             if current_date.date() > end_date_obj.date():
                 break
-                
-            current_portfolio_value = cash_amount  # 현금부터 시작
-            current_invested = cash_amount  # 현재까지 투자된 원금 (초기값)
-            
-            # 각 포트폴리오 항목의 현재 가치 및 투자 원금 계산 (중복 종목 지원)
-            for unique_key, amount in amounts.items():
-                if dca_info[unique_key].get('asset_type') == 'cash':
-                    continue
-                    
+
+            # 현재 가격 가져오기
+            current_prices = {}
+            for unique_key in stock_amounts.keys():
                 symbol = dca_info[unique_key]['symbol']
-                info = dca_info[unique_key]
-                investment_type = info['investment_type']
-                
-                if symbol not in portfolio_data:
-                    continue
-                    
-                df = portfolio_data[symbol]
-                
-                try:
-                    # 해당 날짜의 가격 찾기
+                if symbol in portfolio_data:
+                    df = portfolio_data[symbol]
                     price_data = df[df.index.date <= current_date.date()]
-                    if price_data.empty:
+                    if not price_data.empty:
+                        current_prices[unique_key] = price_data['Close'].iloc[-1]
+
+            # 첫 날: 초기 매수 (일시불) 또는 DCA 시작
+            if is_first_day:
+                for unique_key, amount in stock_amounts.items():
+                    symbol = dca_info[unique_key]['symbol']
+                    info = dca_info[unique_key]
+                    investment_type = info['investment_type']
+
+                    if unique_key not in current_prices:
                         continue
-                        
-                    current_price = price_data['Close'].iloc[-1]
-                    
+
+                    price = current_prices[unique_key]
+
                     if investment_type == 'lump_sum':
-                        # 일시불 투자: 시작일에 전액 투자
-                        if current_date.date() >= start_date_obj.date():
-                            # 시작 가격으로 주식 수량 계산
-                            first_price_data = df[df.index.date >= start_date_obj.date()]
-                            if not first_price_data.empty:
-                                start_price = first_price_data['Close'].iloc[0]
-                                shares = amount / start_price
-                                stock_value = shares * current_price
-                                current_portfolio_value += stock_value
-                                current_invested += amount  # 원금 추가
-                            else:
-                                shares = 0
-                        
+                        # 일시불: 목표 비중대로 전액 투자
+                        invest_amount = amount * (1 - commission)  # 수수료 차감
+                        shares[unique_key] = invest_amount / price
+                        total_trades += 1  # 초기 매수 거래
                     else:  # DCA
-                        # 분할 매수: 매월 일정 금액씩 투자
-                        dca_periods = info['dca_periods']
+                        # DCA 첫 달 투자
                         monthly_amount = info['monthly_amount']
-                        
-                        # 현재까지 투자한 개월 수 계산
-                        months_passed = (current_date.year - start_date_obj.year) * 12 + (current_date.month - start_date_obj.month)
-                        months_invested = min(months_passed + 1, dca_periods)  # 시작월 포함
-                        
-                        # 매월 투자한 주식의 누적 가치 계산
-                        total_shares = 0
-                        for month in range(months_invested):
-                            # 각 월의 첫 거래일 가격으로 매수
-                            investment_date = start_date_obj + timedelta(days=30 * month)
-                            month_price_data = df[df.index.date >= investment_date.date()]
-                            
-                            if not month_price_data.empty:
-                                month_price = month_price_data['Close'].iloc[0]
-                                shares_bought = monthly_amount / month_price
-                                total_shares += shares_bought
-                        
-                        stock_value = total_shares * current_price
-                        current_portfolio_value += stock_value
-                        # DCA 원금: 현재까지 투자된 개월 수 × 월 투자금
-                        current_invested += monthly_amount * months_invested
-                    
-                except Exception as e:
-                    logger.warning(f"포트폴리오 항목 {unique_key} (종목: {symbol}) 가치 계산 오류 ({current_date}): {e}")
-                    continue
-            
-            # 일일 수익률 계산 (투자금 유입 제외)
-            # TWR (Time-Weighted Return) 방식: (현재가치 - 이전가치 - 신규투자금) / (이전가치 + 신규투자금)
-            cash_flow = current_invested - prev_invested  # 오늘 유입된 투자금
-            
-            if prev_portfolio_value > 0 or cash_flow > 0:
-                # 투자금 유입을 고려한 순수 수익률 계산
-                # 분모에 신규 투자금을 더해서 정규화
-                denominator = prev_portfolio_value + cash_flow
-                if denominator > 0:
-                    daily_return = (current_portfolio_value - prev_portfolio_value - cash_flow) / denominator
-                else:
-                    daily_return = 0.0
+                        invest_amount = monthly_amount * (1 - commission)
+                        shares[unique_key] = invest_amount / price
+                        total_trades += 1  # 첫 DCA 매수 거래
+
+                is_first_day = False
+                prev_date = current_date
+
+            # DCA 추가 매수 (매월 첫 거래일)
+            if prev_date is not None:
+                for unique_key, amount in stock_amounts.items():
+                    info = dca_info[unique_key]
+                    if info['investment_type'] != 'dca':
+                        continue
+
+                    # 월이 바뀌었는지 확인
+                    if current_date.month != prev_date.month:
+                        months_passed = (current_date.year - start_date_obj.year) * 12 + \
+                                      (current_date.month - start_date_obj.month)
+
+                        if months_passed < info['dca_periods']:
+                            if unique_key in current_prices:
+                                price = current_prices[unique_key]
+                                monthly_amount = info['monthly_amount']
+                                invest_amount = monthly_amount * (1 - commission)
+                                shares[unique_key] += invest_amount / price
+                                total_trades += 1  # DCA 추가 매수 거래
+
+            # 리밸런싱 실행
+            should_rebalance = RebalanceHelper.is_rebalance_date(
+                current_date, prev_date, rebalance_frequency
+            )
+
+            if should_rebalance and len(target_weights) > 1:  # 종목이 2개 이상일 때만
+                # 현재 포트폴리오 총 가치 계산
+                total_stock_value = sum(
+                    shares[key] * current_prices.get(key, 0)
+                    for key in shares.keys()
+                    if key in current_prices
+                )
+
+                if total_stock_value > 0:
+                    # 목표 비중대로 재조정
+                    new_shares = {}
+                    total_commission_cost = 0
+                    trades_in_rebalance = 0
+
+                    for unique_key, target_weight in target_weights.items():
+                        if unique_key not in current_prices:
+                            new_shares[unique_key] = shares[unique_key]
+                            continue
+
+                        price = current_prices[unique_key]
+                        target_value = total_stock_value * target_weight
+                        current_value = shares[unique_key] * price
+
+                        # 매도/매수가 발생했는지 확인 (0.01% 이상 차이나면 거래로 간주)
+                        if abs(target_value - current_value) / total_stock_value > 0.0001:
+                            trades_in_rebalance += 1
+
+                        # 매도/매수 금액
+                        trade_value = abs(target_value - current_value)
+                        commission_cost = trade_value * commission
+                        total_commission_cost += commission_cost
+
+                        # 새로운 주식 수 계산
+                        new_shares[unique_key] = target_value / price
+
+                    # 수수료만큼 전체적으로 비례 축소
+                    if total_stock_value > total_commission_cost:
+                        scale_factor = (total_stock_value - total_commission_cost) / total_stock_value
+                        shares = {k: v * scale_factor for k, v in new_shares.items()}
+                    else:
+                        shares = new_shares
+
+                    total_trades += trades_in_rebalance  # 리밸런싱 거래 추가
+
+            # 포트폴리오 가치 계산
+            current_portfolio_value = available_cash
+            for unique_key in shares.keys():
+                if unique_key in current_prices:
+                    current_portfolio_value += shares[unique_key] * current_prices[unique_key]
+
+            # 수익률 계산
+            if prev_portfolio_value > 0:
+                daily_return = (current_portfolio_value - prev_portfolio_value) / prev_portfolio_value
             else:
                 daily_return = 0.0
-            
-            portfolio_values.append(current_portfolio_value / total_amount)  # 정규화된 가치
+
+            portfolio_values.append(current_portfolio_value / total_amount)
             daily_returns.append(daily_return)
-            cumulative_invested.append(current_invested)
+
             prev_portfolio_value = current_portfolio_value
-            prev_invested = current_invested
-        
+            prev_date = current_date
+
         # 결과 DataFrame 생성
         valid_dates = [d for d in date_range if start_date_obj.date() <= d.date() <= end_date_obj.date()]
-        
+
         if len(portfolio_values) != len(valid_dates):
-            # 길이가 맞지 않으면 기본값으로 채움
-            portfolio_values = [1.0] * len(valid_dates)
-            daily_returns = [0.0] * len(valid_dates)
-        
+            logger.warning(f"포트폴리오 값 길이 불일치: portfolio_values={len(portfolio_values)}, valid_dates={len(valid_dates)}")
+            logger.warning(f"첫 3개 날짜: {valid_dates[:3] if len(valid_dates) > 0 else 'None'}")
+            logger.warning(f"마지막 3개 날짜: {valid_dates[-3:] if len(valid_dates) > 0 else 'None'}")
+            # 길이가 맞지 않으면 오류 발생 (기본값으로 채우는 대신)
+            raise ValueError(f"계산된 포트폴리오 값 개수({len(portfolio_values)})가 날짜 개수({len(valid_dates)})와 일치하지 않습니다.")
+
         result = pd.DataFrame({
             'Date': valid_dates,
             'Portfolio_Value': portfolio_values,
@@ -275,7 +383,10 @@ class PortfolioService:
             'Cumulative_Return': [(v - 1) * 100 for v in portfolio_values]
         })
         result.set_index('Date', inplace=True)
-        
+
+        # 메타데이터 저장
+        result.attrs['total_trades'] = total_trades
+
         return result
     
     @staticmethod
@@ -283,39 +394,42 @@ class PortfolioService:
         start_date = portfolio_data.index[0]
         end_date = portfolio_data.index[-1]
         duration = (end_date - start_date).days
-        
+
         final_value = portfolio_data['Portfolio_Value'].iloc[-1]
         peak_value = portfolio_data['Portfolio_Value'].max()
-        
+
         total_return = (final_value - 1) * 100
-        
+
         # 드로우다운 계산
         running_max = portfolio_data['Portfolio_Value'].expanding().max()
         drawdown = (portfolio_data['Portfolio_Value'] - running_max) / running_max * 100
         max_drawdown = drawdown.min()
         avg_drawdown = drawdown[drawdown < 0].mean() if len(drawdown[drawdown < 0]) > 0 else 0
-        
+
         # 변동성 및 샤프 비율
         daily_returns = portfolio_data['Daily_Return']
         annual_volatility = daily_returns.std() * np.sqrt(252) * 100
         annual_return = ((final_value ** (365.25 / duration)) - 1) * 100 if duration > 0 else 0
-        
+
         # 무위험 수익률을 0으로 가정한 샤프 비율
         sharpe_ratio = (annual_return / annual_volatility) if annual_volatility > 0 else 0
-        
+
         # 최대 연속 상승/하락일
         daily_changes = daily_returns > 0
         consecutive_gains = PortfolioService._get_max_consecutive(daily_changes, True)
         consecutive_losses = PortfolioService._get_max_consecutive(daily_changes, False)
-        
+
         # Profit Factor 계산 (이익일 수익률의 합 / 손실일 손실률의 절댓값 합)
         positive_returns = daily_returns[daily_returns > 0]
         negative_returns = daily_returns[daily_returns < 0]
-        
+
         gross_profit = positive_returns.sum() if len(positive_returns) > 0 else 0
         gross_loss = abs(negative_returns.sum()) if len(negative_returns) > 0 else 0
         profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (2.0 if gross_profit > 0 else 1.0)
-        
+
+        # 실제 거래 횟수 추출 (DataFrame 메타데이터에서)
+        total_trades = portfolio_data.attrs.get('total_trades', 0)
+
         return {
             'Start': start_date.strftime('%Y-%m-%d'),
             'End': end_date.strftime('%Y-%m-%d'),
@@ -332,6 +446,7 @@ class PortfolioService:
             'Max_Consecutive_Gains': consecutive_gains,
             'Max_Consecutive_Losses': consecutive_losses,
             'Total_Trading_Days': len(portfolio_data),
+            'Total_Trades': total_trades,
             'Positive_Days': len(daily_returns[daily_returns > 0]),
             'Negative_Days': len(daily_returns[daily_returns < 0]),
             'Win_Rate': len(daily_returns[daily_returns > 0]) / len(daily_returns) * 100 if len(daily_returns) > 0 else 0,
@@ -873,9 +988,10 @@ class PortfolioService:
                 raise ValueError("포트폴리오의 어떤 종목도 데이터를 가져올 수 없습니다.")
             
             # 분할 매수를 고려한 포트폴리오 수익률 계산
-            logger.info("분할 매수를 고려한 포트폴리오 수익률 계산 중...")
+            logger.info("분할 매수 및 리밸런싱을 고려한 포트폴리오 수익률 계산 중...")
             portfolio_result = self.calculate_dca_portfolio_returns(
-                portfolio_data, amounts, dca_info, request.start_date, request.end_date, request.rebalance_frequency
+                portfolio_data, amounts, dca_info, request.start_date, request.end_date,
+                request.rebalance_frequency, request.commission
             )
             
             # 통계 계산

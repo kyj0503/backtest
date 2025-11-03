@@ -6,20 +6,27 @@ export interface CommissionFormProps {
   setRebalanceFrequency: (frequency: string) => void;
   commission: number;
   setCommission: (commission: number) => void;
+  stockCount?: number; // 현금 제외한 주식 종목 수
 }
 
 const CommissionForm: React.FC<CommissionFormProps> = ({
   rebalanceFrequency,
   setRebalanceFrequency,
   commission,
-  setCommission
+  setCommission,
+  stockCount = 0
 }) => {
   const rebalanceOptions = [
-    { value: 'never', label: '리밸런싱 안함' },
+    { value: 'none', label: '리밸런싱 안함' },
     { value: 'monthly', label: '매월' },
     { value: 'quarterly', label: '분기별' },
-    { value: 'yearly', label: '연간' }
+    { value: 'annually', label: '연간' }
   ];
+
+  const isRebalanceDisabled = stockCount < 2;
+  const rebalanceHelpText = isRebalanceDisabled
+    ? '리밸런싱은 2개 이상의 종목이 필요합니다'
+    : '포트폴리오 비중을 다시 맞추는 주기';
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
@@ -30,10 +37,11 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
           </FinancialTermTooltip>
         }
         type="select"
-        value={rebalanceFrequency}
+        value={isRebalanceDisabled ? 'none' : rebalanceFrequency}
         onChange={(value) => setRebalanceFrequency(value as string)}
         options={rebalanceOptions}
-        helpText="포트폴리오 비중을 다시 맞추는 주기"
+        disabled={isRebalanceDisabled}
+        helpText={rebalanceHelpText}
       />
 
       <FormField

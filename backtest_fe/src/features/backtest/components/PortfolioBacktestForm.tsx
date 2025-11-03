@@ -117,6 +117,9 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
 
   const allErrors = [...errors, ...state.ui.errors];
 
+  // 현금 제외한 주식 종목 수 계산
+  const stockCount = state.portfolio.filter(stock => stock.assetType !== 'cash').length;
+
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
       {/* 에러 모달 */}
@@ -199,6 +202,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
               setRebalanceFrequency={actions.setRebalanceFrequency}
               commission={state.settings.commission}
               setCommission={actions.setCommission}
+              stockCount={stockCount}
             />
           </FormSection>
         </div>

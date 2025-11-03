@@ -52,10 +52,16 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
       description: '투자 원금 대비 총 수익률',
     },
     {
-      label: '총 거래수',
-      value: String(numberValue(stats.total_trades ?? stats.Total_Trading_Days, 0)),
+      label: '거래일 수',
+      value: String(numberValue(stats.Total_Trading_Days, 0)),
       tone: 'neutral',
-      description: '전체 기간 동안 체결된 거래 수',
+      description: '백테스트가 실행된 총 거래일 수',
+    },
+    {
+      label: '총 거래 횟수',
+      value: String(numberValue(stats.Total_Trades, 0)),
+      tone: 'neutral',
+      description: '실제 매수/매도가 발생한 총 거래 횟수',
     },
     {
       label: '승률',
