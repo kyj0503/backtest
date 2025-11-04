@@ -406,17 +406,15 @@ class PortfolioService:
 
             # 현재 포트폴리오 비중 기록
             current_weights = {'date': current_date.strftime('%Y-%m-%d')}
-            total_stock_value = sum(
-                shares[key] * current_prices[key]
-                for key in shares.keys()
-                if key in current_prices
-            )
-            if total_stock_value > 0:
+            if current_portfolio_value > 0:
+                # 주식 비중 계산
                 for unique_key in shares.keys():
                     if unique_key in current_prices:
                         symbol = dca_info[unique_key]['symbol']
                         stock_value = shares[unique_key] * current_prices[unique_key]
-                        current_weights[symbol] = stock_value / total_stock_value
+                        current_weights[symbol] = stock_value / current_portfolio_value
+                # 현금 비중 계산
+                current_weights['CASH'] = available_cash / current_portfolio_value
             weight_history.append(current_weights)
 
             # 수익률 계산
