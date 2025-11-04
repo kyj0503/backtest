@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Button } from '@/shared/ui/button';
+import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
 interface BenchmarkIndexChartProps {
   sp500Data: any[];
@@ -31,11 +32,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
   if (!hasData && sp500Data.length === 0 && nasdaqData.length === 0) return null;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
+    <div className={CARD_STYLES.base}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-foreground">지수 벤치마크</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className={SPACING.itemCompact}>
+          <h3 className={HEADING_STYLES.h3}>지수 벤치마크</h3>
+          <p className={TEXT_STYLES.caption}>
             S&P 500과 NASDAQ 지수 수준 비교
           </p>
         </div>
