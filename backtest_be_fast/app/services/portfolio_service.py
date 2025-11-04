@@ -1159,16 +1159,28 @@ class PortfolioService:
                         'total_equity': statistics['Final_Value'],
                         'total_return_pct': statistics['Total_Return']
                     },
-                    'portfolio_composition': [
-                        {
-                            'symbol': dca_info[unique_key]['symbol'],  # unique_key에서 실제 symbol 추출
-                            'weight': amount / total_amount,
-                            'amount': amount,
-                            'investment_type': dca_info[unique_key]['investment_type'],
-                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None
-                        }
-                        for unique_key, amount in amounts.items()
-                    ],
+                    'portfolio_composition': (
+                        # 주식 자산들
+                        [
+                            {
+                                'symbol': dca_info[unique_key]['symbol'],
+                                'weight': amount / total_amount,
+                                'amount': amount,
+                                'investment_type': dca_info[unique_key]['investment_type'],
+                                'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None
+                            }
+                            for unique_key, amount in amounts.items()
+                            if dca_info[unique_key].get('asset_type') != 'cash'
+                        ] +
+                        # 현금 자산 (모든 현금을 하나로 합침)
+                        ([{
+                            'symbol': 'CASH',
+                            'weight': cash_amount / total_amount,
+                            'amount': cash_amount,
+                            'investment_type': 'lump_sum',
+                            'dca_periods': None
+                        }] if cash_amount > 0 else [])
+                    ),
                     'equity_curve': {
                         date.strftime('%Y-%m-%d'): value * total_amount
                         for date, value in portfolio_result['Portfolio_Value'].items()
