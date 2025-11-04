@@ -17,7 +17,7 @@
  */
 import React, { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
-import { Button } from '@/shared/ui/button';
+import StockSymbolSelector from './StockSymbolSelector';
 
 interface VolatilityEvent {
   date: string;
@@ -56,39 +56,40 @@ const UnifiedInfoSection: React.FC<UnifiedInfoSectionProps> = ({
   const currentVolatilityEvents = volatilityEvents?.[selectedSymbol] || [];
   const currentNews = latestNews?.[selectedSymbol] || [];
 
+  // 배지 (각 종목의 이벤트 + 뉴스 개수)
+  const badges = useMemo(() => {
+    const result: { [symbol: string]: number } = {};
+    allSymbols.forEach(symbol => {
+      const volatilityCount = volatilityEvents?.[symbol]?.length || 0;
+      const newsCount = latestNews?.[symbol]?.length || 0;
+      result[symbol] = volatilityCount + newsCount;
+    });
+    return result;
+  }, [allSymbols, volatilityEvents, latestNews]);
+
+  // 비활성화할 종목 (데이터가 없는 종목)
+  const disabledSymbols = useMemo(() => {
+    return allSymbols.filter(symbol => {
+      const volatilityCount = volatilityEvents?.[symbol]?.length || 0;
+      const newsCount = latestNews?.[symbol]?.length || 0;
+      return volatilityCount === 0 && newsCount === 0;
+    });
+  }, [allSymbols, volatilityEvents, latestNews]);
+
   // 데이터가 없으면 렌더링하지 않음
   if (allSymbols.length === 0) return null;
 
   return (
     <div className="border border-border rounded-lg p-6 bg-card">
       {/* 종목 선택 버튼 (여러 종목일 때만 표시) */}
-      {allSymbols.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {allSymbols.map(symbol => {
-            const volatilityCount = volatilityEvents?.[symbol]?.length || 0;
-            const newsCount = latestNews?.[symbol]?.length || 0;
-            const hasData = volatilityCount > 0 || newsCount > 0;
-
-            return (
-              <Button
-                key={symbol}
-                variant={selectedSymbol === symbol ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedSymbol(symbol)}
-                disabled={!hasData}
-                className="flex items-center gap-2"
-              >
-                {symbol}
-                {hasData && (
-                  <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                    {volatilityCount + newsCount}
-                  </span>
-                )}
-              </Button>
-            );
-          })}
-        </div>
-      )}
+      <StockSymbolSelector
+        symbols={allSymbols}
+        selectedSymbol={selectedSymbol}
+        onSelectSymbol={setSelectedSymbol}
+        badges={badges}
+        disabledSymbols={disabledSymbols}
+        className="mb-4"
+      />
 
       {/* 급등락/뉴스 탭 */}
       <Tabs defaultValue="volatility" className="w-full">
