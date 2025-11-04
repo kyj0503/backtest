@@ -236,6 +236,8 @@ class PortfolioService:
         available_cash = cash_amount  # 사용 가능한 현금 (총합)
         # 각 현금 항목을 개별 추적
         cash_holdings = {k: v for k, v in amounts.items() if dca_info[k].get('asset_type') == 'cash'}
+        logger.info(f"현금 보유 항목: {cash_holdings}")
+        logger.info(f"주식 보유 항목: {list(stock_amounts.keys())}")
         total_trades = 0  # 총 거래 횟수 추적
         rebalance_history = []  # 리밸런싱 히스토리
         weight_history = []  # 포트폴리오 비중 변화 이력
@@ -415,9 +417,11 @@ class PortfolioService:
                         stock_value = shares[unique_key] * current_prices[unique_key]
                         current_weights[unique_key] = stock_value / current_portfolio_value
                 # 현금 비중 계산 (각 현금 항목 개별 처리)
-                for unique_key, amount in amounts.items():
-                    if dca_info[unique_key].get('asset_type') == 'cash':
-                        current_weights[unique_key] = amount / current_portfolio_value
+                for unique_key, amount in cash_holdings.items():
+                    current_weights[unique_key] = amount / current_portfolio_value
+            # 첫 날 weight_history 로그
+            if len(weight_history) == 0:
+                logger.info(f"첫 날 포트폴리오 비중: {current_weights}")
             weight_history.append(current_weights)
 
             # 수익률 계산
@@ -1168,7 +1172,8 @@ class PortfolioService:
                             'weight': amount / total_amount,
                             'amount': amount,
                             'investment_type': dca_info[unique_key]['investment_type'],
-                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None
+                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None,
+                            'asset_type': dca_info[unique_key].get('asset_type', 'stock')
                         }
                         for unique_key, amount in amounts.items()
                     ],
