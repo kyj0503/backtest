@@ -1,6 +1,4 @@
-# Backtest (Full-stack 금융 백테스트 플랫폼)
-
-이 레포지토리는 FastAPI 기반 백엔드(`backtest_be_fast`)와 React/TypeScript 프론트엔드(`backtest_fe`)로 구성된 금융 백테스팅 플랫폼입니다. 개발은 Docker를 사용한 컨테이너 환경에서 진행하도록 구성되어 있으며, 핫 리로드가 활성화되어 있어 코드 변경 시 자동 반영됩니다.
+# Backtest
 
 ## 요구사항
 
@@ -8,10 +6,10 @@
 
 ## 빠른 시작 (Docker 개발 환경)
 
-아래 명령은 프로젝트 루트에서 실행합니다. 개발용 Docker Compose 파일을 사용하여 백엔드 및 프론트엔드를 빌드하고 핫 리로드와 함께 실행합니다.
+아래 명령은 프로젝트 루트에서 실행합니다. 개발용 Docker Compose 파일을 사용하여 백엔드 및 프론트엔드를 빌드하고 핫 리로드 설정으로 실행합니다.
 
 ```bash
-# 개발 컨테이너 빌드 및 실행 (핫 리로드 포함)
+# 개발 컨테이너 빌드 및 실행
 docker compose -f compose.dev.yaml up -d --build
 
 # 백엔드 로그 확인
