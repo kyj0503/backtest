@@ -3,6 +3,7 @@ import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { Label } from '@/shared/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 export interface FormFieldProps {
   label: React.ReactNode;
@@ -100,17 +101,17 @@ export const FormField: React.FC<FormFieldProps> = ({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <Label className="text-sm font-medium">
+      <Label className={TEXT_STYLES.label}>
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
-      
+
       {renderInput()}
-      
+
       {helpText && (
-        <p className="text-sm text-muted-foreground">{helpText}</p>
+        <p className={TEXT_STYLES.caption}>{helpText}</p>
       )}
-      
+
       {error && (
         <p className="text-sm text-destructive" role="alert">
           {error}
