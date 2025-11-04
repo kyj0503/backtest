@@ -37,6 +37,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import numpy as np
+import re
 
 from ..core.config import settings
 
@@ -81,8 +82,11 @@ class PortfolioStock(BaseModel):
         # CASH는 특별한 심볼로 허용
         if v.upper() == 'CASH':
             return v.upper()
-        if not v.isalpha():
-            raise ValueError('주식 심볼은 영문자만 포함해야 합니다.')
+
+        # 주식 심볼은 영문자, 숫자, 점(.), 하이픈(-)만 허용
+        # 예: AAPL (미국), 005930.KS (한국), 600519.SS (중국)
+        if not re.match(r'^[A-Za-z0-9.\-]+$', v):
+            raise ValueError('주식 심볼은 영문자, 숫자, 점(.), 하이픈(-)만 포함해야 합니다.')
         return v.upper()
     
     @field_validator('investment_type')
