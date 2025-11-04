@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { WeightHistoryPoint } from '../../model/backtest-result-types';
+import { getStockDisplayName } from '../../model/strategyConfig';
 
 interface RebalanceEvent {
   date: string;
@@ -29,6 +30,11 @@ const COLORS = [
   '#14b8a6', // teal
 ];
 
+// unique_key에서 실제 심볼 추출 (AAPL_0 -> AAPL, 005930.KS_1 -> 005930.KS)
+const extractSymbolFromUniqueKey = (uniqueKey: string): string => {
+  return uniqueKey.replace(/_\d+$/, '');
+};
+
 const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
   weightHistory,
   portfolioComposition,
@@ -37,6 +43,16 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
   const symbols = useMemo(() => {
     return portfolioComposition.map(stock => stock.symbol);
   }, [portfolioComposition]);
+
+  // unique_key -> 표시 이름 매핑
+  const symbolDisplayNames = useMemo(() => {
+    const mapping: Record<string, string> = {};
+    symbols.forEach(uniqueKey => {
+      const actualSymbol = extractSymbolFromUniqueKey(uniqueKey);
+      mapping[uniqueKey] = getStockDisplayName(actualSymbol);
+    });
+    return mapping;
+  }, [symbols]);
 
   const chartData = useMemo(() => {
     return weightHistory.map(point => {
@@ -84,7 +100,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
           domain={[0, 100]}
         />
         <Tooltip
-          formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, name]}
+          formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, symbolDisplayNames[name] || name]}
           labelFormatter={(label: string) => `날짜: ${label}`}
           contentStyle={{
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -95,6 +111,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
         <Legend
           wrapperStyle={{ paddingTop: '20px' }}
           iconType="square"
+          formatter={(value: string) => symbolDisplayNames[value] || value}
         />
         {/* 리밸런싱 마커 */}
         {rebalanceHistory && rebalanceHistory.length > 0 && rebalanceHistory.map((event, idx) => (
