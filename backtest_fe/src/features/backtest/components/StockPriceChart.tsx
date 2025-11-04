@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
 import { getStockDisplayName } from '../model/strategyConfig';
 import StockSymbolSelector from './results/StockSymbolSelector';
+import { HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 interface StockData {
   symbol: string;
@@ -60,8 +61,8 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, clas
 
       {/* 헤더: 선택된 종목명 */}
       <div className="mb-3">
-        <h5 className="text-lg font-semibold text-foreground mb-1">{getStockDisplayName(selectedSymbol)}</h5>
-        <p className="text-sm text-muted-foreground">백테스트 기간 동안의 주가 흐름</p>
+        <h5 className={`${HEADING_STYLES.h3} mb-1`}>{getStockDisplayName(selectedSymbol)}</h5>
+        <p className={TEXT_STYLES.caption}>백테스트 기간 동안의 주가 흐름</p>
       </div>
 
       {/* 차트 */}
