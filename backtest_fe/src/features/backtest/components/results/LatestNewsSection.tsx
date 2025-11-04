@@ -12,6 +12,7 @@
 import React, { useState, useMemo } from 'react';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import StockSymbolSelector from './StockSymbolSelector';
+import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
 interface NewsItem {
   title: string;
@@ -44,11 +45,11 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
   if (allSymbols.length === 0) return null;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
+    <div className={CARD_STYLES.base}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-foreground">최신 뉴스</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className={SPACING.itemCompact}>
+          <h3 className={HEADING_STYLES.h3}>최신 뉴스</h3>
+          <p className={TEXT_STYLES.caption}>
             백테스트 기간과 관련된 최신 뉴스
           </p>
         </div>

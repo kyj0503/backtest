@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { RebalanceEvent } from '../../model/backtest-result-types';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { CARD_STYLES, TEXT_STYLES, HEADING_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
 interface RebalanceHistoryTableProps {
   rebalanceHistory: RebalanceEvent[];
@@ -30,19 +31,19 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
   }
 
   return (
-    <div className="space-y-3">
-      <div className="text-sm text-muted-foreground mb-4">
+    <div className={SPACING.item}>
+      <div className={TEXT_STYLES.caption + ' mb-4'}>
         총 {rebalanceHistory.length}회의 리밸런싱이 발생했습니다
       </div>
 
-      <div className="space-y-2">
+      <div className={SPACING.itemCompact}>
         {rebalanceHistory.map((event, index) => {
           const isExpanded = expandedRows.has(index);
 
           return (
             <div
               key={index}
-              className="border border-border/50 rounded-lg bg-card/30 overflow-hidden hover:border-border transition-colors"
+              className={CARD_STYLES.nested + ' overflow-hidden hover:border-border transition-colors'}
             >
               {/* Header */}
               <button

@@ -18,6 +18,7 @@
 import React, { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import StockSymbolSelector from './StockSymbolSelector';
+import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 interface VolatilityEvent {
   date: string;
@@ -80,7 +81,7 @@ const UnifiedInfoSection: React.FC<UnifiedInfoSectionProps> = ({
   if (allSymbols.length === 0) return null;
 
   return (
-    <div className="border border-border rounded-lg p-6 bg-card">
+    <div className={CARD_STYLES.base}>
       {/* 종목 선택 버튼 (여러 종목일 때만 표시) */}
       <StockSymbolSelector
         symbols={allSymbols}

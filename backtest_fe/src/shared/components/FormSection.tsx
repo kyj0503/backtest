@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 export interface FormSectionProps {
   title: string;
@@ -29,16 +30,16 @@ export const FormSection = ({
     >
       <header className="flex flex-col gap-4 border-b-2 border-border/60 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
-          <h3 className="text-xl font-bold leading-tight text-foreground">{title}</h3>
+          <h3 className={`${HEADING_STYLES.h2} leading-tight`}>{title}</h3>
           {description ? (
-            <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+            <p className={`${TEXT_STYLES.caption} leading-relaxed`}>{description}</p>
           ) : null}
         </div>
         {actions ? <div className="flex items-center gap-3 sm:min-w-[200px] sm:justify-end">{actions}</div> : null}
       </header>
       <div className={cn('px-6 py-6', contentClassName)}>{children}</div>
       {footer ? (
-        <footer className="border-t-2 border-border/60 bg-card/60 px-6 py-5 text-sm text-muted-foreground">
+        <footer className={`border-t-2 border-border/60 bg-card/60 px-6 py-5 ${TEXT_STYLES.caption}`}>
           {footer}
         </footer>
       ) : null}
