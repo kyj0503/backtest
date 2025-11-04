@@ -236,6 +236,29 @@ export const VALIDATION_RULES = {
   SYMBOL_MAX_LENGTH: 10
 };
 
+// 주식 심볼에서 표시 이름 추출
+export const getStockDisplayName = (symbol: string): string => {
+  // PREDEFINED_STOCKS에서 해당 심볼 찾기
+  const stock = PREDEFINED_STOCKS.find(s => s.value.toUpperCase() === symbol.toUpperCase());
+
+  if (stock && stock.value !== 'CUSTOM') {
+    // "AAPL - Apple Inc." -> "Apple Inc."
+    // "005930.KS - 삼성전자" -> "삼성전자"
+    const parts = stock.label.split(' - ');
+    if (parts.length > 1) {
+      const name = parts[1].trim();
+      // "Apple Inc."는 "Apple"로 짧게, 한국 주식은 그대로
+      if (name.includes('Inc.') || name.includes('Corp.') || name.includes('Co.')) {
+        return name.split(/\s+(Inc\.|Corp\.|Co\.)/)[0];
+      }
+      return name;
+    }
+  }
+
+  // 매핑이 없으면 원래 심볼 반환
+  return symbol;
+};
+
 // 기본값
 export const DEFAULT_VALUES = {
   START_DATE: '2023-01-01',
