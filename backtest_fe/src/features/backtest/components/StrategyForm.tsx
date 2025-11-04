@@ -5,6 +5,7 @@ import { FormField } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
 import { HelpCircle } from 'lucide-react';
 import StrategyHelpModal from './StrategyHelpModal';
+import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 export interface StrategyFormProps {
   selectedStrategy: string;
@@ -60,7 +61,7 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
       </div>
 
       {currentConfig && (
-        <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
+        <div className={`${TEXT_STYLES.caption} bg-muted/30 rounded-lg p-3`}>
           {currentConfig.description}
         </div>
       )}

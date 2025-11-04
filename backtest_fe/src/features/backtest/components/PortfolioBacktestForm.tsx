@@ -117,8 +117,8 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
 
   const allErrors = [...errors, ...state.ui.errors];
 
-  // 현금 제외한 주식 종목 수 계산
-  const stockCount = state.portfolio.filter(stock => stock.assetType !== 'cash').length;
+  // 포트폴리오 전체 자산 수 계산 (주식 + 현금)
+  const stockCount = state.portfolio.length;
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">

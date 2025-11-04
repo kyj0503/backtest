@@ -5,7 +5,7 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import {
   Table,
   TableBody,
@@ -17,15 +17,16 @@ import {
 } from '@/shared/ui/table';
 import { Stock, PortfolioInputMode } from '../model/backtest-form-types';
 import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths } from '../model/strategyConfig';
+import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 // DCA 프리뷰 컴포넌트
 const DcaPreview: React.FC<{ stock: Stock }> = ({ stock }) => {
   const dcaMonths = getDcaMonths(stock.dcaFrequency || 'monthly');
   const monthlyAmount = Math.round(stock.amount / dcaMonths);
   const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
-  
+
   return (
-    <p className="text-xs text-muted-foreground mt-1">
+    <p className={`${TEXT_STYLES.captionSmall} mt-1`}>
       {frequencyLabel}: 총 {dcaMonths}회, 회당 ${monthlyAmount.toLocaleString()}
     </p>
   );
@@ -110,24 +111,22 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
           >
             + 종목 추가
           </Button>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  onClick={addCash}
-                  disabled={portfolio.length >= 10}
-                  variant="outline"
-                  className="rounded-full border-green-300 text-green-700 hover:bg-green-50"
-                >
-                  현금 추가
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>현금을 포트폴리오에 추가 (무위험 자산)</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                onClick={addCash}
+                disabled={portfolio.length >= 10}
+                variant="outline"
+                className="rounded-full border-green-300 text-green-700 hover:bg-green-50"
+              >
+                현금 추가
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>현금을 포트폴리오에 추가 (무위험 자산)</p>
+            </TooltipContent>
+          </Tooltip>
           <span className="text-xs text-muted-foreground">
             {portfolio.length}/10 자산
           </span>

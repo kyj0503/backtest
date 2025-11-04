@@ -10,7 +10,9 @@
  * - 내용 영역: 선택된 종목의 최신 뉴스 리스트
  */
 import React, { useState, useMemo } from 'react';
-import { Button } from '@/shared/ui/button';
+import { getStockDisplayName } from '../../model/strategyConfig';
+import StockSymbolSelector from './StockSymbolSelector';
+import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
 interface NewsItem {
   title: string;
@@ -43,36 +45,28 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
   if (allSymbols.length === 0) return null;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
+    <div className={CARD_STYLES.base}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-foreground">최신 뉴스</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className={SPACING.itemCompact}>
+          <h3 className={HEADING_STYLES.h3}>최신 뉴스</h3>
+          <p className={TEXT_STYLES.caption}>
             백테스트 기간과 관련된 최신 뉴스
           </p>
         </div>
       </div>
 
       {/* 종목 선택 버튼 (여러 종목일 때만 표시) */}
-      {allSymbols.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {allSymbols.map(symbol => (
-            <Button
-              key={symbol}
-              variant={selectedSymbol === symbol ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedSymbol(symbol)}
-            >
-              {symbol}
-            </Button>
-          ))}
-        </div>
-      )}
+      <StockSymbolSelector
+        symbols={allSymbols}
+        selectedSymbol={selectedSymbol}
+        onSelectSymbol={setSelectedSymbol}
+        className="mb-4"
+      />
 
       {/* 최신 뉴스 내용 */}
       {currentNews.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {selectedSymbol}의 최신 뉴스가 없습니다.
+          {getStockDisplayName(selectedSymbol)}의 최신 뉴스가 없습니다.
         </div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">

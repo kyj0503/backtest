@@ -11,6 +11,9 @@
  */
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/shared/ui/button';
+import { getStockDisplayName } from '../../model/strategyConfig';
+import StockSymbolSelector from './StockSymbolSelector';
+import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
 interface VolatilityEvent {
   date: string;
@@ -51,8 +54,9 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
     const day = date.getDate();
     const koreanDate = `${year}년 ${month}월 ${day}일`;
 
-    // 구글 검색 쿼리 생성
-    const query = `${symbol} ${koreanDate} 뉴스`;
+    // 구글 검색 쿼리 생성 (표시 이름 사용)
+    const displayName = getStockDisplayName(symbol);
+    const query = `${displayName} ${koreanDate} 뉴스`;
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
     // 새 탭에서 열기
@@ -60,36 +64,28 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
   };
 
   return (
-    <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
+    <div className={CARD_STYLES.base}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-foreground">급등락 이벤트</h3>
-          <p className="text-sm text-muted-foreground">
+        <div className={SPACING.itemCompact}>
+          <h3 className={HEADING_STYLES.h3}>급등락 이벤트</h3>
+          <p className={TEXT_STYLES.caption}>
             백테스트 기간 동안 발생한 급등락 이벤트
           </p>
         </div>
       </div>
 
       {/* 종목 선택 버튼 (여러 종목일 때만 표시) */}
-      {allSymbols.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {allSymbols.map(symbol => (
-            <Button
-              key={symbol}
-              variant={selectedSymbol === symbol ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedSymbol(symbol)}
-            >
-              {symbol}
-            </Button>
-          ))}
-        </div>
-      )}
+      <StockSymbolSelector
+        symbols={allSymbols}
+        selectedSymbol={selectedSymbol}
+        onSelectSymbol={setSelectedSymbol}
+        className="mb-4"
+      />
 
       {/* 급등락 이벤트 내용 */}
       {currentVolatilityEvents.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {selectedSymbol}의 급등락 이벤트가 없습니다.
+          {getStockDisplayName(selectedSymbol)}의 급등락 이벤트가 없습니다.
         </div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">

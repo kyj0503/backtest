@@ -3,6 +3,7 @@ import { formatPercent, getStatVariant } from '@/shared/lib/utils/formatters';
 import FinancialTermTooltip from '@/shared/components/FinancialTermTooltip';
 import { Card, CardContent } from '@/shared/ui/card';
 import { cn } from '@/shared/lib/core/utils';
+import { HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 type StatTone = 'positive' | 'negative' | 'neutral';
 
@@ -129,8 +130,8 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
   return (
     <section className="space-y-4">
       <div className="flex items-end justify-between gap-4">
-        <h4 className="text-lg font-semibold text-foreground">백테스트 성과</h4>
-        <p className="text-xs text-muted-foreground">
+        <h4 className={HEADING_STYLES.h3}>백테스트 성과</h4>
+        <p className={TEXT_STYLES.captionSmall}>
           주요 지표를 통해 포트폴리오의 성과와 리스크를 빠르게 파악하세요.
         </p>
       </div>
@@ -143,7 +144,7 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
             )}
           >
             <CardContent className="space-y-3 px-5 py-4">
-              <h5 className="text-sm font-medium text-muted-foreground">
+              <h5 className={TEXT_STYLES.label}>
                 <FinancialTermTooltip term={item.label}>{item.label}</FinancialTermTooltip>
               </h5>
               <div
@@ -154,7 +155,7 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
               >
                 {item.value}
               </div>
-              <p className="text-xs text-muted-foreground">{item.description}</p>
+              <p className={TEXT_STYLES.captionSmall}>{item.description}</p>
             </CardContent>
           </Card>
         ))}
