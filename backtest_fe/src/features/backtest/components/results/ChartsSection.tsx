@@ -29,6 +29,7 @@ import BenchmarkIndexChart from './BenchmarkIndexChart';
 import BenchmarkReturnsChart from './BenchmarkReturnsChart';
 import RebalanceHistoryTable from './RebalanceHistoryTable';
 import WeightHistoryChart from './WeightHistoryChart';
+import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
 interface ChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -41,15 +42,15 @@ const ResultBlock: React.FC<{
   actions?: React.ReactNode;
   children: React.ReactNode;
 }> = ({ title, description, actions, children }) => (
-  <div className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-5 shadow-sm">
+  <div className={CARD_STYLES.base}>
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-      <div className="space-y-1">
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      <div className={SPACING.itemCompact}>
+        <h3 className={HEADING_STYLES.h3}>{title}</h3>
+        {description ? <p className={TEXT_STYLES.caption}>{description}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>
-    <div>{children}</div>
+    <div className="mt-4">{children}</div>
   </div>
 );
 
