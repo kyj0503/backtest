@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { WeightHistoryPoint } from '../../model/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
+import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 interface RebalanceEvent {
   date: string;
@@ -68,7 +69,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
 
   if (!weightHistory || weightHistory.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
+      <div className={`text-center py-12 ${TEXT_STYLES.caption}`}>
         <p>비중 변화 데이터가 없습니다.</p>
       </div>
     );
