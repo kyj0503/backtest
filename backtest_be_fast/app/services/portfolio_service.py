@@ -194,12 +194,6 @@ class PortfolioService:
         Returns:
             포트폴리오 가치와 수익률이 포함된 DataFrame
         """
-        logger.info(f"=== calculate_dca_portfolio_returns 시작 ===")
-        logger.info(f"amounts 항목: {list(amounts.keys())}")
-        logger.info(f"dca_info 항목: {list(dca_info.keys())}")
-        for key in amounts.keys():
-            logger.info(f"  {key}: amount={amounts[key]}, asset_type={dca_info[key].get('asset_type', 'stock')}")
-
         # 현금 처리
         cash_amount = 0
         for unique_key, amount in amounts.items():
@@ -242,8 +236,6 @@ class PortfolioService:
         available_cash = cash_amount  # 사용 가능한 현금 (총합)
         # 각 현금 항목을 개별 추적
         cash_holdings = {k: v for k, v in amounts.items() if dca_info[k].get('asset_type') == 'cash'}
-        logger.info(f"현금 보유 항목: {cash_holdings}")
-        logger.info(f"주식 보유 항목: {list(stock_amounts.keys())}")
         total_trades = 0  # 총 거래 횟수 추적
         rebalance_history = []  # 리밸런싱 히스토리
         weight_history = []  # 포트폴리오 비중 변화 이력
@@ -425,9 +417,6 @@ class PortfolioService:
                 # 현금 비중 계산 (각 현금 항목 개별 처리)
                 for unique_key, amount in cash_holdings.items():
                     current_weights[unique_key] = amount / current_portfolio_value
-            # 첫 날 weight_history 로그
-            if len(weight_history) == 0:
-                logger.info(f"첫 날 포트폴리오 비중: {current_weights}")
             weight_history.append(current_weights)
 
             # 수익률 계산
@@ -464,10 +453,6 @@ class PortfolioService:
         result.attrs['total_trades'] = total_trades
         result.attrs['rebalance_history'] = rebalance_history
         result.attrs['weight_history'] = weight_history
-
-        logger.info(f"=== weight_history 샘플 (처음 2개) ===")
-        for i, wh in enumerate(weight_history[:2]):
-            logger.info(f"  [{i}] {wh}")
 
         return result
     
@@ -1166,22 +1151,6 @@ class PortfolioService:
             weight_history = portfolio_result.attrs.get('weight_history', [])
 
             # 결과 포맷팅
-            # portfolio_composition 생성
-            portfolio_composition = [
-                {
-                    'symbol': unique_key,  # unique_key를 symbol로 사용
-                    'weight': amount / total_amount,
-                    'amount': amount,
-                    'investment_type': dca_info[unique_key]['investment_type'],
-                    'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None,
-                    'asset_type': dca_info[unique_key].get('asset_type', 'stock')
-                }
-                for unique_key, amount in amounts.items()
-            ]
-            logger.info(f"=== portfolio_composition ===")
-            for comp in portfolio_composition:
-                logger.info(f"  {comp['symbol']}: weight={comp['weight']:.2f}, asset_type={comp['asset_type']}")
-
             result = {
                 'status': 'success',
                 'data': {
@@ -1192,7 +1161,17 @@ class PortfolioService:
                         'total_equity': statistics['Final_Value'],
                         'total_return_pct': statistics['Total_Return']
                     },
-                    'portfolio_composition': portfolio_composition,
+                    'portfolio_composition': [
+                        {
+                            'symbol': unique_key,  # unique_key를 symbol로 사용
+                            'weight': amount / total_amount,
+                            'amount': amount,
+                            'investment_type': dca_info[unique_key]['investment_type'],
+                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None,
+                            'asset_type': dca_info[unique_key].get('asset_type', 'stock')
+                        }
+                        for unique_key, amount in amounts.items()
+                    ],
                     'equity_curve': {
                         date.strftime('%Y-%m-%d'): value * total_amount
                         for date, value in portfolio_result['Portfolio_Value'].items()
