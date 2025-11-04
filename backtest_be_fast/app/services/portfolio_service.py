@@ -194,6 +194,12 @@ class PortfolioService:
         Returns:
             포트폴리오 가치와 수익률이 포함된 DataFrame
         """
+        logger.info(f"=== calculate_dca_portfolio_returns 시작 ===")
+        logger.info(f"amounts 항목: {list(amounts.keys())}")
+        logger.info(f"dca_info 항목: {list(dca_info.keys())}")
+        for key in amounts.keys():
+            logger.info(f"  {key}: amount={amounts[key]}, asset_type={dca_info[key].get('asset_type', 'stock')}")
+
         # 현금 처리
         cash_amount = 0
         for unique_key, amount in amounts.items():
@@ -458,6 +464,10 @@ class PortfolioService:
         result.attrs['total_trades'] = total_trades
         result.attrs['rebalance_history'] = rebalance_history
         result.attrs['weight_history'] = weight_history
+
+        logger.info(f"=== weight_history 샘플 (처음 2개) ===")
+        for i, wh in enumerate(weight_history[:2]):
+            logger.info(f"  [{i}] {wh}")
 
         return result
     
@@ -1156,6 +1166,22 @@ class PortfolioService:
             weight_history = portfolio_result.attrs.get('weight_history', [])
 
             # 결과 포맷팅
+            # portfolio_composition 생성
+            portfolio_composition = [
+                {
+                    'symbol': unique_key,  # unique_key를 symbol로 사용
+                    'weight': amount / total_amount,
+                    'amount': amount,
+                    'investment_type': dca_info[unique_key]['investment_type'],
+                    'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None,
+                    'asset_type': dca_info[unique_key].get('asset_type', 'stock')
+                }
+                for unique_key, amount in amounts.items()
+            ]
+            logger.info(f"=== portfolio_composition ===")
+            for comp in portfolio_composition:
+                logger.info(f"  {comp['symbol']}: weight={comp['weight']:.2f}, asset_type={comp['asset_type']}")
+
             result = {
                 'status': 'success',
                 'data': {
@@ -1166,17 +1192,7 @@ class PortfolioService:
                         'total_equity': statistics['Final_Value'],
                         'total_return_pct': statistics['Total_Return']
                     },
-                    'portfolio_composition': [
-                        {
-                            'symbol': unique_key,  # unique_key를 symbol로 사용
-                            'weight': amount / total_amount,
-                            'amount': amount,
-                            'investment_type': dca_info[unique_key]['investment_type'],
-                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None,
-                            'asset_type': dca_info[unique_key].get('asset_type', 'stock')
-                        }
-                        for unique_key, amount in amounts.items()
-                    ],
+                    'portfolio_composition': portfolio_composition,
                     'equity_curve': {
                         date.strftime('%Y-%m-%d'): value * total_amount
                         for date, value in portfolio_result['Portfolio_Value'].items()
