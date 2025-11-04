@@ -3,6 +3,7 @@ import ChartsSection from './results/ChartsSection';
 import { BacktestResultsProps, TradeMarker, ExchangeRatePoint } from '../model/backtest-result-types';
 import { AlertCircle, FileDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 // Summary stats 타입 정의 (동적 필드를 가진 타입)
 interface SummaryStats {
@@ -196,8 +197,8 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-yellow-100 shadow-md">
           <AlertCircle className="h-10 w-10 text-yellow-600" />
         </div>
-        <h3 className="text-2xl font-bold mb-3">데이터가 없습니다</h3>
-        <p className="text-base text-muted-foreground">백테스트를 실행해 주세요.</p>
+        <h3 className={`${HEADING_STYLES.h1} mb-3`}>데이터가 없습니다</h3>
+        <p className={TEXT_STYLES.body}>백테스트를 실행해 주세요.</p>
       </div>
     );
   }
@@ -209,8 +210,8 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-yellow-100 shadow-md">
           <AlertCircle className="h-10 w-10 text-yellow-600" />
         </div>
-        <h3 className="text-2xl font-bold mb-3">포트폴리오 데이터가 없습니다</h3>
-        <p className="text-base text-muted-foreground">유효한 포트폴리오를 구성해 주세요.</p>
+        <h3 className={`${HEADING_STYLES.h1} mb-3`}>포트폴리오 데이터가 없습니다</h3>
+        <p className={TEXT_STYLES.body}>유효한 포트폴리오를 구성해 주세요.</p>
       </div>
     );
   }

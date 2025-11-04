@@ -6,6 +6,7 @@ import { Separator } from '@/shared/ui/separator';
 import { ChartData, PortfolioData, Stock } from '../../model/backtest-result-types';
 import { FormLegend } from '@/shared/components';
 import { formatPercent } from '@/shared/lib/utils/formatters';
+import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 interface ResultsHeaderProps {
   data: ChartData | PortfolioData;
@@ -56,11 +57,11 @@ const ResultsHeader: React.FC<ResultsHeaderProps> = ({ data, isPortfolio }) => {
   }, [data, isPortfolio]);
 
   return (
-    <Card className="overflow-hidden border border-border/70 bg-card/70 shadow-sm">
+    <Card className={CARD_STYLES.base + ' overflow-hidden'}>
       <CardHeader className="space-y-3">
         <div className="space-y-2">
-          <CardTitle className="text-2xl font-semibold text-foreground">{title}</CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">{subtitle}</CardDescription>
+          <CardTitle className={HEADING_STYLES.h2}>{title}</CardTitle>
+          <CardDescription className={TEXT_STYLES.caption}>{subtitle}</CardDescription>
         </div>
 
         {metaBadges?.length ? (
