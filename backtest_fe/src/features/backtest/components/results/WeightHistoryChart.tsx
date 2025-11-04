@@ -23,7 +23,7 @@ const COLORS = [
 
 const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({ weightHistory, portfolioComposition }) => {
   const symbols = useMemo(() => {
-    return portfolioComposition.map(stock => stock.symbol).filter(s => s !== 'CASH');
+    return portfolioComposition.map(stock => stock.symbol);
   }, [portfolioComposition]);
 
   const chartData = useMemo(() => {
