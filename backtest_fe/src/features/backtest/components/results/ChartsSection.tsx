@@ -511,6 +511,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           <WeightHistoryChart
             weightHistory={portfolioData.weight_history}
             portfolioComposition={portfolioData.portfolio_composition}
+            rebalanceHistory={portfolioData.rebalance_history}
           />
         </ResultBlock>
       );

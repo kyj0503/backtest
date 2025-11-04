@@ -1,10 +1,18 @@
 import React, { useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { WeightHistoryPoint } from '../../model/backtest-result-types';
+
+interface RebalanceEvent {
+  date: string;
+  trades: Array<any>;
+  weights_before: Record<string, number>;
+  weights_after: Record<string, number>;
+}
 
 interface WeightHistoryChartProps {
   weightHistory: WeightHistoryPoint[];
   portfolioComposition: Array<{ symbol: string }>;
+  rebalanceHistory?: RebalanceEvent[];
 }
 
 // 색상 팔레트
@@ -21,7 +29,11 @@ const COLORS = [
   '#14b8a6', // teal
 ];
 
-const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({ weightHistory, portfolioComposition }) => {
+const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
+  weightHistory,
+  portfolioComposition,
+  rebalanceHistory
+}) => {
   const symbols = useMemo(() => {
     return portfolioComposition.map(stock => stock.symbol);
   }, [portfolioComposition]);
@@ -84,6 +96,21 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({ weightHistory, 
           wrapperStyle={{ paddingTop: '20px' }}
           iconType="square"
         />
+        {/* 리밸런싱 마커 */}
+        {rebalanceHistory && rebalanceHistory.length > 0 && rebalanceHistory.map((event, idx) => (
+          <ReferenceLine
+            key={idx}
+            x={event.date}
+            stroke="#f97316"
+            strokeWidth={2}
+            strokeDasharray="5 5"
+            label={{
+              value: '⚖️',
+              position: 'top',
+              fontSize: 16,
+            }}
+          />
+        ))}
         {symbols.map((symbol, index) => (
           <Area
             key={symbol}
