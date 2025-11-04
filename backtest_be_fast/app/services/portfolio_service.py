@@ -135,7 +135,7 @@ class RebalanceHelper:
     @staticmethod
     def calculate_target_weights(amounts: Dict[str, float], dca_info: Dict[str, Dict]) -> Dict[str, float]:
         """
-        목표 비중 계산 (현금 제외)
+        목표 비중 계산 (현금 포함)
 
         Args:
             amounts: 각 종목의 투자 금액
@@ -144,21 +144,16 @@ class RebalanceHelper:
         Returns:
             각 종목의 목표 비중 (합이 1.0)
         """
-        # 현금 제외한 총 투자금 계산
-        stock_amounts = {
-            k: v for k, v in amounts.items()
-            if dca_info[k].get('asset_type') != 'cash'
-        }
+        # 전체 투자금 계산 (현금 포함)
+        total_amount = sum(amounts.values())
 
-        total_stock_amount = sum(stock_amounts.values())
-
-        if total_stock_amount == 0:
+        if total_amount == 0:
             return {}
 
-        # 목표 비중 계산
+        # 목표 비중 계산 (현금 포함)
         target_weights = {
-            k: v / total_stock_amount
-            for k, v in stock_amounts.items()
+            k: v / total_amount
+            for k, v in amounts.items()
         }
 
         return target_weights
@@ -233,7 +228,9 @@ class PortfolioService:
         prev_portfolio_value = 0
         prev_date = None
         is_first_day = True
-        available_cash = cash_amount  # 사용 가능한 현금
+        available_cash = cash_amount  # 사용 가능한 현금 (총합)
+        # 각 현금 항목을 개별 추적
+        cash_holdings = {k: v for k, v in amounts.items() if dca_info[k].get('asset_type') == 'cash'}
         total_trades = 0  # 총 거래 횟수 추적
         rebalance_history = []  # 리밸런싱 히스토리
         weight_history = []  # 포트폴리오 비중 변화 이력
@@ -306,85 +303,127 @@ class PortfolioService:
                 current_date, prev_date, rebalance_frequency
             )
 
-            if should_rebalance and len(target_weights) > 1:  # 종목이 2개 이상일 때만
-                # 현재 포트폴리오 총 가치 계산
+            if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
+                # 현재 포트폴리오 총 가치 계산 (주식 + 현금)
                 total_stock_value = sum(
                     shares[key] * current_prices.get(key, 0)
                     for key in shares.keys()
                     if key in current_prices
                 )
+                total_portfolio_value = total_stock_value + available_cash
 
-                if total_stock_value > 0:
-                    # 리밸런싱 전 비중 계산
+                if total_portfolio_value > 0:
+                    # 리밸런싱 전 비중 계산 (현금 포함)
                     weights_before = {}
                     for unique_key in shares.keys():
                         if unique_key in current_prices:
                             current_value = shares[unique_key] * current_prices[unique_key]
-                            weights_before[dca_info[unique_key]['symbol']] = current_value / total_stock_value
+                            weights_before[dca_info[unique_key]['symbol']] = current_value / total_portfolio_value
+                    # 현금 비중 추가
+                    for unique_key in cash_holdings.keys():
+                        weights_before[dca_info[unique_key]['symbol']] = cash_holdings[unique_key] / total_portfolio_value
 
                     # 목표 비중대로 재조정
                     new_shares = {}
+                    new_cash_holdings = {}
                     total_commission_cost = 0
                     trades_in_rebalance = 0
                     rebalance_trades = []  # 이번 리밸런싱의 거래 내역
 
                     for unique_key, target_weight in target_weights.items():
-                        if unique_key not in current_prices:
-                            new_shares[unique_key] = shares[unique_key]
-                            continue
+                        target_value = total_portfolio_value * target_weight
 
-                        price = current_prices[unique_key]
-                        target_value = total_stock_value * target_weight
-                        current_value = shares[unique_key] * price
-                        symbol = dca_info[unique_key]['symbol']
+                        # 현금 처리
+                        if dca_info[unique_key].get('asset_type') == 'cash':
+                            current_value = cash_holdings.get(unique_key, 0)
+                            # 현금은 거래 수수료 없이 조정
+                            new_cash_holdings[unique_key] = target_value
 
-                        # 매도/매수가 발생했는지 확인 (0.01% 이상 차이나면 거래로 간주)
-                        if abs(target_value - current_value) / total_stock_value > 0.0001:
-                            trades_in_rebalance += 1
+                            # 현금 조정 내역 기록 (차이가 있을 때만)
+                            if abs(target_value - current_value) / total_portfolio_value > 0.0001:
+                                trades_in_rebalance += 1
+                                symbol = dca_info[unique_key]['symbol']
+                                if target_value > current_value:
+                                    rebalance_trades.append({
+                                        'symbol': symbol,
+                                        'action': 'increase',  # 현금 증가 (주식 매도)
+                                        'amount': abs(target_value - current_value),
+                                        'price': 1.0
+                                    })
+                                else:
+                                    rebalance_trades.append({
+                                        'symbol': symbol,
+                                        'action': 'decrease',  # 현금 감소 (주식 매수)
+                                        'amount': abs(target_value - current_value),
+                                        'price': 1.0
+                                    })
 
-                            # 거래 내역 기록
-                            shares_diff = (target_value / price) - shares[unique_key]
-                            if shares_diff > 0:
-                                rebalance_trades.append({
-                                    'symbol': symbol,
-                                    'action': 'buy',
-                                    'shares': abs(shares_diff),
-                                    'price': price
-                                })
-                            else:
-                                rebalance_trades.append({
-                                    'symbol': symbol,
-                                    'action': 'sell',
-                                    'shares': abs(shares_diff),
-                                    'price': price
-                                })
+                        # 주식 처리
+                        else:
+                            if unique_key not in current_prices:
+                                new_shares[unique_key] = shares[unique_key]
+                                continue
 
-                        # 매도/매수 금액
-                        trade_value = abs(target_value - current_value)
-                        commission_cost = trade_value * commission
-                        total_commission_cost += commission_cost
+                            price = current_prices[unique_key]
+                            current_value = shares[unique_key] * price
+                            symbol = dca_info[unique_key]['symbol']
 
-                        # 새로운 주식 수 계산
-                        new_shares[unique_key] = target_value / price
+                            # 매도/매수가 발생했는지 확인 (0.01% 이상 차이나면 거래로 간주)
+                            if abs(target_value - current_value) / total_portfolio_value > 0.0001:
+                                trades_in_rebalance += 1
+
+                                # 거래 내역 기록
+                                shares_diff = (target_value / price) - shares[unique_key]
+                                if shares_diff > 0:
+                                    rebalance_trades.append({
+                                        'symbol': symbol,
+                                        'action': 'buy',
+                                        'shares': abs(shares_diff),
+                                        'price': price
+                                    })
+                                else:
+                                    rebalance_trades.append({
+                                        'symbol': symbol,
+                                        'action': 'sell',
+                                        'shares': abs(shares_diff),
+                                        'price': price
+                                    })
+
+                            # 매도/매수 금액
+                            trade_value = abs(target_value - current_value)
+                            commission_cost = trade_value * commission
+                            total_commission_cost += commission_cost
+
+                            # 새로운 주식 수 계산
+                            new_shares[unique_key] = target_value / price
 
                     # 수수료만큼 전체적으로 비례 축소
-                    if total_stock_value > total_commission_cost:
-                        scale_factor = (total_stock_value - total_commission_cost) / total_stock_value
+                    if total_portfolio_value > total_commission_cost:
+                        scale_factor = (total_portfolio_value - total_commission_cost) / total_portfolio_value
                         shares = {k: v * scale_factor for k, v in new_shares.items()}
+                        cash_holdings = {k: v * scale_factor for k, v in new_cash_holdings.items()}
+                        available_cash = sum(cash_holdings.values())
                     else:
                         shares = new_shares
+                        cash_holdings = new_cash_holdings
+                        available_cash = sum(cash_holdings.values())
 
-                    # 리밸런싱 후 비중 계산
+                    # 리밸런싱 후 비중 계산 (현금 포함)
                     weights_after = {}
-                    new_total_value = sum(
+                    new_total_stock_value = sum(
                         shares[key] * current_prices[key]
                         for key in shares.keys()
                         if key in current_prices
                     )
+                    new_total_portfolio_value = new_total_stock_value + available_cash
+
                     for unique_key in shares.keys():
                         if unique_key in current_prices:
                             new_value = shares[unique_key] * current_prices[unique_key]
-                            weights_after[dca_info[unique_key]['symbol']] = new_value / new_total_value
+                            weights_after[dca_info[unique_key]['symbol']] = new_value / new_total_portfolio_value
+                    # 현금 비중 추가
+                    for unique_key in cash_holdings.keys():
+                        weights_after[dca_info[unique_key]['symbol']] = cash_holdings[unique_key] / new_total_portfolio_value
 
                     # 리밸런싱 히스토리에 추가
                     if rebalance_trades:  # 실제 거래가 발생한 경우만
@@ -406,17 +445,15 @@ class PortfolioService:
 
             # 현재 포트폴리오 비중 기록
             current_weights = {'date': current_date.strftime('%Y-%m-%d')}
-            total_stock_value = sum(
-                shares[key] * current_prices[key]
-                for key in shares.keys()
-                if key in current_prices
-            )
-            if total_stock_value > 0:
+            if current_portfolio_value > 0:
+                # 주식 비중 계산 (unique_key 사용)
                 for unique_key in shares.keys():
                     if unique_key in current_prices:
-                        symbol = dca_info[unique_key]['symbol']
                         stock_value = shares[unique_key] * current_prices[unique_key]
-                        current_weights[symbol] = stock_value / total_stock_value
+                        current_weights[unique_key] = stock_value / current_portfolio_value
+                # 현금 비중 계산 (각 현금 항목 개별 처리)
+                for unique_key, amount in cash_holdings.items():
+                    current_weights[unique_key] = amount / current_portfolio_value
             weight_history.append(current_weights)
 
             # 수익률 계산
@@ -1163,11 +1200,12 @@ class PortfolioService:
                     },
                     'portfolio_composition': [
                         {
-                            'symbol': dca_info[unique_key]['symbol'],  # unique_key에서 실제 symbol 추출
+                            'symbol': unique_key,  # unique_key를 symbol로 사용
                             'weight': amount / total_amount,
                             'amount': amount,
                             'investment_type': dca_info[unique_key]['investment_type'],
-                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None
+                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None,
+                            'asset_type': dca_info[unique_key].get('asset_type', 'stock')
                         }
                         for unique_key, amount in amounts.items()
                     ],

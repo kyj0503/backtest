@@ -238,9 +238,9 @@ class TestBacktestEndpoint:
             "end_date": "2023-06-30",
             "strategy": "rsi_strategy",
             "strategy_params": {
-                "period": 14,
-                "oversold": 30,
-                "overbought": 70
+                "rsi_period": 14,
+                "rsi_oversold": 30,
+                "rsi_overbought": 70
             }
         }
         

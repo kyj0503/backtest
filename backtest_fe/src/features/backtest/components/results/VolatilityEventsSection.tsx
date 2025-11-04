@@ -11,6 +11,8 @@
  */
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/shared/ui/button';
+import { getStockDisplayName } from '../../model/strategyConfig';
+import StockSymbolSelector from './StockSymbolSelector';
 
 interface VolatilityEvent {
   date: string;
@@ -51,8 +53,9 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
     const day = date.getDate();
     const koreanDate = `${year}년 ${month}월 ${day}일`;
 
-    // 구글 검색 쿼리 생성
-    const query = `${symbol} ${koreanDate} 뉴스`;
+    // 구글 검색 쿼리 생성 (표시 이름 사용)
+    const displayName = getStockDisplayName(symbol);
+    const query = `${displayName} ${koreanDate} 뉴스`;
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
     // 새 탭에서 열기
@@ -71,25 +74,17 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
       </div>
 
       {/* 종목 선택 버튼 (여러 종목일 때만 표시) */}
-      {allSymbols.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {allSymbols.map(symbol => (
-            <Button
-              key={symbol}
-              variant={selectedSymbol === symbol ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedSymbol(symbol)}
-            >
-              {symbol}
-            </Button>
-          ))}
-        </div>
-      )}
+      <StockSymbolSelector
+        symbols={allSymbols}
+        selectedSymbol={selectedSymbol}
+        onSelectSymbol={setSelectedSymbol}
+        className="mb-4"
+      />
 
       {/* 급등락 이벤트 내용 */}
       {currentVolatilityEvents.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {selectedSymbol}의 급등락 이벤트가 없습니다.
+          {getStockDisplayName(selectedSymbol)}의 급등락 이벤트가 없습니다.
         </div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">

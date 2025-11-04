@@ -140,6 +140,8 @@ export const STRATEGY_CONFIGS: Record<string, StrategyConfig> = {
 // 미리 정의된 종목 목록
 export const PREDEFINED_STOCKS = [
   { value: 'CUSTOM', label: '직접 입력' },
+
+  // 미국 주식 및 ETF (20개)
   { value: 'AAPL', label: 'AAPL - Apple Inc.' },
   { value: 'GOOGL', label: 'GOOGL - Alphabet Inc.' },
   { value: 'MSFT', label: 'MSFT - Microsoft Corp.' },
@@ -148,9 +150,41 @@ export const PREDEFINED_STOCKS = [
   { value: 'NVDA', label: 'NVDA - NVIDIA Corp.' },
   { value: 'META', label: 'META - Meta Platforms Inc.' },
   { value: 'NFLX', label: 'NFLX - Netflix Inc.' },
+  { value: 'JPM', label: 'JPM - JPMorgan Chase & Co.' },
+  { value: 'V', label: 'V - Visa Inc.' },
+  { value: 'JNJ', label: 'JNJ - Johnson & Johnson' },
+  { value: 'WMT', label: 'WMT - Walmart Inc.' },
+  { value: 'PG', label: 'PG - Procter & Gamble Co.' },
+  { value: 'DIS', label: 'DIS - Walt Disney Co.' },
+  { value: 'BAC', label: 'BAC - Bank of America Corp.' },
+  { value: 'CSCO', label: 'CSCO - Cisco Systems Inc.' },
+  { value: 'INTC', label: 'INTC - Intel Corp.' },
+  { value: 'AMD', label: 'AMD - Advanced Micro Devices Inc.' },
   { value: 'SPY', label: 'SPY - SPDR S&P 500 ETF' },
   { value: 'QQQ', label: 'QQQ - Invesco QQQ Trust' },
-  { value: 'VTI', label: 'VTI - Vanguard Total Stock Market ETF' }
+  { value: 'VTI', label: 'VTI - Vanguard Total Stock Market ETF' },
+
+  // 한국 주식 (20개)
+  { value: '005930.KS', label: '005930.KS - 삼성전자' },
+  { value: '000660.KS', label: '000660.KS - SK하이닉스' },
+  { value: '005380.KS', label: '005380.KS - 현대자동차' },
+  { value: '000270.KS', label: '000270.KS - 기아' },
+  { value: '035420.KS', label: '035420.KS - NAVER' },
+  { value: '051910.KS', label: '051910.KS - LG화학' },
+  { value: '006400.KS', label: '006400.KS - 삼성SDI' },
+  { value: '035720.KS', label: '035720.KS - 카카오' },
+  { value: '003550.KS', label: '003550.KS - LG' },
+  { value: '017670.KS', label: '017670.KS - SK텔레콤' },
+  { value: '096770.KS', label: '096770.KS - SK이노베이션' },
+  { value: '034730.KS', label: '034730.KS - SK' },
+  { value: '028260.KS', label: '028260.KS - 삼성물산' },
+  { value: '012330.KS', label: '012330.KS - 현대모비스' },
+  { value: '068270.KS', label: '068270.KS - 셀트리온' },
+  { value: '207940.KS', label: '207940.KS - 삼성바이오로직스' },
+  { value: '105560.KS', label: '105560.KS - KB금융' },
+  { value: '055550.KS', label: '055550.KS - 신한지주' },
+  { value: '086790.KS', label: '086790.KS - 하나금융지주' },
+  { value: '015760.KS', label: '015760.KS - 한국전력' }
 ];
 
 // 자산 타입 정의
@@ -200,6 +234,29 @@ export const VALIDATION_RULES = {
   MIN_COMMISSION: 0,
   MAX_COMMISSION: 5,
   SYMBOL_MAX_LENGTH: 10
+};
+
+// 주식 심볼에서 표시 이름 추출
+export const getStockDisplayName = (symbol: string): string => {
+  // PREDEFINED_STOCKS에서 해당 심볼 찾기
+  const stock = PREDEFINED_STOCKS.find(s => s.value.toUpperCase() === symbol.toUpperCase());
+
+  if (stock && stock.value !== 'CUSTOM') {
+    // "AAPL - Apple Inc." -> "Apple Inc."
+    // "005930.KS - 삼성전자" -> "삼성전자"
+    const parts = stock.label.split(' - ');
+    if (parts.length > 1) {
+      const name = parts[1].trim();
+      // "Apple Inc."는 "Apple"로 짧게, 한국 주식은 그대로
+      if (name.includes('Inc.') || name.includes('Corp.') || name.includes('Co.')) {
+        return name.split(/\s+(Inc\.|Corp\.|Co\.)/)[0];
+      }
+      return name;
+    }
+  }
+
+  // 매핑이 없으면 원래 심볼 반환
+  return symbol;
 };
 
 // 기본값

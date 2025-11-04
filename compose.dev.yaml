@@ -20,6 +20,7 @@ services:
     volumes:
       - ./backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
   backtest-fe:
     build:
       context: ./backtest_fe

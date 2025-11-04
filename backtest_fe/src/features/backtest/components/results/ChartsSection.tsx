@@ -505,12 +505,13 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       allCharts.push(
         <ResultBlock
           title="포트폴리오 비중 변화"
-          description="시간에 따른 각 종목의 비중 변화 (스택 영역 차트)"
+          description="시간에 따른 각 자산(주식 + 현금)의 비중 변화 (스택 영역 차트)"
           key="weight-history"
         >
           <WeightHistoryChart
             weightHistory={portfolioData.weight_history}
             portfolioComposition={portfolioData.portfolio_composition}
+            rebalanceHistory={portfolioData.rebalance_history}
           />
         </ResultBlock>
       );
