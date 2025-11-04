@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
 
@@ -100,21 +99,19 @@ const FinancialTermTooltip: React.FC<FinancialTermTooltipProps> = ({
   }
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className={`cursor-help border-b border-dotted border-primary text-primary hover:text-primary/80 ${className}`}>
-            {children}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          <div className="space-y-1">
-            <div className="font-medium">{term}</div>
-            <div className="text-sm text-muted-foreground">{explanation}</div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={`cursor-help border-b border-dotted border-primary text-primary hover:text-primary/80 ${className}`}>
+          {children}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs">
+        <div className="space-y-1">
+          <div className="font-medium">{term}</div>
+          <div className="text-sm text-muted-foreground">{explanation}</div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 };
 

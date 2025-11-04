@@ -6,7 +6,7 @@ export interface CommissionFormProps {
   setRebalanceFrequency: (frequency: string) => void;
   commission: number;
   setCommission: (commission: number) => void;
-  stockCount?: number; // 현금 제외한 주식 종목 수
+  stockCount?: number; // 포트폴리오 전체 자산 수 (주식 + 현금)
 }
 
 const CommissionForm: React.FC<CommissionFormProps> = ({
@@ -25,7 +25,7 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
 
   const isRebalanceDisabled = stockCount < 2;
   const rebalanceHelpText = isRebalanceDisabled
-    ? '리밸런싱은 2개 이상의 종목이 필요합니다'
+    ? '리밸런싱은 2개 이상의 자산(주식 또는 현금)이 필요합니다'
     : '포트폴리오 비중을 다시 맞추는 주기';
 
   return (

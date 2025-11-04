@@ -1,7 +1,8 @@
 import React, { useState, memo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
-import { Button } from "@/shared/ui/button";
+import { getStockDisplayName } from '../model/strategyConfig';
+import StockSymbolSelector from './results/StockSymbolSelector';
 
 interface StockData {
   symbol: string;
@@ -50,24 +51,16 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, clas
   return (
     <div className={className}>
       {/* 종목 선택 버튼들 */}
-      {stocksData.length > 1 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          {stocksData.map((stock) => (
-            <Button
-              key={stock.symbol}
-              variant={selectedSymbol === stock.symbol ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedSymbol(stock.symbol)}
-            >
-              {stock.symbol}
-            </Button>
-          ))}
-        </div>
-      )}
+      <StockSymbolSelector
+        symbols={stocksData.map(s => s.symbol)}
+        selectedSymbol={selectedSymbol}
+        onSelectSymbol={setSelectedSymbol}
+        className="mb-4"
+      />
 
       {/* 헤더: 선택된 종목명 */}
       <div className="mb-3">
-        <h5 className="text-lg font-semibold text-foreground mb-1">{selectedSymbol}</h5>
+        <h5 className="text-lg font-semibold text-foreground mb-1">{getStockDisplayName(selectedSymbol)}</h5>
         <p className="text-sm text-muted-foreground">백테스트 기간 동안의 주가 흐름</p>
       </div>
 
