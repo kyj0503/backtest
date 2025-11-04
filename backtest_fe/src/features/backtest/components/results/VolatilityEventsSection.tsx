@@ -12,6 +12,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/shared/ui/button';
 import { getStockDisplayName } from '../../model/strategyConfig';
+import StockSymbolSelector from './StockSymbolSelector';
 
 interface VolatilityEvent {
   date: string;
@@ -73,20 +74,12 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
       </div>
 
       {/* 종목 선택 버튼 (여러 종목일 때만 표시) */}
-      {allSymbols.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {allSymbols.map(symbol => (
-            <Button
-              key={symbol}
-              variant={selectedSymbol === symbol ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedSymbol(symbol)}
-            >
-              {getStockDisplayName(symbol)}
-            </Button>
-          ))}
-        </div>
-      )}
+      <StockSymbolSelector
+        symbols={allSymbols}
+        selectedSymbol={selectedSymbol}
+        onSelectSymbol={setSelectedSymbol}
+        className="mb-4"
+      />
 
       {/* 급등락 이벤트 내용 */}
       {currentVolatilityEvents.length === 0 ? (

@@ -10,7 +10,8 @@
  * - 내용 영역: 선택된 종목의 최신 뉴스 리스트
  */
 import React, { useState, useMemo } from 'react';
-import { Button } from '@/shared/ui/button';
+import { getStockDisplayName } from '../../model/strategyConfig';
+import StockSymbolSelector from './StockSymbolSelector';
 
 interface NewsItem {
   title: string;
@@ -54,25 +55,17 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
       </div>
 
       {/* 종목 선택 버튼 (여러 종목일 때만 표시) */}
-      {allSymbols.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {allSymbols.map(symbol => (
-            <Button
-              key={symbol}
-              variant={selectedSymbol === symbol ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedSymbol(symbol)}
-            >
-              {symbol}
-            </Button>
-          ))}
-        </div>
-      )}
+      <StockSymbolSelector
+        symbols={allSymbols}
+        selectedSymbol={selectedSymbol}
+        onSelectSymbol={setSelectedSymbol}
+        className="mb-4"
+      />
 
       {/* 최신 뉴스 내용 */}
       {currentNews.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {selectedSymbol}의 최신 뉴스가 없습니다.
+          {getStockDisplayName(selectedSymbol)}의 최신 뉴스가 없습니다.
         </div>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
