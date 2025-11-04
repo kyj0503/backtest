@@ -233,7 +233,9 @@ class PortfolioService:
         prev_portfolio_value = 0
         prev_date = None
         is_first_day = True
-        available_cash = cash_amount  # 사용 가능한 현금
+        available_cash = cash_amount  # 사용 가능한 현금 (총합)
+        # 각 현금 항목을 개별 추적
+        cash_holdings = {k: v for k, v in amounts.items() if dca_info[k].get('asset_type') == 'cash'}
         total_trades = 0  # 총 거래 횟수 추적
         rebalance_history = []  # 리밸런싱 히스토리
         weight_history = []  # 포트폴리오 비중 변화 이력
@@ -407,14 +409,15 @@ class PortfolioService:
             # 현재 포트폴리오 비중 기록
             current_weights = {'date': current_date.strftime('%Y-%m-%d')}
             if current_portfolio_value > 0:
-                # 주식 비중 계산
+                # 주식 비중 계산 (unique_key 사용)
                 for unique_key in shares.keys():
                     if unique_key in current_prices:
-                        symbol = dca_info[unique_key]['symbol']
                         stock_value = shares[unique_key] * current_prices[unique_key]
-                        current_weights[symbol] = stock_value / current_portfolio_value
-                # 현금 비중 계산
-                current_weights['CASH'] = available_cash / current_portfolio_value
+                        current_weights[unique_key] = stock_value / current_portfolio_value
+                # 현금 비중 계산 (각 현금 항목 개별 처리)
+                for unique_key, amount in amounts.items():
+                    if dca_info[unique_key].get('asset_type') == 'cash':
+                        current_weights[unique_key] = amount / current_portfolio_value
             weight_history.append(current_weights)
 
             # 수익률 계산
@@ -1159,28 +1162,16 @@ class PortfolioService:
                         'total_equity': statistics['Final_Value'],
                         'total_return_pct': statistics['Total_Return']
                     },
-                    'portfolio_composition': (
-                        # 주식 자산들
-                        [
-                            {
-                                'symbol': dca_info[unique_key]['symbol'],
-                                'weight': amount / total_amount,
-                                'amount': amount,
-                                'investment_type': dca_info[unique_key]['investment_type'],
-                                'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None
-                            }
-                            for unique_key, amount in amounts.items()
-                            if dca_info[unique_key].get('asset_type') != 'cash'
-                        ] +
-                        # 현금 자산 (모든 현금을 하나로 합침)
-                        ([{
-                            'symbol': 'CASH',
-                            'weight': cash_amount / total_amount,
-                            'amount': cash_amount,
-                            'investment_type': 'lump_sum',
-                            'dca_periods': None
-                        }] if cash_amount > 0 else [])
-                    ),
+                    'portfolio_composition': [
+                        {
+                            'symbol': unique_key,  # unique_key를 symbol로 사용
+                            'weight': amount / total_amount,
+                            'amount': amount,
+                            'investment_type': dca_info[unique_key]['investment_type'],
+                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None
+                        }
+                        for unique_key, amount in amounts.items()
+                    ],
                     'equity_curve': {
                         date.strftime('%Y-%m-%d'): value * total_amount
                         for date, value in portfolio_result['Portfolio_Value'].items()
