@@ -1,8 +1,8 @@
 import React, { useState, memo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
-import { getStockDisplayName } from '../backtest/model/strategyConfig';
-import StockSymbolSelector from './backtest/components/results/StockSymbolSelector';
+import { getStockDisplayName } from '../model/strategyConfig';
+import StockSymbolSelector from './results/StockSymbolSelector';
 
 interface StockData {
   symbol: string;
