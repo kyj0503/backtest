@@ -1,3 +1,11 @@
+/**
+ * 리밸런싱 히스토리 테이블 컴포넌트
+ *
+ * **통화 표시 정책:**
+ * - 리밸런싱은 백테스트 연산의 결과물이므로 **USD로 통일 표시**
+ * - 포트폴리오 전체가 USD 기준으로 계산되므로 일관성 유지
+ * - 수수료, 거래 가격, 거래 금액 모두 USD
+ */
 import React, { useState } from 'react';
 import { RebalanceEvent } from '../../model/backtest-result-types';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
@@ -125,12 +133,12 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
                           <div className="text-right">
                             <div className="text-sm">
                               {trade.shares !== undefined
-                                ? `${trade.shares.toFixed(2)}주 @ ${formatPriceWithCurrency(trade.price, tickerInfo[trade.symbol]?.currency || 'USD')}`
+                                ? `${trade.shares.toFixed(2)}주 @ ${formatPriceWithCurrency(trade.price, 'USD')}`
                                 : `$${(trade.amount || 0).toFixed(2)}`}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {trade.shares !== undefined
-                                ? formatPriceWithCurrency(trade.shares * trade.price, tickerInfo[trade.symbol]?.currency || 'USD')
+                                ? formatPriceWithCurrency(trade.shares * trade.price, 'USD')
                                 : '현금'}
                             </div>
                           </div>
