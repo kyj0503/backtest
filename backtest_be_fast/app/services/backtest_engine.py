@@ -88,6 +88,9 @@ class BacktestEngine:
             self.logger.info(f"데이터 로드 완료: {len(data)} 행")
             self.logger.debug(f"데이터 컬럼: {list(data.columns)}")
             self.logger.info(f"데이터 범위: {data.index[0]} ~ {data.index[-1]}")
+
+            # 통화 변환: 비USD 통화를 USD로 변환
+            data = await self._convert_to_usd(request.ticker, data, request.start_date, request.end_date)
             
             # 전략 클래스 가져오기
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
@@ -177,6 +180,118 @@ class BacktestEngine:
             raise HTTPException(status_code=404, detail="가격 데이터를 찾을 수 없습니다.")
 
         return data
+
+    async def _convert_to_usd(
+        self, ticker: str, data: pd.DataFrame, start_date: str, end_date: str
+    ) -> pd.DataFrame:
+        """
+        비USD 통화의 가격 데이터를 USD로 변환
+
+        Parameters:
+        -----------
+        ticker : str
+            종목 심볼
+        data : pd.DataFrame
+            가격 데이터 (Open, High, Low, Close, Volume)
+        start_date : str
+            시작 날짜
+        end_date : str
+            종료 날짜
+
+        Returns:
+        --------
+        pd.DataFrame
+            USD로 변환된 가격 데이터
+        """
+        from datetime import datetime, timedelta
+        from app.services.yfinance_db import get_ticker_info_from_db
+        from app.services.unified_data_service import load_ticker_data
+
+        # 통화 정보 가져오기
+        try:
+            ticker_info = get_ticker_info_from_db(ticker)
+            currency = ticker_info.get('currency', 'USD')
+            self.logger.info(f"{ticker} 통화: {currency}")
+        except Exception as e:
+            self.logger.warning(f"{ticker} 통화 정보 조회 실패: {e}, USD로 가정")
+            currency = 'USD'
+
+        # USD면 변환 불필요
+        if currency == 'USD':
+            return data
+
+        # 지원되는 통화 및 환율 티커 매핑 (portfolio_service.py와 동일)
+        SUPPORTED_CURRENCIES = {
+            'USD': None,
+            'KRW': 'KRW=X',
+            'JPY': 'JPY=X',
+            'EUR': 'EURUSD=X',
+            'GBP': 'GBPUSD=X',
+            'CNY': 'CNY=X',
+            'HKD': 'HKD=X',
+            'TWD': 'TWD=X',
+            'SGD': 'SGD=X',
+            'AUD': 'AUDUSD=X',
+            'CAD': 'CADUSD=X',
+            'CHF': 'CHFUSD=X',
+            'INR': 'INR=X'
+        }
+
+        if currency not in SUPPORTED_CURRENCIES:
+            self.logger.warning(f"지원하지 않는 통화: {currency}, 변환 없이 진행")
+            return data
+
+        exchange_ticker = SUPPORTED_CURRENCIES[currency]
+        if not exchange_ticker:
+            return data
+
+        # 환율 데이터 로드 (60일 버퍼 추가)
+        try:
+            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+            exchange_start_date_obj = start_date_obj - timedelta(days=60)
+            exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
+
+            self.logger.info(f"{currency} 환율 데이터 로드 중: {exchange_ticker}")
+            exchange_data = load_ticker_data(exchange_ticker, exchange_start_date, end_date)
+
+            if exchange_data is None or exchange_data.empty:
+                self.logger.warning(f"{currency} 환율 데이터 없음, 변환 없이 진행")
+                return data
+
+            # 데이터 날짜 범위로 reindex하고 forward-fill
+            exchange_data = exchange_data.reindex(data.index, method='ffill')
+            exchange_data = exchange_data.bfill()
+
+            self.logger.info(f"환율 데이터 전처리 완료: {len(exchange_data)}일치")
+
+            # 가격 데이터 복사
+            converted_data = data.copy()
+
+            # 각 행에 대해 환율 적용
+            for idx in converted_data.index:
+                if idx in exchange_data.index and pd.notna(exchange_data.loc[idx, 'Close']):
+                    exchange_rate = exchange_data.loc[idx, 'Close']
+
+                    # EUR, GBP, AUD 등: XXXUSD=X 형태 (곱하기)
+                    # KRW, JPY 등: XXX=X 형태 (나누기)
+                    if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
+                        # 1 통화 = X USD
+                        multiplier = exchange_rate
+                    else:
+                        # 1 USD = X 통화
+                        multiplier = 1.0 / exchange_rate if exchange_rate > 0 else 1.0
+
+                    # OHLC 컬럼 변환
+                    for col in ['Open', 'High', 'Low', 'Close']:
+                        if col in converted_data.columns:
+                            converted_data.loc[idx, col] *= multiplier
+
+            self.logger.info(f"{ticker} 가격을 {currency}에서 USD로 변환 완료")
+            return converted_data
+
+        except Exception as e:
+            self.logger.error(f"통화 변환 중 오류: {e}, 원본 데이터 사용")
+            return data
 
     def _build_strategy(
         self, strategy_name: str, params: Optional[Dict[str, Any]]
