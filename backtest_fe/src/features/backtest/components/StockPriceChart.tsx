@@ -76,6 +76,20 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     return mergedData;
   }, [selectedSymbol, selectedStockData, tradeLogs]);
 
+  // Y축 도메인 계산 (메모이제이션)
+  const yAxisDomain = useMemo<[number, number]>(() => {
+    const prices = chartDataWithSignals
+      .map((d: any) => d.price)
+      .filter((price): price is number => typeof price === 'number' && !isNaN(price));
+    
+    if (prices.length === 0) return [0, 100];
+    
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    
+    return [minPrice, maxPrice];
+  }, [chartDataWithSignals]);
+
   // 매매 횟수 계산
   const tradeCount = useMemo(() => {
     const logs = tradeLogs[selectedSymbol];
@@ -133,18 +147,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                 />
                 <YAxis
                   tickFormatter={formatPrice}
-                  domain={(() => {
-                    const prices = chartDataWithSignals
-                      .map((d: any) => d.price)
-                      .filter((price): price is number => typeof price === 'number' && !isNaN(price));
-                    
-                    if (prices.length === 0) return [0, 100];
-                    
-                    const minPrice = Math.min(...prices);
-                    const maxPrice = Math.max(...prices);
-                    
-                    return [minPrice, maxPrice];
-                  })()}
+                  domain={yAxisDomain}
                 />
                 <Tooltip
                   labelFormatter={(label: any) => `날짜: ${label}`}
