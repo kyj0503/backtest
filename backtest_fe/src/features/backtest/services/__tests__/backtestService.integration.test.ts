@@ -6,7 +6,7 @@ import type {
   BacktestRequest,
   UnifiedBacktestResponse,
   NewsResponse,
-} from '../../model/api-types'
+} from '../../model/types/api-types'
 
 const baseRequest: BacktestRequest = {
   portfolio: [

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { STRATEGY_CONFIGS, StrategyParameter } from '../model/strategyConfig';
-import { StrategyParamValue } from '../model/api-types';
+import { StrategyParamValue } from '../model/types/api-types';
 import { FormField } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
 import { HelpCircle } from 'lucide-react';

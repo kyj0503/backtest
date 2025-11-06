@@ -126,6 +126,18 @@ class PortfolioBacktestRequest(BaseModel):
         if not v:
             raise ValueError('포트폴리오는 최소 1개 종목을 포함해야 합니다.')
         
+        # 중복 종목 검증 (현금 제외)
+        stock_symbols = [item.symbol.upper() for item in v if item.asset_type != 'cash']
+        if len(stock_symbols) != len(set(stock_symbols)):
+            # 중복된 종목 찾기
+            seen = set()
+            duplicates = set()
+            for symbol in stock_symbols:
+                if symbol in seen:
+                    duplicates.add(symbol)
+                seen.add(symbol)
+            raise ValueError(f'중복된 종목이 있습니다: {", ".join(sorted(duplicates))}. 같은 종목은 한 번만 추가할 수 있습니다.')
+        
         # amount/weight 혼합 입력 불가, 모두 amount만 입력 or 모두 weight만 입력 or 일부만 weight면 amount 자동 환산
         has_amount = any(item.amount is not None for item in v)
         has_weight = any(item.weight is not None for item in v)

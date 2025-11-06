@@ -59,7 +59,7 @@ class MACDStrategy(Strategy):
     def next(self):
         if (len(self.macd_line) > 1 and len(self.signal_line) > 1 and
             not np.isnan(self.macd_line[-1]) and not np.isnan(self.signal_line[-1])):
-            
+
             # MACD 선이 시그널 선을 상향 돌파: 매수
             if crossover(self.macd_line, self.signal_line) and not self.position:
                 price = self.data.Close[-1]

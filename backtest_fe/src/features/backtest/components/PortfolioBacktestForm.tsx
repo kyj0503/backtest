@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Loader2, TrendingUp, AlertCircle } from 'lucide-react';
 import axios from 'axios';
-import { BacktestRequest } from '../model/api-types';
+import { BacktestRequest } from '../model/types/api-types';
 import { ASSET_TYPES } from '../model/strategyConfig';
 import DateRangeForm from './DateRangeForm';
 import StrategyForm from './StrategyForm';
@@ -203,6 +203,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
               commission={state.settings.commission}
               setCommission={actions.setCommission}
               stockCount={stockCount}
+              selectedStrategy={state.strategy.selectedStrategy}
             />
           </FormSection>
         </div>

@@ -15,7 +15,7 @@ import { getStockDisplayName } from '../../model/strategyConfig';
 import StockSymbolSelector from './StockSymbolSelector';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
-import { TickerInfo } from '../../model/backtest-result-types';
+import { TickerInfo } from '../../model/types/backtest-result-types';
 
 interface VolatilityEvent {
   date: string;
@@ -69,7 +69,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
 
   return (
     <div className={CARD_STYLES.base}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between ${SPACING.itemCompact}`}>
         <div className={SPACING.itemCompact}>
           <h3 className={HEADING_STYLES.h3}>급등락 이벤트</h3>
           <p className={TEXT_STYLES.caption}>

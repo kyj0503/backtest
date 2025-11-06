@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { STRATEGY_CONFIGS, StrategyConfig, StrategyParameter } from '../model/strategyConfig';
-import { StrategyParamValue } from '../model/api-types';
+import { StrategyParamValue } from '../model/types/api-types';
 
 export interface StrategyParam {
   key: string;

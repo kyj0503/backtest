@@ -7,6 +7,7 @@ export interface CommissionFormProps {
   commission: number;
   setCommission: (commission: number) => void;
   stockCount?: number; // 포트폴리오 전체 자산 수 (주식 + 현금)
+  selectedStrategy?: string; // 선택된 전략
 }
 
 const CommissionForm: React.FC<CommissionFormProps> = ({
@@ -14,7 +15,8 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
   setRebalanceFrequency,
   commission,
   setCommission,
-  stockCount = 0
+  stockCount = 0,
+  selectedStrategy = 'buy_hold_strategy'
 }) => {
   const rebalanceOptions = [
     { value: 'none', label: '리밸런싱 안함' },
@@ -23,10 +25,28 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
     { value: 'annually', label: '연간' }
   ];
 
-  const isRebalanceDisabled = stockCount < 2;
-  const rebalanceHelpText = isRebalanceDisabled
-    ? '리밸런싱은 2개 이상의 자산(주식 또는 현금)이 필요합니다'
-    : '포트폴리오 비중을 다시 맞추는 주기';
+  // 기술적 전략 목록 (리밸런싱 불가)
+  const technicalStrategies = [
+    'sma_strategy',
+    'rsi_strategy',
+    'macd_strategy',
+    'ema_strategy',
+    'bollinger_strategy'
+  ];
+
+  const isTechnicalStrategy = technicalStrategies.includes(selectedStrategy);
+  const isRebalanceDisabled = stockCount < 2 || isTechnicalStrategy;
+
+  // 비활성화 이유를 명확히 안내
+  const rebalanceHelpText = (() => {
+    if (isTechnicalStrategy) {
+      return '기술적 전략은 매수/매도 신호를 따르므로 리밸런싱이 지원되지 않습니다';
+    }
+    if (stockCount < 2) {
+      return '리밸런싱은 2개 이상의 자산(주식 또는 현금)이 필요합니다';
+    }
+    return '포트폴리오 비중을 다시 맞추는 주기';
+  })();
 
   return (
     <div className="grid gap-6 md:grid-cols-2">

@@ -19,7 +19,7 @@
  */
 import React, { memo, useMemo } from 'react';
 import { ResponsiveContainer, ScatterChart, CartesianGrid, XAxis, YAxis, Tooltip, Scatter, Legend } from 'recharts';
-import { TradeMarker } from '../model/backtest-result-types';
+import { TradeMarker } from '../model/types/backtest-result-types';
 import { formatPrice } from '@/shared/lib/utils/numberUtils';
 
 interface TradeSignalsChartProps {

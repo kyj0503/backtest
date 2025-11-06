@@ -3,7 +3,7 @@ import { BacktestService } from '../services/backtestService';
 import {
   BacktestRequest,
   UnifiedBacktestResponse,
-} from '../model/api-types';
+} from '../model/types/api-types';
 
 export function useBacktest() {
   const [lastRequest, setLastRequest] = useState<BacktestRequest | null>(null);

@@ -11,7 +11,7 @@ import {
   Line,
   ReferenceLine
 } from 'recharts';
-import CustomTooltip from './CustomTooltip';
+import { CustomTooltip } from './shared';
 
 interface OHLCData {
   date: string;
