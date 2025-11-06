@@ -710,10 +710,13 @@ class PortfolioService:
         return max_count
     
     async def _calculate_realistic_equity_curve(self, request: PortfolioBacktestRequest,
-                                              portfolio_results: Dict, total_amount: float) -> Tuple[Dict, Dict]:
+                                              portfolio_results: Dict, total_amount: float) -> Tuple[Dict, Dict, List]:
         """
         개별 종목 백테스트의 실제 equity curve를 합산하여 포트폴리오 equity curve 계산
         (매수/매도 타이밍이 정확히 반영됨)
+
+        Returns:
+            Tuple[equity_curve, daily_returns, weight_history]
         """
         from datetime import datetime
         import pandas as pd
@@ -745,29 +748,34 @@ class PortfolioService:
 
         equity_curve = {}
         daily_returns = {}
+        weight_history = []
         prev_portfolio_value = total_amount
 
         for i, date_str in enumerate(date_range):
             portfolio_value = 0
+            symbol_equities = {}  # 각 종목의 equity 저장
 
             # 각 종목의 해당 날짜 equity 합산
             for unique_key, result in portfolio_results.items():
                 equity_curve_dict = equity_curves_by_symbol.get(unique_key)
+                symbol_equity = 0
 
                 if equity_curve_dict:
                     # 전략 실행 결과의 equity curve 사용
                     if date_str in equity_curve_dict:
-                        portfolio_value += equity_curve_dict[date_str]
+                        symbol_equity = equity_curve_dict[date_str]
                     elif i == 0:
                         # 첫날에 데이터가 없으면 초기 투자금
-                        portfolio_value += result.get('amount', 0)
+                        symbol_equity = result.get('amount', 0)
                     else:
                         # 중간에 데이터가 없으면 마지막 값 사용 (forward fill)
-                        last_value = result.get('final_value', result.get('amount', 0))
-                        portfolio_value += last_value
+                        symbol_equity = result.get('final_value', result.get('amount', 0))
                 else:
                     # equity curve가 없는 종목 (예: 현금)
-                    portfolio_value += result.get('amount', 0)
+                    symbol_equity = result.get('amount', 0)
+
+                symbol_equities[unique_key] = symbol_equity
+                portfolio_value += symbol_equity
 
             # 일일 수익률 계산
             if i == 0:
@@ -777,15 +785,29 @@ class PortfolioService:
 
             equity_curve[date_str] = portfolio_value
             daily_returns[date_str] = daily_return
+
+            # 포트폴리오 비중 계산
+            current_weights = {'date': date_str}
+            if portfolio_value > 0:
+                for unique_key, symbol_equity in symbol_equities.items():
+                    current_weights[unique_key] = symbol_equity / portfolio_value
+            else:
+                for unique_key in symbol_equities.keys():
+                    current_weights[unique_key] = 0
+
+            weight_history.append(current_weights)
             prev_portfolio_value = portfolio_value
 
-        logger.info(f"포트폴리오 equity curve 계산 완료: {len(equity_curve)}일치")
-        return equity_curve, daily_returns
+        logger.info(f"포트폴리오 equity curve 및 weight history 계산 완료: {len(equity_curve)}일치")
+        return equity_curve, daily_returns, weight_history
     
-    def _fallback_equity_curve(self, request: PortfolioBacktestRequest, 
-                              portfolio_results: Dict, total_amount: float) -> Tuple[Dict, Dict]:
+    def _fallback_equity_curve(self, request: PortfolioBacktestRequest,
+                              portfolio_results: Dict, total_amount: float) -> Tuple[Dict, Dict, List]:
         """
         데이터가 없을 때 사용하는 기본 equity curve (선형)
+
+        Returns:
+            Tuple[equity_curve, daily_returns, weight_history]
         """
         from datetime import datetime
         import pandas as pd
@@ -800,8 +822,14 @@ class PortfolioService:
         
         equity_curve = {}
         daily_returns = {}
+        weight_history = []
         prev_equity = total_amount
-        
+
+        # 초기 비중 계산 (고정된 비중으로 가정)
+        initial_weights = {}
+        for unique_key, result in portfolio_results.items():
+            initial_weights[unique_key] = result.get('amount', 0) / total_amount if total_amount > 0 else 0
+
         for i, date in enumerate(date_range):
             if i == 0:
                 daily_return = 0.0
@@ -811,12 +839,18 @@ class PortfolioService:
                 progress = i / (len(date_range) - 1) if len(date_range) > 1 else 1
                 equity_value = total_amount * (1 + growth_rate * progress)
                 daily_return = (equity_value - prev_equity) / prev_equity * 100 if prev_equity > 0 else 0.0
-            
+
             equity_curve[date.strftime('%Y-%m-%d')] = equity_value
             daily_returns[date.strftime('%Y-%m-%d')] = daily_return
+
+            # 비중 기록 (fallback에서는 초기 비중 유지)
+            current_weights = {'date': date.strftime('%Y-%m-%d')}
+            current_weights.update(initial_weights)
+            weight_history.append(current_weights)
+
             prev_equity = equity_value
-        
-        return equity_curve, daily_returns
+
+        return equity_curve, daily_returns, weight_history
     
     async def run_portfolio_backtest(self, request: PortfolioBacktestRequest) -> Dict[str, Any]:
         """
@@ -1011,8 +1045,8 @@ class PortfolioService:
             # 연간 수익률 계산
             annual_return = ((total_portfolio_value / total_amount) ** (365.25 / duration_days) - 1) * 100 if duration_days > 0 else 0
 
-            # 먼저 equity curve와 daily returns 계산
-            equity_curve, daily_returns = await self._calculate_realistic_equity_curve(
+            # 먼저 equity curve, daily returns, weight history 계산
+            equity_curve, daily_returns, weight_history = await self._calculate_realistic_equity_curve(
                 request, portfolio_results, total_amount
             )
 
@@ -1090,7 +1124,9 @@ class PortfolioService:
                         for symbol, result in portfolio_results.items()
                     },
                     'equity_curve': equity_curve,
-                    'daily_returns': daily_returns
+                    'daily_returns': daily_returns,
+                    'weight_history': weight_history,
+                    'rebalance_history': []  # 전략 포트폴리오는 리밸런싱 없음
                 }
             }
             
