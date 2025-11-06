@@ -16,7 +16,7 @@ import {
   TableRow,
 } from '@/shared/ui/table';
 import { Stock, PortfolioInputMode } from '../model/backtest-form-types';
-import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths } from '../model/strategyConfig';
+import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths, VALIDATION_RULES } from '../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 // DCA 프리뷰 컴포넌트
@@ -60,7 +60,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
   return (
     <FormSection
       title="포트폴리오 구성"
-      description="투자할 자산과 비중을 설정하세요. 최대 10개의 자산을 추가할 수 있습니다."
+      description={`투자할 자산과 비중을 설정하세요. 최대 ${VALIDATION_RULES.MAX_PORTFOLIO_SIZE}개의 자산을 추가할 수 있습니다.`}
       actions={
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
           <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background p-1 shadow-sm">
@@ -128,7 +128,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
             </TooltipContent>
           </Tooltip>
           <span className="text-xs text-muted-foreground">
-            {portfolio.length}/10 자산
+            {portfolio.length}/{VALIDATION_RULES.MAX_PORTFOLIO_SIZE} 자산
           </span>
         </div>
       }
