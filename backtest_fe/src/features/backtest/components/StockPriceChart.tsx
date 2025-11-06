@@ -45,7 +45,14 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     if (!selectedStockData) return [];
 
     const logs = tradeLogs[selectedSymbol];
+
+    // 디버깅: tradeLogs 확인
+    console.log('🔍 [StockPriceChart] tradeLogs:', tradeLogs);
+    console.log('🔍 [StockPriceChart] selectedSymbol:', selectedSymbol);
+    console.log('🔍 [StockPriceChart] logs:', logs);
+
     if (!logs || !Array.isArray(logs)) {
+      console.log('⚠️ [StockPriceChart] No trade logs found for', selectedSymbol);
       return selectedStockData.data.map(d => ({ ...d }));
     }
 
@@ -57,12 +64,16 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
       if (trade.EntryTime && trade.EntryPrice) {
         const entryDate = trade.EntryTime.split(' ')[0];
         buyMap.set(entryDate, trade.EntryPrice);
+        console.log('✅ [StockPriceChart] Buy signal:', entryDate, trade.EntryPrice);
       }
       if (trade.ExitTime && trade.ExitPrice) {
         const exitDate = trade.ExitTime.split(' ')[0];
         sellMap.set(exitDate, trade.ExitPrice);
+        console.log('✅ [StockPriceChart] Sell signal:', exitDate, trade.ExitPrice);
       }
     });
+
+    console.log('📊 [StockPriceChart] buyMap size:', buyMap.size, 'sellMap size:', sellMap.size);
 
     // 주가 데이터에 매매 신호 merge
     return selectedStockData.data.map(point => ({

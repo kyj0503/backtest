@@ -92,16 +92,26 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
   // strategy_details에서 trade_log 추출 (symbol별)
   const tradeLogs = useMemo(() => {
+    console.log('🔍 [ChartsSection] portfolioData:', portfolioData);
+    console.log('🔍 [ChartsSection] strategy_details:', portfolioData?.strategy_details);
+
     const logs: Record<string, any[]> = {};
     if (portfolioData?.strategy_details) {
       Object.entries(portfolioData.strategy_details).forEach(([symbol, stats]) => {
+        console.log('🔍 [ChartsSection] Processing symbol:', symbol, 'stats:', stats);
         if (stats.trade_log && Array.isArray(stats.trade_log)) {
           // 원본 심볼로 매핑 (예: "AAPL#0" → "AAPL")
           const cleanSymbol = symbol.split('#')[0];
           logs[cleanSymbol] = stats.trade_log;
+          console.log('✅ [ChartsSection] Added trade_log for', cleanSymbol, ':', stats.trade_log.length, 'trades');
+        } else {
+          console.log('⚠️ [ChartsSection] No trade_log for', symbol);
         }
       });
+    } else {
+      console.log('⚠️ [ChartsSection] No strategy_details in portfolioData');
     }
+    console.log('📊 [ChartsSection] Final tradeLogs:', logs);
     return logs;
   }, [portfolioData]);
 
