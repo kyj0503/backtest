@@ -49,7 +49,7 @@ from decimal import Decimal
 
 from app.schemas.schemas import PortfolioBacktestRequest, PortfolioStock
 from app.schemas.requests import BacktestRequest
-from app.services.yfinance_db import load_ticker_data
+from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db
 from app.services.backtest_service import backtest_service
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
@@ -216,6 +216,33 @@ class PortfolioService:
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
 
+        # 환율 데이터 가져오기 (KRW to USD 변환용)
+        exchange_rates = {}
+        try:
+            exchange_data = load_ticker_data(
+                settings.exchange_rate_ticker,  # "KRW=X"
+                start_date,
+                end_date
+            )
+            if exchange_data is not None and not exchange_data.empty:
+                for date_idx, row in exchange_data.iterrows():
+                    exchange_rates[date_idx.date()] = row['Close']
+                logger.info(f"환율 데이터 로드 완료: {len(exchange_rates)}일치")
+        except Exception as e:
+            logger.warning(f"환율 데이터 로드 실패: {e}, KRW 자산이 있으면 문제 발생 가능")
+
+        # 각 종목의 currency 정보 가져오기
+        ticker_currencies = {}
+        for unique_key in stock_amounts.keys():
+            symbol = dca_info[unique_key]['symbol']
+            try:
+                ticker_info = get_ticker_info_from_db(symbol)
+                ticker_currencies[unique_key] = ticker_info.get('currency', 'USD')
+                logger.debug(f"{symbol} currency: {ticker_currencies[unique_key]}")
+            except Exception as e:
+                logger.warning(f"{symbol} currency 정보 조회 실패: {e}, USD로 가정")
+                ticker_currencies[unique_key] = 'USD'
+
         # 목표 비중 계산 (리밸런싱용)
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
 
@@ -241,7 +268,7 @@ class PortfolioService:
             if current_date.date() > end_date_obj.date():
                 break
 
-            # 현재 가격 가져오기
+            # 현재 가격 가져오기 (필요 시 USD로 변환)
             current_prices = {}
             for unique_key in stock_amounts.keys():
                 symbol = dca_info[unique_key]['symbol']
@@ -249,7 +276,22 @@ class PortfolioService:
                     df = portfolio_data[symbol]
                     price_data = df[df.index.date <= current_date.date()]
                     if not price_data.empty:
-                        current_prices[unique_key] = price_data['Close'].iloc[-1]
+                        raw_price = price_data['Close'].iloc[-1]
+
+                        # Currency 변환 (KRW -> USD)
+                        currency = ticker_currencies.get(unique_key, 'USD')
+                        if currency == 'KRW':
+                            # 해당 날짜의 환율 찾기
+                            exchange_rate = exchange_rates.get(current_date.date())
+                            if exchange_rate and exchange_rate > 0:
+                                converted_price = raw_price / exchange_rate
+                                logger.debug(f"{symbol} 가격 변환: ₩{raw_price:.2f} -> ${converted_price:.2f} (환율: {exchange_rate:.2f})")
+                                current_prices[unique_key] = converted_price
+                            else:
+                                logger.warning(f"{current_date.date()} 환율 데이터 없음, 원화 가격 그대로 사용")
+                                current_prices[unique_key] = raw_price
+                        else:
+                            current_prices[unique_key] = raw_price
 
             # 첫 날: 초기 매수 (일시불) 또는 DCA 시작
             if is_first_day:
