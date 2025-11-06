@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     default_commission: float = 0.002  # 0.2%
     
     # 포트폴리오 설정
-    max_portfolio_items: int = 10  # 포트폴리오 최대 종목 수
+    max_portfolio_items: int = 20  # 포트폴리오 최대 종목 수
     max_symbol_length: int = 10  # 심볼 최대 길이
     default_dca_periods: int = 12  # DCA 기본 기간 (개월)
     max_dca_periods: int = 60  # DCA 최대 기간 (개월)

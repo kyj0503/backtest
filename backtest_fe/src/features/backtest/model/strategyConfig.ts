@@ -230,7 +230,7 @@ export const getDcaMonths = (frequency: DcaFrequency): number => {
 export const VALIDATION_RULES = {
   MIN_AMOUNT: 100,
   MAX_AMOUNT: 1000000,
-  MAX_PORTFOLIO_SIZE: 10,
+  MAX_PORTFOLIO_SIZE: 20,
   MIN_COMMISSION: 0,
   MAX_COMMISSION: 5,
   SYMBOL_MAX_LENGTH: 10
