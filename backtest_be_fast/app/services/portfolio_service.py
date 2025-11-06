@@ -989,13 +989,35 @@ class PortfolioService:
             
             # 백테스트 기간 계산
             from datetime import datetime
+            import numpy as np
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
             duration_days = (end_date_obj - start_date_obj).days
-            
+
             # 연간 수익률 계산
             annual_return = ((total_portfolio_value / total_amount) ** (365.25 / duration_days) - 1) * 100 if duration_days > 0 else 0
-            
+
+            # 먼저 equity curve와 daily returns 계산
+            equity_curve, daily_returns = await self._calculate_realistic_equity_curve(
+                request, portfolio_results, total_amount
+            )
+
+            # daily_returns로부터 연간 변동성 계산
+            returns_list = [v for v in daily_returns.values()]
+            daily_volatility = np.std(returns_list) if len(returns_list) > 1 else 0.0
+            annual_volatility = daily_volatility * np.sqrt(252)  # 연간 거래일 수로 연간화
+
+            # daily_returns로부터 프로핏 팩터 계산
+            positive_returns = [r for r in returns_list if r > 0]
+            negative_returns = [r for r in returns_list if r < 0]
+            total_gains = sum(positive_returns) if positive_returns else 0.0
+            total_losses = abs(sum(negative_returns)) if negative_returns else 0.0
+            actual_profit_factor = total_gains / total_losses if total_losses > 0 else 0.0
+
+            # Positive/Negative Days 계산
+            positive_days = len(positive_returns)
+            negative_days = len(negative_returns)
+
             # 포트폴리오 통계 (프론트엔드 호환)
             portfolio_statistics = {
                 'Start': request.start_date,
@@ -1006,7 +1028,7 @@ class PortfolioService:
                 'Peak_Value': total_portfolio_value,  # 전략 기반에서는 최종값과 동일하게 가정
                 'Total_Return': portfolio_return,
                 'Annual_Return': annual_return,
-                'Annual_Volatility': 0.0,  # 전략 기반에서는 계산 복잡하므로 0으로 설정
+                'Annual_Volatility': annual_volatility,  # 실제 계산된 연간 변동성
                 'Sharpe_Ratio': weighted_sharpe_ratio,
                 'Max_Drawdown': -weighted_max_drawdown,  # 음수로 표시
                 'Avg_Drawdown': -weighted_max_drawdown / 2,  # 평균 드로우다운 추정
@@ -1014,17 +1036,11 @@ class PortfolioService:
                 'Max_Consecutive_Losses': 0,  # 전략 기반에서는 계산 복잡
                 'Total_Trading_Days': duration_days,
                 'Total_Trades': total_trades,  # 전체 거래 횟수 추가
-                'Positive_Days': 0,  # 전략 기반에서는 계산 복잡
-                'Negative_Days': 0,  # 전략 기반에서는 계산 복잡
+                'Positive_Days': positive_days,  # 실제 계산된 값
+                'Negative_Days': negative_days,  # 실제 계산된 값
                 'Win_Rate': weighted_win_rate,
-                'Profit_Factor': weighted_profit_factor
+                'Profit_Factor': actual_profit_factor  # 실제 계산된 프로핏 팩터
             }
-            
-            # 실제 포트폴리오 equity curve 생성
-            # 각 종목의 실제 가격 데이터를 기반으로 일일 포트폴리오 가치 계산
-            equity_curve, daily_returns = await self._calculate_realistic_equity_curve(
-                request, portfolio_results, total_amount
-            )
 
             # individual_results를 리스트 형태로 변환 (테스트 호환성)
             individual_results_list = []
