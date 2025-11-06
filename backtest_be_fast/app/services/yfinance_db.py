@@ -344,6 +344,93 @@ def get_ticker_info_from_db(ticker: str) -> dict:
         conn.close()
 
 
+def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
+    """
+    DB에서 여러 티커의 메타데이터를 배치로 조회 (N+1 쿼리 최적화)
+
+    Args:
+        tickers: 종목 심볼 리스트
+
+    Returns:
+        티커별 정보 딕셔너리 (key: ticker, value: info dict)
+    """
+    if not tickers:
+        return {}
+
+    engine = _get_engine()
+    conn = engine.connect()
+    try:
+        # 대문자로 변환
+        upper_tickers = [t.upper() for t in tickers]
+
+        # IN 절을 사용한 배치 조회
+        placeholders = ', '.join([f':t{i}' for i in range(len(upper_tickers))])
+        query = text(f"SELECT ticker, info_json FROM stocks WHERE ticker IN ({placeholders})")
+        params = {f't{i}': ticker for i, ticker in enumerate(upper_tickers)}
+
+        rows = conn.execute(query, params).fetchall()
+
+        # 결과를 딕셔너리로 변환
+        result = {}
+        found_tickers = set()
+
+        for row in rows:
+            ticker = row[0]
+            found_tickers.add(ticker)
+
+            if row[1]:
+                try:
+                    info = json.loads(row[1])
+                    result[ticker] = {
+                        'symbol': ticker,
+                        'currency': info.get('currency', 'USD'),
+                        'company_name': info.get('company_name', ticker),
+                        'exchange': info.get('exchange', 'Unknown')
+                    }
+                except Exception as e:
+                    logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
+                    result[ticker] = {
+                        'symbol': ticker,
+                        'currency': 'USD',
+                        'company_name': ticker,
+                        'exchange': 'Unknown'
+                    }
+            else:
+                result[ticker] = {
+                    'symbol': ticker,
+                    'currency': 'USD',
+                    'company_name': ticker,
+                    'exchange': 'Unknown'
+                }
+
+        # DB에 없는 티커들은 기본값 추가
+        for ticker in upper_tickers:
+            if ticker not in found_tickers:
+                result[ticker] = {
+                    'symbol': ticker,
+                    'currency': 'USD',
+                    'company_name': ticker,
+                    'exchange': 'Unknown'
+                }
+
+        return result
+
+    except Exception as e:
+        logger.error(f"배치 티커 정보 조회 실패: {e}")
+        # 실패 시 기본값으로 채운 딕셔너리 반환
+        return {
+            ticker.upper(): {
+                'symbol': ticker.upper(),
+                'currency': 'USD',
+                'company_name': ticker.upper(),
+                'exchange': 'Unknown'
+            }
+            for ticker in tickers
+        }
+    finally:
+        conn.close()
+
+
 def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> pd.DataFrame:
     """실제 데이터 로드 로직 (내부용)"""
     engine = _get_engine()

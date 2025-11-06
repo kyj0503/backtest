@@ -64,21 +64,23 @@ class UnifiedDataService:
         Returns:
             종목별 메타데이터 딕셔너리 (currency, company_name, exchange)
         """
-        from .yfinance_db import get_ticker_info_from_db
+        from .yfinance_db import get_ticker_info_batch_from_db
 
-        ticker_info = {}
-        for symbol in symbols:
-            try:
-                info = get_ticker_info_from_db(symbol)
-                ticker_info[symbol] = info
-            except Exception as e:
-                logger.warning(f"티커 정보 조회 실패: {symbol} - {str(e)}")
-                ticker_info[symbol] = {
+        # 배치 조회로 N+1 쿼리 문제 해결
+        try:
+            ticker_info = get_ticker_info_batch_from_db(symbols)
+        except Exception as e:
+            logger.warning(f"티커 정보 일괄 조회 실패: {str(e)}")
+            # 실패 시 기본값 반환
+            ticker_info = {
+                symbol: {
                     'symbol': symbol,
                     'currency': 'USD',
                     'company_name': symbol,
                     'exchange': 'Unknown'
                 }
+                for symbol in symbols
+            }
 
         return ticker_info
 
