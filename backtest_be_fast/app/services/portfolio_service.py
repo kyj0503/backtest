@@ -278,14 +278,20 @@ class PortfolioService:
                     # 백테스트 시작일보다 60일 전부터 로드
                     exchange_data = load_ticker_data(exchange_ticker, exchange_start_date, end_date)
                     if exchange_data is not None and not exchange_data.empty:
-                        # Forward-fill: 누락된 날짜를 이전 유효 값으로 채움
-                        exchange_data = exchange_data.ffill()
+                        # 백테스트 날짜 범위로 reindex하고 forward-fill 적용
+                        # 이렇게 하면 환율 시장 휴일(주말, 공휴일)에도 이전 거래일의 환율이 채워짐
+                        exchange_data = exchange_data.reindex(date_range, method='ffill')
+
+                        # 여전히 NaN이 있으면 backward-fill로 채움 (초기 날짜 대비)
+                        exchange_data = exchange_data.bfill()
 
                         currency_rates = {}
                         for date_idx, row in exchange_data.iterrows():
-                            currency_rates[date_idx.date()] = row['Close']
+                            if pd.notna(row['Close']):
+                                currency_rates[date_idx.date()] = row['Close']
+
                         exchange_rates_by_currency[currency] = currency_rates
-                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치 (버퍼 포함)")
+                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치 (reindex + ffill/bfill)")
                 except Exception as e:
                     logger.warning(f"{currency} 환율 데이터 로드 실패: {e}")
                     exchange_rates_by_currency[currency] = {}
