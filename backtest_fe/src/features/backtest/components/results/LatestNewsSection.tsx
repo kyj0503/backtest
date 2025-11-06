@@ -60,7 +60,7 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
         symbols={allSymbols}
         selectedSymbol={selectedSymbol}
         onSelectSymbol={setSelectedSymbol}
-        className="mb-4"
+        className="mt-4 mb-4"
       />
 
       {/* 최신 뉴스 내용 */}

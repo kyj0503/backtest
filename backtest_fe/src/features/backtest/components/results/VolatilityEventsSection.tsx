@@ -83,7 +83,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
         symbols={allSymbols}
         selectedSymbol={selectedSymbol}
         onSelectSymbol={setSelectedSymbol}
-        className="mb-4"
+        className="mt-4 mb-4"
       />
 
       {/* 급등락 이벤트 내용 */}
