@@ -1,5 +1,5 @@
-import React, { useState, memo } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import React, { useState, memo, useMemo } from "react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Scatter, ScatterChart } from "recharts";
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
@@ -14,13 +14,24 @@ interface StockData {
   }>;
 }
 
+interface TradeLog {
+  EntryTime: string;
+  ExitTime?: string;
+  EntryPrice: number;
+  ExitPrice?: number;
+  Size: number;
+  PnL?: number;
+  ReturnPct?: number;
+}
+
 interface StockPriceChartProps {
   stocksData: StockData[];
   tickerInfo?: { [symbol: string]: TickerInfo };
+  tradeLogs?: Record<string, TradeLog[]>;
   className?: string;
 }
 
-const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tickerInfo = {}, className = "" }) => {
+const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tickerInfo = {}, tradeLogs = {}, className = "" }) => {
   // 성능 모니터링
   useRenderPerformance('StockPriceChart');
 
@@ -28,6 +39,31 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
 
   // 선택된 종목의 데이터 찾기
   const selectedStockData = stocksData.find(stock => stock.symbol === selectedSymbol);
+
+  // 선택된 종목의 매매 신호 생성
+  const tradeSignals = useMemo(() => {
+    const logs = tradeLogs[selectedSymbol];
+    if (!logs || !Array.isArray(logs)) return { buys: [], sells: [] };
+
+    const buys: Array<{ date: string; price: number }> = [];
+    const sells: Array<{ date: string; price: number }> = [];
+
+    logs.forEach((trade) => {
+      // 매수 신호
+      if (trade.EntryTime && trade.EntryPrice) {
+        const entryDate = trade.EntryTime.split(' ')[0]; // "2025-01-02 00:00:00" → "2025-01-02"
+        buys.push({ date: entryDate, price: trade.EntryPrice });
+      }
+
+      // 매도 신호
+      if (trade.ExitTime && trade.ExitPrice) {
+        const exitDate = trade.ExitTime.split(' ')[0];
+        sells.push({ date: exitDate, price: trade.ExitPrice });
+      }
+    });
+
+    return { buys, sells };
+  }, [selectedSymbol, tradeLogs]);
 
   if (!stocksData || stocksData.length === 0) {
     return (
@@ -89,23 +125,44 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                   dot={false}
                   activeDot={{ r: 6 }}
                 />
+                {/* 매수 신호 (파란점) */}
+                <Scatter
+                  data={tradeSignals.buys}
+                  fill="#3b82f6"
+                  shape="circle"
+                />
+                {/* 매도 신호 (빨간점) */}
+                <Scatter
+                  data={tradeSignals.sells}
+                  fill="#ef4444"
+                  shape="circle"
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           {/* 차트 하단 정보 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
             <div>
               <small className="text-muted-foreground">
                 시작: {selectedStockData.data[0]?.date} |
                 종료: {selectedStockData.data[selectedStockData.data.length - 1]?.date}
               </small>
             </div>
-            <div className="text-left md:text-right">
+            <div className="text-left md:text-center">
               <small className="text-muted-foreground">
                 데이터 포인트: {selectedStockData.data.length}개
               </small>
             </div>
+            {tradeSignals.buys.length > 0 || tradeSignals.sells.length > 0 ? (
+              <div className="text-left md:text-right">
+                <small className="text-muted-foreground">
+                  <span className="text-blue-500">● 매수: {tradeSignals.buys.length}회</span>
+                  {' | '}
+                  <span className="text-red-500">● 매도: {tradeSignals.sells.length}회</span>
+                </small>
+              </div>
+            ) : null}
           </div>
         </>
       )}
