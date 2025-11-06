@@ -278,6 +278,9 @@ class PortfolioService:
 
             # 현재 가격 가져오기 (필요 시 USD로 변환)
             current_prices = {}
+            # 가장 최근 유효한 환율 캐싱
+            last_valid_exchange_rate = None
+
             for unique_key in stock_amounts.keys():
                 symbol = dca_info[unique_key]['symbol']
                 if symbol in portfolio_data:
@@ -291,13 +294,33 @@ class PortfolioService:
                         if currency == 'KRW':
                             # 해당 날짜의 환율 찾기
                             exchange_rate = exchange_rates.get(current_date.date())
+
+                            # 환율이 없으면 가장 최근 유효한 환율 찾기
+                            if not exchange_rate or exchange_rate <= 0:
+                                # 이전 날짜들의 환율 검색
+                                search_date = current_date.date()
+                                for _ in range(30):  # 최대 30일 전까지 검색
+                                    search_date = search_date - timedelta(days=1)
+                                    exchange_rate = exchange_rates.get(search_date)
+                                    if exchange_rate and exchange_rate > 0:
+                                        last_valid_exchange_rate = exchange_rate
+                                        logger.warning(f"{current_date.date()} 환율 데이터 없음, {search_date} 환율 사용: {exchange_rate:.2f}")
+                                        break
+
+                                # 30일 내에도 없으면 마지막으로 사용한 환율 사용
+                                if not exchange_rate or exchange_rate <= 0:
+                                    if last_valid_exchange_rate:
+                                        exchange_rate = last_valid_exchange_rate
+                                        logger.warning(f"{current_date.date()} 환율 데이터 없음, 마지막 유효 환율 사용: {exchange_rate:.2f}")
+                                    else:
+                                        logger.error(f"{current_date.date()} 환율 데이터 없고 이전 환율도 없음, 해당 날짜 건너뛰기")
+                                        continue  # 이 날짜는 건너뛰기
+
                             if exchange_rate and exchange_rate > 0:
                                 converted_price = raw_price / exchange_rate
                                 logger.debug(f"{symbol} 가격 변환: ₩{raw_price:.2f} -> ${converted_price:.2f} (환율: {exchange_rate:.2f})")
                                 current_prices[unique_key] = converted_price
-                            else:
-                                logger.warning(f"{current_date.date()} 환율 데이터 없음, 원화 가격 그대로 사용")
-                                current_prices[unique_key] = raw_price
+                                last_valid_exchange_rate = exchange_rate  # 유효한 환율 저장
                         else:
                             current_prices[unique_key] = raw_price
 
