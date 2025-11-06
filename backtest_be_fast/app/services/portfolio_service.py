@@ -262,6 +262,11 @@ class PortfolioService:
         required_currencies = set(ticker_currencies.values()) - {'USD'}
         exchange_rates_by_currency = {}  # {currency: {date: rate}}
 
+        # 환율 데이터는 백테스트 시작일보다 충분히 이전부터 로드
+        # (백테스트 초반에 누락된 환율을 forward-fill로 채우기 위해)
+        exchange_start_date_obj = start_date_obj - timedelta(days=EXCHANGE_RATE_LOOKBACK_DAYS * 2)
+        exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
+
         for currency in required_currencies:
             if currency not in SUPPORTED_CURRENCIES:
                 logger.warning(f"지원하지 않는 통화: {currency}, USD로 처리")
@@ -270,16 +275,17 @@ class PortfolioService:
             exchange_ticker = SUPPORTED_CURRENCIES[currency]
             if exchange_ticker:
                 try:
-                    exchange_data = load_ticker_data(exchange_ticker, start_date, end_date)
+                    # 백테스트 시작일보다 60일 전부터 로드
+                    exchange_data = load_ticker_data(exchange_ticker, exchange_start_date, end_date)
                     if exchange_data is not None and not exchange_data.empty:
                         # Forward-fill: 누락된 날짜를 이전 유효 값으로 채움
-                        exchange_data = exchange_data.ffill(limit=EXCHANGE_RATE_LOOKBACK_DAYS)
+                        exchange_data = exchange_data.ffill()
 
                         currency_rates = {}
                         for date_idx, row in exchange_data.iterrows():
                             currency_rates[date_idx.date()] = row['Close']
                         exchange_rates_by_currency[currency] = currency_rates
-                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치")
+                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치 (버퍼 포함)")
                 except Exception as e:
                     logger.warning(f"{currency} 환율 데이터 로드 실패: {e}")
                     exchange_rates_by_currency[currency] = {}
