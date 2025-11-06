@@ -133,6 +133,28 @@ export interface TickerInfo {
   exchange: string;
 }
 
+export interface TradeLog {
+  EntryTime: string;
+  ExitTime?: string;
+  EntryPrice: number;
+  ExitPrice?: number;
+  Size: number;
+  PnL?: number;
+  ReturnPct?: number;
+  Duration?: string;
+}
+
+export interface StrategyStats {
+  trade_log?: TradeLog[];
+  total_trades?: number;
+  win_rate_pct?: number;
+  profit_factor?: number;
+  sharpe_ratio?: number;
+  max_drawdown_pct?: number;
+  final_equity?: number;
+  [key: string]: any;
+}
+
 export interface PortfolioData {
   portfolio_statistics: PortfolioStatistics;
   individual_returns: Record<string, IndividualReturn>;
@@ -143,6 +165,9 @@ export interface PortfolioData {
   // 리밸런싱 데이터
   rebalance_history?: RebalanceEvent[];
   weight_history?: WeightHistoryPoint[];
+
+  // 전략 상세 정보 (개별 종목의 거래 내역 포함)
+  strategy_details?: Record<string, StrategyStats>;
 
   // 통합 응답 데이터 (별도 API 호출 불필요)
   ticker_info?: Record<string, TickerInfo>;

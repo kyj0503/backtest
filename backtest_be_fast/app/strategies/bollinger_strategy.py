@@ -55,12 +55,12 @@ class BollingerBandsStrategy(Strategy):
     def next(self):
         if len(self.data) < self.period:
             return
-        
-        if (len(self.upper_band) > 0 and len(self.lower_band) > 0 and 
+
+        if (len(self.upper_band) > 0 and len(self.lower_band) > 0 and
             not np.isnan(self.upper_band[-1]) and not np.isnan(self.lower_band[-1])):
-            
+
             current_price = self.data.Close[-1]
-            
+
             # 가격이 하단 밴드 아래로 떨어짐: 과매도 → 매수
             if current_price < self.lower_band[-1] and not self.position:
                 price = self.data.Close[-1]

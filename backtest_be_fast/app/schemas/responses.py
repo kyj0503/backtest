@@ -84,7 +84,10 @@ class BacktestResult(BaseModel):
 
     # 거래 로그
     trade_log: List[Dict[str, Any]] = Field(default_factory=list, description="거래 내역")
-    
+
+    # Equity Curve (일일 자산 가치)
+    equity_curve: Optional[Dict[str, float]] = Field(None, description="일일 자산 가치 (날짜: equity)")
+
     # 메타데이터
     execution_time_seconds: float = Field(..., description="실행 시간 (초)")
     timestamp: datetime = Field(..., description="결과 생성 시간")

@@ -90,6 +90,21 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     return [];
   }, [portfolioData, chartData, data]);
 
+  // strategy_details에서 trade_log 추출 (symbol별)
+  const tradeLogs = useMemo(() => {
+    const logs: Record<string, any[]> = {};
+    if (portfolioData?.strategy_details) {
+      Object.entries(portfolioData.strategy_details).forEach(([symbol, stats]) => {
+        if (stats.trade_log && Array.isArray(stats.trade_log)) {
+          // 원본 심볼로 매핑 (예: "AAPL_1" → "AAPL", "MSFT_0" → "MSFT")
+          const cleanSymbol = symbol.split('_')[0];
+          logs[cleanSymbol] = stats.trade_log;
+        }
+      });
+    }
+    return logs;
+  }, [portfolioData]);
+
   const loadingStockData = false; // 통합 응답이므로 별도 로딩 없음
 
   const formatCurrency = useMemo(
@@ -266,7 +281,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             </div>
           ) : stocksData.length > 0 ? (
             <Suspense fallback={<ChartLoading height={360} />}>
-              <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} />
+              <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} tradeLogs={tradeLogs} />
             </Suspense>
           ) : (
             <p className="text-sm text-muted-foreground">표시할 자산 데이터가 없습니다.</p>
@@ -312,7 +327,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             </div>
           ) : stocksData.length > 0 ? (
             <Suspense fallback={<ChartLoading height={360} />}>
-              <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} />
+              <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} tradeLogs={tradeLogs} />
             </Suspense>
           ) : (
             <p className="text-sm text-muted-foreground">표시할 주가 데이터가 없습니다.</p>

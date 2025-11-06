@@ -262,6 +262,11 @@ class PortfolioService:
         required_currencies = set(ticker_currencies.values()) - {'USD'}
         exchange_rates_by_currency = {}  # {currency: {date: rate}}
 
+        # 환율 데이터는 백테스트 시작일보다 충분히 이전부터 로드
+        # (백테스트 초반에 누락된 환율을 forward-fill로 채우기 위해)
+        exchange_start_date_obj = start_date_obj - timedelta(days=EXCHANGE_RATE_LOOKBACK_DAYS * 2)
+        exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
+
         for currency in required_currencies:
             if currency not in SUPPORTED_CURRENCIES:
                 logger.warning(f"지원하지 않는 통화: {currency}, USD로 처리")
@@ -270,16 +275,23 @@ class PortfolioService:
             exchange_ticker = SUPPORTED_CURRENCIES[currency]
             if exchange_ticker:
                 try:
-                    exchange_data = load_ticker_data(exchange_ticker, start_date, end_date)
+                    # 백테스트 시작일보다 60일 전부터 로드
+                    exchange_data = load_ticker_data(exchange_ticker, exchange_start_date, end_date)
                     if exchange_data is not None and not exchange_data.empty:
-                        # Forward-fill: 누락된 날짜를 이전 유효 값으로 채움
-                        exchange_data = exchange_data.ffill(limit=EXCHANGE_RATE_LOOKBACK_DAYS)
+                        # 백테스트 날짜 범위로 reindex하고 forward-fill 적용
+                        # 이렇게 하면 환율 시장 휴일(주말, 공휴일)에도 이전 거래일의 환율이 채워짐
+                        exchange_data = exchange_data.reindex(date_range, method='ffill')
+
+                        # 여전히 NaN이 있으면 backward-fill로 채움 (초기 날짜 대비)
+                        exchange_data = exchange_data.bfill()
 
                         currency_rates = {}
                         for date_idx, row in exchange_data.iterrows():
-                            currency_rates[date_idx.date()] = row['Close']
+                            if pd.notna(row['Close']):
+                                currency_rates[date_idx.date()] = row['Close']
+
                         exchange_rates_by_currency[currency] = currency_rates
-                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치")
+                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치 (reindex + ffill/bfill)")
                 except Exception as e:
                     logger.warning(f"{currency} 환율 데이터 로드 실패: {e}")
                     exchange_rates_by_currency[currency] = {}
@@ -683,71 +695,77 @@ class PortfolioService:
         
         return max_count
     
-    async def _calculate_realistic_equity_curve(self, request: PortfolioBacktestRequest, 
+    async def _calculate_realistic_equity_curve(self, request: PortfolioBacktestRequest,
                                               portfolio_results: Dict, total_amount: float) -> Tuple[Dict, Dict]:
         """
-        실제 종목 데이터를 기반으로 포트폴리오 equity curve 계산
+        개별 종목 백테스트의 실제 equity curve를 합산하여 포트폴리오 equity curve 계산
+        (매수/매도 타이밍이 정확히 반영됨)
         """
         from datetime import datetime
         import pandas as pd
-        
-        # 각 종목의 실제 가격 데이터 로드
-        portfolio_data = {}
-        for unique_key, result in portfolio_results.items():
-            # original_symbol을 사용하여 실제 티커로 데이터 로드
-            original_symbol = result.get('original_symbol', result.get('symbol'))
-            if original_symbol and original_symbol not in portfolio_data:
-                df = load_ticker_data(original_symbol, request.start_date, request.end_date)
-                if df is not None and not df.empty:
-                    portfolio_data[unique_key] = df
-        
-        if not portfolio_data:
-            # 데이터가 없으면 기본 선형 계산으로 fallback
-            return self._fallback_equity_curve(request, portfolio_results, total_amount)
-        
-        # 모든 데이터의 공통 날짜 범위 찾기
+
+        # 각 종목의 equity curve 수집
+        equity_curves_by_symbol = {}
         all_dates = set()
-        for df in portfolio_data.values():
-            all_dates.update(df.index.strftime('%Y-%m-%d'))
-        
+
+        for unique_key, result in portfolio_results.items():
+            strategy_stats = result.get('strategy_stats', {})
+            equity_curve_dict = strategy_stats.get('equity_curve')
+
+            if equity_curve_dict and isinstance(equity_curve_dict, dict):
+                equity_curves_by_symbol[unique_key] = equity_curve_dict
+                all_dates.update(equity_curve_dict.keys())
+                logger.info(f"{unique_key} equity curve: {len(equity_curve_dict)}일치")
+            else:
+                # equity curve가 없으면 (예: 현금) 초기값으로 고정
+                amount = result.get('amount', 0)
+                equity_curves_by_symbol[unique_key] = None
+                logger.info(f"{unique_key}: equity curve 없음, 고정값 ${amount}")
+
+        if not all_dates:
+            # equity curve가 하나도 없으면 fallback
+            logger.warning("모든 종목의 equity curve가 없음, fallback 사용")
+            return self._fallback_equity_curve(request, portfolio_results, total_amount)
+
         date_range = sorted(all_dates)
-        
+
         equity_curve = {}
         daily_returns = {}
         prev_portfolio_value = total_amount
-        
+
         for i, date_str in enumerate(date_range):
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
             portfolio_value = 0
-            
-            # 각 종목의 해당 날짜 가치 계산
+
+            # 각 종목의 해당 날짜 equity 합산
             for unique_key, result in portfolio_results.items():
-                if unique_key in portfolio_data:
-                    df = portfolio_data[unique_key]
-                    try:
-                        # 해당 날짜의 가격 찾기
-                        price_data = df[df.index.strftime('%Y-%m-%d') == date_str]
-                        if not price_data.empty:
-                            current_price = price_data['Close'].iloc[0]
-                            initial_price = df['Close'].iloc[0]
-                            
-                            # 해당 종목의 투자 금액 기준 현재 가치
-                            stock_value = result['amount'] * (current_price / initial_price)
-                            portfolio_value += stock_value
-                    except:
-                        # 데이터가 없으면 초기값 유지
-                        portfolio_value += result['amount']
-            
+                equity_curve_dict = equity_curves_by_symbol.get(unique_key)
+
+                if equity_curve_dict:
+                    # 전략 실행 결과의 equity curve 사용
+                    if date_str in equity_curve_dict:
+                        portfolio_value += equity_curve_dict[date_str]
+                    elif i == 0:
+                        # 첫날에 데이터가 없으면 초기 투자금
+                        portfolio_value += result.get('amount', 0)
+                    else:
+                        # 중간에 데이터가 없으면 마지막 값 사용 (forward fill)
+                        last_value = result.get('final_value', result.get('amount', 0))
+                        portfolio_value += last_value
+                else:
+                    # equity curve가 없는 종목 (예: 현금)
+                    portfolio_value += result.get('amount', 0)
+
             # 일일 수익률 계산
             if i == 0:
                 daily_return = 0.0
             else:
                 daily_return = (portfolio_value - prev_portfolio_value) / prev_portfolio_value * 100 if prev_portfolio_value > 0 else 0.0
-            
+
             equity_curve[date_str] = portfolio_value
             daily_returns[date_str] = daily_return
             prev_portfolio_value = portfolio_value
-        
+
+        logger.info(f"포트폴리오 equity curve 계산 완료: {len(equity_curve)}일치")
         return equity_curve, daily_returns
     
     def _fallback_equity_curve(self, request: PortfolioBacktestRequest, 
@@ -971,13 +989,35 @@ class PortfolioService:
             
             # 백테스트 기간 계산
             from datetime import datetime
+            import numpy as np
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
             duration_days = (end_date_obj - start_date_obj).days
-            
+
             # 연간 수익률 계산
             annual_return = ((total_portfolio_value / total_amount) ** (365.25 / duration_days) - 1) * 100 if duration_days > 0 else 0
-            
+
+            # 먼저 equity curve와 daily returns 계산
+            equity_curve, daily_returns = await self._calculate_realistic_equity_curve(
+                request, portfolio_results, total_amount
+            )
+
+            # daily_returns로부터 연간 변동성 계산
+            returns_list = [v for v in daily_returns.values()]
+            daily_volatility = np.std(returns_list) if len(returns_list) > 1 else 0.0
+            annual_volatility = daily_volatility * np.sqrt(252)  # 연간 거래일 수로 연간화
+
+            # daily_returns로부터 프로핏 팩터 계산
+            positive_returns = [r for r in returns_list if r > 0]
+            negative_returns = [r for r in returns_list if r < 0]
+            total_gains = sum(positive_returns) if positive_returns else 0.0
+            total_losses = abs(sum(negative_returns)) if negative_returns else 0.0
+            actual_profit_factor = total_gains / total_losses if total_losses > 0 else 0.0
+
+            # Positive/Negative Days 계산
+            positive_days = len(positive_returns)
+            negative_days = len(negative_returns)
+
             # 포트폴리오 통계 (프론트엔드 호환)
             portfolio_statistics = {
                 'Start': request.start_date,
@@ -988,24 +1028,19 @@ class PortfolioService:
                 'Peak_Value': total_portfolio_value,  # 전략 기반에서는 최종값과 동일하게 가정
                 'Total_Return': portfolio_return,
                 'Annual_Return': annual_return,
-                'Annual_Volatility': 0.0,  # 전략 기반에서는 계산 복잡하므로 0으로 설정
+                'Annual_Volatility': annual_volatility,  # 실제 계산된 연간 변동성
                 'Sharpe_Ratio': weighted_sharpe_ratio,
                 'Max_Drawdown': -weighted_max_drawdown,  # 음수로 표시
                 'Avg_Drawdown': -weighted_max_drawdown / 2,  # 평균 드로우다운 추정
                 'Max_Consecutive_Gains': 0,  # 전략 기반에서는 계산 복잡
                 'Max_Consecutive_Losses': 0,  # 전략 기반에서는 계산 복잡
                 'Total_Trading_Days': duration_days,
-                'Positive_Days': 0,  # 전략 기반에서는 계산 복잡
-                'Negative_Days': 0,  # 전략 기반에서는 계산 복잡
+                'Total_Trades': total_trades,  # 전체 거래 횟수 추가
+                'Positive_Days': positive_days,  # 실제 계산된 값
+                'Negative_Days': negative_days,  # 실제 계산된 값
                 'Win_Rate': weighted_win_rate,
-                'Profit_Factor': weighted_profit_factor
+                'Profit_Factor': actual_profit_factor  # 실제 계산된 프로핏 팩터
             }
-            
-            # 실제 포트폴리오 equity curve 생성
-            # 각 종목의 실제 가격 데이터를 기반으로 일일 포트폴리오 가치 계산
-            equity_curve, daily_returns = await self._calculate_realistic_equity_curve(
-                request, portfolio_results, total_amount
-            )
 
             # individual_results를 리스트 형태로 변환 (테스트 호환성)
             individual_results_list = []
