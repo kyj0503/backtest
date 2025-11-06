@@ -272,11 +272,14 @@ class PortfolioService:
                 try:
                     exchange_data = load_ticker_data(exchange_ticker, start_date, end_date)
                     if exchange_data is not None and not exchange_data.empty:
+                        # Forward-fill: 누락된 날짜를 이전 유효 값으로 채움
+                        exchange_data = exchange_data.ffill(limit=EXCHANGE_RATE_LOOKBACK_DAYS)
+
                         currency_rates = {}
                         for date_idx, row in exchange_data.iterrows():
                             currency_rates[date_idx.date()] = row['Close']
                         exchange_rates_by_currency[currency] = currency_rates
-                        logger.info(f"{currency} 환율 데이터 로드 완료: {len(currency_rates)}일치")
+                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치")
                 except Exception as e:
                     logger.warning(f"{currency} 환율 데이터 로드 실패: {e}")
                     exchange_rates_by_currency[currency] = {}
@@ -326,32 +329,20 @@ class PortfolioService:
                             # 이미 USD, 변환 불필요
                             current_prices[unique_key] = raw_price
                         elif currency in exchange_rates_by_currency:
-                            # 환율 데이터가 있는 통화
+                            # 환율 데이터가 있는 통화 (이미 forward-fill 처리됨)
                             currency_rates = exchange_rates_by_currency[currency]
 
-                            # 해당 날짜의 환율 찾기
+                            # 해당 날짜의 환율 찾기 (forward-fill로 이미 채워짐)
                             exchange_rate = currency_rates.get(current_date.date())
 
-                            # 환율이 없으면 가장 최근 유효한 환율 찾기
+                            # 여전히 없으면 캐시된 마지막 환율 사용 (fallback)
                             if not exchange_rate or exchange_rate <= 0:
-                                # 이전 날짜들의 환율 검색
-                                search_date = current_date.date()
-                                for _ in range(EXCHANGE_RATE_LOOKBACK_DAYS):
-                                    search_date = search_date - timedelta(days=1)
-                                    exchange_rate = currency_rates.get(search_date)
-                                    if exchange_rate and exchange_rate > 0:
-                                        last_valid_exchange_rates[currency] = exchange_rate
-                                        logger.warning(f"{currency} {current_date.date()} 환율 없음, {search_date} 환율 사용: {exchange_rate:.2f}")
-                                        break
-
-                                # 30일 내에도 없으면 마지막으로 사용한 환율 사용
-                                if not exchange_rate or exchange_rate <= 0:
-                                    if currency in last_valid_exchange_rates:
-                                        exchange_rate = last_valid_exchange_rates[currency]
-                                        logger.warning(f"{currency} {current_date.date()} 환율 없음, 마지막 유효 환율 사용: {exchange_rate:.2f}")
-                                    else:
-                                        logger.error(f"{currency} {current_date.date()} 환율 데이터 없고 이전 환율도 없음, 해당 날짜 건너뛰기")
-                                        continue  # 이 날짜는 건너뛰기
+                                if currency in last_valid_exchange_rates:
+                                    exchange_rate = last_valid_exchange_rates[currency]
+                                    logger.warning(f"{currency} {current_date.date()} 환율 없음, 캐시된 환율 사용: {exchange_rate:.2f}")
+                                else:
+                                    logger.error(f"{currency} {current_date.date()} 환율 데이터 없음, 해당 종목 건너뛰기")
+                                    continue  # 이 종목은 건너뛰기
 
                             if exchange_rate and exchange_rate > 0:
                                 # EUR, GBP, AUD 등: 이미 USD 환율 (EURUSD=X)
