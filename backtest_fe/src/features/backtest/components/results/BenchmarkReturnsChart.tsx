@@ -102,7 +102,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
 
   return (
     <div className={CARD_STYLES.base}>
-      <div className={SPACING.itemCompact}>
+      <div className={`${SPACING.itemCompact} mb-4`}>
         <h3 className={HEADING_STYLES.h3}>일일 수익률 벤치마크 비교</h3>
         <p className={TEXT_STYLES.caption}>
           포트폴리오와 주요 지수의 일일 수익률을 비교하세요
