@@ -3,7 +3,7 @@
  * 누적 자산 가치, 일일 수익률, 개별 자산 주가 차트
  */
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -42,6 +42,20 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = ({
 }) => {
   const { portfolio_composition, rebalance_history } = portfolioData;
   const isMultipleStocks = portfolio_composition.length > 1;
+
+  // 일일 수익률 Y축 도메인 계산 (메모이제이션)
+  const dailyReturnYAxisDomain = useMemo<[number, number]>(() => {
+    const returnValues = portfolioEquityData
+      .map((d: any) => d.return_pct || 0)
+      .filter((value): value is number => typeof value === 'number' && !isNaN(value));
+    
+    if (returnValues.length === 0) return [0, 100];
+    
+    const minValue = Math.min(...returnValues);
+    const maxValue = Math.max(...returnValues);
+    
+    return [minValue, maxValue];
+  }, [portfolioEquityData]);
 
   return (
     <>
@@ -95,10 +109,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = ({
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tickFormatter={formatDateShort} />
             <YAxis 
-              domain={[
-                Math.min(...portfolioEquityData.map((d: any) => d.return_pct || 0)),
-                Math.max(...portfolioEquityData.map((d: any) => d.return_pct || 0)),
-              ]}
+              domain={dailyReturnYAxisDomain}
               tickFormatter={(value: number) => `${value.toFixed(1)}%`} 
             />
             <Tooltip
