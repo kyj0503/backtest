@@ -54,6 +54,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Tuple
 from datetime import datetime, timedelta, date
+from dateutil.relativedelta import relativedelta
 import logging
 from decimal import Decimal
 
@@ -109,7 +110,8 @@ class DCACalculator:
         trade_log = []  # DCA 매수 기록
 
         for month in range(dca_periods):
-            investment_date = start_date_obj + timedelta(days=30 * month)
+            # 실제 월 단위 증가 (28~31일 변동 고려)
+            investment_date = start_date_obj + relativedelta(months=month)
             month_price_data = df[df.index.date >= investment_date.date()]
 
             if not month_price_data.empty:
