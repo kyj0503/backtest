@@ -24,6 +24,14 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
   const currentData = selectedIndex === 'sp500' ? sp500Data : nasdaqData;
   const hasData = currentData && currentData.length > 0;
 
+  // Y축 범위 계산 (최저점 - 100 ~ 최고점 + 100)
+  const yAxisDomain = hasData
+    ? [
+        Math.min(...currentData.map((d: any) => d.close)) - 100,
+        Math.max(...currentData.map((d: any) => d.close)) + 100,
+      ]
+    : undefined;
+
   const formatDateTick = (value: string) => {
     const date = new Date(value);
     return `${date.getMonth() + 1}/${date.getDate()}`;
@@ -67,7 +75,10 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
           <LineChart data={currentData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tickFormatter={formatDateTick} />
-            <YAxis tickFormatter={(value: number) => value.toFixed(0)} />
+            <YAxis
+              domain={yAxisDomain}
+              tickFormatter={(value: number) => value.toFixed(0)}
+            />
             <Tooltip
               formatter={(value: number) => [value.toFixed(2), '지수']}
               labelFormatter={(label: string) => `날짜: ${label}`}
