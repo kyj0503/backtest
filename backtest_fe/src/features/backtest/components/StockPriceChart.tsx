@@ -1,5 +1,5 @@
 import React, { useState, memo, useMemo } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Scatter, ScatterChart } from "recharts";
+import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Scatter } from "recharts";
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
@@ -40,27 +40,45 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
   // 선택된 종목의 데이터 찾기
   const selectedStockData = stocksData.find(stock => stock.symbol === selectedSymbol);
 
-  // 선택된 종목의 매매 신호 생성
-  const tradeSignals = useMemo(() => {
-    const logs = tradeLogs[selectedSymbol];
-    if (!logs || !Array.isArray(logs)) return { buys: [], sells: [] };
+  // 선택된 종목의 매매 신호를 주가 데이터에 merge
+  const chartDataWithSignals = useMemo(() => {
+    if (!selectedStockData) return [];
 
-    const buys: Array<{ date: string; price: number }> = [];
-    const sells: Array<{ date: string; price: number }> = [];
+    const logs = tradeLogs[selectedSymbol];
+    if (!logs || !Array.isArray(logs)) {
+      return selectedStockData.data.map(d => ({ ...d }));
+    }
+
+    // 날짜별 매매 신호 맵 생성
+    const buyMap = new Map<string, number>();
+    const sellMap = new Map<string, number>();
 
     logs.forEach((trade) => {
-      // 매수 신호
       if (trade.EntryTime && trade.EntryPrice) {
-        const entryDate = trade.EntryTime.split(' ')[0]; // "2025-01-02 00:00:00" → "2025-01-02"
-        buys.push({ date: entryDate, price: trade.EntryPrice });
+        const entryDate = trade.EntryTime.split(' ')[0];
+        buyMap.set(entryDate, trade.EntryPrice);
       }
-
-      // 매도 신호
       if (trade.ExitTime && trade.ExitPrice) {
         const exitDate = trade.ExitTime.split(' ')[0];
-        sells.push({ date: exitDate, price: trade.ExitPrice });
+        sellMap.set(exitDate, trade.ExitPrice);
       }
     });
+
+    // 주가 데이터에 매매 신호 merge
+    return selectedStockData.data.map(point => ({
+      ...point,
+      buySignal: buyMap.get(point.date),
+      sellSignal: sellMap.get(point.date),
+    }));
+  }, [selectedSymbol, selectedStockData, tradeLogs]);
+
+  // 매매 횟수 계산
+  const tradeCount = useMemo(() => {
+    const logs = tradeLogs[selectedSymbol];
+    if (!logs || !Array.isArray(logs)) return { buys: 0, sells: 0 };
+
+    const buys = logs.filter(t => t.EntryTime && t.EntryPrice).length;
+    const sells = logs.filter(t => t.ExitTime && t.ExitPrice).length;
 
     return { buys, sells };
   }, [selectedSymbol, tradeLogs]);
@@ -101,22 +119,29 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
         <>
           <div style={{ width: '100%', height: '400px' }}>
             <ResponsiveContainer>
-              <LineChart data={selectedStockData.data}>
+              <ComposedChart data={chartDataWithSignals}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatDate}
                   tick={{ fontSize: 12 }}
-                  interval={Math.max(1, Math.floor(selectedStockData.data.length / 8))}
+                  interval={Math.max(1, Math.floor(chartDataWithSignals.length / 8))}
                 />
                 <YAxis
                   tickFormatter={formatPrice}
-                  domain={['dataMin - 5', 'dataMax + 5']}
+                  domain={['auto', 'auto']}
                 />
                 <Tooltip
                   labelFormatter={(label: any) => `날짜: ${label}`}
-                  formatter={(value: number) => [formatPrice(value), '주가']}
+                  formatter={(value: any, name: string) => {
+                    if (!value) return null;
+                    if (name === 'price') return [formatPrice(value), '주가'];
+                    if (name === 'buySignal') return [formatPrice(value), '매수'];
+                    if (name === 'sellSignal') return [formatPrice(value), '매도'];
+                    return [value, name];
+                  }}
                 />
+                {/* 주가 라인 */}
                 <Line
                   type="monotone"
                   dataKey="price"
@@ -124,20 +149,25 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 6 }}
+                  isAnimationActive={false}
                 />
                 {/* 매수 신호 (파란점) */}
                 <Scatter
-                  data={tradeSignals.buys}
+                  name="buySignal"
+                  dataKey="buySignal"
                   fill="#3b82f6"
                   shape="circle"
+                  isAnimationActive={false}
                 />
                 {/* 매도 신호 (빨간점) */}
                 <Scatter
-                  data={tradeSignals.sells}
+                  name="sellSignal"
+                  dataKey="sellSignal"
                   fill="#ef4444"
                   shape="circle"
+                  isAnimationActive={false}
                 />
-              </LineChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
 
@@ -154,12 +184,12 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                 데이터 포인트: {selectedStockData.data.length}개
               </small>
             </div>
-            {tradeSignals.buys.length > 0 || tradeSignals.sells.length > 0 ? (
+            {tradeCount.buys > 0 || tradeCount.sells > 0 ? (
               <div className="text-left md:text-right">
                 <small className="text-muted-foreground">
-                  <span className="text-blue-500">● 매수: {tradeSignals.buys.length}회</span>
+                  <span className="text-blue-500">● 매수: {tradeCount.buys}회</span>
                   {' | '}
-                  <span className="text-red-500">● 매도: {tradeSignals.sells.length}회</span>
+                  <span className="text-red-500">● 매도: {tradeCount.sells}회</span>
                 </small>
               </div>
             ) : null}
