@@ -11,7 +11,6 @@ import {
   transformTradeMarkers,
   transformOhlcData,
   withBenchmarkReturn,
-  transformStockData,
   extractTradeLogs,
   extractBenchmarkData,
   extractStatsPayload,

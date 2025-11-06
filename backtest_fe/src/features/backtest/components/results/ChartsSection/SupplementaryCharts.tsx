@@ -18,7 +18,6 @@ import VolatilityEventsSection from '../VolatilityEventsSection';
 import LatestNewsSection from '../LatestNewsSection';
 import RebalanceHistoryTable from '../RebalanceHistoryTable';
 import WeightHistoryChart from '../WeightHistoryChart';
-import { PortfolioData } from '../../../model/types';
 import { formatDateShort, formatKRW } from '../../../utils';
 
 interface SupplementaryChartsProps {
