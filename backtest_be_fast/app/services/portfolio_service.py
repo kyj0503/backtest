@@ -111,6 +111,8 @@ class DCACalculator:
 
         for month in range(dca_periods):
             # 실제 월 단위 증가 (28~31일 변동 고려)
+            # Use relativedelta to increment by actual calendar months, handling month-end edge cases and varying month lengths (28–31 days).
+            # This ensures that adding months to dates like January 31st yields the correct result (e.g., February 28th/29th), unlike timedelta(days=30*month).
             investment_date = start_date_obj + relativedelta(months=month)
             month_price_data = df[df.index.date >= investment_date.date()]
 
