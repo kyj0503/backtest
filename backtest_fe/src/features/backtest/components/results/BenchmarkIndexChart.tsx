@@ -163,7 +163,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
           />
           <Legend 
             wrapperStyle={{ paddingTop: '10px', cursor: 'pointer' }}
-            onClick={(e: any) => {
+            onClick={(e: { dataKey?: string }) => {
               const dataKey = e.dataKey;
               if (dataKey) {
                 setVisibleLines(prev => ({
