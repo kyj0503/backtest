@@ -107,9 +107,10 @@ export interface NewsItem {
 
 export interface RebalanceTrade {
   symbol: string;
-  action: 'buy' | 'sell';
+  action: 'buy' | 'sell' | 'increase' | 'decrease';
   shares: number;
   price: number;
+  amount?: number; // 현금 거래 시 사용
 }
 
 export interface RebalanceEvent {
