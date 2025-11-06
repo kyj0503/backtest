@@ -10,9 +10,6 @@ import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
-// 차트 Y축 패딩 비율 (10%)
-const CHART_Y_AXIS_PADDING_RATIO = 0.1;
-
 interface BenchmarkIndexChartProps {
   sp500Data: any[];
   nasdaqData: any[];
@@ -113,9 +110,8 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
 
     const min = Math.min(...allValues);
     const max = Math.max(...allValues);
-    const padding = (max - min) * CHART_Y_AXIS_PADDING_RATIO;
 
-    return [Math.max(0, min - padding), max + padding];
+    return [min, max];
   }, [mergedData, visibleLines]);
 
   const hasData = mergedData.length > 0;

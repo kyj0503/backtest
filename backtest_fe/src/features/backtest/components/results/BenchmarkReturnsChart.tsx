@@ -85,10 +85,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
     const minValue = Math.min(...allValues);
     const maxValue = Math.max(...allValues);
     
-    // 여유 공간 추가 (5%)
-    const padding = (maxValue - minValue) * 0.05;
-    
-    return [minValue - padding, maxValue + padding];
+    return [minValue, maxValue];
   }, [mergedData, visibleLines]);
 
   const hasData = mergedData.length > 0;
