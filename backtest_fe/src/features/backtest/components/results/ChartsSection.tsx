@@ -501,8 +501,8 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       );
     }
 
-    // 7. 포트폴리오 비중 변화 차트
-    if (portfolioData?.weight_history && portfolioData.weight_history.length > 0) {
+    // 7. 포트폴리오 비중 변화 차트 (종목이 2개 이상일 때만 표시)
+    if (portfolioData?.weight_history && portfolioData.weight_history.length > 0 && portfolioData.portfolio_composition.length > 1) {
       allCharts.push(
         <ResultBlock
           title="포트폴리오 비중 변화"
