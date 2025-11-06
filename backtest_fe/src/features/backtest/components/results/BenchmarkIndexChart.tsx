@@ -4,11 +4,10 @@
  * **역할**:
  * - S&P 500과 NASDAQ 지수와 포트폴리오 누적 수익률 비교
  * - 시작점을 100으로 normalize하여 직관적 비교
- * - 버튼으로 S&P/NASDAQ 전환
+ * - 범례 클릭으로 개별 라인 토글 가능
  */
 import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Button } from '@/shared/ui/button';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
 // 차트 Y축 패딩 비율 (10%)
@@ -25,10 +24,12 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
   nasdaqData,
   portfolioEquityData,
 }) => {
-  const [selectedIndex, setSelectedIndex] = useState<'sp500' | 'nasdaq'>('sp500');
-
-  const currentBenchmarkData = selectedIndex === 'sp500' ? sp500Data : nasdaqData;
-  const hasData = currentBenchmarkData && currentBenchmarkData.length > 0;
+  // 각 라인의 표시 여부를 관리하는 상태
+  const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
+    portfolio: true,
+    sp500: true,
+    nasdaq: true,
+  });
 
   // 데이터를 시작점 100으로 normalize하는 함수
   const normalizeData = (data: any[], valueKey: string) => {
@@ -42,10 +43,15 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
     }));
   };
 
-  // 벤치마크와 포트폴리오 데이터를 normalize
-  const normalizedBenchmark = useMemo(
-    () => normalizeData(currentBenchmarkData, 'close'),
-    [currentBenchmarkData]
+  // S&P 500과 NASDAQ 데이터를 normalize
+  const normalizedSp500 = useMemo(
+    () => normalizeData(sp500Data, 'close'),
+    [sp500Data]
+  );
+
+  const normalizedNasdaq = useMemo(
+    () => normalizeData(nasdaqData, 'close'),
+    [nasdaqData]
   );
 
   const normalizedPortfolio = useMemo(
@@ -53,126 +59,180 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
     [portfolioEquityData]
   );
 
-  // 두 데이터를 날짜별로 병합
+  // 세 데이터를 날짜별로 병합
   const mergedData = useMemo(() => {
-    if (normalizedBenchmark.length === 0) return [];
+    const dataMap = new Map<string, any>();
 
-    const portfolioMap = new Map(
-      normalizedPortfolio.map(p => [p.date, p.normalized])
+    // 포트폴리오 데이터 추가
+    normalizedPortfolio.forEach(p => {
+      dataMap.set(p.date, {
+        date: p.date,
+        portfolio: p.normalized,
+      });
+    });
+
+    // S&P 500 데이터 추가
+    normalizedSp500.forEach(item => {
+      const existing = dataMap.get(item.date) || { date: item.date };
+      existing.sp500 = item.normalized;
+      dataMap.set(item.date, existing);
+    });
+
+    // NASDAQ 데이터 추가
+    normalizedNasdaq.forEach(item => {
+      const existing = dataMap.get(item.date) || { date: item.date };
+      existing.nasdaq = item.normalized;
+      dataMap.set(item.date, existing);
+    });
+
+    // 날짜순으로 정렬
+    return Array.from(dataMap.values()).sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
     );
+  }, [normalizedSp500, normalizedNasdaq, normalizedPortfolio]);
 
-    return normalizedBenchmark.map(b => ({
-      date: b.date,
-      benchmark: b.normalized,
-      portfolio: portfolioMap.get(b.date) || null,
-    }));
-  }, [normalizedBenchmark, normalizedPortfolio]);
-
-  // Y축 범위 계산 (normalize된 데이터 기준)
+  // Y축 범위 계산 (표시된 라인만 고려)
   const yAxisDomain = useMemo(() => {
-    if (mergedData.length === 0) return undefined;
+    if (mergedData.length === 0) return ['auto', 'auto'];
 
-    const allValues = mergedData.flatMap(d =>
-      [d.benchmark, d.portfolio].filter(v => v !== null) as number[]
-    );
+    let allValues: number[] = [];
+    
+    mergedData.forEach(item => {
+      if (visibleLines.portfolio && item.portfolio !== undefined) {
+        allValues.push(item.portfolio);
+      }
+      if (visibleLines.sp500 && item.sp500 !== undefined) {
+        allValues.push(item.sp500);
+      }
+      if (visibleLines.nasdaq && item.nasdaq !== undefined) {
+        allValues.push(item.nasdaq);
+      }
+    });
 
-    if (allValues.length === 0) return undefined;
+    if (allValues.length === 0) return ['auto', 'auto'];
 
     const min = Math.min(...allValues);
     const max = Math.max(...allValues);
     const padding = (max - min) * CHART_Y_AXIS_PADDING_RATIO;
 
     return [Math.max(0, min - padding), max + padding];
-  }, [mergedData]);
+  }, [mergedData, visibleLines]);
+
+  const hasData = mergedData.length > 0;
 
   const formatDateTick = (value: string) => {
     const date = new Date(value);
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  if (!hasData && sp500Data.length === 0 && nasdaqData.length === 0) return null;
+  if (!hasData) return null;
 
   return (
     <div className={CARD_STYLES.base}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className={SPACING.itemCompact}>
-          <h3 className={HEADING_STYLES.h3}>벤치마크 비교</h3>
-          <p className={TEXT_STYLES.caption}>
-            포트폴리오와 지수의 누적 성과 비교 (시작점 = 100)
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {sp500Data.length > 0 && (
-            <Button
-              variant={selectedIndex === 'sp500' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedIndex('sp500')}
-            >
-              S&P 500
-            </Button>
-          )}
-          {nasdaqData.length > 0 && (
-            <Button
-              variant={selectedIndex === 'nasdaq' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedIndex('nasdaq')}
-            >
-              NASDAQ
-            </Button>
-          )}
-        </div>
+      <div className={SPACING.itemCompact}>
+        <h3 className={HEADING_STYLES.h3}>벤치마크 비교</h3>
+        <p className={TEXT_STYLES.caption}>
+          포트폴리오와 지수의 누적 성과 비교 (시작점 = 100)
+        </p>
       </div>
 
-      {hasData ? (
-        <ResponsiveContainer width="100%" height={320}>
-          <LineChart data={mergedData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" tickFormatter={formatDateTick} />
-            <YAxis
-              domain={yAxisDomain}
-              tickFormatter={(value: number) => value.toFixed(0)}
-            />
-            <Tooltip
-              formatter={(value: number, name: string) => {
-                const label = name === 'benchmark'
-                  ? (selectedIndex === 'sp500' ? 'S&P 500' : 'NASDAQ')
-                  : '내 포트폴리오';
-                return [value.toFixed(2), label];
-              }}
-              labelFormatter={(label: string) => `날짜: ${label}`}
-            />
-            <Legend
-              formatter={(value: string) => {
-                if (value === 'benchmark') {
-                  return selectedIndex === 'sp500' ? 'S&P 500' : 'NASDAQ';
-                }
-                return '내 포트폴리오';
-              }}
-            />
+      <ResponsiveContainer width="100%" height={320}>
+        <LineChart data={mergedData}>
+          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+          <XAxis 
+            dataKey="date" 
+            tickFormatter={formatDateTick}
+            tick={{ fontSize: 12 }}
+          />
+          <YAxis
+            domain={yAxisDomain}
+            tickFormatter={(value: number) => value.toFixed(0)}
+            tick={{ fontSize: 12 }}
+          />
+          <Tooltip
+            formatter={(value: number, name: string) => {
+              const labels: Record<string, string> = {
+                portfolio: '내 포트폴리오',
+                sp500: 'S&P 500',
+                nasdaq: 'NASDAQ',
+              };
+              return [value.toFixed(2), labels[name] || name];
+            }}
+            labelFormatter={(label: string) => `날짜: ${label}`}
+            contentStyle={{
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              border: '1px solid #ccc',
+              borderRadius: '8px',
+            }}
+          />
+          <Legend 
+            wrapperStyle={{ paddingTop: '10px', cursor: 'pointer' }}
+            onClick={(e: any) => {
+              const dataKey = e.dataKey;
+              if (dataKey) {
+                setVisibleLines(prev => ({
+                  ...prev,
+                  [dataKey]: !prev[dataKey],
+                }));
+              }
+            }}
+            formatter={(value: string) => {
+              const labels: Record<string, string> = {
+                portfolio: '내 포트폴리오',
+                sp500: 'S&P 500',
+                nasdaq: 'NASDAQ',
+              };
+              const isVisible = visibleLines[value];
+              return (
+                <span style={{ opacity: isVisible ? 1 : 0.5 }}>
+                  {labels[value] || value}
+                </span>
+              );
+            }}
+          />
+          
+          {/* 포트폴리오 라인 */}
+          {portfolioEquityData.length > 0 && (
             <Line
               type="monotone"
               dataKey="portfolio"
               stroke="#6366f1"
-              strokeWidth={2.5}
-              dot={false}
-              name="portfolio"
-              connectNulls
-            />
-            <Line
-              type="monotone"
-              dataKey="benchmark"
-              stroke="#10b981"
               strokeWidth={2}
               dot={false}
-              name="benchmark"
+              name="portfolio"
+              hide={!visibleLines.portfolio}
             />
-          </LineChart>
-        </ResponsiveContainer>
-      ) : (
-        <div className="text-center py-8 text-muted-foreground">
-          선택한 지수의 데이터가 없습니다.
-        </div>
-      )}
+          )}
+          
+          {/* S&P 500 라인 */}
+          {sp500Data.length > 0 && (
+            <Line
+              type="monotone"
+              dataKey="sp500"
+              stroke="#10b981"
+              strokeWidth={1.5}
+              dot={false}
+              strokeDasharray="5 5"
+              name="sp500"
+              hide={!visibleLines.sp500}
+            />
+          )}
+          
+          {/* NASDAQ 라인 */}
+          {nasdaqData.length > 0 && (
+            <Line
+              type="monotone"
+              dataKey="nasdaq"
+              stroke="#f97316"
+              strokeWidth={1.5}
+              dot={false}
+              strokeDasharray="3 3"
+              name="nasdaq"
+              hide={!visibleLines.nasdaq}
+            />
+          )}
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 };
