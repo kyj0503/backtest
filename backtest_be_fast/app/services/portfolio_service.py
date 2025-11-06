@@ -1007,6 +1007,7 @@ class PortfolioService:
                 'Max_Consecutive_Gains': 0,  # 전략 기반에서는 계산 복잡
                 'Max_Consecutive_Losses': 0,  # 전략 기반에서는 계산 복잡
                 'Total_Trading_Days': duration_days,
+                'Total_Trades': total_trades,  # 전체 거래 횟수 추가
                 'Positive_Days': 0,  # 전략 기반에서는 계산 복잡
                 'Negative_Days': 0,  # 전략 기반에서는 계산 복잡
                 'Win_Rate': weighted_win_rate,
