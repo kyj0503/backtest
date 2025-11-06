@@ -46,7 +46,7 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
 
   return (
     <div className={CARD_STYLES.base}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-4">
+      <div className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between ${SPACING.itemCompact}`}>
         <div className={SPACING.itemCompact}>
           <h3 className={HEADING_STYLES.h3}>최신 뉴스</h3>
           <p className={TEXT_STYLES.caption}>
