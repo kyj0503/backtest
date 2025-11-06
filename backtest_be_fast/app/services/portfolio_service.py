@@ -69,6 +69,9 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# 환율 데이터 검색 설정
+EXCHANGE_RATE_LOOKBACK_DAYS = 30  # 환율 데이터 누락 시 과거 검색 일수
+
 class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
     
@@ -299,7 +302,7 @@ class PortfolioService:
                             if not exchange_rate or exchange_rate <= 0:
                                 # 이전 날짜들의 환율 검색
                                 search_date = current_date.date()
-                                for _ in range(30):  # 최대 30일 전까지 검색
+                                for _ in range(EXCHANGE_RATE_LOOKBACK_DAYS):
                                     search_date = search_date - timedelta(days=1)
                                     exchange_rate = exchange_rates.get(search_date)
                                     if exchange_rate and exchange_rate > 0:
