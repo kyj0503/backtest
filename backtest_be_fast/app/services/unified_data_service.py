@@ -227,10 +227,11 @@ class UnifiedDataService:
             return 0.0
 
         try:
-            first_close = benchmark_data[0]['close']
-            last_close = benchmark_data[-1]['close']
+            # 대소문자 구분 없이 close 키 접근 (pandas는 'Close', dict는 'close' 사용 가능)
+            first_close = benchmark_data[0].get('close', benchmark_data[0].get('Close'))
+            last_close = benchmark_data[-1].get('close', benchmark_data[-1].get('Close'))
 
-            if first_close <= 0:
+            if not first_close or first_close <= 0:
                 return 0.0
 
             return ((last_close - first_close) / first_close) * 100
