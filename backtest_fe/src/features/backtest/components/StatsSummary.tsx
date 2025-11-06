@@ -127,6 +127,28 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
     });
   }
 
+  if (typeof stats.sp500_total_return_pct === 'number') {
+    statItems.push({
+      label: 'S&P 500 수익률',
+      value: formatPercent(numberValue(stats.sp500_total_return_pct)),
+      tone: mapVariantToTone(
+        getStatVariant(numberValue(stats.sp500_total_return_pct), 'return'),
+      ),
+      description: '동일 기간 S&P 500 지수의 총 수익률',
+    });
+  }
+
+  if (typeof stats.alpha_vs_sp500_pct === 'number') {
+    statItems.push({
+      label: 'S&P 500 대비 성과',
+      value: formatPercent(numberValue(stats.alpha_vs_sp500_pct)),
+      tone: mapVariantToTone(
+        getStatVariant(numberValue(stats.alpha_vs_sp500_pct), 'return'),
+      ),
+      description: 'S&P 500 지수 대비 초과 수익률',
+    });
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex items-end justify-between gap-4">
