@@ -95,7 +95,10 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = ({
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tickFormatter={formatDateShort} />
             <YAxis 
-              domain={['auto', 'auto']}
+              domain={[
+                Math.min(...portfolioEquityData.map((d: any) => d.return_pct || 0)),
+                Math.max(...portfolioEquityData.map((d: any) => d.return_pct || 0)),
+              ]}
               tickFormatter={(value: number) => `${value.toFixed(1)}%`} 
             />
             <Tooltip

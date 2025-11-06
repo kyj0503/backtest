@@ -133,7 +133,10 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                 />
                 <YAxis
                   tickFormatter={formatPrice}
-                  domain={['auto', 'auto']}
+                  domain={[
+                    Math.min(...chartDataWithSignals.map((d: any) => d.price)),
+                    Math.max(...chartDataWithSignals.map((d: any) => d.price)),
+                  ]}
                 />
                 <Tooltip
                   labelFormatter={(label: any) => `날짜: ${label}`}
