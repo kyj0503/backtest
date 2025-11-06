@@ -262,6 +262,21 @@ export const backtestFormHelpers = {
       return errors;
     }
 
+    // 중복 종목 검증 (현금 제외)
+    const symbolCounts = new Map<string, number>();
+    portfolio.forEach(stock => {
+      if (stock.assetType !== ASSET_TYPES.CASH && stock.symbol.trim()) {
+        const normalizedSymbol = stock.symbol.trim().toUpperCase();
+        symbolCounts.set(normalizedSymbol, (symbolCounts.get(normalizedSymbol) || 0) + 1);
+      }
+    });
+    
+    symbolCounts.forEach((count, symbol) => {
+      if (count > 1) {
+        errors.push(`종목 ${symbol}이(가) ${count}번 중복되었습니다. 같은 종목은 한 번만 추가할 수 있습니다.`);
+      }
+    });
+
     portfolio.forEach((stock, index) => {
       if (!stock.symbol.trim()) {
         errors.push(`${index + 1}번째 종목의 심볼을 입력해주세요.`);

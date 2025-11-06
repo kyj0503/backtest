@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   VolatilityEvent,
   NewsItem,
-} from '../model/volatility-news-types';
+} from '../model/types/volatility-news-types';
 import {
   getStockVolatilityNews,
   getNaverNews,

@@ -3,7 +3,7 @@ import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveCo
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
-import { TickerInfo } from '../model/backtest-result-types';
+import { TickerInfo } from '../model/types/backtest-result-types';
 
 interface StockData {
   symbol: string;
@@ -76,6 +76,20 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     return mergedData;
   }, [selectedSymbol, selectedStockData, tradeLogs]);
 
+  // Y축 도메인 계산 (메모이제이션)
+  const yAxisDomain = useMemo<[number, number]>(() => {
+    const prices = chartDataWithSignals
+      .map((d: any) => d.price)
+      .filter((price): price is number => typeof price === 'number' && !isNaN(price));
+    
+    if (prices.length === 0) return [0, 100];
+    
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    
+    return [minPrice, maxPrice];
+  }, [chartDataWithSignals]);
+
   // 매매 횟수 계산
   const tradeCount = useMemo(() => {
     const logs = tradeLogs[selectedSymbol];
@@ -133,7 +147,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                 />
                 <YAxis
                   tickFormatter={formatPrice}
-                  domain={['auto', 'auto']}
+                  domain={yAxisDomain}
                 />
                 <Tooltip
                   labelFormatter={(label: any) => `날짜: ${label}`}
@@ -155,20 +169,20 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
                 />
-                {/* 매수 신호 (파란점) */}
+                {/* 매수 신호 (빨간점) */}
                 <Scatter
                   name="매수"
                   dataKey="buySignal"
-                  fill="#3b82f6"
+                  fill="#ef4444"
                   shape="circle"
                   isAnimationActive={false}
                   r={8}
                 />
-                {/* 매도 신호 (빨간점) */}
+                {/* 매도 신호 (파란점) */}
                 <Scatter
                   name="매도"
                   dataKey="sellSignal"
-                  fill="#ef4444"
+                  fill="#3b82f6"
                   shape="circle"
                   isAnimationActive={false}
                   r={8}
@@ -193,9 +207,9 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
             {tradeCount.buys > 0 || tradeCount.sells > 0 ? (
               <div className="text-left md:text-right">
                 <small className="text-muted-foreground">
-                  <span className="text-blue-500">● 매수: {tradeCount.buys}회</span>
+                  <span className="text-red-500">● 매수: {tradeCount.buys}회</span>
                   {' | '}
-                  <span className="text-red-500">● 매도: {tradeCount.sells}회</span>
+                  <span className="text-blue-500">● 매도: {tradeCount.sells}회</span>
                 </small>
               </div>
             ) : null}

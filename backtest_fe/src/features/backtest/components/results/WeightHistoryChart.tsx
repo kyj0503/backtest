@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { WeightHistoryPoint } from '../../model/backtest-result-types';
+import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
@@ -31,26 +31,21 @@ const COLORS = [
   '#14b8a6', // teal
 ];
 
-// unique_key에서 실제 심볼 추출 (AAPL_0 -> AAPL, 005930.KS_1 -> 005930.KS)
-const extractSymbolFromUniqueKey = (uniqueKey: string): string => {
-  return uniqueKey.replace(/_\d+$/, '');
-};
-
 const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
   weightHistory,
   portfolioComposition,
   rebalanceHistory
 }) => {
   const symbols = useMemo(() => {
-    return portfolioComposition.map(stock => stock.symbol);
+    // portfolioComposition에서 symbol 추출 (중복 제거)
+    return Array.from(new Set(portfolioComposition.map(stock => stock.symbol)));
   }, [portfolioComposition]);
 
-  // unique_key -> 표시 이름 매핑
+  // symbol -> 표시 이름 매핑
   const symbolDisplayNames = useMemo(() => {
     const mapping: Record<string, string> = {};
-    symbols.forEach(uniqueKey => {
-      const actualSymbol = extractSymbolFromUniqueKey(uniqueKey);
-      mapping[uniqueKey] = getStockDisplayName(actualSymbol);
+    symbols.forEach(symbol => {
+      mapping[symbol] = getStockDisplayName(symbol);
     });
     return mapping;
   }, [symbols]);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getStockData } from '../api/backtestApi';
-import { StockDataItem } from '../model/backtest-result-types';
+import { StockDataItem } from '../model/types/backtest-result-types';
 
 interface UseStockDataParams {
   symbols: string[];

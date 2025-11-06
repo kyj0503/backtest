@@ -14,7 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import TradeSignalsChart from '../TradeSignalsChart';
-import { TradeMarker } from '../../model/backtest-result-types';
+import { TradeMarker } from '../../model/types/backtest-result-types';
 
 describe('TradeSignalsChart', () => {
   const mockTrades: TradeMarker[] = [

@@ -1,6 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Line, Area, ReferenceLine } from 'recharts';
-import CustomTooltip from './CustomTooltip';
+import { CustomTooltip } from './shared';
 
 interface EquityChartData {
   date: string;

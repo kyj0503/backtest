@@ -3,7 +3,7 @@ import { CalendarRange, Layers, LineChart, PieChart } from 'lucide-react';
 import { Badge } from '@/shared/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
 import { Separator } from '@/shared/ui/separator';
-import { ChartData, PortfolioData, Stock } from '../../model/backtest-result-types';
+import { ChartData, PortfolioData, Stock } from '../../model/types/backtest-result-types';
 import { FormLegend } from '@/shared/components';
 import { formatPercent } from '@/shared/lib/utils/formatters';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';

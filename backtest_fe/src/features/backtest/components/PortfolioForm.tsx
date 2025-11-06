@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table';
-import { Stock, PortfolioInputMode } from '../model/backtest-form-types';
+import { Stock, PortfolioInputMode } from '../model/types/backtest-form-types';
 import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths, VALIDATION_RULES } from '../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
@@ -166,7 +166,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
             {portfolio.map((stock, index) => (
               <TableRow key={`stock_${index}`}>
                 <TableCell className="w-64">
-                  <div className="space-y-2 max-w-full overflow-hidden">
+                  <div className="space-y-2 max-w-full">
                     {stock.assetType === ASSET_TYPES.CASH ? (
                       <Input
                         type="text"
@@ -191,7 +191,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="종목 선택" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent position="popper" sideOffset={5}>
                             <SelectItem value="CUSTOM">직접 입력</SelectItem>
                             {PREDEFINED_STOCKS.slice(1).map(option => (
                               <SelectItem key={option.value} value={option.value}>

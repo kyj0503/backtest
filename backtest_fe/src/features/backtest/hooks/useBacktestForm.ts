@@ -1,4 +1,4 @@
-import { StrategyParamValue } from '../model/api-types';
+import { StrategyParamValue } from '../model/types/api-types';
 
 export interface UseBacktestFormReturn {
   state: BacktestFormState;
@@ -26,7 +26,7 @@ export interface UseBacktestFormReturn {
 }
 import { useReducer, useEffect } from 'react';
 import { STRATEGY_CONFIGS, StrategyParameter } from '../model/strategyConfig';
-import { BacktestFormState, Stock, initialBacktestFormState } from '../model/backtest-form-types';
+import { BacktestFormState, Stock, initialBacktestFormState } from '../model/types/backtest-form-types';
 import { backtestFormReducer, backtestFormHelpers } from '../model/backtestFormReducer';
 
 
