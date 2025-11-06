@@ -294,6 +294,56 @@ def load_ticker_data(ticker: str, start_date=None, end_date=None, max_retries: i
     raise ValueError(error_msg)
 
 
+def get_ticker_info_from_db(ticker: str) -> dict:
+    """
+    DB에서 티커의 메타데이터 조회
+
+    Args:
+        ticker: 종목 심볼
+
+    Returns:
+        티커 정보 딕셔너리 (currency 포함)
+    """
+    engine = _get_engine()
+    conn = engine.connect()
+    try:
+        ticker = ticker.upper()
+        row = conn.execute(
+            text("SELECT info_json FROM stocks WHERE ticker = :t"),
+            {"t": ticker}
+        ).fetchone()
+
+        if row and row[0]:
+            try:
+                info = json.loads(row[0])
+                return {
+                    'symbol': ticker,
+                    'currency': info.get('currency', 'USD'),
+                    'company_name': info.get('company_name', ticker),
+                    'exchange': info.get('exchange', 'Unknown')
+                }
+            except Exception as e:
+                logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
+
+        # DB에 없으면 기본값 반환
+        return {
+            'symbol': ticker,
+            'currency': 'USD',
+            'company_name': ticker,
+            'exchange': 'Unknown'
+        }
+    except Exception as e:
+        logger.error(f"티커 정보 조회 실패: {ticker} - {e}")
+        return {
+            'symbol': ticker,
+            'currency': 'USD',
+            'company_name': ticker,
+            'exchange': 'Unknown'
+        }
+    finally:
+        conn.close()
+
+
 def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> pd.DataFrame:
     """실제 데이터 로드 로직 (내부용)"""
     engine = _get_engine()

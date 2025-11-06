@@ -51,20 +51,51 @@ class UnifiedDataService:
         """
         self.news_service = news_service
     
+    def collect_ticker_info(
+        self,
+        symbols: List[str]
+    ) -> Dict[str, Dict[str, str]]:
+        """
+        종목별 메타데이터 수집 (currency 포함)
+
+        Args:
+            symbols: 종목 심볼 리스트
+
+        Returns:
+            종목별 메타데이터 딕셔너리 (currency, company_name, exchange)
+        """
+        from .yfinance_db import get_ticker_info_from_db
+
+        ticker_info = {}
+        for symbol in symbols:
+            try:
+                info = get_ticker_info_from_db(symbol)
+                ticker_info[symbol] = info
+            except Exception as e:
+                logger.warning(f"티커 정보 조회 실패: {symbol} - {str(e)}")
+                ticker_info[symbol] = {
+                    'symbol': symbol,
+                    'currency': 'USD',
+                    'company_name': symbol,
+                    'exchange': 'Unknown'
+                }
+
+        return ticker_info
+
     def collect_stock_data(
-        self, 
-        symbols: List[str], 
-        start_date: str, 
+        self,
+        symbols: List[str],
+        start_date: str,
         end_date: str
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         주가 데이터 수집
-        
+
         Args:
             symbols: 종목 심볼 리스트
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
-            
+
         Returns:
             종목별 주가 데이터 딕셔너리
         """
@@ -79,7 +110,7 @@ class UnifiedDataService:
             except Exception as e:
                 logger.warning(f"주가 데이터 수집 실패: {symbol} - {str(e)}")
                 stock_data[symbol] = []
-        
+
         return stock_data
     
     def collect_exchange_data(
@@ -249,42 +280,46 @@ class UnifiedDataService:
     ) -> Dict[str, Any]:
         """
         모든 통합 데이터를 한 번에 수집
-        
+
         Args:
             symbols: 종목 심볼 리스트
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
             include_news: 뉴스 포함 여부
             news_display_count: 종목당 뉴스 개수
-            
+
         Returns:
             모든 통합 데이터를 포함하는 딕셔너리
         """
+        # 종목 메타데이터 (currency 포함)
+        ticker_info = self.collect_ticker_info(symbols)
+
         # 주가 데이터
         stock_data = self.collect_stock_data(symbols, start_date, end_date)
-        
+
         # 환율 데이터 및 통계
         exchange_rates, exchange_stats = self.collect_exchange_data(start_date, end_date)
-        
+
         # 급등/급락 이벤트
         volatility_events = self.collect_volatility_events(symbols, start_date, end_date)
-        
+
         # 벤치마크 데이터
         sp500_benchmark, nasdaq_benchmark = self.collect_benchmark_data(start_date, end_date)
-        
+
         # 뉴스 (선택적)
         latest_news = {}
         if include_news:
             latest_news = self.collect_latest_news(symbols, news_display_count)
-        
+
         logger.info(
             f"통합 데이터 수집 완료: "
             f"{len(symbols)}개 종목, "
             f"{len(exchange_rates)}개 환율 데이터, "
             f"{len(latest_news)}개 종목 뉴스"
         )
-        
+
         return {
+            'ticker_info': ticker_info,
             'stock_data': stock_data,
             'exchange_rates': exchange_rates,
             'exchange_stats': exchange_stats,

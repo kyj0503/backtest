@@ -5,11 +5,19 @@ import { Button } from '@/shared/ui/button';
 import { CARD_STYLES, TEXT_STYLES, HEADING_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
 
-interface RebalanceHistoryTableProps {
-  rebalanceHistory: RebalanceEvent[];
+interface TickerInfo {
+  symbol: string;
+  currency: string;
+  company_name: string;
+  exchange: string;
 }
 
-const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalanceHistory }) => {
+interface RebalanceHistoryTableProps {
+  rebalanceHistory: RebalanceEvent[];
+  tickerInfo?: { [symbol: string]: TickerInfo };
+}
+
+const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalanceHistory, tickerInfo = {} }) => {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const toggleRow = (index: number) => {
@@ -117,12 +125,12 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
                           <div className="text-right">
                             <div className="text-sm">
                               {trade.shares !== undefined
-                                ? `${trade.shares.toFixed(2)}주 @ ${formatPriceWithCurrency(trade.price, trade.symbol)}`
+                                ? `${trade.shares.toFixed(2)}주 @ ${formatPriceWithCurrency(trade.price, tickerInfo[trade.symbol]?.currency || 'USD')}`
                                 : `$${(trade.amount || 0).toFixed(2)}`}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {trade.shares !== undefined
-                                ? formatPriceWithCurrency(trade.shares * trade.price, trade.symbol)
+                                ? formatPriceWithCurrency(trade.shares * trade.price, tickerInfo[trade.symbol]?.currency || 'USD')
                                 : '현금'}
                             </div>
                           </div>

@@ -23,12 +23,21 @@ interface VolatilityEvent {
   event_type: string;
 }
 
+interface TickerInfo {
+  symbol: string;
+  currency: string;
+  company_name: string;
+  exchange: string;
+}
+
 interface VolatilityEventsSectionProps {
   volatilityEvents: { [symbol: string]: VolatilityEvent[] };
+  tickerInfo?: { [symbol: string]: TickerInfo };
 }
 
 const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
   volatilityEvents,
+  tickerInfo = {},
 }) => {
   // 급등락 이벤트가 있는 종목 목록
   const allSymbols = useMemo(() => {
@@ -117,7 +126,10 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
                   {event.daily_return.toFixed(2)}%
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  {formatPriceWithCurrency(event.close_price, selectedSymbol)}
+                  {formatPriceWithCurrency(
+                    event.close_price,
+                    tickerInfo[selectedSymbol]?.currency || 'USD'
+                  )}
                 </span>
                 <Button
                   variant="outline"

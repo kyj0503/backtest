@@ -22,17 +22,55 @@ export const formatPrice = (value: number, decimals = 2): string => {
   return `$${value.toFixed(decimals)}`;
 };
 
-// 한국 주식 심볼 확인
-export const isKoreanStock = (symbol: string): boolean => {
-  return symbol.toUpperCase().endsWith('.KS') || symbol.toUpperCase().endsWith('.KQ');
+// 통화 코드에 따른 통화 기호 매핑
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  'USD': '$',
+  'KRW': '₩',
+  'JPY': '¥',
+  'EUR': '€',
+  'GBP': '£',
+  'CNY': '¥',
+  'HKD': 'HK$',
+  'TWD': 'NT$',
+  'SGD': 'S$',
+  'AUD': 'A$',
+  'CAD': 'C$',
+  'CHF': 'CHF',
+  'INR': '₹',
 };
 
-// 심볼에 따라 적절한 화폐 단위로 가격 포맷
-export const formatPriceWithCurrency = (value: number, symbol: string, decimals = 2): string => {
-  if (isKoreanStock(symbol)) {
-    return `₩${value.toLocaleString('ko-KR', { maximumFractionDigits: decimals })}`;
-  }
-  return `$${value.toFixed(decimals)}`;
+// 통화 코드에 따른 로케일 매핑
+const CURRENCY_LOCALES: Record<string, string> = {
+  'USD': 'en-US',
+  'KRW': 'ko-KR',
+  'JPY': 'ja-JP',
+  'EUR': 'de-DE',
+  'GBP': 'en-GB',
+  'CNY': 'zh-CN',
+  'HKD': 'zh-HK',
+  'TWD': 'zh-TW',
+  'SGD': 'en-SG',
+  'AUD': 'en-AU',
+  'CAD': 'en-CA',
+  'CHF': 'de-CH',
+  'INR': 'en-IN',
+};
+
+// 통화 코드 기반 가격 포맷
+export const formatPriceWithCurrency = (value: number, currency: string, decimals = 2): string => {
+  const currencyCode = currency.toUpperCase();
+  const symbol = CURRENCY_SYMBOLS[currencyCode] || '$';
+  const locale = CURRENCY_LOCALES[currencyCode] || 'en-US';
+
+  // KRW, JPY는 일반적으로 소수점 없이 표시
+  const displayDecimals = (currencyCode === 'KRW' || currencyCode === 'JPY') ? 0 : decimals;
+
+  const formattedValue = value.toLocaleString(locale, {
+    minimumFractionDigits: displayDecimals,
+    maximumFractionDigits: displayDecimals
+  });
+
+  return `${symbol}${formattedValue}`;
 };
 
 export const formatKoreanCurrency = (value: number): string => {

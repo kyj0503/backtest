@@ -68,6 +68,11 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     [data, isPortfolio],
   );
 
+  // 종목 메타데이터 (currency 포함)
+  const tickerInfo = useMemo(() => {
+    return portfolioData?.ticker_info || (data as any).ticker_info || {};
+  }, [portfolioData, data]);
+
   // 통합 응답에서 주가 데이터 추출
   const stocksData = useMemo(() => {
     if (portfolioData?.stock_data) {
@@ -473,6 +478,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       allCharts.push(
         <VolatilityEventsSection
           volatilityEvents={volatilityEvents}
+          tickerInfo={tickerInfo}
           key="volatility-events"
         />
       );
@@ -500,7 +506,10 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           description="포트폴리오 리밸런싱 이벤트 상세 내역"
           key="rebalance-history"
         >
-          <RebalanceHistoryTable rebalanceHistory={portfolioData.rebalance_history} />
+          <RebalanceHistoryTable
+            rebalanceHistory={portfolioData.rebalance_history}
+            tickerInfo={tickerInfo}
+          />
         </ResultBlock>
       );
     }
