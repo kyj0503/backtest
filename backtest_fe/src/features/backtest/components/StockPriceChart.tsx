@@ -49,34 +49,22 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
       return selectedStockData.data.map(d => ({ ...d }));
     }
 
-    console.log('🔍 [StockPriceChart] Processing trades for', selectedSymbol);
-    console.log('🔍 [StockPriceChart] Trade logs:', logs);
-    console.log('🔍 [StockPriceChart] First stock data point:', selectedStockData.data[0]);
-
     // 날짜별 매매 신호 세트 생성 (날짜만 저장)
     const buyDates = new Set<string>();
     const sellDates = new Set<string>();
 
-    logs.forEach((trade, index) => {
-      console.log(`📝 [Trade ${index + 1}]`, trade);
-
+    logs.forEach((trade) => {
       if (trade.EntryTime) {
         // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
         const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
         buyDates.add(entryDate);
-        console.log(`  ✅ Buy date: ${entryDate}`);
       }
       if (trade.ExitTime) {
         // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
         const exitDate = trade.ExitTime.split('T')[0].split(' ')[0];
         sellDates.add(exitDate);
-        console.log(`  ✅ Sell date: ${exitDate}`);
       }
     });
-
-    console.log('📊 [StockPriceChart] Buy dates:', Array.from(buyDates));
-    console.log('📊 [StockPriceChart] Sell dates:', Array.from(sellDates));
-    console.log('📊 [StockPriceChart] stock data dates (first 5):', selectedStockData.data.slice(0, 5).map(d => d.date));
 
     // 주가 데이터에 매매 신호 merge (해당 날짜의 실제 주가를 사용)
     const mergedData = selectedStockData.data.map(point => ({
@@ -84,11 +72,6 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
       buySignal: buyDates.has(point.date) ? point.price : undefined,
       sellSignal: sellDates.has(point.date) ? point.price : undefined,
     }));
-
-    // 디버깅: 매매 신호가 있는 데이터만 필터링해서 출력
-    const signalPoints = mergedData.filter(d => d.buySignal || d.sellSignal);
-    console.log('📍 [StockPriceChart] Signal points count:', signalPoints.length);
-    console.log('📍 [StockPriceChart] Signal points:', signalPoints);
 
     return mergedData;
   }, [selectedSymbol, selectedStockData, tradeLogs]);
