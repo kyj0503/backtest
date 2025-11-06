@@ -53,36 +53,36 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     console.log('🔍 [StockPriceChart] Trade logs:', logs);
     console.log('🔍 [StockPriceChart] First stock data point:', selectedStockData.data[0]);
 
-    // 날짜별 매매 신호 맵 생성
-    const buyMap = new Map<string, number>();
-    const sellMap = new Map<string, number>();
+    // 날짜별 매매 신호 세트 생성 (날짜만 저장)
+    const buyDates = new Set<string>();
+    const sellDates = new Set<string>();
 
     logs.forEach((trade, index) => {
       console.log(`📝 [Trade ${index + 1}]`, trade);
 
-      if (trade.EntryTime && trade.EntryPrice) {
+      if (trade.EntryTime) {
         // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
         const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
-        buyMap.set(entryDate, trade.EntryPrice);
-        console.log(`  ✅ Buy: ${entryDate} → ${trade.EntryPrice}`);
+        buyDates.add(entryDate);
+        console.log(`  ✅ Buy date: ${entryDate}`);
       }
-      if (trade.ExitTime && trade.ExitPrice) {
+      if (trade.ExitTime) {
         // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
         const exitDate = trade.ExitTime.split('T')[0].split(' ')[0];
-        sellMap.set(exitDate, trade.ExitPrice);
-        console.log(`  ✅ Sell: ${exitDate} → ${trade.ExitPrice}`);
+        sellDates.add(exitDate);
+        console.log(`  ✅ Sell date: ${exitDate}`);
       }
     });
 
-    console.log('📊 [StockPriceChart] buyMap keys:', Array.from(buyMap.keys()));
-    console.log('📊 [StockPriceChart] sellMap keys:', Array.from(sellMap.keys()));
+    console.log('📊 [StockPriceChart] Buy dates:', Array.from(buyDates));
+    console.log('📊 [StockPriceChart] Sell dates:', Array.from(sellDates));
     console.log('📊 [StockPriceChart] stock data dates (first 5):', selectedStockData.data.slice(0, 5).map(d => d.date));
 
-    // 주가 데이터에 매매 신호 merge
+    // 주가 데이터에 매매 신호 merge (해당 날짜의 실제 주가를 사용)
     const mergedData = selectedStockData.data.map(point => ({
       ...point,
-      buySignal: buyMap.get(point.date),
-      sellSignal: sellMap.get(point.date),
+      buySignal: buyDates.has(point.date) ? point.price : undefined,
+      sellSignal: sellDates.has(point.date) ? point.price : undefined,
     }));
 
     // 디버깅: 매매 신호가 있는 데이터만 필터링해서 출력
