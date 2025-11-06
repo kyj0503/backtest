@@ -2,14 +2,22 @@ import React from 'react';
 import { VolatilityEvent, formatPercent, getCompanyName } from '../../model/volatility-news-types';
 import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
 
+interface TickerInfo {
+  symbol: string;
+  currency: string;
+  company_name: string;
+  exchange: string;
+}
+
 interface VolatilityTableProps {
   selectedStock: string;
   events: VolatilityEvent[];
   onNewsClick: (date: string, event: VolatilityEvent) => void;
   newsDisabled?: boolean;
+  tickerInfo?: { [symbol: string]: TickerInfo };
 }
 
-const VolatilityTable: React.FC<VolatilityTableProps> = ({ selectedStock, events, onNewsClick, newsDisabled = false }) => {
+const VolatilityTable: React.FC<VolatilityTableProps> = ({ selectedStock, events, onNewsClick, newsDisabled = false, tickerInfo = {} }) => {
   if (events.length === 0) {
     return (
       <div className="text-center py-8">
@@ -51,7 +59,7 @@ const VolatilityTable: React.FC<VolatilityTableProps> = ({ selectedStock, events
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                {formatPriceWithCurrency(event.close_price, selectedStock)}
+                {formatPriceWithCurrency(event.close_price, tickerInfo[selectedStock]?.currency || 'USD')}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                 {event.volume.toLocaleString()}
