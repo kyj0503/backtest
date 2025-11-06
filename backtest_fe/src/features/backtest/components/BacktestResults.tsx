@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import ChartsSection from './results/ChartsSection';
-import { BacktestResultsProps, TradeMarker, ExchangeRatePoint } from '../model/backtest-result-types';
+import { BacktestResultsProps, TradeMarker, ExchangeRatePoint } from '../model/types/backtest-result-types';
 import { AlertCircle, FileDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';

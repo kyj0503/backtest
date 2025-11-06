@@ -3,7 +3,7 @@
  * 백엔드 응답을 차트 컴포넌트에서 사용할 수 있는 형식으로 변환
  */
 
-import { EquityPoint, TradeMarker, OhlcPoint, ChartData, PortfolioData } from '../model/backtest-result-types';
+import { EquityPoint, TradeMarker, OhlcPoint, ChartData, PortfolioData } from '../model/types/backtest-result-types';
 
 /**
  * 포트폴리오 equity curve 데이터를 EquityPoint 배열로 변환

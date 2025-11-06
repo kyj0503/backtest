@@ -15,7 +15,7 @@ import { getStockDisplayName } from '../../model/strategyConfig';
 import StockSymbolSelector from './StockSymbolSelector';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
-import { TickerInfo } from '../../model/backtest-result-types';
+import { TickerInfo } from '../../model/types/backtest-result-types';
 
 interface VolatilityEvent {
   date: string;

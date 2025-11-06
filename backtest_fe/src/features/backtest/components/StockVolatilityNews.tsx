@@ -2,7 +2,7 @@ import React from 'react';
 import VolatilityTable from './volatility/VolatilityTable';
 import NewsModal from './volatility/NewsModal';
 import { useVolatilityNews } from '../hooks/useVolatilityNews';
-import { StockVolatilityNewsProps } from '../model/volatility-news-types';
+import { StockVolatilityNewsProps } from '../model/types/volatility-news-types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 
 const StockVolatilityNews: React.FC<StockVolatilityNewsProps> = ({ 

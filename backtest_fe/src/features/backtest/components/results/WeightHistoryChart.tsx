@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { WeightHistoryPoint } from '../../model/backtest-result-types';
+import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 

@@ -11,7 +11,7 @@ import {
   NewsResponse,
   ExchangeRateData,
   VolatilityData,
-} from '../model/api-types';
+} from '../model/types/api-types';
 
 export class BacktestService {
   /**

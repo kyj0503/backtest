@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table';
-import { Stock, PortfolioInputMode } from '../model/backtest-form-types';
+import { Stock, PortfolioInputMode } from '../model/types/backtest-form-types';
 import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths, VALIDATION_RULES } from '../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 

@@ -3,7 +3,7 @@ import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveCo
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
-import { TickerInfo } from '../model/backtest-result-types';
+import { TickerInfo } from '../model/types/backtest-result-types';
 
 interface StockData {
   symbol: string;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { ScrollArea } from '@/shared/ui/scroll-area';
-import { NewsItem, VolatilityEvent, getCompanyName, formatPercent } from '../../model/volatility-news-types';
+import { NewsItem, VolatilityEvent, getCompanyName, formatPercent } from '../../model/types/volatility-news-types';
 
 interface NewsModalProps {
   isVisible: boolean;
