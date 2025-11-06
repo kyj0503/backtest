@@ -204,8 +204,7 @@ class BacktestEngine:
             USD로 변환된 가격 데이터
         """
         from datetime import datetime, timedelta
-        from app.services.yfinance_db import get_ticker_info_from_db
-        from app.services.unified_data_service import load_ticker_data
+        from app.services.yfinance_db import get_ticker_info_from_db, load_ticker_data
 
         # 통화 정보 가져오기
         try:
