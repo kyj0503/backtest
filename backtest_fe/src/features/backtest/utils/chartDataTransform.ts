@@ -103,9 +103,8 @@ export const extractTradeLogs = (
 
   Object.entries(strategyDetails).forEach(([symbol, stats]) => {
     if (stats.trade_log && Array.isArray(stats.trade_log)) {
-      // 원본 심볼로 매핑 (예: "AAPL_1" → "AAPL", "MSFT_0" → "MSFT")
-      const cleanSymbol = symbol.split('_')[0];
-      logs[cleanSymbol] = stats.trade_log;
+      // 백엔드에서 이미 실제 심볼 이름으로 제공하므로 그대로 사용
+      logs[symbol] = stats.trade_log;
     }
   });
 
