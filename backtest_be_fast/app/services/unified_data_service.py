@@ -229,11 +229,11 @@ class UnifiedDataService:
             return 0.0
 
         try:
-            # 대소문자 구분 없이 close 키 접근 (pandas는 'Close', dict는 'close' 사용 가능)
-            first_close = benchmark_data[0].get('close', benchmark_data[0].get('Close'))
-            last_close = benchmark_data[-1].get('close', benchmark_data[-1].get('Close'))
+            # 소스에서 이미 정규화되어 'close' 키만 사용
+            first_close = benchmark_data[0]['close']
+            last_close = benchmark_data[-1]['close']
 
-            if not first_close or first_close <= 0:
+            if first_close <= 0:
                 return 0.0
 
             return ((last_close - first_close) / first_close) * 100
@@ -422,20 +422,28 @@ class UnifiedDataService:
         start_date: str,
         end_date: str
     ) -> List[Dict[str, Any]]:
-        """단일 벤치마크 데이터 수집"""
+        """
+        단일 벤치마크 데이터 수집
+
+        Note: 모든 키를 소문자로 정규화하여 일관성 유지
+        """
         try:
             df = data_service.get_ticker_data_sync(ticker, start_date, end_date)
             if df is not None and not df.empty:
+                # DataFrame 컬럼명을 소문자로 정규화
+                df_normalized = df.copy()
+                df_normalized.columns = [col.lower() for col in df_normalized.columns]
+
                 return [
                     {
                         'date': date.strftime('%Y-%m-%d'),
-                        'close': float(row['Close'])
+                        'close': float(row['close'])
                     }
-                    for date, row in df.iterrows()
+                    for date, row in df_normalized.iterrows()
                 ]
         except Exception as e:
             logger.warning(f"{ticker} 벤치마크 데이터 수집 실패: {str(e)}")
-        
+
         return []
 
 
