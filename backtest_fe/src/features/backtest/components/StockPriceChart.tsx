@@ -155,20 +155,20 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
                 />
-                {/* 매수 신호 (파란점) */}
+                {/* 매수 신호 (빨간점) */}
                 <Scatter
                   name="매수"
                   dataKey="buySignal"
-                  fill="#3b82f6"
+                  fill="#ef4444"
                   shape="circle"
                   isAnimationActive={false}
                   r={8}
                 />
-                {/* 매도 신호 (빨간점) */}
+                {/* 매도 신호 (파란점) */}
                 <Scatter
                   name="매도"
                   dataKey="sellSignal"
-                  fill="#ef4444"
+                  fill="#3b82f6"
                   shape="circle"
                   isAnimationActive={false}
                   r={8}
@@ -193,9 +193,9 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
             {tradeCount.buys > 0 || tradeCount.sells > 0 ? (
               <div className="text-left md:text-right">
                 <small className="text-muted-foreground">
-                  <span className="text-blue-500">● 매수: {tradeCount.buys}회</span>
+                  <span className="text-red-500">● 매수: {tradeCount.buys}회</span>
                   {' | '}
-                  <span className="text-red-500">● 매도: {tradeCount.sells}회</span>
+                  <span className="text-blue-500">● 매도: {tradeCount.sells}회</span>
                 </small>
               </div>
             ) : null}
