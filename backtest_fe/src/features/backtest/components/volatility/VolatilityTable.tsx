@@ -1,5 +1,6 @@
 import React from 'react';
-import { VolatilityEvent, formatPercent, formatPrice, getCompanyName } from '../../model/volatility-news-types';
+import { VolatilityEvent, formatPercent, getCompanyName } from '../../model/volatility-news-types';
+import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
 
 interface VolatilityTableProps {
   selectedStock: string;
@@ -50,7 +51,7 @@ const VolatilityTable: React.FC<VolatilityTableProps> = ({ selectedStock, events
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                {formatPrice(event.close_price)}
+                {formatPriceWithCurrency(event.close_price, selectedStock)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                 {event.volume.toLocaleString()}

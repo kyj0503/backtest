@@ -22,6 +22,19 @@ export const formatPrice = (value: number, decimals = 2): string => {
   return `$${value.toFixed(decimals)}`;
 };
 
+// 한국 주식 심볼 확인
+export const isKoreanStock = (symbol: string): boolean => {
+  return symbol.toUpperCase().endsWith('.KS') || symbol.toUpperCase().endsWith('.KQ');
+};
+
+// 심볼에 따라 적절한 화폐 단위로 가격 포맷
+export const formatPriceWithCurrency = (value: number, symbol: string, decimals = 2): string => {
+  if (isKoreanStock(symbol)) {
+    return `₩${value.toLocaleString('ko-KR', { maximumFractionDigits: decimals })}`;
+  }
+  return `$${value.toFixed(decimals)}`;
+};
+
 export const formatKoreanCurrency = (value: number): string => {
   if (value >= 1e8) {
     return `${(value / 1e8).toFixed(1)}억원`;

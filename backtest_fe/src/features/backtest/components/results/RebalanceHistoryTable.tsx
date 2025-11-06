@@ -3,6 +3,7 @@ import { RebalanceEvent } from '../../model/backtest-result-types';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { CARD_STYLES, TEXT_STYLES, HEADING_STYLES, SPACING } from '@/shared/styles/design-tokens';
+import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
 
 interface RebalanceHistoryTableProps {
   rebalanceHistory: RebalanceEvent[];
@@ -116,12 +117,12 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
                           <div className="text-right">
                             <div className="text-sm">
                               {trade.shares !== undefined
-                                ? `${trade.shares.toFixed(2)}주 @ $${trade.price.toFixed(2)}`
+                                ? `${trade.shares.toFixed(2)}주 @ ${formatPriceWithCurrency(trade.price, trade.symbol)}`
                                 : `$${(trade.amount || 0).toFixed(2)}`}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {trade.shares !== undefined
-                                ? `$${(trade.shares * trade.price).toFixed(2)}`
+                                ? formatPriceWithCurrency(trade.shares * trade.price, trade.symbol)
                                 : '현금'}
                             </div>
                           </div>
