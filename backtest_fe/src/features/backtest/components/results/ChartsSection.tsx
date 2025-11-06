@@ -350,10 +350,14 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
     // 2. 지수 벤치마크 차트 (S&P 500 + NASDAQ)
     if (sp500Benchmark.length > 0 || nasdaqBenchmark.length > 0) {
+      // 포트폴리오 또는 단일 종목 equity 데이터 선택
+      const equityDataForBenchmark = isPortfolio ? portfolioEquityData : singleEquityData;
+
       allCharts.push(
         <BenchmarkIndexChart
           sp500Data={sp500Benchmark}
           nasdaqData={nasdaqBenchmark}
+          portfolioEquityData={equityDataForBenchmark}
           key="benchmark-index"
         />
       );
