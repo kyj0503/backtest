@@ -119,9 +119,26 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
         include_news=True,
         news_display_count=15
     )
-    
-    # 4. 응답 데이터 병합
+
+    # 4. S&P 500 벤치마크 통계 계산 및 추가
+    sp500_benchmark = unified_data.get('sp500_benchmark', [])
+    if sp500_benchmark and len(sp500_benchmark) > 0:
+        # S&P 500 수익률 계산
+        sp500_return = unified_data_service.calculate_benchmark_return(sp500_benchmark)
+
+        # 포트폴리오 통계에 추가
+        portfolio_stats = backtest_result['data'].get('portfolio_statistics', {})
+        if portfolio_stats:
+            portfolio_stats['sp500_total_return_pct'] = sp500_return
+
+            # 전략 수익률과 S&P 500 수익률 비교 (알파)
+            strategy_return = portfolio_stats.get('Total_Return', 0.0)
+            portfolio_stats['alpha_vs_sp500_pct'] = strategy_return - sp500_return
+
+            logger.info(f"S&P 500 수익률: {sp500_return:.2f}%, 알파: {strategy_return - sp500_return:.2f}%")
+
+    # 5. 응답 데이터 병합
     backtest_result['data'].update(unified_data)
-    
+
     return backtest_result
 

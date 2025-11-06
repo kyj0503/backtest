@@ -89,6 +89,18 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
       description: '리스크 대비 성과 지표 (Sharpe)',
     },
     {
+      label: '연간 변동성',
+      value: formatPercent(numberValue(stats.annual_volatility_pct ?? stats.Annual_Volatility)),
+      tone: (() => {
+        const volatility = numberValue(stats.annual_volatility_pct ?? stats.Annual_Volatility);
+        // 낮을수록 안정적 (초록색), 높을수록 위험 (빨간색)
+        if (volatility < 15) return 'positive';  // 낮은 변동성 (안정)
+        if (volatility < 25) return 'neutral';   // 보통 변동성
+        return 'negative';                       // 높은 변동성 (위험)
+      })(),
+      description: '수익률의 변동 폭 (낮을수록 안정적)',
+    },
+    {
       label: '프로핏 팩터',
       value: numberValue(stats.profit_factor ?? stats.Profit_Factor, 1).toFixed(2),
       tone:
@@ -124,6 +136,28 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
         getStatVariant(numberValue(stats.alpha_vs_benchmark_pct), 'return'),
       ),
       description: '벤치마크 대비 초과 수익률',
+    });
+  }
+
+  if (typeof stats.sp500_total_return_pct === 'number') {
+    statItems.push({
+      label: 'S&P 500 수익률',
+      value: formatPercent(numberValue(stats.sp500_total_return_pct)),
+      tone: mapVariantToTone(
+        getStatVariant(numberValue(stats.sp500_total_return_pct), 'return'),
+      ),
+      description: '동일 기간 S&P 500 지수의 총 수익률',
+    });
+  }
+
+  if (typeof stats.alpha_vs_sp500_pct === 'number') {
+    statItems.push({
+      label: 'S&P 500 대비 성과',
+      value: formatPercent(numberValue(stats.alpha_vs_sp500_pct)),
+      tone: mapVariantToTone(
+        getStatVariant(numberValue(stats.alpha_vs_sp500_pct), 'return'),
+      ),
+      description: 'S&P 500 지수 대비 초과 수익률',
     });
   }
 

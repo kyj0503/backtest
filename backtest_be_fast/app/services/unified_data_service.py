@@ -51,20 +51,53 @@ class UnifiedDataService:
         """
         self.news_service = news_service
     
+    def collect_ticker_info(
+        self,
+        symbols: List[str]
+    ) -> Dict[str, Dict[str, str]]:
+        """
+        종목별 메타데이터 수집 (currency 포함)
+
+        Args:
+            symbols: 종목 심볼 리스트
+
+        Returns:
+            종목별 메타데이터 딕셔너리 (currency, company_name, exchange)
+        """
+        from .yfinance_db import get_ticker_info_batch_from_db
+
+        # 배치 조회로 N+1 쿼리 문제 해결
+        try:
+            ticker_info = get_ticker_info_batch_from_db(symbols)
+        except Exception as e:
+            logger.warning(f"티커 정보 일괄 조회 실패: {str(e)}")
+            # 실패 시 기본값 반환
+            ticker_info = {
+                symbol: {
+                    'symbol': symbol,
+                    'currency': 'USD',
+                    'company_name': symbol,
+                    'exchange': 'Unknown'
+                }
+                for symbol in symbols
+            }
+
+        return ticker_info
+
     def collect_stock_data(
-        self, 
-        symbols: List[str], 
-        start_date: str, 
+        self,
+        symbols: List[str],
+        start_date: str,
         end_date: str
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         주가 데이터 수집
-        
+
         Args:
             symbols: 종목 심볼 리스트
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
-            
+
         Returns:
             종목별 주가 데이터 딕셔너리
         """
@@ -79,7 +112,7 @@ class UnifiedDataService:
             except Exception as e:
                 logger.warning(f"주가 데이터 수집 실패: {symbol} - {str(e)}")
                 stock_data[symbol] = []
-        
+
         return stock_data
     
     def collect_exchange_data(
@@ -166,18 +199,47 @@ class UnifiedDataService:
     ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         벤치마크 데이터 수집 (S&P 500, NASDAQ)
-        
+
         Args:
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
-            
+
         Returns:
             (S&P 500 데이터, NASDAQ 데이터) 튜플
         """
         sp500_benchmark = self._collect_single_benchmark('^GSPC', start_date, end_date)
         nasdaq_benchmark = self._collect_single_benchmark('^IXIC', start_date, end_date)
-        
+
         return sp500_benchmark, nasdaq_benchmark
+
+    def calculate_benchmark_return(
+        self,
+        benchmark_data: List[Dict[str, Any]]
+    ) -> float:
+        """
+        벤치마크 수익률 계산
+
+        Args:
+            benchmark_data: 벤치마크 가격 데이터 리스트
+
+        Returns:
+            총 수익률 (%)
+        """
+        if not benchmark_data or len(benchmark_data) < 2:
+            return 0.0
+
+        try:
+            # 소스에서 이미 정규화되어 'close' 키만 사용
+            first_close = benchmark_data[0]['close']
+            last_close = benchmark_data[-1]['close']
+
+            if first_close <= 0:
+                return 0.0
+
+            return ((last_close - first_close) / first_close) * 100
+        except (KeyError, TypeError, ZeroDivisionError) as e:
+            logger.warning(f"벤치마크 수익률 계산 실패: {str(e)}")
+            return 0.0
     
     def collect_latest_news(
         self,
@@ -221,42 +283,46 @@ class UnifiedDataService:
     ) -> Dict[str, Any]:
         """
         모든 통합 데이터를 한 번에 수집
-        
+
         Args:
             symbols: 종목 심볼 리스트
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
             include_news: 뉴스 포함 여부
             news_display_count: 종목당 뉴스 개수
-            
+
         Returns:
             모든 통합 데이터를 포함하는 딕셔너리
         """
+        # 종목 메타데이터 (currency 포함)
+        ticker_info = self.collect_ticker_info(symbols)
+
         # 주가 데이터
         stock_data = self.collect_stock_data(symbols, start_date, end_date)
-        
+
         # 환율 데이터 및 통계
         exchange_rates, exchange_stats = self.collect_exchange_data(start_date, end_date)
-        
+
         # 급등/급락 이벤트
         volatility_events = self.collect_volatility_events(symbols, start_date, end_date)
-        
+
         # 벤치마크 데이터
         sp500_benchmark, nasdaq_benchmark = self.collect_benchmark_data(start_date, end_date)
-        
+
         # 뉴스 (선택적)
         latest_news = {}
         if include_news:
             latest_news = self.collect_latest_news(symbols, news_display_count)
-        
+
         logger.info(
             f"통합 데이터 수집 완료: "
             f"{len(symbols)}개 종목, "
             f"{len(exchange_rates)}개 환율 데이터, "
             f"{len(latest_news)}개 종목 뉴스"
         )
-        
+
         return {
+            'ticker_info': ticker_info,
             'stock_data': stock_data,
             'exchange_rates': exchange_rates,
             'exchange_stats': exchange_stats,
@@ -356,20 +422,28 @@ class UnifiedDataService:
         start_date: str,
         end_date: str
     ) -> List[Dict[str, Any]]:
-        """단일 벤치마크 데이터 수집"""
+        """
+        단일 벤치마크 데이터 수집
+
+        Note: 모든 키를 소문자로 정규화하여 일관성 유지
+        """
         try:
             df = data_service.get_ticker_data_sync(ticker, start_date, end_date)
             if df is not None and not df.empty:
+                # DataFrame 컬럼명을 소문자로 정규화
+                df_normalized = df.copy()
+                df_normalized.columns = [col.lower() for col in df_normalized.columns]
+
                 return [
                     {
                         'date': date.strftime('%Y-%m-%d'),
-                        'close': float(row['Close'])
+                        'close': float(row['close'])
                     }
-                    for date, row in df.iterrows()
+                    for date, row in df_normalized.iterrows()
                 ]
         except Exception as e:
             logger.warning(f"{ticker} 벤치마크 데이터 수집 실패: {str(e)}")
-        
+
         return []
 
 

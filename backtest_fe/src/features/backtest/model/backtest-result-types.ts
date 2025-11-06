@@ -107,9 +107,10 @@ export interface NewsItem {
 
 export interface RebalanceTrade {
   symbol: string;
-  action: 'buy' | 'sell';
+  action: 'buy' | 'sell' | 'increase' | 'decrease';
   shares: number;
   price: number;
+  amount?: number; // 현금 거래 시 사용
 }
 
 export interface RebalanceEvent {
@@ -125,6 +126,13 @@ export interface WeightHistoryPoint {
   [symbol: string]: number | string; // symbol별 비중 + date
 }
 
+export interface TickerInfo {
+  symbol: string;
+  currency: string;
+  company_name: string;
+  exchange: string;
+}
+
 export interface PortfolioData {
   portfolio_statistics: PortfolioStatistics;
   individual_returns: Record<string, IndividualReturn>;
@@ -137,6 +145,7 @@ export interface PortfolioData {
   weight_history?: WeightHistoryPoint[];
 
   // 통합 응답 데이터 (별도 API 호출 불필요)
+  ticker_info?: Record<string, TickerInfo>;
   stock_data?: Record<string, Array<{ date: string; price: number; volume: number }>>;
   exchange_rates?: ExchangeRatePoint[];
   volatility_events?: Record<string, VolatilityEvent[]>;

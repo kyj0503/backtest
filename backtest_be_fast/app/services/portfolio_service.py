@@ -7,6 +7,16 @@
 - 리밸런싱 로직 구현
 - 포트폴리오 수익률 및 통계 계산
 
+**통화 정책**:
+- 개별 종목 가격: DB에 원래 통화로 저장 (KRW, JPY, EUR, GBP 등)
+- 백테스트 연산: 모든 가격을 USD로 변환하여 계산
+- 환율 변환: 13개 주요 통화 지원
+  * 직접 환율: KRW=X, JPY=X, CNY=X 등 (1 USD = X 통화)
+  * USD 환율: EURUSD=X, GBPUSD=X 등 (1 통화 = X USD)
+- 프론트엔드 표시:
+  * 개별 종목 시장 데이터(주가, 급등락) → 원래 통화
+  * 백테스트 결과(리밸런싱, 수수료) → USD
+
 **주요 기능**:
 1. run_portfolio_backtest(): 메인 백테스트 실행 메서드
    - 단일 종목 → backtest_service로 위임
@@ -49,7 +59,7 @@ from decimal import Decimal
 
 from app.schemas.schemas import PortfolioBacktestRequest, PortfolioStock
 from app.schemas.requests import BacktestRequest
-from app.services.yfinance_db import load_ticker_data
+from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db
 from app.services.backtest_service import backtest_service
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
@@ -60,6 +70,26 @@ from app.core.exceptions import (
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# 환율 데이터 검색 설정
+EXCHANGE_RATE_LOOKBACK_DAYS = 30  # 환율 데이터 누락 시 과거 검색 일수
+
+# 지원하는 통화 및 환율 티커 매핑
+SUPPORTED_CURRENCIES = {
+    'USD': None,  # 기준 통화, 변환 불필요
+    'KRW': 'KRW=X',  # 원화
+    'JPY': 'JPY=X',  # 엔화
+    'EUR': 'EURUSD=X',  # 유로
+    'GBP': 'GBPUSD=X',  # 파운드
+    'CNY': 'CNY=X',  # 위안화
+    'HKD': 'HKD=X',  # 홍콩달러
+    'TWD': 'TWD=X',  # 대만달러
+    'SGD': 'SGD=X',  # 싱가포르달러
+    'AUD': 'AUDUSD=X',  # 호주달러
+    'CAD': 'CADUSD=X',  # 캐나다달러
+    'CHF': 'CHFUSD=X',  # 스위스프랑
+    'INR': 'INR=X',  # 루피
+}
 
 class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
@@ -216,6 +246,44 @@ class PortfolioService:
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
 
+        # 각 종목의 currency 정보 먼저 가져오기
+        ticker_currencies = {}
+        for unique_key in stock_amounts.keys():
+            symbol = dca_info[unique_key]['symbol']
+            try:
+                ticker_info = get_ticker_info_from_db(symbol)
+                ticker_currencies[unique_key] = ticker_info.get('currency', 'USD')
+                logger.debug(f"{symbol} currency: {ticker_currencies[unique_key]}")
+            except Exception as e:
+                logger.warning(f"{symbol} currency 정보 조회 실패: {e}, USD로 가정")
+                ticker_currencies[unique_key] = 'USD'
+
+        # 필요한 통화 파악 및 환율 데이터 로드
+        required_currencies = set(ticker_currencies.values()) - {'USD'}
+        exchange_rates_by_currency = {}  # {currency: {date: rate}}
+
+        for currency in required_currencies:
+            if currency not in SUPPORTED_CURRENCIES:
+                logger.warning(f"지원하지 않는 통화: {currency}, USD로 처리")
+                continue
+
+            exchange_ticker = SUPPORTED_CURRENCIES[currency]
+            if exchange_ticker:
+                try:
+                    exchange_data = load_ticker_data(exchange_ticker, start_date, end_date)
+                    if exchange_data is not None and not exchange_data.empty:
+                        # Forward-fill: 누락된 날짜를 이전 유효 값으로 채움
+                        exchange_data = exchange_data.ffill(limit=EXCHANGE_RATE_LOOKBACK_DAYS)
+
+                        currency_rates = {}
+                        for date_idx, row in exchange_data.iterrows():
+                            currency_rates[date_idx.date()] = row['Close']
+                        exchange_rates_by_currency[currency] = currency_rates
+                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치")
+                except Exception as e:
+                    logger.warning(f"{currency} 환율 데이터 로드 실패: {e}")
+                    exchange_rates_by_currency[currency] = {}
+
         # 목표 비중 계산 (리밸런싱용)
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
 
@@ -241,15 +309,58 @@ class PortfolioService:
             if current_date.date() > end_date_obj.date():
                 break
 
-            # 현재 가격 가져오기
+            # 현재 가격 가져오기 (필요 시 USD로 변환)
             current_prices = {}
+            # 통화별 가장 최근 유효한 환율 캐싱
+            last_valid_exchange_rates = {}
+
             for unique_key in stock_amounts.keys():
                 symbol = dca_info[unique_key]['symbol']
                 if symbol in portfolio_data:
                     df = portfolio_data[symbol]
                     price_data = df[df.index.date <= current_date.date()]
                     if not price_data.empty:
-                        current_prices[unique_key] = price_data['Close'].iloc[-1]
+                        raw_price = price_data['Close'].iloc[-1]
+
+                        # Currency 변환 (원래 통화 -> USD)
+                        currency = ticker_currencies.get(unique_key, 'USD')
+
+                        if currency == 'USD':
+                            # 이미 USD, 변환 불필요
+                            current_prices[unique_key] = raw_price
+                        elif currency in exchange_rates_by_currency:
+                            # 환율 데이터가 있는 통화 (이미 forward-fill 처리됨)
+                            currency_rates = exchange_rates_by_currency[currency]
+
+                            # 해당 날짜의 환율 찾기 (forward-fill로 이미 채워짐)
+                            exchange_rate = currency_rates.get(current_date.date())
+
+                            # 여전히 없으면 캐시된 마지막 환율 사용 (fallback)
+                            if not exchange_rate or exchange_rate <= 0:
+                                if currency in last_valid_exchange_rates:
+                                    exchange_rate = last_valid_exchange_rates[currency]
+                                    logger.warning(f"{currency} {current_date.date()} 환율 없음, 캐시된 환율 사용: {exchange_rate:.2f}")
+                                else:
+                                    logger.error(f"{currency} {current_date.date()} 환율 데이터 없음, 해당 종목 건너뛰기")
+                                    continue  # 이 종목은 건너뛰기
+
+                            if exchange_rate and exchange_rate > 0:
+                                # EUR, GBP, AUD 등: 이미 USD 환율 (EURUSD=X)
+                                # KRW, JPY 등: 역수 계산 필요 (1 USD = X KRW)
+                                if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
+                                    # XXXUSD=X 형태: 1 XXX = Y USD
+                                    converted_price = raw_price * exchange_rate
+                                else:
+                                    # XXX=X 형태: 1 USD = Y XXX
+                                    converted_price = raw_price / exchange_rate
+
+                                logger.debug(f"{symbol} 가격 변환: {currency} {raw_price:.2f} -> ${converted_price:.2f} (환율: {exchange_rate:.2f})")
+                                current_prices[unique_key] = converted_price
+                                last_valid_exchange_rates[currency] = exchange_rate  # 유효한 환율 저장
+                        else:
+                            # 지원하지 않는 통화, USD로 가정
+                            logger.warning(f"{symbol} 지원하지 않는 통화 {currency}, 변환 없이 사용")
+                            current_prices[unique_key] = raw_price
 
             # 첫 날: 초기 매수 (일시불) 또는 DCA 시작
             if is_first_day:

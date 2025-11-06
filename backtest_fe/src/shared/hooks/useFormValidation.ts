@@ -53,8 +53,8 @@ export const useFormValidation = (): UseFormValidationReturn => {
 
     // 총 투자 금액 검증
     const totalAmount = formState.portfolio.reduce((sum, stock) => sum + stock.amount, 0);
-    if (totalAmount < 1000) {
-      newErrors.push('총 투자 금액은 최소 $1,000 이상이어야 합니다.');
+    if (totalAmount < 1) {
+      newErrors.push('총 투자 금액은 최소 $1 이상이어야 합니다.');
     }
 
     setErrorsState(newErrors);

@@ -1,14 +1,24 @@
+/**
+ * 리밸런싱 히스토리 테이블 컴포넌트
+ *
+ * **통화 표시 정책:**
+ * - 리밸런싱은 백테스트 연산의 결과물이므로 **USD로 통일 표시**
+ * - 포트폴리오 전체가 USD 기준으로 계산되므로 일관성 유지
+ * - 수수료, 거래 가격, 거래 금액 모두 USD
+ */
 import React, { useState } from 'react';
-import { RebalanceEvent } from '../../model/backtest-result-types';
+import { RebalanceEvent, TickerInfo } from '../../model/backtest-result-types';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { CARD_STYLES, TEXT_STYLES, HEADING_STYLES, SPACING } from '@/shared/styles/design-tokens';
+import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
 
 interface RebalanceHistoryTableProps {
   rebalanceHistory: RebalanceEvent[];
+  tickerInfo?: { [symbol: string]: TickerInfo };
 }
 
-const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalanceHistory }) => {
+const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalanceHistory, tickerInfo = {} }) => {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const toggleRow = (index: number) => {
@@ -85,11 +95,13 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
                         <div
                           key={tradeIdx}
                           className={`flex items-center justify-between p-2 rounded ${
-                            trade.action === 'buy' ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                            trade.action === 'buy' || trade.action === 'decrease'
+                              ? 'bg-emerald-500/10'
+                              : 'bg-red-500/10'
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            {trade.action === 'buy' ? (
+                            {trade.action === 'buy' || trade.action === 'decrease' ? (
                               <TrendingUp className="w-4 h-4 text-emerald-600" />
                             ) : (
                               <TrendingDown className="w-4 h-4 text-red-600" />
@@ -97,18 +109,30 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
                             <span className="font-medium">{trade.symbol}</span>
                             <span
                               className={`text-sm ${
-                                trade.action === 'buy' ? 'text-emerald-600' : 'text-red-600'
+                                trade.action === 'buy' || trade.action === 'decrease'
+                                  ? 'text-emerald-600'
+                                  : 'text-red-600'
                               }`}
                             >
-                              {trade.action === 'buy' ? '매수' : '매도'}
+                              {trade.action === 'buy'
+                                ? '매수'
+                                : trade.action === 'sell'
+                                ? '매도'
+                                : trade.action === 'increase'
+                                ? '증가'
+                                : '감소'}
                             </span>
                           </div>
                           <div className="text-right">
                             <div className="text-sm">
-                              {trade.shares.toFixed(2)}주 @ ${trade.price.toFixed(2)}
+                              {trade.shares !== undefined
+                                ? `${trade.shares.toFixed(2)}주 @ ${formatPriceWithCurrency(trade.price, 'USD')}`
+                                : formatPriceWithCurrency(trade.amount || 0, 'USD')}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              ${(trade.shares * trade.price).toFixed(2)}
+                              {trade.shares !== undefined
+                                ? formatPriceWithCurrency(trade.shares * trade.price, 'USD')
+                                : '현금'}
                             </div>
                           </div>
                         </div>

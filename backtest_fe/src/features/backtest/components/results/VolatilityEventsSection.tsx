@@ -14,6 +14,8 @@ import { Button } from '@/shared/ui/button';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import StockSymbolSelector from './StockSymbolSelector';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
+import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
+import { TickerInfo } from '../../model/backtest-result-types';
 
 interface VolatilityEvent {
   date: string;
@@ -24,10 +26,12 @@ interface VolatilityEvent {
 
 interface VolatilityEventsSectionProps {
   volatilityEvents: { [symbol: string]: VolatilityEvent[] };
+  tickerInfo?: { [symbol: string]: TickerInfo };
 }
 
 const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
   volatilityEvents,
+  tickerInfo = {},
 }) => {
   // 급등락 이벤트가 있는 종목 목록
   const allSymbols = useMemo(() => {
@@ -116,7 +120,10 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
                   {event.daily_return.toFixed(2)}%
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  ${event.close_price.toFixed(2)}
+                  {formatPriceWithCurrency(
+                    event.close_price,
+                    tickerInfo[selectedSymbol]?.currency || 'USD'
+                  )}
                 </span>
                 <Button
                   variant="outline"

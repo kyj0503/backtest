@@ -68,6 +68,11 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     [data, isPortfolio],
   );
 
+  // 종목 메타데이터 (currency 포함)
+  const tickerInfo = useMemo(() => {
+    return portfolioData?.ticker_info || (data as any).ticker_info || {};
+  }, [portfolioData, data]);
+
   // 통합 응답에서 주가 데이터 추출
   const stocksData = useMemo(() => {
     if (portfolioData?.stock_data) {
@@ -261,7 +266,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             </div>
           ) : stocksData.length > 0 ? (
             <Suspense fallback={<ChartLoading height={360} />}>
-              <LazyStockPriceChart stocksData={stocksData} />
+              <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} />
             </Suspense>
           ) : (
             <p className="text-sm text-muted-foreground">표시할 자산 데이터가 없습니다.</p>
@@ -307,7 +312,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             </div>
           ) : stocksData.length > 0 ? (
             <Suspense fallback={<ChartLoading height={360} />}>
-              <LazyStockPriceChart stocksData={stocksData} />
+              <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} />
             </Suspense>
           ) : (
             <p className="text-sm text-muted-foreground">표시할 주가 데이터가 없습니다.</p>
@@ -350,10 +355,14 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
     // 2. 지수 벤치마크 차트 (S&P 500 + NASDAQ)
     if (sp500Benchmark.length > 0 || nasdaqBenchmark.length > 0) {
+      // 포트폴리오 또는 단일 종목 equity 데이터 선택
+      const equityDataForBenchmark = isPortfolio ? portfolioEquityData : singleEquityData;
+
       allCharts.push(
         <BenchmarkIndexChart
           sp500Data={sp500Benchmark}
           nasdaqData={nasdaqBenchmark}
+          portfolioEquityData={equityDataForBenchmark}
           key="benchmark-index"
         />
       );
@@ -469,6 +478,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       allCharts.push(
         <VolatilityEventsSection
           volatilityEvents={volatilityEvents}
+          tickerInfo={tickerInfo}
           key="volatility-events"
         />
       );
@@ -496,13 +506,16 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           description="포트폴리오 리밸런싱 이벤트 상세 내역"
           key="rebalance-history"
         >
-          <RebalanceHistoryTable rebalanceHistory={portfolioData.rebalance_history} />
+          <RebalanceHistoryTable
+            rebalanceHistory={portfolioData.rebalance_history}
+            tickerInfo={tickerInfo}
+          />
         </ResultBlock>
       );
     }
 
-    // 7. 포트폴리오 비중 변화 차트
-    if (portfolioData?.weight_history && portfolioData.weight_history.length > 0) {
+    // 7. 포트폴리오 비중 변화 차트 (종목이 2개 이상일 때만 표시)
+    if (portfolioData?.weight_history && portfolioData.weight_history.length > 0 && portfolioData.portfolio_composition.length > 1) {
       allCharts.push(
         <ResultBlock
           title="포트폴리오 비중 변화"
