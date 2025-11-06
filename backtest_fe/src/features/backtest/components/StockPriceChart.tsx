@@ -65,11 +65,19 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     });
 
     // 주가 데이터에 매매 신호 merge
-    return selectedStockData.data.map(point => ({
+    const mergedData = selectedStockData.data.map(point => ({
       ...point,
       buySignal: buyMap.get(point.date),
       sellSignal: sellMap.get(point.date),
     }));
+
+    // 디버깅: 매매 신호가 있는 데이터만 필터링해서 출력
+    const signalPoints = mergedData.filter(d => d.buySignal || d.sellSignal);
+    if (signalPoints.length > 0) {
+      console.log('📍 [StockPriceChart] Signal points:', signalPoints);
+    }
+
+    return mergedData;
   }, [selectedSymbol, selectedStockData, tradeLogs]);
 
   // 매매 횟수 계산
@@ -153,19 +161,21 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                 />
                 {/* 매수 신호 (파란점) */}
                 <Scatter
-                  name="buySignal"
+                  name="매수"
                   dataKey="buySignal"
                   fill="#3b82f6"
                   shape="circle"
                   isAnimationActive={false}
+                  r={8}
                 />
                 {/* 매도 신호 (빨간점) */}
                 <Scatter
-                  name="sellSignal"
+                  name="매도"
                   dataKey="sellSignal"
                   fill="#ef4444"
                   shape="circle"
                   isAnimationActive={false}
+                  r={8}
                 />
               </ComposedChart>
             </ResponsiveContainer>
