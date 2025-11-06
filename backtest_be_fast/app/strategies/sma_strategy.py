@@ -85,16 +85,6 @@ class SMACrossStrategy(Strategy):
         - 이동평균 교차 시 매수/매도 신호 생성
         - 포지션 크기 조절
         """
-        # 백테스트 마지막 날 체크: 미체결 포지션 청산
-        # (승률과 총 수익률을 정확히 계산하기 위함)
-        current_bar = len(self.sma1) - 1
-        total_bars = len(self.data.Close)
-        is_last_day = current_bar == total_bars - 1
-
-        if is_last_day and self.position:
-            self.position.close()
-            return
-
         # 포지션이 없을 때
         if not self.position:
             # 골든 크로스 (단기선이 장기선을 상향 돌파)

@@ -42,16 +42,6 @@ class EMAStrategy(Strategy):
         self.ema_slow = self.I(self._ema, close, self.slow_window)
 
     def next(self):
-        # 백테스트 마지막 날 체크: 미체결 포지션 청산
-        # (승률과 총 수익률을 정확히 계산하기 위함)
-        current_bar = len(self.ema_fast) - 1
-        total_bars = len(self.data.Close)
-        is_last_day = current_bar == total_bars - 1
-
-        if is_last_day and self.position:
-            self.position.close()
-            return
-
         # 빠른 EMA가 느린 EMA를 상향 돌파: 골든크로스 → 매수
         if crossover(self.ema_fast, self.ema_slow) and not self.position:
             price = self.data.Close[-1]
