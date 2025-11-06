@@ -266,8 +266,16 @@ class BacktestEngine:
                 self.logger.warning(f"{currency} 환율 데이터 없음, 변환 없이 진행")
                 return data
 
+            # 타임존 불일치 해결: 타임존 제거 후 reindex
+            # 한국 주식: datetime64[ns, Asia/Seoul], 환율: datetime64[ns]
+            data_index_no_tz = data.index.tz_localize(None) if data.index.tz is not None else data.index
+            exchange_index_no_tz = exchange_data.index.tz_localize(None) if exchange_data.index.tz is not None else exchange_data.index
+
+            # 환율 데이터 인덱스를 타임존 제거한 것으로 교체
+            exchange_data.index = exchange_index_no_tz
+
             # 데이터 날짜 범위로 reindex하고 forward-fill
-            exchange_data = exchange_data.reindex(data.index, method='ffill')
+            exchange_data = exchange_data.reindex(data_index_no_tz, method='ffill')
             exchange_data = exchange_data.bfill()
 
             self.logger.info(f"환율 데이터 전처리 완료: {len(exchange_data)}일치")
@@ -276,9 +284,12 @@ class BacktestEngine:
             converted_data = data.copy()
 
             # 각 행에 대해 환율 적용
-            for idx in converted_data.index:
-                if idx in exchange_data.index and pd.notna(exchange_data.loc[idx, 'Close']):
-                    exchange_rate = exchange_data.loc[idx, 'Close']
+            for i, idx in enumerate(converted_data.index):
+                # 타임존 제거한 인덱스로 환율 데이터 접근
+                idx_no_tz = idx.tz_localize(None) if hasattr(idx, 'tz_localize') and idx.tz is not None else idx
+
+                if idx_no_tz in exchange_data.index and pd.notna(exchange_data.loc[idx_no_tz, 'Close']):
+                    exchange_rate = exchange_data.loc[idx_no_tz, 'Close']
 
                     # EUR, GBP, AUD 등: XXXUSD=X 형태 (곱하기)
                     # KRW, JPY 등: XXX=X 형태 (나누기)
