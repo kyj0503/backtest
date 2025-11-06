@@ -95,35 +95,49 @@ class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
     
     @staticmethod
-    def calculate_dca_shares_and_return(df: pd.DataFrame, monthly_amount: float, 
-                                      dca_periods: int, start_date: str) -> Tuple[float, float, float]:
+    def calculate_dca_shares_and_return(df: pd.DataFrame, monthly_amount: float,
+                                      dca_periods: int, start_date: str) -> Tuple[float, float, float, List[Dict]]:
         """
-        DCA 투자의 총 주식 수량과 평균 단가, 수익률을 계산
-        
+        DCA 투자의 총 주식 수량과 평균 단가, 수익률, 매수 로그를 계산
+
         Returns:
-            (total_shares, average_price, return_rate)
+            (total_shares, average_price, return_rate, trade_log)
         """
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         total_shares = 0
         total_invested = 0
-        
+        trade_log = []  # DCA 매수 기록
+
         for month in range(dca_periods):
             investment_date = start_date_obj + timedelta(days=30 * month)
             month_price_data = df[df.index.date >= investment_date.date()]
-            
+
             if not month_price_data.empty:
                 month_price = month_price_data['Close'].iloc[0]
+                actual_date = month_price_data.index[0]
                 shares_bought = monthly_amount / month_price
                 total_shares += shares_bought
                 total_invested += monthly_amount
-        
+
+                # DCA 매수 기록 추가
+                trade_log.append({
+                    'EntryTime': actual_date.isoformat(),
+                    'EntryPrice': float(month_price),
+                    'Size': float(shares_bought),
+                    'ExitTime': None,  # DCA는 매수만 있고 매도 없음
+                    'ExitPrice': None,
+                    'PnL': None,
+                    'ReturnPct': None,
+                    'Duration': None,
+                })
+
         if total_shares > 0:
             average_price = total_invested / total_shares
             end_price = df['Close'].iloc[-1]
             return_rate = (end_price / average_price - 1) * 100
-            return total_shares, average_price, return_rate
-        
-        return 0, 0, 0
+            return total_shares, average_price, return_rate, trade_log
+
+        return 0, 0, 0, []
 
 class RebalanceHelper:
     """리밸런싱 유틸리티"""
@@ -1250,7 +1264,8 @@ class PortfolioService:
             
             # 개별 종목 수익률 (참고용, 현금 포함)
             individual_returns = {}
-            
+            strategy_details = {}  # 거래 로그를 저장할 딕셔너리
+
                 # 현금 수익률 추가
             if cash_amount > 0:
                 individual_returns['CASH'] = {
@@ -1281,7 +1296,21 @@ class PortfolioService:
                             start_price = df['Close'].iloc[0]
                             end_price = df['Close'].iloc[-1]
                             individual_return = (end_price / start_price - 1) * 100
-                            
+
+                            # 일시불 매수 거래 로그 생성
+                            start_date = df.index[0]
+                            total_shares = amount / start_price
+                            lump_sum_trade_log = [{
+                                'EntryTime': start_date.isoformat(),
+                                'EntryPrice': float(start_price),
+                                'Size': float(total_shares),
+                                'ExitTime': None,
+                                'ExitPrice': None,
+                                'PnL': None,
+                                'ReturnPct': None,
+                                'Duration': None,
+                            }]
+
                             individual_returns[unique_key] = {
                                 'symbol': symbol,
                                 'weight': weight,
@@ -1292,18 +1321,23 @@ class PortfolioService:
                                 'investment_type': investment_type,
                                 'dca_periods': None
                             }
+
+                            # strategy_details에 거래 로그 저장
+                            strategy_details[unique_key] = {
+                                'trade_log': lump_sum_trade_log
+                            }
                             
                         else:  # DCA
                             # 분할매수: DCACalculator를 사용하여 수익률 계산
                             dca_periods = dca_info[unique_key]['dca_periods']
                             monthly_amount = dca_info[unique_key]['monthly_amount']
-                            
-                            total_shares, average_price, individual_return = DCACalculator.calculate_dca_shares_and_return(
+
+                            total_shares, average_price, individual_return, dca_trade_log = DCACalculator.calculate_dca_shares_and_return(
                                 df, monthly_amount, dca_periods, request.start_date
                             )
-                            
+
                             end_price = df['Close'].iloc[-1]
-                            
+
                             individual_returns[unique_key] = {
                                 'symbol': symbol,
                                 'weight': weight,
@@ -1313,6 +1347,11 @@ class PortfolioService:
                                 'end_price': end_price,
                                 'investment_type': investment_type,
                                 'dca_periods': dca_periods
+                            }
+
+                            # strategy_details에 거래 로그 저장
+                            strategy_details[unique_key] = {
+                                'trade_log': dca_trade_log
                             }
             
             # individual_results를 리스트 형태로 변환 (테스트 호환성)
@@ -1363,6 +1402,7 @@ class PortfolioService:
                         date.strftime('%Y-%m-%d'): return_val * 100
                         for date, return_val in portfolio_result['Daily_Return'].items()
                     },
+                    'strategy_details': strategy_details,  # 거래 로그 포함
                     'rebalance_history': rebalance_history,
                     'weight_history': weight_history
                 }
