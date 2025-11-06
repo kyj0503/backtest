@@ -203,6 +203,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
               commission={state.settings.commission}
               setCommission={actions.setCommission}
               stockCount={stockCount}
+              selectedStrategy={state.strategy.selectedStrategy}
             />
           </FormSection>
         </div>
