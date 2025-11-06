@@ -94,7 +94,10 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = ({
           <LineChart data={portfolioEquityData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tickFormatter={formatDateShort} />
-            <YAxis tickFormatter={(value: number) => `${value.toFixed(1)}%`} />
+            <YAxis 
+              domain={['auto', 'auto']}
+              tickFormatter={(value: number) => `${value.toFixed(1)}%`} 
+            />
             <Tooltip
               formatter={(value: number) => [`${value.toFixed(2)}%`, '일일 수익률']}
               labelFormatter={(label: string) => `날짜: ${label}`}

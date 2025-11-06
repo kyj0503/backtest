@@ -70,10 +70,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = ({
                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} tickFormatter={formatDateShort} />
                 <YAxis
-                  domain={[
-                    Math.min(...exchangeRates.map((d: any) => d.rate)) - 50,
-                    Math.max(...exchangeRates.map((d: any) => d.rate)) + 50,
-                  ]}
+                  domain={['auto', 'auto']}
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value: number) => formatKRW(value)}
                 />
