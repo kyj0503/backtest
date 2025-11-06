@@ -57,9 +57,19 @@ class MACDStrategy(Strategy):
         return macd.ewm(span=signal).mean()
     
     def next(self):
+        # 백테스트 마지막 날 체크: 미체결 포지션 청산
+        # (승률과 총 수익률을 정확히 계산하기 위함)
+        current_bar = len(self.macd_line) - 1
+        total_bars = len(self.data.Close)
+        is_last_day = current_bar == total_bars - 1
+
+        if is_last_day and self.position:
+            self.position.close()
+            return
+
         if (len(self.macd_line) > 1 and len(self.signal_line) > 1 and
             not np.isnan(self.macd_line[-1]) and not np.isnan(self.signal_line[-1])):
-            
+
             # MACD 선이 시그널 선을 상향 돌파: 매수
             if crossover(self.macd_line, self.signal_line) and not self.position:
                 price = self.data.Close[-1]

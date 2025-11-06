@@ -55,12 +55,22 @@ class BollingerBandsStrategy(Strategy):
     def next(self):
         if len(self.data) < self.period:
             return
-        
-        if (len(self.upper_band) > 0 and len(self.lower_band) > 0 and 
+
+        # 백테스트 마지막 날 체크: 미체결 포지션 청산
+        # (승률과 총 수익률을 정확히 계산하기 위함)
+        current_bar = len(self.sma) - 1
+        total_bars = len(self.data.Close)
+        is_last_day = current_bar == total_bars - 1
+
+        if is_last_day and self.position:
+            self.position.close()
+            return
+
+        if (len(self.upper_band) > 0 and len(self.lower_band) > 0 and
             not np.isnan(self.upper_band[-1]) and not np.isnan(self.lower_band[-1])):
-            
+
             current_price = self.data.Close[-1]
-            
+
             # 가격이 하단 밴드 아래로 떨어짐: 과매도 → 매수
             if current_price < self.lower_band[-1] and not self.position:
                 price = self.data.Close[-1]
