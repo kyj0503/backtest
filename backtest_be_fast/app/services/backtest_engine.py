@@ -246,7 +246,16 @@ class BacktestEngine:
 
         # 환율 데이터 로드 (60일 버퍼 추가)
         try:
-            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+            # start_date가 문자열 또는 date/datetime 객체일 수 있음
+            from datetime import date
+            if isinstance(start_date, str):
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+            elif isinstance(start_date, date):
+                start_date_obj = datetime.combine(start_date, datetime.min.time())
+            else:
+                # 이미 datetime 객체인 경우
+                start_date_obj = start_date
+
             exchange_start_date_obj = start_date_obj - timedelta(days=60)
             exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
 
