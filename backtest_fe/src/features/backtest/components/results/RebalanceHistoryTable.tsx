@@ -85,11 +85,13 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
                         <div
                           key={tradeIdx}
                           className={`flex items-center justify-between p-2 rounded ${
-                            trade.action === 'buy' ? 'bg-emerald-500/10' : 'bg-red-500/10'
+                            trade.action === 'buy' || trade.action === 'decrease'
+                              ? 'bg-emerald-500/10'
+                              : 'bg-red-500/10'
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            {trade.action === 'buy' ? (
+                            {trade.action === 'buy' || trade.action === 'decrease' ? (
                               <TrendingUp className="w-4 h-4 text-emerald-600" />
                             ) : (
                               <TrendingDown className="w-4 h-4 text-red-600" />
@@ -97,18 +99,30 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
                             <span className="font-medium">{trade.symbol}</span>
                             <span
                               className={`text-sm ${
-                                trade.action === 'buy' ? 'text-emerald-600' : 'text-red-600'
+                                trade.action === 'buy' || trade.action === 'decrease'
+                                  ? 'text-emerald-600'
+                                  : 'text-red-600'
                               }`}
                             >
-                              {trade.action === 'buy' ? '매수' : '매도'}
+                              {trade.action === 'buy'
+                                ? '매수'
+                                : trade.action === 'sell'
+                                ? '매도'
+                                : trade.action === 'increase'
+                                ? '증가'
+                                : '감소'}
                             </span>
                           </div>
                           <div className="text-right">
                             <div className="text-sm">
-                              {trade.shares.toFixed(2)}주 @ ${trade.price.toFixed(2)}
+                              {trade.shares !== undefined
+                                ? `${trade.shares.toFixed(2)}주 @ $${trade.price.toFixed(2)}`
+                                : `$${(trade.amount || 0).toFixed(2)}`}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              ${(trade.shares * trade.price).toFixed(2)}
+                              {trade.shares !== undefined
+                                ? `$${(trade.shares * trade.price).toFixed(2)}`
+                                : '현금'}
                             </div>
                           </div>
                         </div>
