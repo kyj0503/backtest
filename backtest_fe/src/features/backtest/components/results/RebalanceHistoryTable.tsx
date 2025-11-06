@@ -7,18 +7,11 @@
  * - 수수료, 거래 가격, 거래 금액 모두 USD
  */
 import React, { useState } from 'react';
-import { RebalanceEvent } from '../../model/backtest-result-types';
+import { RebalanceEvent, TickerInfo } from '../../model/backtest-result-types';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { CARD_STYLES, TEXT_STYLES, HEADING_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
-
-interface TickerInfo {
-  symbol: string;
-  currency: string;
-  company_name: string;
-  exchange: string;
-}
 
 interface RebalanceHistoryTableProps {
   rebalanceHistory: RebalanceEvent[];

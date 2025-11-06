@@ -15,19 +15,13 @@ import { getStockDisplayName } from '../../model/strategyConfig';
 import StockSymbolSelector from './StockSymbolSelector';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
+import { TickerInfo } from '../../model/backtest-result-types';
 
 interface VolatilityEvent {
   date: string;
   daily_return: number;
   close_price: number;
   event_type: string;
-}
-
-interface TickerInfo {
-  symbol: string;
-  currency: string;
-  company_name: string;
-  exchange: string;
 }
 
 interface VolatilityEventsSectionProps {

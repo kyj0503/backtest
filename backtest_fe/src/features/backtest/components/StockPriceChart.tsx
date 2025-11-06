@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
+import { TickerInfo } from '../model/backtest-result-types';
 
 interface StockData {
   symbol: string;
@@ -11,13 +12,6 @@ interface StockData {
     price: number;
     volume?: number;
   }>;
-}
-
-interface TickerInfo {
-  symbol: string;
-  currency: string;
-  company_name: string;
-  exchange: string;
 }
 
 interface StockPriceChartProps {

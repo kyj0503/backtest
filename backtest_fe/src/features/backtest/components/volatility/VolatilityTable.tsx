@@ -1,13 +1,7 @@
 import React from 'react';
 import { VolatilityEvent, formatPercent, getCompanyName } from '../../model/volatility-news-types';
 import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
-
-interface TickerInfo {
-  symbol: string;
-  currency: string;
-  company_name: string;
-  exchange: string;
-}
+import { TickerInfo } from '../../model/backtest-result-types';
 
 interface VolatilityTableProps {
   selectedStock: string;
