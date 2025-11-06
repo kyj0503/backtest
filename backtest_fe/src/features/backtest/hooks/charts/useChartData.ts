@@ -105,7 +105,7 @@ export const useChartData = (
   // 통계 데이터
   const statsPayload = useMemo<Record<string, unknown>>(() => {
     return extractStatsPayload(data, isPortfolio);
-  }, [portfolioData, chartData]);
+  }, [data, isPortfolio]);
 
   // 포트폴리오 equity 데이터
   const portfolioEquityData = useMemo<EquityPoint[]>(() => {
