@@ -31,26 +31,21 @@ const COLORS = [
   '#14b8a6', // teal
 ];
 
-// unique_key에서 실제 심볼 추출 (AAPL_0 -> AAPL, 005930.KS_1 -> 005930.KS)
-const extractSymbolFromUniqueKey = (uniqueKey: string): string => {
-  return uniqueKey.replace(/_\d+$/, '');
-};
-
 const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
   weightHistory,
   portfolioComposition,
   rebalanceHistory
 }) => {
   const symbols = useMemo(() => {
-    return portfolioComposition.map(stock => stock.symbol);
+    // 중복 제거 (같은 종목이 여러 번 포함될 수 있음)
+    return Array.from(new Set(portfolioComposition.map(stock => stock.symbol)));
   }, [portfolioComposition]);
 
-  // unique_key -> 표시 이름 매핑
+  // symbol -> 표시 이름 매핑
   const symbolDisplayNames = useMemo(() => {
     const mapping: Record<string, string> = {};
-    symbols.forEach(uniqueKey => {
-      const actualSymbol = extractSymbolFromUniqueKey(uniqueKey);
-      mapping[uniqueKey] = getStockDisplayName(actualSymbol);
+    symbols.forEach(symbol => {
+      mapping[symbol] = getStockDisplayName(symbol);
     });
     return mapping;
   }, [symbols]);

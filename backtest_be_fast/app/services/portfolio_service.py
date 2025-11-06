@@ -1430,7 +1430,7 @@ class PortfolioService:
                     },
                     'portfolio_composition': [
                         {
-                            'symbol': unique_key,  # unique_key를 symbol로 사용
+                            'symbol': dca_info[unique_key]['symbol'],  # 실제 symbol 사용 (프론트엔드 호환)
                             'weight': amount / total_amount,
                             'amount': amount,
                             'investment_type': dca_info[unique_key]['investment_type'],
