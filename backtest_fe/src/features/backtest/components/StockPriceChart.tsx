@@ -49,20 +49,34 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
       return selectedStockData.data.map(d => ({ ...d }));
     }
 
+    console.log('🔍 [StockPriceChart] Processing trades for', selectedSymbol);
+    console.log('🔍 [StockPriceChart] Trade logs:', logs);
+    console.log('🔍 [StockPriceChart] First stock data point:', selectedStockData.data[0]);
+
     // 날짜별 매매 신호 맵 생성
     const buyMap = new Map<string, number>();
     const sellMap = new Map<string, number>();
 
-    logs.forEach((trade) => {
+    logs.forEach((trade, index) => {
+      console.log(`📝 [Trade ${index + 1}]`, trade);
+
       if (trade.EntryTime && trade.EntryPrice) {
-        const entryDate = trade.EntryTime.split(' ')[0];
+        // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
+        const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
         buyMap.set(entryDate, trade.EntryPrice);
+        console.log(`  ✅ Buy: ${entryDate} → ${trade.EntryPrice}`);
       }
       if (trade.ExitTime && trade.ExitPrice) {
-        const exitDate = trade.ExitTime.split(' ')[0];
+        // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
+        const exitDate = trade.ExitTime.split('T')[0].split(' ')[0];
         sellMap.set(exitDate, trade.ExitPrice);
+        console.log(`  ✅ Sell: ${exitDate} → ${trade.ExitPrice}`);
       }
     });
+
+    console.log('📊 [StockPriceChart] buyMap keys:', Array.from(buyMap.keys()));
+    console.log('📊 [StockPriceChart] sellMap keys:', Array.from(sellMap.keys()));
+    console.log('📊 [StockPriceChart] stock data dates (first 5):', selectedStockData.data.slice(0, 5).map(d => d.date));
 
     // 주가 데이터에 매매 신호 merge
     const mergedData = selectedStockData.data.map(point => ({
@@ -73,9 +87,8 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
 
     // 디버깅: 매매 신호가 있는 데이터만 필터링해서 출력
     const signalPoints = mergedData.filter(d => d.buySignal || d.sellSignal);
-    if (signalPoints.length > 0) {
-      console.log('📍 [StockPriceChart] Signal points:', signalPoints);
-    }
+    console.log('📍 [StockPriceChart] Signal points count:', signalPoints.length);
+    console.log('📍 [StockPriceChart] Signal points:', signalPoints);
 
     return mergedData;
   }, [selectedSymbol, selectedStockData, tradeLogs]);
