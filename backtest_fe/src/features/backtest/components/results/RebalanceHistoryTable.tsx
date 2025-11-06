@@ -134,7 +134,7 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
                             <div className="text-sm">
                               {trade.shares !== undefined
                                 ? `${trade.shares.toFixed(2)}주 @ ${formatPriceWithCurrency(trade.price, 'USD')}`
-                                : `$${(trade.amount || 0).toFixed(2)}`}
+                                : formatPriceWithCurrency(trade.amount || 0, 'USD')}
                             </div>
                             <div className="text-xs text-muted-foreground">
                               {trade.shares !== undefined
