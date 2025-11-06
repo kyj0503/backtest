@@ -14,6 +14,7 @@ interface BenchmarkSectionProps {
   sp500BenchmarkWithReturn: any[];
   nasdaqBenchmarkWithReturn: any[];
   equityDataForBenchmark: EquityPoint[];
+  portfolioDailyReturns?: Record<string, number>;
 }
 
 export const BenchmarkSection: React.FC<BenchmarkSectionProps> = ({
@@ -22,6 +23,7 @@ export const BenchmarkSection: React.FC<BenchmarkSectionProps> = ({
   sp500BenchmarkWithReturn,
   nasdaqBenchmarkWithReturn,
   equityDataForBenchmark,
+  portfolioDailyReturns,
 }) => {
   const hasBenchmarkData = sp500Benchmark.length > 0 || nasdaqBenchmark.length > 0;
 
@@ -38,8 +40,12 @@ export const BenchmarkSection: React.FC<BenchmarkSectionProps> = ({
         portfolioEquityData={equityDataForBenchmark}
       />
 
-      {/* 일일 수익률 벤치마크 차트 */}
-      <BenchmarkReturnsChart sp500Data={sp500BenchmarkWithReturn} nasdaqData={nasdaqBenchmarkWithReturn} />
+      {/* 일일 수익률 벤치마크 비교 차트 */}
+      <BenchmarkReturnsChart 
+        sp500Data={sp500BenchmarkWithReturn} 
+        nasdaqData={nasdaqBenchmarkWithReturn}
+        portfolioDailyReturns={portfolioDailyReturns}
+      />
     </>
   );
 };
