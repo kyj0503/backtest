@@ -695,71 +695,77 @@ class PortfolioService:
         
         return max_count
     
-    async def _calculate_realistic_equity_curve(self, request: PortfolioBacktestRequest, 
+    async def _calculate_realistic_equity_curve(self, request: PortfolioBacktestRequest,
                                               portfolio_results: Dict, total_amount: float) -> Tuple[Dict, Dict]:
         """
-        실제 종목 데이터를 기반으로 포트폴리오 equity curve 계산
+        개별 종목 백테스트의 실제 equity curve를 합산하여 포트폴리오 equity curve 계산
+        (매수/매도 타이밍이 정확히 반영됨)
         """
         from datetime import datetime
         import pandas as pd
-        
-        # 각 종목의 실제 가격 데이터 로드
-        portfolio_data = {}
-        for unique_key, result in portfolio_results.items():
-            # original_symbol을 사용하여 실제 티커로 데이터 로드
-            original_symbol = result.get('original_symbol', result.get('symbol'))
-            if original_symbol and original_symbol not in portfolio_data:
-                df = load_ticker_data(original_symbol, request.start_date, request.end_date)
-                if df is not None and not df.empty:
-                    portfolio_data[unique_key] = df
-        
-        if not portfolio_data:
-            # 데이터가 없으면 기본 선형 계산으로 fallback
-            return self._fallback_equity_curve(request, portfolio_results, total_amount)
-        
-        # 모든 데이터의 공통 날짜 범위 찾기
+
+        # 각 종목의 equity curve 수집
+        equity_curves_by_symbol = {}
         all_dates = set()
-        for df in portfolio_data.values():
-            all_dates.update(df.index.strftime('%Y-%m-%d'))
-        
+
+        for unique_key, result in portfolio_results.items():
+            strategy_stats = result.get('strategy_stats', {})
+            equity_curve_dict = strategy_stats.get('equity_curve')
+
+            if equity_curve_dict and isinstance(equity_curve_dict, dict):
+                equity_curves_by_symbol[unique_key] = equity_curve_dict
+                all_dates.update(equity_curve_dict.keys())
+                logger.info(f"{unique_key} equity curve: {len(equity_curve_dict)}일치")
+            else:
+                # equity curve가 없으면 (예: 현금) 초기값으로 고정
+                amount = result.get('amount', 0)
+                equity_curves_by_symbol[unique_key] = None
+                logger.info(f"{unique_key}: equity curve 없음, 고정값 ${amount}")
+
+        if not all_dates:
+            # equity curve가 하나도 없으면 fallback
+            logger.warning("모든 종목의 equity curve가 없음, fallback 사용")
+            return self._fallback_equity_curve(request, portfolio_results, total_amount)
+
         date_range = sorted(all_dates)
-        
+
         equity_curve = {}
         daily_returns = {}
         prev_portfolio_value = total_amount
-        
+
         for i, date_str in enumerate(date_range):
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
             portfolio_value = 0
-            
-            # 각 종목의 해당 날짜 가치 계산
+
+            # 각 종목의 해당 날짜 equity 합산
             for unique_key, result in portfolio_results.items():
-                if unique_key in portfolio_data:
-                    df = portfolio_data[unique_key]
-                    try:
-                        # 해당 날짜의 가격 찾기
-                        price_data = df[df.index.strftime('%Y-%m-%d') == date_str]
-                        if not price_data.empty:
-                            current_price = price_data['Close'].iloc[0]
-                            initial_price = df['Close'].iloc[0]
-                            
-                            # 해당 종목의 투자 금액 기준 현재 가치
-                            stock_value = result['amount'] * (current_price / initial_price)
-                            portfolio_value += stock_value
-                    except:
-                        # 데이터가 없으면 초기값 유지
-                        portfolio_value += result['amount']
-            
+                equity_curve_dict = equity_curves_by_symbol.get(unique_key)
+
+                if equity_curve_dict:
+                    # 전략 실행 결과의 equity curve 사용
+                    if date_str in equity_curve_dict:
+                        portfolio_value += equity_curve_dict[date_str]
+                    elif i == 0:
+                        # 첫날에 데이터가 없으면 초기 투자금
+                        portfolio_value += result.get('amount', 0)
+                    else:
+                        # 중간에 데이터가 없으면 마지막 값 사용 (forward fill)
+                        last_value = result.get('final_value', result.get('amount', 0))
+                        portfolio_value += last_value
+                else:
+                    # equity curve가 없는 종목 (예: 현금)
+                    portfolio_value += result.get('amount', 0)
+
             # 일일 수익률 계산
             if i == 0:
                 daily_return = 0.0
             else:
                 daily_return = (portfolio_value - prev_portfolio_value) / prev_portfolio_value * 100 if prev_portfolio_value > 0 else 0.0
-            
+
             equity_curve[date_str] = portfolio_value
             daily_returns[date_str] = daily_return
             prev_portfolio_value = portfolio_value
-        
+
+        logger.info(f"포트폴리오 equity curve 계산 완료: {len(equity_curve)}일치")
         return equity_curve, daily_returns
     
     def _fallback_equity_curve(self, request: PortfolioBacktestRequest, 

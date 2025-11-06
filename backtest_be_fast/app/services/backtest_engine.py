@@ -492,6 +492,20 @@ class BacktestEngine:
             alpha_pct = None
             beta_value = None
 
+            # equity_curve 추출 (전략 실행 결과)
+            equity_curve_dict = None
+            equity_curve_df = stats.get('_equity_curve') if hasattr(stats, 'get') else None
+            if isinstance(equity_curve_df, pd.DataFrame) and not equity_curve_df.empty:
+                try:
+                    # DataFrame을 Dict[str, float]로 변환
+                    equity_curve_dict = {}
+                    for idx, row in equity_curve_df.iterrows():
+                        date_str = idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx)
+                        equity_curve_dict[date_str] = float(row['Equity'])
+                except Exception as e:
+                    self.logger.warning(f"equity curve 변환 실패: {e}")
+                    equity_curve_dict = None
+
             if getattr(request, 'benchmark_ticker', None):
                 try:
                     benchmark = self.data_fetcher.get_stock_data(
@@ -499,12 +513,11 @@ class BacktestEngine:
                         start_date=start_date,
                         end_date=end_date
                     )
-                    equity_curve = stats.get('_equity_curve') if hasattr(stats, 'get') else None
                     if (
                         benchmark is not None and not benchmark.empty
-                        and isinstance(equity_curve, pd.DataFrame) and not equity_curve.empty
+                        and isinstance(equity_curve_df, pd.DataFrame) and not equity_curve_df.empty
                     ):
-                        strat_returns = equity_curve['Equity'].pct_change().dropna()
+                        strat_returns = equity_curve_df['Equity'].pct_change().dropna()
                         bench_returns = benchmark['Close'].pct_change().dropna()
                         strat_returns, bench_returns = strat_returns.align(bench_returns, join='inner')
                         if len(strat_returns) > 1 and bench_returns.var() != 0:
@@ -550,6 +563,7 @@ class BacktestEngine:
                 kelly_criterion=None,  # 추후 계산 추가
                 sqn=safe_float('SQN') if 'SQN' in stats else None,
                 trade_log=trade_log,
+                equity_curve=equity_curve_dict,  # 일일 자산 가치
                 execution_time_seconds=0.5,  # 추후 실제 시간 측정 추가
                 timestamp=datetime.now()
             )
