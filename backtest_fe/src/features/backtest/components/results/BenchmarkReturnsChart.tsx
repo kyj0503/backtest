@@ -62,22 +62,23 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
     );
   }, [sp500Data, nasdaqData, portfolioDailyReturns]);
 
-  // Y축 범위 계산 (표시된 라인만 고려)
+  // Y축 범위 계산 (표시된 라인만 고려) - 효율적인 계산
   const yAxisDomain = useMemo(() => {
     if (mergedData.length === 0) return ['auto', 'auto'];
 
-    let allValues: number[] = [];
-    
-    mergedData.forEach(item => {
+    // 표시된 라인에 따라 필요한 값들만 추출
+    const allValues: number[] = mergedData.flatMap(item => {
+      const values: number[] = [];
       if (visibleLines.portfolio && item.portfolio !== undefined) {
-        allValues.push(item.portfolio);
+        values.push(item.portfolio);
       }
       if (visibleLines.sp500 && item.sp500 !== undefined) {
-        allValues.push(item.sp500);
+        values.push(item.sp500);
       }
       if (visibleLines.nasdaq && item.nasdaq !== undefined) {
-        allValues.push(item.nasdaq);
+        values.push(item.nasdaq);
       }
+      return values;
     });
 
     if (allValues.length === 0) return ['auto', 'auto'];
