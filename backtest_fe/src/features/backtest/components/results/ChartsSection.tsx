@@ -133,6 +133,13 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     }));
   }, [chartData?.ohlc_data]);
 
+  const statsPayload = useMemo<Record<string, unknown>>(() => {
+    if (portfolioData) {
+      return { ...portfolioData.portfolio_statistics } as Record<string, unknown>;
+    }
+    return chartData?.summary_stats ?? {};
+  }, [portfolioData, chartData?.summary_stats]);
+
   // 벤치마크 데이터
   const sp500Benchmark = useMemo<any[]>(() => {
     const chartBenchmark = (data as ChartData).sp500_benchmark;
@@ -149,28 +156,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     console.log('NASDAQ Benchmark data:', result.length, 'items');
     return result;
   }, [data]);
-
-  const statsPayload = useMemo<Record<string, unknown>>(() => {
-    const baseStats = portfolioData
-      ? ({ ...portfolioData.portfolio_statistics } as Record<string, unknown>)
-      : (chartData?.summary_stats ?? {});
-
-    // S&P 500 벤치마크 수익률 계산
-    if (sp500Benchmark.length > 0) {
-      const firstClose = sp500Benchmark[0]?.close;
-      const lastClose = sp500Benchmark[sp500Benchmark.length - 1]?.close;
-      if (firstClose && lastClose) {
-        const sp500Return = ((lastClose - firstClose) / firstClose) * 100;
-        baseStats.sp500_total_return_pct = sp500Return;
-
-        // 전략 수익률과 S&P 500 수익률 비교 (알파)
-        const strategyReturn = baseStats.total_return_pct ?? baseStats.Total_Return ?? 0;
-        baseStats.alpha_vs_sp500_pct = Number(strategyReturn) - sp500Return;
-      }
-    }
-
-    return baseStats;
-  }, [portfolioData, chartData?.summary_stats, sp500Benchmark]);
 
   const withBenchmarkReturn = (points: any[]) =>
     points?.map((point, index) => {

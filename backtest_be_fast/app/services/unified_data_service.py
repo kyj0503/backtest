@@ -166,18 +166,46 @@ class UnifiedDataService:
     ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         벤치마크 데이터 수집 (S&P 500, NASDAQ)
-        
+
         Args:
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
-            
+
         Returns:
             (S&P 500 데이터, NASDAQ 데이터) 튜플
         """
         sp500_benchmark = self._collect_single_benchmark('^GSPC', start_date, end_date)
         nasdaq_benchmark = self._collect_single_benchmark('^IXIC', start_date, end_date)
-        
+
         return sp500_benchmark, nasdaq_benchmark
+
+    def calculate_benchmark_return(
+        self,
+        benchmark_data: List[Dict[str, Any]]
+    ) -> float:
+        """
+        벤치마크 수익률 계산
+
+        Args:
+            benchmark_data: 벤치마크 가격 데이터 리스트
+
+        Returns:
+            총 수익률 (%)
+        """
+        if not benchmark_data or len(benchmark_data) < 2:
+            return 0.0
+
+        try:
+            first_close = benchmark_data[0]['close']
+            last_close = benchmark_data[-1]['close']
+
+            if first_close <= 0:
+                return 0.0
+
+            return ((last_close - first_close) / first_close) * 100
+        except (KeyError, TypeError, ZeroDivisionError) as e:
+            logger.warning(f"벤치마크 수익률 계산 실패: {str(e)}")
+            return 0.0
     
     def collect_latest_news(
         self,
