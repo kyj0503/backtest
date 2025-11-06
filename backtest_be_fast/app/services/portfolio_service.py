@@ -583,14 +583,17 @@ class PortfolioService:
             # 현재 포트폴리오 비중 기록
             current_weights = {'date': current_date.strftime('%Y-%m-%d')}
             if current_portfolio_value > 0:
-                # 주식 비중 계산 (unique_key 사용)
+                # 주식 비중 계산 (symbol을 키로 사용 - 프론트엔드 호환)
                 for unique_key in shares.keys():
                     if unique_key in current_prices:
                         stock_value = shares[unique_key] * current_prices[unique_key]
-                        current_weights[unique_key] = stock_value / current_portfolio_value
+                        symbol = dca_info[unique_key]['symbol']
+                        # 같은 symbol이 여러 개 있으면 합산
+                        current_weights[symbol] = current_weights.get(symbol, 0) + stock_value / current_portfolio_value
                 # 현금 비중 계산 (각 현금 항목 개별 처리)
                 for unique_key, amount in cash_holdings.items():
-                    current_weights[unique_key] = amount / current_portfolio_value
+                    symbol = dca_info[unique_key]['symbol']
+                    current_weights[symbol] = current_weights.get(symbol, 0) + amount / current_portfolio_value
             weight_history.append(current_weights)
 
             # 수익률 계산
@@ -790,10 +793,15 @@ class PortfolioService:
             current_weights = {'date': date_str}
             if portfolio_value > 0:
                 for unique_key, symbol_equity in symbol_equities.items():
-                    current_weights[unique_key] = symbol_equity / portfolio_value
+                    # original_symbol을 키로 사용 (프론트엔드 호환)
+                    result = portfolio_results[unique_key]
+                    display_symbol = result.get('original_symbol', result.get('symbol', unique_key))
+                    current_weights[display_symbol] = symbol_equity / portfolio_value
             else:
                 for unique_key in symbol_equities.keys():
-                    current_weights[unique_key] = 0
+                    result = portfolio_results[unique_key]
+                    display_symbol = result.get('original_symbol', result.get('symbol', unique_key))
+                    current_weights[display_symbol] = 0
 
             weight_history.append(current_weights)
             prev_portfolio_value = portfolio_value
@@ -828,7 +836,8 @@ class PortfolioService:
         # 초기 비중 계산 (고정된 비중으로 가정)
         initial_weights = {}
         for unique_key, result in portfolio_results.items():
-            initial_weights[unique_key] = result.get('amount', 0) / total_amount if total_amount > 0 else 0
+            display_symbol = result.get('original_symbol', result.get('symbol', unique_key))
+            initial_weights[display_symbol] = result.get('amount', 0) / total_amount if total_amount > 0 else 0
 
         for i, date in enumerate(date_range):
             if i == 0:
