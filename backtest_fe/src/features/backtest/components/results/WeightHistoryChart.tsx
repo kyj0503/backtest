@@ -37,7 +37,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
   rebalanceHistory
 }) => {
   const symbols = useMemo(() => {
-    // 중복 제거 (같은 종목이 여러 번 포함될 수 있음)
+    // portfolioComposition에서 symbol 추출 (중복 제거)
     return Array.from(new Set(portfolioComposition.map(stock => stock.symbol)));
   }, [portfolioComposition]);
 

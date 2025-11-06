@@ -728,19 +728,19 @@ class PortfolioService:
         equity_curves_by_symbol = {}
         all_dates = set()
 
-        for unique_key, result in portfolio_results.items():
+        for symbol, result in portfolio_results.items():
             strategy_stats = result.get('strategy_stats', {})
             equity_curve_dict = strategy_stats.get('equity_curve')
 
             if equity_curve_dict and isinstance(equity_curve_dict, dict):
-                equity_curves_by_symbol[unique_key] = equity_curve_dict
+                equity_curves_by_symbol[symbol] = equity_curve_dict
                 all_dates.update(equity_curve_dict.keys())
-                logger.info(f"{unique_key} equity curve: {len(equity_curve_dict)}일치")
+                logger.info(f"{symbol} equity curve: {len(equity_curve_dict)}일치")
             else:
                 # equity curve가 없으면 (예: 현금) 초기값으로 고정
                 amount = result.get('amount', 0)
-                equity_curves_by_symbol[unique_key] = None
-                logger.info(f"{unique_key}: equity curve 없음, 고정값 ${amount}")
+                equity_curves_by_symbol[symbol] = None
+                logger.info(f"{symbol}: equity curve 없음, 고정값 ${amount}")
 
         if not all_dates:
             # equity curve가 하나도 없으면 fallback
@@ -759,8 +759,8 @@ class PortfolioService:
             symbol_equities = {}  # 각 종목의 equity 저장
 
             # 각 종목의 해당 날짜 equity 합산
-            for unique_key, result in portfolio_results.items():
-                equity_curve_dict = equity_curves_by_symbol.get(unique_key)
+            for symbol, result in portfolio_results.items():
+                equity_curve_dict = equity_curves_by_symbol.get(symbol)
                 symbol_equity = 0
 
                 if equity_curve_dict:
@@ -777,7 +777,7 @@ class PortfolioService:
                     # equity curve가 없는 종목 (예: 현금)
                     symbol_equity = result.get('amount', 0)
 
-                symbol_equities[unique_key] = symbol_equity
+                symbol_equities[symbol] = symbol_equity
                 portfolio_value += symbol_equity
 
             # 일일 수익률 계산
@@ -792,16 +792,11 @@ class PortfolioService:
             # 포트폴리오 비중 계산
             current_weights = {'date': date_str}
             if portfolio_value > 0:
-                for unique_key, symbol_equity in symbol_equities.items():
-                    # original_symbol을 키로 사용 (프론트엔드 호환)
-                    result = portfolio_results[unique_key]
-                    display_symbol = result.get('original_symbol', result.get('symbol', unique_key))
-                    current_weights[display_symbol] = symbol_equity / portfolio_value
+                for symbol, symbol_equity in symbol_equities.items():
+                    current_weights[symbol] = symbol_equity / portfolio_value
             else:
-                for unique_key in symbol_equities.keys():
-                    result = portfolio_results[unique_key]
-                    display_symbol = result.get('original_symbol', result.get('symbol', unique_key))
-                    current_weights[display_symbol] = 0
+                for symbol in symbol_equities.keys():
+                    current_weights[symbol] = 0
 
             weight_history.append(current_weights)
             prev_portfolio_value = portfolio_value
@@ -835,9 +830,8 @@ class PortfolioService:
 
         # 초기 비중 계산 (고정된 비중으로 가정)
         initial_weights = {}
-        for unique_key, result in portfolio_results.items():
-            display_symbol = result.get('original_symbol', result.get('symbol', unique_key))
-            initial_weights[display_symbol] = result.get('amount', 0) / total_amount if total_amount > 0 else 0
+        for symbol, result in portfolio_results.items():
+            initial_weights[symbol] = result.get('amount', 0) / total_amount if total_amount > 0 else 0
 
         for i, date in enumerate(date_range):
             if i == 0:
@@ -901,34 +895,31 @@ class PortfolioService:
             # amount/weight 동시 지원: amount가 없고 weight만 있으면 환산
             if all(item.amount is not None for item in request.portfolio):
                 total_amount = sum(item.amount for item in request.portfolio)
-                amounts = {f"{item.symbol}_{idx}": item.amount for idx, item in enumerate(request.portfolio)}
+                amounts = {item.symbol: item.amount for item in request.portfolio}
             elif all(item.weight is not None for item in request.portfolio):
                 # weight만 입력된 경우, 총 투자금액을 100으로 가정하거나, 프론트에서 별도 입력받을 수도 있음
                 # 여기서는 100 단위로 환산 (실제 투자금액은 프론트에서 amount로 입력 권장)
                 total_amount = 100.0
-                amounts = {f"{item.symbol}_{idx}": total_amount * (item.weight / 100.0) for idx, item in enumerate(request.portfolio)}
+                amounts = {item.symbol: total_amount * (item.weight / 100.0) for item in request.portfolio}
             else:
                 raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
             logger.info(f"전략 기반 백테스트: {strategy_name}, 총 투자금액: ${total_amount:,.2f}")
             
-            # 각 종목별로 전략 백테스트 실행 (중복 종목 지원)
+            # 각 종목별로 전략 백테스트 실행
             for idx, item in enumerate(request.portfolio):
                 symbol = item.symbol
                 # amount/weight 동시 지원
-                amount = amounts[f"{symbol}_{idx}"]
+                amount = amounts[symbol]
                 weight = amount / total_amount if total_amount > 0 else 0.0
-                # 중복 종목을 위한 고유 키 생성
-                unique_key = f"{symbol}_{idx}"
                 
                 # 현금 처리 (수익률 0%, 전략 적용 안함)
                 if item.asset_type == 'cash':
                     logger.info(f"현금 자산 {symbol} 처리 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
                     
-                    portfolio_results[unique_key] = {
-                        'symbol': symbol,  # 원래 심볼 저장
-                        'original_symbol': symbol,  # 원래 심볼 명시적으로 저장
+                    portfolio_results[symbol] = {
+                        'symbol': symbol,
                         'initial_value': amount,
                         'final_value': amount,  # 현금은 변동 없음
                         'return_pct': 0.0,  # 현금 수익률 0%
@@ -943,7 +934,7 @@ class PortfolioService:
                         }
                     }
                     
-                    individual_returns[unique_key] = {
+                    individual_returns[symbol] = {
                         'symbol': symbol,
                         'weight': weight,
                         'amount': amount,
@@ -980,9 +971,8 @@ class PortfolioService:
                         initial_value = amount
                         stock_return = (final_value / initial_value - 1) * 100
                         
-                        portfolio_results[unique_key] = {
+                        portfolio_results[symbol] = {
                             'symbol': symbol,
-                            'original_symbol': symbol,  # 원래 심볼 명시적으로 저장
                             'initial_value': initial_value,
                             'final_value': final_value,
                             'return_pct': stock_return,
@@ -991,7 +981,7 @@ class PortfolioService:
                             'strategy_stats': result.__dict__  # 객체를 딕셔너리로 변환
                         }
                         
-                        individual_returns[unique_key] = {
+                        individual_returns[symbol] = {
                             'symbol': symbol,
                             'weight': weight,
                             'amount': amount,
@@ -1101,12 +1091,12 @@ class PortfolioService:
 
             # individual_results를 리스트 형태로 변환 (테스트 호환성)
             individual_results_list = []
-            for unique_key, returns in individual_returns.items():
+            for symbol, returns in individual_returns.items():
                 individual_results_list.append({
                     'ticker': returns['symbol'],
                     'final_equity': returns['final_value'],
                     'total_return_pct': returns['return'],
-                    'sharpe_ratio': portfolio_results[unique_key].get('strategy_stats', {}).get('sharpe_ratio', 0.0),
+                    'sharpe_ratio': portfolio_results[symbol].get('strategy_stats', {}).get('sharpe_ratio', 0.0),
                     'weight': returns['weight'],
                     'amount': returns['amount'],
                     'trades': returns.get('trades', 0),
@@ -1124,7 +1114,7 @@ class PortfolioService:
                         'total_return_pct': portfolio_return
                     },
                     'portfolio_composition': [
-                        {'symbol': result['original_symbol'] if 'original_symbol' in result else result['symbol'], 
+                        {'symbol': result['symbol'], 
                          'weight': result['weight'], 'amount': result['amount']}
                         for symbol, result in portfolio_results.items()
                     ],
@@ -1163,31 +1153,30 @@ class PortfolioService:
             # amount/weight 동시 지원: amount가 없고 weight만 있으면 환산
             if all(item.amount is not None for item in request.portfolio):
                 total_amount = sum(item.amount for item in request.portfolio)
-                amounts = {f"{item.symbol}_{idx}": item.amount for idx, item in enumerate(request.portfolio)}
+                amounts = {item.symbol: item.amount for item in request.portfolio}
             elif all(item.weight is not None for item in request.portfolio):
                 total_amount = 100.0
-                amounts = {f"{item.symbol}_{idx}": total_amount * (item.weight / 100.0) for idx, item in enumerate(request.portfolio)}
+                amounts = {item.symbol: total_amount * (item.weight / 100.0) for item in request.portfolio}
             else:
                 raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             cash_amount = 0
             
-            # 분할 매수 정보 수집 (중복 종목 지원)
+            # 분할 매수 정보 수집
             dca_info = {}
             
             # DCA 주기 매핑
             from ..schemas.schemas import DCA_FREQUENCY_MAP
             
-            for idx, item in enumerate(request.portfolio):
+            for item in request.portfolio:
                 symbol = item.symbol
-                amount = amounts[f"{symbol}_{idx}"]
+                amount = amounts[symbol]
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_frequency = getattr(item, 'dca_frequency', 'monthly')
                 dca_periods = DCA_FREQUENCY_MAP.get(dca_frequency, 1)  # 주기를 개월 수로 변환
                 asset_type = getattr(item, 'asset_type', 'stock')  # 자산 타입 확인
-                # 중복 종목을 위한 고유 키 생성
-                unique_key = f"{symbol}_{idx}"
+                
                 # 분할 매수 정보 저장
-                dca_info[unique_key] = {
+                dca_info[symbol] = {
                     'symbol': symbol,
                     'investment_type': investment_type,
                     'dca_frequency': dca_frequency,
@@ -1199,28 +1188,24 @@ class PortfolioService:
                 # 진짜 현금 자산 처리 (asset_type이 'cash'인 경우)
                 if asset_type == 'cash':
                     # 현금 처리
-                    cash_amount += amount  # 중복 현금은 합산
-                    amounts[unique_key] = amount
-                    logger.info(f"현금 자산 {symbol} (#{idx+1}) 추가 (금액: ${amount:,.2f})")
+                    cash_amount += amount
+                    logger.info(f"현금 자산 {symbol} 추가 (금액: ${amount:,.2f})")
                     continue
                 
-                logger.info(f"종목 {symbol} (#{idx+1}) 데이터 로드 중 (투자금액: ${amount:,.2f}, 방식: {investment_type})")
+                logger.info(f"종목 {symbol} 데이터 로드 중 (투자금액: ${amount:,.2f}, 방식: {investment_type})")
                 
                 if investment_type == 'dca':
                     logger.info(f"분할 매수: ${amount:,.2f}을 {dca_periods}개월에 걸쳐 매달 ${amount/dca_periods:,.2f}씩")
                 
-                # DB에서 데이터 로드 (동일 종목은 한 번만 로드)
-                if symbol not in portfolio_data:
-                    df = load_ticker_data(symbol, request.start_date, request.end_date)
-                    
-                    if df is None or df.empty:
-                        logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
-                        continue
-                    
-                    portfolio_data[symbol] = df
-                    logger.info(f"종목 {symbol} 데이터 로드 완료: {len(df)} 행")
+                # DB에서 데이터 로드
+                df = load_ticker_data(symbol, request.start_date, request.end_date)
                 
-                amounts[unique_key] = amount
+                if df is None or df.empty:
+                    logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
+                    continue
+                
+                portfolio_data[symbol] = df
+                logger.info(f"종목 {symbol} 데이터 로드 완료: {len(df)} 행")
             
             # 현금만 있는 경우 처리
             if not portfolio_data and cash_amount > 0:
