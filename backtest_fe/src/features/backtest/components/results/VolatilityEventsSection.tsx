@@ -14,6 +14,7 @@ import { Button } from '@/shared/ui/button';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import StockSymbolSelector from './StockSymbolSelector';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
+import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
 
 interface VolatilityEvent {
   date: string;
@@ -116,7 +117,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
                   {event.daily_return.toFixed(2)}%
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  ${event.close_price.toFixed(2)}
+                  {formatPriceWithCurrency(event.close_price, selectedSymbol)}
                 </span>
                 <Button
                   variant="outline"
