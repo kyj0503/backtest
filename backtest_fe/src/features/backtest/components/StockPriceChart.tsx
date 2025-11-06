@@ -2,6 +2,7 @@ import React, { useState, memo } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
 import StockSymbolSelector from './results/StockSymbolSelector';
+import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
 
 interface StockData {
   symbol: string;
@@ -12,12 +13,20 @@ interface StockData {
   }>;
 }
 
+interface TickerInfo {
+  symbol: string;
+  currency: string;
+  company_name: string;
+  exchange: string;
+}
+
 interface StockPriceChartProps {
   stocksData: StockData[];
+  tickerInfo?: { [symbol: string]: TickerInfo };
   className?: string;
 }
 
-const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, className = "" }) => {
+const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tickerInfo = {}, className = "" }) => {
   // 성능 모니터링
   useRenderPerformance('StockPriceChart');
 
@@ -44,7 +53,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, clas
 
   // 가격 포맷팅 함수
   const formatPrice = (value: number) => {
-    return `$${value.toFixed(2)}`;
+    return formatPriceWithCurrency(value, tickerInfo[selectedSymbol]?.currency || 'USD');
   };
 
   return (

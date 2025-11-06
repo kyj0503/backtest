@@ -266,7 +266,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             </div>
           ) : stocksData.length > 0 ? (
             <Suspense fallback={<ChartLoading height={360} />}>
-              <LazyStockPriceChart stocksData={stocksData} />
+              <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} />
             </Suspense>
           ) : (
             <p className="text-sm text-muted-foreground">표시할 자산 데이터가 없습니다.</p>
@@ -312,7 +312,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             </div>
           ) : stocksData.length > 0 ? (
             <Suspense fallback={<ChartLoading height={360} />}>
-              <LazyStockPriceChart stocksData={stocksData} />
+              <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} />
             </Suspense>
           ) : (
             <p className="text-sm text-muted-foreground">표시할 주가 데이터가 없습니다.</p>
