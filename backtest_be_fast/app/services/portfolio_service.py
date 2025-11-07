@@ -145,14 +145,15 @@ class RebalanceHelper:
     """리밸런싱 유틸리티"""
 
     @staticmethod
-    def is_rebalance_date(current_date: datetime, prev_date: datetime, frequency: str) -> bool:
+    def is_rebalance_date(current_date: datetime, prev_date: datetime, frequency: str, start_date: datetime = None) -> bool:
         """
-        현재 날짜가 리밸런싱 날짜인지 확인
+        현재 날짜가 리밸런싱 날짜인지 확인 (주 단위)
 
         Args:
             current_date: 현재 날짜
             prev_date: 이전 날짜
-            frequency: 리밸런싱 주기 (monthly, quarterly, annually, none)
+            frequency: 리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)
+            start_date: 시작 날짜 (주 단위 계산용)
 
         Returns:
             리밸런싱 실행 여부
@@ -164,19 +165,29 @@ class RebalanceHelper:
         if prev_date is None:
             return False
 
-        if frequency == 'monthly':
-            # 월이 바뀌었는지 확인
-            return current_date.month != prev_date.month
-        elif frequency == 'quarterly':
-            # 분기가 바뀌었는지 확인 (1, 4, 7, 10월)
-            curr_quarter = (current_date.month - 1) // 3
-            prev_quarter = (prev_date.month - 1) // 3
-            return curr_quarter != prev_quarter
-        elif frequency == 'annually':
-            # 연도가 바뀌었는지 확인
-            return current_date.year != prev_date.year
+        # 주 단위 리밸런싱
+        from ..schemas.schemas import DCA_FREQUENCY_MAP
+        interval_weeks = DCA_FREQUENCY_MAP.get(frequency)
 
-        return False
+        if interval_weeks is None:
+            # 알 수 없는 주기면 리밸런싱 안 함
+            logger.warning(f"알 수 없는 리밸런싱 주기: {frequency}")
+            return False
+
+        # start_date가 없으면 prev_date를 기준으로 사용
+        ref_date = start_date if start_date else prev_date
+
+        # 시작일로부터 경과한 주 수 계산
+        current_weeks = (current_date - ref_date).days // 7
+        prev_weeks = (prev_date - ref_date).days // 7
+
+        # 리밸런싱 주기(interval_weeks)마다 실행
+        # 예: interval_weeks=4이면 0, 4, 8, 12주차에 리밸런싱
+        current_period = current_weeks // interval_weeks
+        prev_period = prev_weeks // interval_weeks
+
+        # 새로운 리밸런싱 주기에 진입했으면 True
+        return current_period > prev_period
 
     @staticmethod
     def calculate_target_weights(amounts: Dict[str, float], dca_info: Dict[str, Dict]) -> Dict[str, float]:
@@ -420,30 +431,38 @@ class PortfolioService:
                 is_first_day = False
                 prev_date = current_date
 
-            # DCA 추가 매수 (매월 첫 거래일)
+            # DCA 추가 매수 (주기적 투자)
             if prev_date is not None:
                 for unique_key, amount in stock_amounts.items():
                     info = dca_info[unique_key]
                     if info['investment_type'] != 'dca':
                         continue
 
-                    # 월이 바뀌었는지 확인
-                    if current_date.month != prev_date.month:
-                        months_passed = (current_date.year - start_date_obj.year) * 12 + \
-                                      (current_date.month - start_date_obj.month)
+                    # 시작일로부터 경과한 주 수 계산
+                    weeks_passed = (current_date - start_date_obj).days // 7
+                    prev_weeks_passed = (prev_date - start_date_obj).days // 7
 
-                        if months_passed < info['dca_periods']:
-                            if unique_key in current_prices:
-                                price = current_prices[unique_key]
-                                monthly_amount = info['monthly_amount']
-                                invest_amount = monthly_amount * (1 - commission)
-                                shares[unique_key] += invest_amount / price
-                                total_trades += 1  # DCA 추가 매수 거래
-                                daily_cash_inflow += monthly_amount  # DCA 추가 투자 유입 기록
+                    # 주 간격이 바뀌었는지 확인 (예: 0주차 → 4주차)
+                    interval_weeks = info.get('interval_weeks', 4)
+
+                    # 현재 주차가 투자 주기의 배수이고, 이전 날짜와 다른 주기에 속하는지 확인
+                    current_period = weeks_passed // interval_weeks
+                    prev_period = prev_weeks_passed // interval_weeks
+
+                    # 새로운 투자 주기에 진입했고, 아직 투자 횟수를 초과하지 않았으면 투자
+                    if current_period > prev_period and current_period < info['dca_periods']:
+                        if unique_key in current_prices:
+                            price = current_prices[unique_key]
+                            period_amount = info['monthly_amount']  # 회당 투자 금액
+                            invest_amount = period_amount * (1 - commission)
+                            shares[unique_key] += invest_amount / price
+                            total_trades += 1  # DCA 추가 매수 거래
+                            daily_cash_inflow += period_amount  # DCA 추가 투자 유입 기록
+                            logger.debug(f"{current_date.date()}: {unique_key} DCA 추가 매수 (주기 {current_period + 1}/{info['dca_periods']})")
 
             # 리밸런싱 실행
             should_rebalance = RebalanceHelper.is_rebalance_date(
-                current_date, prev_date, rebalance_frequency
+                current_date, prev_date, rebalance_frequency, start_date_obj
             )
 
             if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
@@ -1162,17 +1181,16 @@ class PortfolioService:
             # DCA 주기 매핑
             from ..schemas.schemas import DCA_FREQUENCY_MAP
 
-            # 백테스트 기간 계산 (개월 수)
+            # 백테스트 기간 계산 (주 수)
             from datetime import datetime
-            from dateutil.relativedelta import relativedelta
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
 
-            # 정확한 개월 수 계산
-            delta = relativedelta(end_date_obj, start_date_obj)
-            backtest_months = delta.years * 12 + delta.months + (1 if delta.days > 0 else 0)
+            # 백테스트 기간을 주 단위로 계산
+            backtest_days = (end_date_obj - start_date_obj).days
+            backtest_weeks = backtest_days // 7  # 주 단위 (정수 나눗셈)
 
-            logger.info(f"백테스트 기간: {request.start_date} ~ {request.end_date} ({backtest_months}개월)")
+            logger.info(f"백테스트 기간: {request.start_date} ~ {request.end_date} ({backtest_days}일, {backtest_weeks}주)")
 
             # 분할 매수 정보 수집 및 총 투자 금액 계산
             dca_info = {}
@@ -1182,11 +1200,11 @@ class PortfolioService:
             for item in request.portfolio:
                 symbol = item.symbol
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
-                dca_frequency = getattr(item, 'dca_frequency', 'monthly')
+                dca_frequency = getattr(item, 'dca_frequency', 'weekly_4')
 
-                # DCA 투자 횟수 계산: 백테스트 기간 / 투자 간격
-                interval_months = DCA_FREQUENCY_MAP.get(dca_frequency, 1)
-                dca_periods = max(1, backtest_months // interval_months) if investment_type == 'dca' else 1
+                # DCA 투자 횟수 계산: 백테스트 기간(주) / 투자 간격(주)
+                interval_weeks = DCA_FREQUENCY_MAP.get(dca_frequency, 4)
+                dca_periods = max(1, backtest_weeks // interval_weeks) if investment_type == 'dca' else 1
 
                 asset_type = getattr(item, 'asset_type', 'stock')
 
@@ -1215,7 +1233,8 @@ class PortfolioService:
                     'investment_type': investment_type,
                     'dca_frequency': dca_frequency,
                     'dca_periods': dca_periods,
-                    'monthly_amount': per_period_amount,  # 회당 투자 금액
+                    'interval_weeks': interval_weeks,  # DCA 투자 간격 (주)
+                    'monthly_amount': per_period_amount,  # 회당 투자 금액 (legacy 필드명 유지)
                     'asset_type': asset_type
                 }
 
