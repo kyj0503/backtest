@@ -5,6 +5,43 @@
 
 import { EquityPoint, TradeMarker, OhlcPoint, ChartData, PortfolioData } from '../model/types/backtest-result-types';
 
+// ============================================
+// 포맷팅 함수들 (차트 표시용)
+// ============================================
+
+/**
+ * 통화 값을 축약 형식으로 포맷팅
+ * @example formatCurrency(1500000) => "1.5M"
+ * @example formatCurrency(1500) => "1.5K"
+ */
+export const formatCurrency = (value: number): string => {
+  if (value >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
+  if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+  if (value >= 1e3) return `${(value / 1e3).toFixed(1)}K`;
+  return value.toLocaleString();
+};
+
+/**
+ * 날짜를 짧은 형식으로 포맷팅 (차트용)
+ * @example formatDateShort("2025-01-15") => "1/15"
+ */
+export const formatDateShort = (value: string): string => {
+  const date = new Date(value);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+};
+
+/**
+ * 원화를 포맷팅
+ * @example formatKRW(1234567) => "₩1,234,567"
+ */
+export const formatKRW = (value: number, decimals: number = 0): string => {
+  return `₩${value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+};
+
+// ============================================
+// 데이터 변환 함수들
+// ============================================
+
 /**
  * 포트폴리오 equity curve 데이터를 EquityPoint 배열로 변환
  */
