@@ -316,13 +316,17 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                   ) : (
                     <span title="DCA를 포함한 총 투자금액 비율로 자동 계산됨. 비중을 직접 입력하려면 비중 기반 모드로 전환하세요.">
                       {(() => {
+                        // 날짜가 설정되지 않으면 가중치 계산 불가
+                        if (!startDate || !endDate) {
+                          return 'N/A';
+                        }
+
                         const dcaAdjustedTotal = getDcaAdjustedTotal(portfolio, startDate, endDate);
                         
                         // 각 종목의 실제 총 투자액 계산
                         let stockTotalAmount = stock.amount;
-                        if (stock.investmentType === 'dca' && startDate && endDate) {
+                        if (stock.investmentType === 'dca') {
                           // DCA: 회당 금액 × 투자 횟수
-                          // calculateDcaPeriods를 사용하여 중복 제거
                           const dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
                           stockTotalAmount = stock.amount * dcaPeriods;
                         }
