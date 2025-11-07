@@ -332,6 +332,7 @@ class PortfolioService:
         weight_history = []  # 포트폴리오 비중 변화 이력
 
         for current_date in date_range:
+            daily_cash_inflow = 0.0  # 당일 추가 투자금 (DCA)
             if current_date.date() < start_date_obj.date():
                 continue
             if current_date.date() > end_date_obj.date():
@@ -407,12 +408,14 @@ class PortfolioService:
                         invest_amount = amount * (1 - commission)  # 수수료 차감
                         shares[unique_key] = invest_amount / price
                         total_trades += 1  # 초기 매수 거래
+                        daily_cash_inflow += amount  # 일시불도 첫 날 유입
                     else:  # DCA
                         # DCA 첫 달 투자
                         monthly_amount = info['monthly_amount']
                         invest_amount = monthly_amount * (1 - commission)
                         shares[unique_key] = invest_amount / price
                         total_trades += 1  # 첫 DCA 매수 거래
+                        daily_cash_inflow += monthly_amount  # DCA 첫 투자 유입
 
                 is_first_day = False
                 prev_date = current_date
@@ -436,6 +439,7 @@ class PortfolioService:
                                 invest_amount = monthly_amount * (1 - commission)
                                 shares[unique_key] += invest_amount / price
                                 total_trades += 1  # DCA 추가 매수 거래
+                                daily_cash_inflow += monthly_amount  # DCA 추가 투자 유입 기록
 
             # 리밸런싱 실행
             should_rebalance = RebalanceHelper.is_rebalance_date(
@@ -598,9 +602,11 @@ class PortfolioService:
                     current_weights[symbol] = current_weights.get(symbol, 0) + amount / current_portfolio_value
             weight_history.append(current_weights)
 
-            # 수익률 계산
+            # 수익률 계산 (추가 투자금 제외)
             if prev_portfolio_value > 0:
-                daily_return = (current_portfolio_value - prev_portfolio_value) / prev_portfolio_value
+                # 순수 수익 = 현재 가치 - 이전 가치 - 당일 추가 투자금
+                net_change = current_portfolio_value - prev_portfolio_value - daily_cash_inflow
+                daily_return = net_change / prev_portfolio_value
             else:
                 daily_return = 0.0
 
