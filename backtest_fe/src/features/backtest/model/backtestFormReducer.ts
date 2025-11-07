@@ -47,8 +47,8 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           // 마지막 DCA 항목: 정확한 오차 보정
           // remainingTotal = 총액 - (이전 종목들의 실제 투자액)
           const remainingTotal = totalInvestment - accumulatedTotalAmount;
-          // 회당 금액 = 남은 총액 / 기간 (버림으로 보수적 계산)
-          const perPeriodAmount = Math.floor(remainingTotal / dcaPeriods);
+          // 회당 금액 = 남은 총액 / 기간 (반올림으로 일관성 있게 계산)
+          const perPeriodAmount = Math.round(remainingTotal / dcaPeriods);
           perPeriodAmounts[index] = perPeriodAmount;
         } else {
           // 일반 DCA 항목
