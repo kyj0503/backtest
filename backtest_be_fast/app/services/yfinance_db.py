@@ -578,7 +578,7 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
         conn.close()
 
 
-def load_news_from_db(ticker: str, max_age_hours: int = 24) -> Optional[list]:
+def load_news_from_db(ticker: str, max_age_hours: int = 3) -> Optional[list]:
     """
     DB에서 뉴스 데이터 조회 (최대 age 체크)
 
