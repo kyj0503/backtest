@@ -435,8 +435,12 @@ class PortfolioService:
 
             # DCA 추가 매수 (주기적 투자)
             if prev_date is not None:
-                for unique_key, amount in stock_amounts.items():
-                    info = dca_info[unique_key]
+                for symbol, amount in stock_amounts.items():  # symbol로 변수명 통일
+                    if symbol not in dca_info:
+                        logger.error(f"DCA 정보 없음: {symbol}")
+                        continue
+
+                    info = dca_info[symbol]
                     if info['investment_type'] != 'dca':
                         continue
 
@@ -445,7 +449,12 @@ class PortfolioService:
                     prev_weeks_passed = (prev_date - start_date_obj).days // 7
 
                     # 주 간격이 바뀌었는지 확인 (예: 0주차 → 4주차)
-                    interval_weeks = info.get('interval_weeks', 4)
+                    interval_weeks = info.get('interval_weeks')
+                    if interval_weeks is None:
+                        logger.error(f"{symbol}: interval_weeks가 dca_info에 없습니다! dca_info 내용: {info}")
+                        logger.error(f"기본값 4 대신 DCA_FREQUENCY_MAP에서 다시 조회 시도: {info.get('dca_frequency')}")
+                        from ..schemas.schemas import DCA_FREQUENCY_MAP
+                        interval_weeks = DCA_FREQUENCY_MAP.get(info.get('dca_frequency', 'weekly_4'), 4)
 
                     # 현재 주차가 투자 주기의 배수이고, 이전 날짜와 다른 주기에 속하는지 확인
                     current_period = weeks_passed // interval_weeks
@@ -453,20 +462,20 @@ class PortfolioService:
 
                     # 디버깅: 주기 변화 로깅
                     if current_period != prev_period:
-                        logger.info(f"{current_date.date()}: {unique_key} 주기 변화 감지 - prev_period={prev_period}, current_period={current_period}, dca_periods={info['dca_periods']}, interval_weeks={interval_weeks}")
+                        logger.info(f"{current_date.date()}: {symbol} 주기 변화 감지 - prev_period={prev_period}, current_period={current_period}, dca_periods={info['dca_periods']}, interval_weeks={interval_weeks}")
 
                     # 새로운 투자 주기에 진입했고, 아직 투자 횟수를 초과하지 않았으면 투자
                     if current_period > prev_period and current_period < info['dca_periods']:
-                        if unique_key in current_prices:
-                            price = current_prices[unique_key]
+                        if symbol in current_prices:
+                            price = current_prices[symbol]
                             period_amount = info['monthly_amount']  # 회당 투자 금액
                             invest_amount = period_amount * (1 - commission)
-                            shares[unique_key] += invest_amount / price
+                            shares[symbol] += invest_amount / price
                             total_trades += 1  # DCA 추가 매수 거래
                             daily_cash_inflow += period_amount  # DCA 추가 투자 유입 기록
-                            logger.info(f"{current_date.date()}: {unique_key} DCA 추가 매수 실행! (주기 {current_period + 1}/{info['dca_periods']}, 금액: ${period_amount:,.2f})")
+                            logger.info(f"{current_date.date()}: {symbol} DCA 추가 매수 실행! (주기 {current_period + 1}/{info['dca_periods']}, 금액: ${period_amount:,.2f})")
                         else:
-                            logger.warning(f"{current_date.date()}: {unique_key} DCA 매수 시점이지만 가격 데이터 없음 (주기 {current_period + 1}/{info['dca_periods']})")
+                            logger.warning(f"{current_date.date()}: {symbol} DCA 매수 시점이지만 가격 데이터 없음 (주기 {current_period + 1}/{info['dca_periods']})")
 
             # 리밸런싱 실행
             should_rebalance = RebalanceHelper.is_rebalance_date(
