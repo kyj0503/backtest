@@ -576,3 +576,168 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
         return df
     finally:
         conn.close()
+
+
+def load_news_from_db(ticker: str, max_age_hours: int = 48) -> Optional[list]:
+    """
+    DB에서 뉴스 데이터 조회 (최대 age 체크)
+
+    Args:
+        ticker: 종목 심볼
+        max_age_hours: 최대 age (시간) - 이보다 오래된 데이터는 제외
+
+    Returns:
+        뉴스 리스트 또는 None (데이터가 없거나 너무 오래된 경우)
+    """
+    engine = _get_engine()
+    conn = engine.connect()
+    try:
+        # created_at이 max_age_hours 이내인 뉴스만 조회
+        cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
+
+        query = text("""
+            SELECT title, link, description, news_date, created_at
+            FROM stock_news
+            WHERE ticker = :ticker
+            AND created_at >= :cutoff_time
+            ORDER BY news_date DESC, created_at DESC
+            LIMIT 20
+        """)
+
+        result = conn.execute(query, {"ticker": ticker, "cutoff_time": cutoff_time})
+        rows = result.fetchall()
+
+        if not rows:
+            logger.debug(f"DB에 {ticker}의 최신 뉴스({max_age_hours}시간 이내)가 없습니다")
+            return None
+
+        # 뉴스 리스트로 변환
+        news_list = []
+        for row in rows:
+            news_list.append({
+                'title': row[0],
+                'link': row[1],
+                'description': row[2] or '',
+                'pubDate': row[3].strftime('%a, %d %b %Y %H:%M:%S +0900') if isinstance(row[3], date) else str(row[3])
+            })
+
+        logger.info(f"DB에서 {ticker} 뉴스 {len(news_list)}개 조회 (created_at >= {cutoff_time})")
+        return news_list
+
+    except Exception as e:
+        logger.error(f"DB 뉴스 조회 실패: {ticker} - {str(e)}")
+        return None
+    finally:
+        conn.close()
+
+
+def save_news_to_db(ticker: str, news_list: list) -> int:
+    """
+    뉴스 데이터를 DB에 저장
+
+    Args:
+        ticker: 종목 심볼
+        news_list: 뉴스 딕셔너리 리스트
+
+    Returns:
+        저장된 행 수
+    """
+    if not news_list:
+        return 0
+
+    engine = _get_engine()
+    conn = engine.connect()
+    trans = conn.begin()
+
+    try:
+        # 기존 해당 티커의 모든 뉴스 삭제 (새로 저장하기 전에)
+        delete_query = text("""
+            DELETE FROM stock_news
+            WHERE ticker = :ticker
+        """)
+        conn.execute(delete_query, {"ticker": ticker})
+
+        # 오래된 뉴스 정리 (7일 이상, 모든 티커)
+        delete_old_query = text("""
+            DELETE FROM stock_news
+            WHERE created_at < :cutoff_time
+        """)
+        cutoff_time = datetime.now() - timedelta(days=7)
+        conn.execute(delete_old_query, {"cutoff_time": cutoff_time})
+
+        # 새 뉴스 저장
+        saved_count = 0
+        for news in news_list:
+            try:
+                # pubDate 파싱 (RFC 2822 형식)
+                import email.utils
+                pub_date_str = news.get('pubDate', '')
+                pub_timestamp = email.utils.parsedate_tz(pub_date_str)
+                if pub_timestamp:
+                    news_date = datetime.fromtimestamp(email.utils.mktime_tz(pub_timestamp)).date()
+                else:
+                    news_date = datetime.now().date()
+
+                # 단순 삽입 (이미 해당 티커의 기존 데이터는 삭제됨)
+                insert_query = text("""
+                    INSERT INTO stock_news (ticker, news_date, title, link, description, source, created_at)
+                    VALUES (:ticker, :news_date, :title, :link, :description, :source, NOW())
+                """)
+
+                conn.execute(insert_query, {
+                    "ticker": ticker,
+                    "news_date": news_date,
+                    "title": news['title'][:500],  # 길이 제한
+                    "link": news.get('link', '')[:1000],
+                    "description": news.get('description', '')[:1000] if news.get('description') else None,
+                    "source": "Naver"
+                })
+                saved_count += 1
+
+            except Exception as e:
+                logger.warning(f"뉴스 저장 실패 (계속 진행): {str(e)}")
+                continue
+
+        trans.commit()
+        logger.info(f"DB에 {ticker} 뉴스 {saved_count}/{len(news_list)}개 저장 완료")
+        return saved_count
+
+    except Exception as e:
+        trans.rollback()
+        logger.error(f"DB 뉴스 저장 실패: {ticker} - {str(e)}")
+        return 0
+    finally:
+        conn.close()
+
+
+def delete_old_news(days: int = 30) -> int:
+    """
+    오래된 뉴스 데이터 삭제
+
+    Args:
+        days: 삭제 기준 (일) - 이보다 오래된 데이터 삭제
+
+    Returns:
+        삭제된 행 수
+    """
+    engine = _get_engine()
+    conn = engine.connect()
+    try:
+        cutoff_time = datetime.now() - timedelta(days=days)
+
+        query = text("""
+            DELETE FROM stock_news
+            WHERE created_at < :cutoff_time
+        """)
+
+        result = conn.execute(query, {"cutoff_time": cutoff_time})
+        deleted_count = result.rowcount
+
+        logger.info(f"DB에서 오래된 뉴스 {deleted_count}개 삭제 (created_at < {cutoff_time})")
+        return deleted_count
+
+    except Exception as e:
+        logger.error(f"DB 뉴스 삭제 실패: {str(e)}")
+        return 0
+    finally:
+        conn.close()

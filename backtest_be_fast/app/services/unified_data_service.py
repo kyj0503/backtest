@@ -248,33 +248,53 @@ class UnifiedDataService:
     def collect_latest_news(
         self,
         symbols: List[str],
-        display: int = 15
+        display: int = 15,
+        max_cache_hours: int = 48
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
-        최신 뉴스 수집
-        
+        최신 뉴스 수집 (DB 캐시 우선, 2일 이상 오래되면 API 호출)
+
         Args:
             symbols: 종목 심볼 리스트
             display: 종목당 뉴스 개수
-            
+            max_cache_hours: 캐시 최대 유효 시간 (기본 48시간 = 2일)
+
         Returns:
             종목별 뉴스 딕셔너리
         """
+        from .yfinance_db import load_news_from_db, save_news_to_db
+
         if not self.news_service:
             logger.warning("뉴스 서비스가 초기화되지 않았습니다.")
             return {symbol: [] for symbol in symbols}
-        
+
         latest_news = {}
         for symbol in symbols:
             try:
-                search_query = self.news_service.TICKER_MAPPING.get(symbol, symbol)
-                news_list = self.news_service.search_news(search_query, display=display)
-                latest_news[symbol] = news_list
-                logger.info(f"{symbol} 뉴스 {len(news_list)}개 수집 완료")
+                # 1. DB에서 먼저 조회 (48시간 이내)
+                cached_news = load_news_from_db(symbol, max_age_hours=max_cache_hours)
+
+                if cached_news and len(cached_news) > 0:
+                    # DB에 신선한 데이터가 있으면 반환
+                    latest_news[symbol] = cached_news[:display]  # display 개수만큼
+                    logger.info(f"{symbol} 뉴스 {len(latest_news[symbol])}개 (DB 캐시 사용)")
+                else:
+                    # 2. 캐시가 없거나 오래되었으면 API 호출
+                    logger.info(f"{symbol} 뉴스 캐시가 없거나 오래됨 - API 호출")
+                    search_query = self.news_service.get_ticker_query(symbol)
+                    news_list = self.news_service.search_news(search_query, display=display)
+
+                    # 3. API 결과를 DB에 저장
+                    if news_list:
+                        save_news_to_db(symbol, news_list)
+
+                    latest_news[symbol] = news_list
+                    logger.info(f"{symbol} 뉴스 {len(news_list)}개 (API 수집 완료)")
+
             except Exception as e:
                 logger.warning(f"{symbol} 뉴스 수집 실패: {str(e)}")
                 latest_news[symbol] = []
-        
+
         return latest_news
     
     def collect_all_unified_data(
