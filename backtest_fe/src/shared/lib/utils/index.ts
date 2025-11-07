@@ -9,7 +9,7 @@ export * from './numberUtils';
 // 차트 관련
 export * from './chartUtils';
 
-// 레거시 포맷터 (호환성 유지를 위해 별칭으로 내보내기)
+// 스타일링 유틸리티 (배지 색상, 거래 마커 색상)
 export {
   getStatVariant,
   getTradeColor
