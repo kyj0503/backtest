@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { BacktestFormState } from '@/features/backtest/model/backtest-form-types';
+import { BacktestFormState } from '@/features/backtest/model/types/backtest-form-types';
 
 export interface UseFormValidationReturn {
   errors: string[];
@@ -33,6 +33,18 @@ export const useFormValidation = (): UseFormValidationReturn => {
         newErrors.push(`${index + 1}번째 종목의 DCA 투자 주기를 선택해주세요.`);
       }
     });
+
+    // 비중 기준 모드에서 비중 합계 검증 (±5% 범위 허용)
+    if (formState.portfolioInputMode === 'weight') {
+      const totalWeight = formState.portfolio.reduce((sum, stock) => {
+        return sum + (typeof stock.weight === 'number' ? stock.weight : 0);
+      }, 0);
+      
+      // 95~105% 범위 허용 (반올림 오차 및 DCA 계산 오차 고려)
+      if (totalWeight < 95 || totalWeight > 105) {
+        newErrors.push(`종목 비중 합계가 95%~105% 사이여야 합니다. 현재: ${totalWeight.toFixed(1)}% (허용 오차: ±5%)`);
+      }
+    }
     
     // 날짜 검증
     if (!formState.dates.startDate) {

@@ -32,7 +32,7 @@
 
 **리밸런싱**:
 - 주기적으로 포트폴리오 비중을 원래대로 조정
-- 지원 주기: monthly, quarterly, annually, none
+- 지원 주기: weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none
 
 **의존성**:
 - app/services/backtest_service.py: 단일 종목 백테스트
@@ -96,10 +96,17 @@ class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
     
     @staticmethod
-    def calculate_dca_shares_and_return(df: pd.DataFrame, monthly_amount: float,
-                                      dca_periods: int, start_date: str) -> Tuple[float, float, float, List[Dict]]:
+    def calculate_dca_shares_and_return(df: pd.DataFrame, period_amount: float,
+                                      dca_periods: int, start_date: str, interval_weeks: int = 4) -> Tuple[float, float, float, List[Dict]]:
         """
-        DCA 투자의 총 주식 수량과 평균 단가, 수익률, 매수 로그를 계산
+        DCA 투자의 총 주식 수량과 평균 단가, 수익률, 매수 로그를 계산 (주 단위)
+
+        Args:
+            df: 가격 데이터
+            period_amount: 회당 투자 금액
+            dca_periods: 투자 횟수
+            start_date: 시작 날짜
+            interval_weeks: 투자 간격 (주 단위)
 
         Returns:
             (total_shares, average_price, return_rate, trade_log)
@@ -109,23 +116,25 @@ class DCACalculator:
         total_invested = 0
         trade_log = []  # DCA 매수 기록
 
-        for month in range(dca_periods):
-            # Use relativedelta for accurate calendar month arithmetic.
-            investment_date = start_date_obj + relativedelta(months=month)
-            month_price_data = df[df.index.date >= investment_date.date()]
+        for period in range(dca_periods):
+            # 주 단위 계산: 시작일 + (period × interval_weeks × 7일)
+            days_to_add = period * interval_weeks * 7
+            investment_date = start_date_obj + timedelta(days=days_to_add)
+            period_price_data = df[df.index.date >= investment_date.date()]
 
-            if not month_price_data.empty:
-                month_price = month_price_data['Close'].iloc[0]
-                actual_date = month_price_data.index[0]
-                shares_bought = monthly_amount / month_price
+            if not period_price_data.empty:
+                period_price = period_price_data['Close'].iloc[0]
+                actual_date = period_price_data.index[0]
+                shares_bought = period_amount / period_price
                 total_shares += shares_bought
-                total_invested += monthly_amount
+                total_invested += period_amount
 
                 # DCA 매수 기록 추가
                 trade_log.append({
                     'EntryTime': actual_date.isoformat(),
-                    'EntryPrice': float(month_price),
+                    'EntryPrice': float(period_price),
                     'Size': float(shares_bought),
+                    'Type': 'BUY',
                     'ExitTime': None,  # DCA는 매수만 있고 매도 없음
                     'ExitPrice': None,
                     'PnL': None,
@@ -145,14 +154,15 @@ class RebalanceHelper:
     """리밸런싱 유틸리티"""
 
     @staticmethod
-    def is_rebalance_date(current_date: datetime, prev_date: datetime, frequency: str) -> bool:
+    def is_rebalance_date(current_date: datetime, prev_date: datetime, frequency: str, start_date: datetime = None) -> bool:
         """
-        현재 날짜가 리밸런싱 날짜인지 확인
+        현재 날짜가 리밸런싱 날짜인지 확인 (주 단위)
 
         Args:
             current_date: 현재 날짜
             prev_date: 이전 날짜
-            frequency: 리밸런싱 주기 (monthly, quarterly, annually, none)
+            frequency: 리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)
+            start_date: 시작 날짜 (주 단위 계산용)
 
         Returns:
             리밸런싱 실행 여부
@@ -164,19 +174,29 @@ class RebalanceHelper:
         if prev_date is None:
             return False
 
-        if frequency == 'monthly':
-            # 월이 바뀌었는지 확인
-            return current_date.month != prev_date.month
-        elif frequency == 'quarterly':
-            # 분기가 바뀌었는지 확인 (1, 4, 7, 10월)
-            curr_quarter = (current_date.month - 1) // 3
-            prev_quarter = (prev_date.month - 1) // 3
-            return curr_quarter != prev_quarter
-        elif frequency == 'annually':
-            # 연도가 바뀌었는지 확인
-            return current_date.year != prev_date.year
+        # 주 단위 리밸런싱
+        from ..schemas.schemas import DCA_FREQUENCY_MAP
+        interval_weeks = DCA_FREQUENCY_MAP.get(frequency)
 
-        return False
+        if interval_weeks is None:
+            # 알 수 없는 주기면 리밸런싱 안 함
+            logger.warning(f"알 수 없는 리밸런싱 주기: {frequency}")
+            return False
+
+        # start_date가 없으면 prev_date를 기준으로 사용
+        ref_date = start_date if start_date else prev_date
+
+        # 시작일로부터 경과한 주 수 계산
+        current_weeks = (current_date - ref_date).days // 7
+        prev_weeks = (prev_date - ref_date).days // 7
+
+        # 리밸런싱 주기(interval_weeks)마다 실행
+        # 예: interval_weeks=4이면 0, 4, 8, 12주차에 리밸런싱
+        current_period = current_weeks // interval_weeks
+        prev_period = prev_weeks // interval_weeks
+
+        # 새로운 리밸런싱 주기에 진입했으면 True
+        return current_period > prev_period
 
     @staticmethod
     def calculate_target_weights(amounts: Dict[str, float], dca_info: Dict[str, Dict]) -> Dict[str, float]:
@@ -217,7 +237,7 @@ class PortfolioService:
         dca_info: Dict[str, Dict],
         start_date: str,
         end_date: str,
-        rebalance_frequency: str = "monthly",
+        rebalance_frequency: str = "weekly_4",
         commission: float = 0.0
     ) -> pd.DataFrame:
         """
@@ -226,10 +246,10 @@ class PortfolioService:
         Args:
             portfolio_data: 각 종목의 가격 데이터 {symbol: DataFrame}
             amounts: 각 종목의 총 투자 금액 {symbol: amount}
-            dca_info: 분할 매수 정보 {symbol: {investment_type, dca_periods, monthly_amount}}
+            dca_info: 분할 매수 정보 {symbol: {investment_type, dca_periods, period_amount, interval_weeks}}
             start_date: 시작 날짜
             end_date: 종료 날짜
-            rebalance_frequency: 리밸런싱 주기 (monthly, quarterly, annually, none)
+            rebalance_frequency: 리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)
             commission: 거래 수수료율 (예: 0.002 = 0.2%)
 
         Returns:
@@ -332,6 +352,7 @@ class PortfolioService:
         weight_history = []  # 포트폴리오 비중 변화 이력
 
         for current_date in date_range:
+            daily_cash_inflow = 0.0  # 당일 추가 투자금 (DCA)
             if current_date.date() < start_date_obj.date():
                 continue
             if current_date.date() > end_date_obj.date():
@@ -407,39 +428,67 @@ class PortfolioService:
                         invest_amount = amount * (1 - commission)  # 수수료 차감
                         shares[unique_key] = invest_amount / price
                         total_trades += 1  # 초기 매수 거래
+                        daily_cash_inflow += amount  # 일시불도 첫 날 유입
+                        logger.info(f"{current_date.date()}: {unique_key} 일시불 첫 투자 (금액: ${amount:,.2f}, 가격: ${price:.2f})")
                     else:  # DCA
                         # DCA 첫 달 투자
                         monthly_amount = info['monthly_amount']
                         invest_amount = monthly_amount * (1 - commission)
                         shares[unique_key] = invest_amount / price
                         total_trades += 1  # 첫 DCA 매수 거래
+                        daily_cash_inflow += monthly_amount  # DCA 첫 투자 유입
+                        logger.info(f"{current_date.date()}: {unique_key} DCA 첫 투자 (금액: ${monthly_amount:,.2f}, interval_weeks: {info.get('interval_weeks', '?')})")
 
                 is_first_day = False
                 prev_date = current_date
 
-            # DCA 추가 매수 (매월 첫 거래일)
+            # DCA 추가 매수 (주기적 투자)
             if prev_date is not None:
-                for unique_key, amount in stock_amounts.items():
-                    info = dca_info[unique_key]
+                for symbol, amount in stock_amounts.items():  # symbol로 변수명 통일
+                    if symbol not in dca_info:
+                        logger.error(f"DCA 정보 없음: {symbol}")
+                        continue
+
+                    info = dca_info[symbol]
                     if info['investment_type'] != 'dca':
                         continue
 
-                    # 월이 바뀌었는지 확인
-                    if current_date.month != prev_date.month:
-                        months_passed = (current_date.year - start_date_obj.year) * 12 + \
-                                      (current_date.month - start_date_obj.month)
+                    # 시작일로부터 경과한 주 수 계산
+                    weeks_passed = (current_date - start_date_obj).days // 7
+                    prev_weeks_passed = (prev_date - start_date_obj).days // 7
 
-                        if months_passed < info['dca_periods']:
-                            if unique_key in current_prices:
-                                price = current_prices[unique_key]
-                                monthly_amount = info['monthly_amount']
-                                invest_amount = monthly_amount * (1 - commission)
-                                shares[unique_key] += invest_amount / price
-                                total_trades += 1  # DCA 추가 매수 거래
+                    # 주 간격이 바뀌었는지 확인 (예: 0주차 → 4주차)
+                    interval_weeks = info.get('interval_weeks')
+                    if interval_weeks is None:
+                        logger.error(f"{symbol}: interval_weeks가 dca_info에 없습니다! dca_info 내용: {info}")
+                        logger.error(f"기본값 4 대신 DCA_FREQUENCY_MAP에서 다시 조회 시도: {info.get('dca_frequency')}")
+                        from ..schemas.schemas import DCA_FREQUENCY_MAP
+                        interval_weeks = DCA_FREQUENCY_MAP.get(info.get('dca_frequency', 'weekly_4'), 4)
+
+                    # 현재 주차가 투자 주기의 배수이고, 이전 날짜와 다른 주기에 속하는지 확인
+                    current_period = weeks_passed // interval_weeks
+                    prev_period = prev_weeks_passed // interval_weeks
+
+                    # 디버깅: 주기 변화 로깅
+                    if current_period != prev_period:
+                        logger.info(f"{current_date.date()}: {symbol} 주기 변화 감지 - prev_period={prev_period}, current_period={current_period}, dca_periods={info['dca_periods']}, interval_weeks={interval_weeks}")
+
+                    # 새로운 투자 주기에 진입했고, 아직 투자 횟수를 초과하지 않았으면 투자
+                    if current_period > prev_period and current_period < info['dca_periods']:
+                        if symbol in current_prices:
+                            price = current_prices[symbol]
+                            period_amount = info['monthly_amount']  # 회당 투자 금액
+                            invest_amount = period_amount * (1 - commission)
+                            shares[symbol] += invest_amount / price
+                            total_trades += 1  # DCA 추가 매수 거래
+                            daily_cash_inflow += period_amount  # DCA 추가 투자 유입 기록
+                            logger.info(f"{current_date.date()}: {symbol} DCA 추가 매수 실행! (주기 {current_period + 1}/{info['dca_periods']}, 금액: ${period_amount:,.2f})")
+                        else:
+                            logger.warning(f"{current_date.date()}: {symbol} DCA 매수 시점이지만 가격 데이터 없음 (주기 {current_period + 1}/{info['dca_periods']})")
 
             # 리밸런싱 실행
             should_rebalance = RebalanceHelper.is_rebalance_date(
-                current_date, prev_date, rebalance_frequency
+                current_date, prev_date, rebalance_frequency, start_date_obj
             )
 
             if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
@@ -598,9 +647,11 @@ class PortfolioService:
                     current_weights[symbol] = current_weights.get(symbol, 0) + amount / current_portfolio_value
             weight_history.append(current_weights)
 
-            # 수익률 계산
+            # 수익률 계산 (추가 투자금 제외)
             if prev_portfolio_value > 0:
-                daily_return = (current_portfolio_value - prev_portfolio_value) / prev_portfolio_value
+                # 순수 수익 = 현재 가치 - 이전 가치 - 당일 추가 투자금
+                net_change = current_portfolio_value - prev_portfolio_value - daily_cash_inflow
+                daily_return = net_change / prev_portfolio_value
             else:
                 daily_return = 0.0
 
@@ -1151,63 +1202,94 @@ class PortfolioService:
         try:
             # 각 종목의 데이터 수집 (중복 종목 지원)
             portfolio_data = {}
-            amounts = {}
-            # amount/weight 동시 지원: amount가 없고 weight만 있으면 환산
-            if all(item.amount is not None for item in request.portfolio):
-                total_amount = sum(item.amount for item in request.portfolio)
-                amounts = {item.symbol: item.amount for item in request.portfolio}
-            elif all(item.weight is not None for item in request.portfolio):
-                total_amount = 100.0
-                amounts = {item.symbol: total_amount * (item.weight / 100.0) for item in request.portfolio}
-            else:
-                raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
-            cash_amount = 0
-            
-            # 분할 매수 정보 수집
-            dca_info = {}
-            
+            amounts = {}  # 실제 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
+
             # DCA 주기 매핑
             from ..schemas.schemas import DCA_FREQUENCY_MAP
-            
+
+            # 백테스트 기간 계산 (주 수)
+            from datetime import datetime
+            start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
+            end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
+
+            # 백테스트 기간을 주 단위로 계산
+            backtest_days = (end_date_obj - start_date_obj).days
+            backtest_weeks = backtest_days // 7  # 주 단위 (정수 나눗셈)
+
+            logger.info(f"백테스트 기간: {request.start_date} ~ {request.end_date} ({backtest_days}일, {backtest_weeks}주)")
+
+            # 분할 매수 정보 수집 및 총 투자 금액 계산
+            dca_info = {}
+            cash_amount = 0
+
+            # 먼저 모든 종목의 투자 타입을 확인하고 총 금액 계산
             for item in request.portfolio:
                 symbol = item.symbol
-                amount = amounts[symbol]
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
-                dca_frequency = getattr(item, 'dca_frequency', 'monthly')
-                dca_periods = DCA_FREQUENCY_MAP.get(dca_frequency, 1)  # 주기를 개월 수로 변환
-                asset_type = getattr(item, 'asset_type', 'stock')  # 자산 타입 확인
-                
+                dca_frequency = getattr(item, 'dca_frequency', 'weekly_4')
+
+                # DCA 투자 횟수 계산: 백테스트 기간(주) / 투자 간격(주) + 1 (0주차 첫 투자 포함)
+                interval_weeks = DCA_FREQUENCY_MAP.get(dca_frequency, 4)
+                # 예: 52주 / 24주 = 2, 2 + 1 = 3회 (0주, 24주, 48주)
+                dca_periods = max(1, (backtest_weeks // interval_weeks) + 1) if investment_type == 'dca' else 1
+
+                asset_type = getattr(item, 'asset_type', 'stock')
+
+                # amount 또는 weight 기반으로 회당 투자 금액 계산
+                if item.amount is not None:
+                    per_period_amount = item.amount  # 입력한 금액 = 회당 투자 금액
+                elif item.weight is not None:
+                    # weight 모드는 나중에 처리
+                    per_period_amount = 0
+                else:
+                    raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight를 입력해야 합니다.')
+
+                # 총 투자 금액 계산
+                if investment_type == 'dca':
+                    # 분할 매수: 회당 금액 × 횟수
+                    total_investment = per_period_amount * dca_periods
+                else:
+                    # 일시불: 회당 금액 = 총 금액
+                    total_investment = per_period_amount
+
+                amounts[symbol] = total_investment
+
                 # 분할 매수 정보 저장
                 dca_info[symbol] = {
                     'symbol': symbol,
                     'investment_type': investment_type,
                     'dca_frequency': dca_frequency,
                     'dca_periods': dca_periods,
-                    'monthly_amount': amount / dca_periods if investment_type == 'dca' else amount,
+                    'interval_weeks': interval_weeks,  # DCA 투자 간격 (주)
+                    'monthly_amount': per_period_amount,  # 회당 투자 금액 (legacy 필드명 유지)
                     'asset_type': asset_type
                 }
-                
+
                 # 진짜 현금 자산 처리 (asset_type이 'cash'인 경우)
                 if asset_type == 'cash':
                     # 현금 처리
-                    cash_amount += amount
-                    logger.info(f"현금 자산 {symbol} 추가 (금액: ${amount:,.2f})")
+                    cash_amount += total_investment
+                    logger.info(f"현금 자산 {symbol} 추가 (금액: ${total_investment:,.2f})")
                     continue
-                
-                logger.info(f"종목 {symbol} 데이터 로드 중 (투자금액: ${amount:,.2f}, 방식: {investment_type})")
-                
+
+                logger.info(f"종목 {symbol} 데이터 로드 중 (총 투자금액: ${total_investment:,.2f}, 방식: {investment_type})")
+
                 if investment_type == 'dca':
-                    logger.info(f"분할 매수: ${amount:,.2f}을 {dca_periods}개월에 걸쳐 매달 ${amount/dca_periods:,.2f}씩")
-                
+                    logger.info(f"분할 매수: {dca_periods}회에 걸쳐 회당 ${per_period_amount:,.2f}씩 (총 ${total_investment:,.2f})")
+                    logger.info(f"DCA 설정: frequency={dca_frequency}, interval_weeks={interval_weeks}, dca_periods={dca_periods}")
+
                 # DB에서 데이터 로드
                 df = load_ticker_data(symbol, request.start_date, request.end_date)
-                
+
                 if df is None or df.empty:
                     logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
                     continue
-                
+
                 portfolio_data[symbol] = df
                 logger.info(f"종목 {symbol} 데이터 로드 완료: {len(df)} 행")
+
+            # 총 투자 금액 계산
+            total_amount = sum(amounts.values())
             
             # 현금만 있는 경우 처리
             if not portfolio_data and cash_amount > 0:
@@ -1336,6 +1418,7 @@ class PortfolioService:
                                 'EntryTime': start_date.isoformat(),
                                 'EntryPrice': float(start_price),
                                 'Size': float(total_shares),
+                                'Type': 'BUY',
                                 'ExitTime': None,
                                 'ExitPrice': None,
                                 'PnL': None,
@@ -1362,10 +1445,11 @@ class PortfolioService:
                         else:  # DCA
                             # 분할매수: DCACalculator를 사용하여 수익률 계산
                             dca_periods = dca_info[unique_key]['dca_periods']
-                            monthly_amount = dca_info[unique_key]['monthly_amount']
+                            period_amount = dca_info[unique_key]['monthly_amount']  # 회당 투자 금액
+                            interval_weeks = dca_info[unique_key].get('interval_weeks', 4)  # 투자 간격
 
                             total_shares, average_price, individual_return, dca_trade_log = DCACalculator.calculate_dca_shares_and_return(
-                                df, monthly_amount, dca_periods, request.start_date
+                                df, period_amount, dca_periods, request.start_date, interval_weeks
                             )
 
                             end_price = df['Close'].iloc[-1]
@@ -1404,6 +1488,36 @@ class PortfolioService:
             rebalance_history = portfolio_result.attrs.get('rebalance_history', [])
             weight_history = portfolio_result.attrs.get('weight_history', [])
 
+            # 리밸런싱 거래를 각 종목의 trade_log에 추가
+            for rebalance_event in rebalance_history:
+                rebalance_date = rebalance_event['date']
+                for trade in rebalance_event['trades']:
+                    symbol = trade['symbol']
+                    action = trade['action']
+
+                    # unique_key 찾기 (symbol로 매칭)
+                    unique_key = None
+                    for key in dca_info.keys():
+                        if dca_info[key]['symbol'] == symbol:
+                            unique_key = key
+                            break
+
+                    if unique_key and unique_key in strategy_details:
+                        # 거래 타입 결정 (buy/sell만 처리, 현금은 제외)
+                        if action in ['buy', 'sell']:
+                            trade_entry = {
+                                'EntryTime': rebalance_date,
+                                'EntryPrice': float(trade['price']),
+                                'Size': float(trade['shares']),
+                                'Type': 'BUY' if action == 'buy' else 'SELL',
+                                'ExitTime': None,
+                                'ExitPrice': None,
+                                'PnL': None,
+                                'ReturnPct': None,
+                                'Duration': None,
+                            }
+                            strategy_details[unique_key]['trade_log'].append(trade_entry)
+
             # 결과 포맷팅
             result = {
                 'status': 'success',
@@ -1430,8 +1544,33 @@ class PortfolioService:
                         date.strftime('%Y-%m-%d'): value * total_amount
                         for date, value in portfolio_result['Portfolio_Value'].items()
                     },
+                    # ============================================================
+                    # 수익률 표현 형식: 백분율(Percentage) vs 소수(Decimal)
+                    # ============================================================
+                    #
+                    # **API 응답 형식: 백분율 (2.5 = 2.5%)**
+                    # - 사용자에게 표시되는 모든 수익률은 백분율로 반환
+                    # - 예: 0.025 (decimal) → 2.5 (percentage)
+                    # - 이유: UI 표시, 툴팁, 차트 레이블 등 90%의 사용 사례가 백분율 표시
+                    # - API 응답의 가독성 향상 ({"daily_return": 2.5} vs {"daily_return": 0.025})
+                    #
+                    # **계산에서의 형식: 소수 (0.025 = 2.5%)**
+                    # - 내부 계산(복리 수익률, 누적 수익률 등)은 소수 형식 사용
+                    # - 예: 복리 계산 시 1.025 = 1 + 0.025 (2.5% 수익)
+                    # - 프론트엔드에서 계산 필요 시 `/100`으로 소수로 변환
+                    #
+                    # **변환 흐름:**
+                    # 1. 백엔드 계산: 0.025 (소수)
+                    # 2. API 응답: 2.5 (백분율, `return_val * 100`)  ← 여기서 한 번만 변환
+                    # 3. 프론트 표시: "2.5%" (그대로 사용)
+                    # 4. 프론트 계산: 2.5 / 100 = 0.025 (필요 시 역변환)
+                    #
+                    # **주의사항:**
+                    # - 이중 변환 방지: API에서 이미 백분율로 반환했으므로 추가 변환 불필요
+                    # - 계산 필요 시에만 `/100` 사용 (예: BenchmarkIndexChart의 복리 계산)
+                    # ============================================================
                     'daily_returns': {
-                        date.strftime('%Y-%m-%d'): return_val * 100
+                        date.strftime('%Y-%m-%d'): return_val * 100  # 소수 → 백분율 변환 (0.025 → 2.5)
                         for date, return_val in portfolio_result['Daily_Return'].items()
                     },
                     'strategy_details': strategy_details,  # 거래 로그 포함

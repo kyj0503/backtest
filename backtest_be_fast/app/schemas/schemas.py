@@ -41,13 +41,15 @@ import re
 
 from ..core.config import settings
 
-# DCA 주기 프리셋
+# DCA 주기 프리셋 (주 단위)
 DCA_FREQUENCY_MAP = {
-    'monthly': 1,       # 매달
-    'bimonthly': 2,     # 격달
-    'quarterly': 3,     # 분기
-    'semiannually': 6,  # 반년
-    'annually': 12      # 매년
+    'weekly_1': 1,      # 1주
+    'weekly_2': 2,      # 2주
+    'weekly_4': 4,      # 4주 (약 1달)
+    'weekly_8': 8,      # 8주 (약 2달)
+    'weekly_12': 12,    # 12주 (약 1분기)
+    'weekly_24': 24,    # 24주 (약 반년)
+    'weekly_48': 48     # 48주 (약 1년)
 }
 
 class PortfolioStock(BaseModel):
@@ -56,7 +58,7 @@ class PortfolioStock(BaseModel):
     amount: Optional[float] = Field(None, gt=0, description="투자 금액 (> 0, weight와 동시 입력 불가)")
     weight: Optional[float] = Field(None, ge=0, le=100, description="비중(%) (0~100, amount와 동시 입력 불가, 소수점 허용)")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
-    dca_frequency: Optional[str] = Field("monthly", description="DCA 주기 (monthly, bimonthly, quarterly, semiannually, annually)")
+    dca_frequency: Optional[str] = Field("weekly_4", description="DCA 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48)")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
     custom_name: Optional[str] = Field(None, description="현금 자산의 커스텀 이름")
     @field_validator('amount', 'weight')
@@ -116,7 +118,7 @@ class PortfolioBacktestRequest(BaseModel):
     start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
     end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
     commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
-    rebalance_frequency: str = Field("monthly", description="리밸런싱 주기 (monthly, quarterly, yearly)")
+    rebalance_frequency: str = Field("weekly_4", description="리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)")
     strategy: str = Field("buy_and_hold", description="전략명")
     strategy_params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="전략 파라미터")
     
@@ -146,9 +148,10 @@ class PortfolioBacktestRequest(BaseModel):
         
         if has_weight:
             total_weight = sum(item.weight or 0 for item in v)
-            # 0~100 허용, 100±0.01 이내만 통과
-            if not (99.99 <= total_weight <= 100.01):
-                raise ValueError(f'종목 비중(weight) 합계가 100이 아닙니다. 현재 합계: {total_weight}')
+            # 비중 합계 검증: 100% ± 5% 범위 허용 (프론트엔드와 동일)
+            # 반올림 오차 및 DCA 계산 오차를 고려하여 95~105% 범위 허용
+            if total_weight < 95 or total_weight > 105:  # ±5% 범위 벗어나면 오류
+                raise ValueError(f'종목 비중 합계가 95-105% 범위를 벗어났습니다. 현재: {total_weight:.1f}%')
         else:
             total_amount = sum(item.amount or 0 for item in v)
             if total_amount <= 0:
@@ -182,26 +185,28 @@ class PortfolioBacktestRequest(BaseModel):
         start = datetime.strptime(self.start_date, '%Y-%m-%d')
         end = datetime.strptime(self.end_date, '%Y-%m-%d')
         backtest_days = (end - start).days
-        backtest_months = backtest_days / 30.44  # 평균 월 일수
-        
+        backtest_weeks = backtest_days / 7  # 주 단위로 변환
+
         for idx, item in enumerate(self.portfolio):
             if item.investment_type == 'dca' and item.dca_frequency:
-                # DCA 주기를 개월 수로 변환
-                dca_months = DCA_FREQUENCY_MAP.get(item.dca_frequency, 1)
-                
+                # DCA 주기 (주 단위)
+                dca_weeks = DCA_FREQUENCY_MAP.get(item.dca_frequency, 1)
+
                 # DCA 주기가 백테스트 기간보다 길면 에러
-                if dca_months > backtest_months:
+                if dca_weeks > backtest_weeks:
                     frequency_labels = {
-                        'monthly': '매달',
-                        'bimonthly': '격달',
-                        'quarterly': '매 분기',
-                        'semiannually': '반년마다',
-                        'annually': '매년'
+                        'weekly_1': '매주',
+                        'weekly_2': '2주마다',
+                        'weekly_4': '4주마다',
+                        'weekly_8': '8주마다',
+                        'weekly_12': '12주마다',
+                        'weekly_24': '24주마다',
+                        'weekly_48': '48주마다'
                     }
                     frequency_label = frequency_labels.get(item.dca_frequency, item.dca_frequency)
                     raise ValueError(
-                        f'{idx + 1}번째 종목({item.symbol}): DCA 주기가 "{frequency_label} 투자"({dca_months}개월)인데, '
-                        f'백테스트 기간이 {backtest_days}일(약 {backtest_months:.1f}개월)밖에 안됩니다. '
+                        f'{idx + 1}번째 종목({item.symbol}): DCA 주기가 "{frequency_label} 투자"({dca_weeks}주)인데, '
+                        f'백테스트 기간이 {backtest_days}일(약 {backtest_weeks:.1f}주)밖에 안됩니다. '
                         f'DCA 주기는 백테스트 기간보다 짧아야 합니다.'
                     )
         return self

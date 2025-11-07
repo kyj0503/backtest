@@ -59,14 +59,3 @@ export const getTradeColor = (type: 'entry' | 'exit', side?: 'buy' | 'sell'): st
     return '#ffc107'; // 노랑 (청산)
   }
 };
-
-// 포트폴리오 총 금액 계산
-export const calculateTotalAmount = (portfolio: Array<{ amount: number }>): number => {
-  return portfolio.reduce((sum, stock) => sum + stock.amount, 0);
-};
-
-// 비중 계산
-export const calculateWeight = (amount: number, totalAmount: number): number => {
-  if (totalAmount === 0) return 0;
-  return (amount / totalAmount) * 100;
-};

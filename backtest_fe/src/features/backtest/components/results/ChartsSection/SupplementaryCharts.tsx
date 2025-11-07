@@ -148,7 +148,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = ({
       {/* 리밸런싱 히스토리 테이블 */}
       {hasRebalanceHistory && (
         <ResultBlock title="리밸런싱 히스토리" description="포트폴리오 리밸런싱 이벤트 상세 내역">
-          <RebalanceHistoryTable rebalanceHistory={rebalanceHistory} tickerInfo={tickerInfo} />
+          <RebalanceHistoryTable rebalanceHistory={rebalanceHistory} />
         </ResultBlock>
       )}
 

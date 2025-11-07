@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { BacktestFormState, initialBacktestFormState, Stock } from './backtest-form-types';
+import { BacktestFormState, initialBacktestFormState, Stock } from './types/backtest-form-types';
 import { backtestFormReducer } from './backtestFormReducer';
 
 interface BacktestContextType {
@@ -57,7 +57,7 @@ export const BacktestProvider: React.FC<BacktestProviderProps> = ({
         symbol: '',
         amount: 10000,
         investmentType: 'lump_sum',
-        dcaPeriods: 12
+        dcaFrequency: 'weekly_4'
       };
       dispatch({ type: 'ADD_STOCK', payload: newStock });
     },
@@ -67,7 +67,7 @@ export const BacktestProvider: React.FC<BacktestProviderProps> = ({
         symbol: 'CASH',
         amount: 10000,
         investmentType: 'lump_sum',
-        dcaPeriods: 12
+        dcaFrequency: 'weekly_4'
       };
       dispatch({ type: 'ADD_STOCK', payload: newCash });
     },

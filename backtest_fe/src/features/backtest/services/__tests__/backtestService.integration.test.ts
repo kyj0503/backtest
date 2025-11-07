@@ -17,7 +17,7 @@ const baseRequest: BacktestRequest = {
   strategy: 'buy_hold_strategy',
   strategy_params: { window: 20 },
   commission: 0.002,
-  rebalance_frequency: 'monthly',
+  rebalance_frequency: 'weekly_4',
 }
 
 describe('BacktestService (integration)', () => {

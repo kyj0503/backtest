@@ -1,0 +1,29 @@
+/**
+ * 백테스트 검증 규칙 및 기본값
+ */
+
+export const VALIDATION_RULES = {
+  MIN_DATE: '2000-01-01',
+  MAX_DATE: '2030-12-31',
+  MIN_AMOUNT: 100,
+  MAX_AMOUNT: 10000000,
+  MIN_COMMISSION: 0,
+  MAX_COMMISSION: 5,
+  MIN_WEIGHT: 0,
+  MAX_WEIGHT: 100,
+  MIN_STOCKS: 1,
+  MAX_STOCKS: 20,
+  MAX_PORTFOLIO_SIZE: 20,
+  SYMBOL_MAX_LENGTH: 10
+};
+
+// 백테스트 기본값
+export const DEFAULT_VALUES = {
+  START_DATE: '2023-01-01',
+  END_DATE: '2024-12-31',
+  INITIAL_AMOUNT: 10000,
+  COMMISSION: 0.2, // 퍼센트
+  DCA_FREQUENCY: 'weekly_4' as const,
+  REBALANCE_FREQUENCY: 'weekly_4',
+  STRATEGY: 'buy_hold_strategy'
+};

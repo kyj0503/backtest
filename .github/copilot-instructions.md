@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 
-**라고할때살걸** - 트레이딩 전략 백테스팅 플랫폼 (v1.6.2)
+**라고할때살걸** - 트레이딩 전략 백테스팅 플랫폼 (v1.6.5)
 - **Backend**: FastAPI + Python 3.x, backtesting.py 라이브러리 래퍼
 - **Frontend**: React 18 + TypeScript + Vite, shadcn/ui 컴포넌트
 - **배포**: Docker Compose 기반 개발/프로덕션 환경

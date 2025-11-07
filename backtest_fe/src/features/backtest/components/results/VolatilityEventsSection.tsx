@@ -87,7 +87,8 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
       />
 
       {/* 급등락 이벤트 내용 */}
-      {currentVolatilityEvents.length === 0 ? (
+      <div className="mt-6">
+        {currentVolatilityEvents.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           {getStockDisplayName(selectedSymbol)}의 급등락 이벤트가 없습니다.
         </div>
@@ -138,6 +139,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 };

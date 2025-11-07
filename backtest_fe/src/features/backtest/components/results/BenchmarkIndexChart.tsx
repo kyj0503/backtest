@@ -51,10 +51,58 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
     [nasdaqData]
   );
 
-  const normalizedPortfolio = useMemo(
-    () => normalizeData(portfolioEquityData, 'value'),
-    [portfolioEquityData]
-  );
+  // ============================================================
+  // 포트폴리오 누적 수익률 계산 (일일 수익률 기반)
+  // ============================================================
+  //
+  // **목적: DCA(분할 매수) 전략과 벤치마크 지수를 공정하게 비교**
+  // - DCA는 시간에 따라 투자금이 증가하므로 절대 금액(equity curve)으로는 비교 불가
+  // - 대신 일일 수익률을 복리로 누적하여 상대적 성과를 비교
+  // - 시작점을 100으로 normalize하여 직관적 비교 가능
+  //
+  // **수익률 형식 변환:**
+  // - API에서 받는 return_pct: 백분율 (2.5 = 2.5%)
+  // - 복리 계산에 필요한 형식: 소수 (0.025 = 2.5%)
+  // - 변환: dailyReturn / 100
+  //
+  // **복리 누적 공식:**
+  // - 현재 가치 = 이전 가치 × (1 + 수익률)
+  // - 예: 100 × (1 + 0.025) = 102.5 (첫날 2.5% 수익)
+  // - 예: 102.5 × (1 + 0.03) = 105.575 (둘째날 3% 수익)
+  //
+  // **사용 예시:**
+  // - 포트폴리오(DCA): 매달 $1000씩 10회 투자 → 총 투자금 $10,000, 최종 equity $12,000 (20% 수익)
+  // - 벤치마크(지수): 지수는 "투자금" 개념 없이 시작 가격 100에서 종료 가격 110으로 상승 (10% 수익)
+  // - 절대 equity 비교: $12,000 vs 110 (단위도 다르고, DCA 투자금 증가 효과 포함되어 무의미)
+  // - 수익률 비교: 120 vs 110 (시작점 100 기준, 순수 성과만 비교 가능)
+  //
+  // **관련 파일:**
+  // - 백엔드: portfolio_service.py의 API 응답 생성 (return_val * 100으로 백분율 변환)
+  // - 이 파일: normalizedPortfolio 계산 (dailyReturn / 100으로 소수 변환)
+  // ============================================================
+  const normalizedPortfolio = useMemo(() => {
+    if (!portfolioEquityData || portfolioEquityData.length === 0) return [];
+
+    let cumulativeValue = 100; // 시작점 = 100
+
+    return portfolioEquityData.map((point, index) => {
+      if (index === 0) {
+        return { date: point.date, normalized: 100 };
+      }
+
+      // 일일 수익률을 누적: 현재 가치 = 이전 가치 × (1 + 수익률/100)
+      // - dailyReturn: API에서 받은 백분율 (예: 2.5 = 2.5%)
+      // - dailyReturn / 100: 복리 계산용 소수로 변환 (예: 2.5 / 100 = 0.025)
+      // - (1 + 0.025): 수익률 승수 (1.025 = 2.5% 증가)
+      const dailyReturn = point.return_pct || 0;
+      cumulativeValue = cumulativeValue * (1 + dailyReturn / 100);
+
+      return {
+        date: point.date,
+        normalized: cumulativeValue,
+      };
+    });
+  }, [portfolioEquityData]);
 
   // 세 데이터를 날짜별로 병합
   const mergedData = useMemo(() => {
@@ -161,11 +209,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               borderRadius: '8px',
             }}
           />
-          <Legend 
+          <Legend
             wrapperStyle={{ paddingTop: '10px', cursor: 'pointer' }}
-            onClick={(e: { dataKey?: string }) => {
-              const dataKey = e.dataKey;
-              if (dataKey) {
+            onClick={(data) => {
+              const dataKey = data.dataKey;
+              if (dataKey && typeof dataKey === 'string') {
                 setVisibleLines(prev => ({
                   ...prev,
                   [dataKey]: !prev[dataKey],
