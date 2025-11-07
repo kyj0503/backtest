@@ -22,7 +22,7 @@ import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 // DCA 프리뷰 컴포넌트
 const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string }> = ({ stock, startDate, endDate }) => {
   const intervalMonths = getDcaMonths(stock.dcaFrequency || 'monthly');
-  const monthlyAmount = stock.amount;  // 입력한 금액이 회당 투자 금액
+  const monthlyAmount = stock.amount || 0;  // 입력한 금액이 회당 투자 금액
   const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
 
   // 백테스트 기간 계산 (개월 수)
@@ -33,10 +33,12 @@ const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string 
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    // 개월 수 계산
-    const months = (end.getFullYear() - start.getFullYear()) * 12 +
-                   (end.getMonth() - start.getMonth()) +
-                   (end.getDate() > start.getDate() ? 1 : 0);
+    // 개월 수 계산 (백엔드와 동일한 로직)
+    const yearsDiff = end.getFullYear() - start.getFullYear();
+    const monthsDiff = end.getMonth() - start.getMonth();
+    const daysDiff = end.getDate() - start.getDate();
+
+    const months = yearsDiff * 12 + monthsDiff + (daysDiff > 0 ? 1 : 0);
 
     // 투자 횟수 = 백테스트 기간 / 투자 간격
     dcaPeriods = Math.max(1, Math.floor(months / intervalMonths));
