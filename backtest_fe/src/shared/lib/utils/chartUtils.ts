@@ -2,7 +2,7 @@
  * 차트 데이터 변환 및 조작 유틸리티 함수들
  */
 
-import { OhlcPoint, EquityPoint, TradeMarker } from '@/features/backtest/model/backtest-result-types';
+import { OhlcPoint, EquityPoint, TradeMarker } from '@/features/backtest/model/types/backtest-result-types';
 import { formatChartDate, formatDate } from './dateUtils';
 import { formatPercent, formatPrice, getColorByValue } from './numberUtils';
 

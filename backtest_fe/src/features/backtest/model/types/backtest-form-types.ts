@@ -1,4 +1,4 @@
-import { AssetType, DcaFrequency } from './strategyConfig';
+import { AssetType, DcaFrequency } from '../strategyConfig';
 import { StrategyParamValue } from './api-types';
 
 export interface Stock {

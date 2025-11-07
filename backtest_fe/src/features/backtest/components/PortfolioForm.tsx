@@ -49,7 +49,6 @@ export interface PortfolioFormProps {
   addStock: () => void;
   addCash: () => void;
   removeStock: (index: number) => void;
-  getTotalAmount: () => number;
   portfolioInputMode: PortfolioInputMode;
   setPortfolioInputMode: (mode: PortfolioInputMode) => void;
   totalInvestment: number;
@@ -66,7 +65,6 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
   addStock,
   addCash,
   removeStock,
-  getTotalAmount,
   portfolioInputMode,
   setPortfolioInputMode,
   totalInvestment,

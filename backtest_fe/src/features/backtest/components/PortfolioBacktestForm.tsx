@@ -25,7 +25,7 @@ interface PortfolioBacktestFormProps {
 }
 
 const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit, loading = false }) => {
-  const { state, actions, helpers } = useBacktestForm();
+  const { state, actions } = useBacktestForm();
   const { errors, validateForm, setErrors } = useFormValidation();
   const [showErrorModal, setShowErrorModal] = useState(false);
 
@@ -156,7 +156,6 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
           addStock={actions.addStock}
           addCash={actions.addCash}
           removeStock={actions.removeStock}
-          getTotalAmount={helpers.getTotalAmount}
           portfolioInputMode={state.portfolioInputMode}
           setPortfolioInputMode={actions.setPortfolioInputMode}
           totalInvestment={state.totalInvestment}

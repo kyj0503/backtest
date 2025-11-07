@@ -209,11 +209,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               borderRadius: '8px',
             }}
           />
-          <Legend 
+          <Legend
             wrapperStyle={{ paddingTop: '10px', cursor: 'pointer' }}
-            onClick={(e: { dataKey?: string }) => {
-              const dataKey = e.dataKey;
-              if (dataKey) {
+            onClick={(data) => {
+              const dataKey = data.dataKey;
+              if (dataKey && typeof dataKey === 'string') {
                 setVisibleLines(prev => ({
                   ...prev,
                   [dataKey]: !prev[dataKey],

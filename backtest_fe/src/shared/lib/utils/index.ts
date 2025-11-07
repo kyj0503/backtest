@@ -10,9 +10,7 @@ export * from './numberUtils';
 export * from './chartUtils';
 
 // 레거시 포맷터 (호환성 유지를 위해 별칭으로 내보내기)
-export { 
-  getStatVariant, 
-  getTradeColor, 
-  calculateTotalAmount, 
-  calculateWeight 
+export {
+  getStatVariant,
+  getTradeColor
 } from './formatters';

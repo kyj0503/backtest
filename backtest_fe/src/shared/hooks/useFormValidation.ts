@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { BacktestFormState } from '@/features/backtest/model/backtest-form-types';
+import { BacktestFormState } from '@/features/backtest/model/types/backtest-form-types';
 
 export interface UseFormValidationReturn {
   errors: string[];
