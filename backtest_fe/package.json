@@ -1,6 +1,6 @@
 {
   "name": "backtesting-frontend",
-  "version": "1.6.3",
+  "version": "1.6.5",
   "description": "Professional backtesting dashboard built with React, TypeScript, Tailwind CSS, and Recharts for visualizing trading strategy performance",
   "private": true,
   "type": "module",
@@ -101,7 +101,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "postinstall": "patch-package"
   },
   "eslintConfig": {
     "extends": [

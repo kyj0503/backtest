@@ -18,7 +18,7 @@ import {
   Lightbulb,
   Link2
 } from 'lucide-react';
-import { STRATEGY_DETAILS, StrategyDetail } from '../constants/strategyDetails';
+import { STRATEGY_DETAILS } from '../constants/strategyDetails';
 
 interface StrategyHelpModalProps {
   strategyId: string;

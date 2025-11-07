@@ -7,18 +7,16 @@
  * - 수수료, 거래 가격, 거래 금액 모두 USD
  */
 import React, { useState } from 'react';
-import { RebalanceEvent, TickerInfo } from '../../model/types/backtest-result-types';
+import { RebalanceEvent } from '../../model/types/backtest-result-types';
 import { ChevronDown, ChevronRight, TrendingUp, TrendingDown } from 'lucide-react';
-import { Button } from '@/shared/ui/button';
-import { CARD_STYLES, TEXT_STYLES, HEADING_STYLES, SPACING } from '@/shared/styles/design-tokens';
+import { CARD_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { formatPriceWithCurrency } from '@/shared/lib/utils/numberUtils';
 
 interface RebalanceHistoryTableProps {
   rebalanceHistory: RebalanceEvent[];
-  tickerInfo?: { [symbol: string]: TickerInfo };
 }
 
-const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalanceHistory, tickerInfo = {} }) => {
+const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalanceHistory }) => {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const toggleRow = (index: number) => {

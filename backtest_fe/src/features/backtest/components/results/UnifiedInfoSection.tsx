@@ -18,7 +18,7 @@
 import React, { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import StockSymbolSelector from './StockSymbolSelector';
-import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
+import { CARD_STYLES } from '@/shared/styles/design-tokens';
 
 interface VolatilityEvent {
   date: string;
