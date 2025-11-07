@@ -1178,12 +1178,14 @@ class PortfolioService:
                 asset_type = getattr(item, 'asset_type', 'stock')  # 자산 타입 확인
                 
                 # 분할 매수 정보 저장
+                # 분할 매수 시: amount는 "회당 투자 금액"으로 해석
+                # 일시불 시: amount는 "총 투자 금액"으로 해석
                 dca_info[symbol] = {
                     'symbol': symbol,
                     'investment_type': investment_type,
                     'dca_frequency': dca_frequency,
                     'dca_periods': dca_periods,
-                    'monthly_amount': amount / dca_periods if investment_type == 'dca' else amount,
+                    'monthly_amount': amount,  # 분할 매수 시 amount는 회당 투자 금액
                     'asset_type': asset_type
                 }
                 
@@ -1195,9 +1197,9 @@ class PortfolioService:
                     continue
                 
                 logger.info(f"종목 {symbol} 데이터 로드 중 (투자금액: ${amount:,.2f}, 방식: {investment_type})")
-                
+
                 if investment_type == 'dca':
-                    logger.info(f"분할 매수: ${amount:,.2f}을 {dca_periods}개월에 걸쳐 매달 ${amount/dca_periods:,.2f}씩")
+                    logger.info(f"분할 매수: {dca_periods}회에 걸쳐 회당 ${amount:,.2f}씩 (총 ${amount * dca_periods:,.2f})")
                 
                 # DB에서 데이터 로드
                 df = load_ticker_data(symbol, request.start_date, request.end_date)

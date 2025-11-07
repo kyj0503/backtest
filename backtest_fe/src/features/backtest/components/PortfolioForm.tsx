@@ -22,12 +22,13 @@ import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 // DCA 프리뷰 컴포넌트
 const DcaPreview: React.FC<{ stock: Stock }> = ({ stock }) => {
   const dcaMonths = getDcaMonths(stock.dcaFrequency || 'monthly');
-  const monthlyAmount = Math.round(stock.amount / dcaMonths);
+  const monthlyAmount = stock.amount;  // 입력한 금액이 회당 투자 금액
+  const totalAmount = stock.amount * dcaMonths;  // 총 투자 금액
   const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
 
   return (
     <p className={`${TEXT_STYLES.captionSmall} mt-1`}>
-      {frequencyLabel}: 총 {dcaMonths}회, 회당 ${monthlyAmount.toLocaleString()}
+      {frequencyLabel}: 총 {dcaMonths}회, 회당 ${monthlyAmount.toLocaleString()} (총 ${totalAmount.toLocaleString()})
     </p>
   );
 };
@@ -145,7 +146,10 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               </TableHead>
               <TableHead className="w-32">
                 <FinancialTermTooltip term="투자 금액">
-                  투자 금액 ($)
+                  <div className="flex flex-col gap-0.5">
+                    <span>투자 금액 ($)</span>
+                    <span className="text-xs font-normal text-muted-foreground">분할매수: 회당 금액</span>
+                  </div>
                 </FinancialTermTooltip>
               </TableHead>
               <TableHead className="w-28">투자 방식</TableHead>
