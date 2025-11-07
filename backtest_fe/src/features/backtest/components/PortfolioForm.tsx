@@ -38,8 +38,9 @@ const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string 
     const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
     const weeks = Math.floor(days / 7);
 
-    // 투자 횟수 = 백테스트 기간(주) / 투자 간격(주)
-    dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks));
+    // 투자 횟수 = (백테스트 기간(주) / 투자 간격(주)) + 1 (0주차 첫 투자 포함)
+    // 예: 52주 / 24주 = 2, 2 + 1 = 3회 (0주, 24주, 48주)
+    dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
     totalAmount = periodAmount * dcaPeriods;
   }
 

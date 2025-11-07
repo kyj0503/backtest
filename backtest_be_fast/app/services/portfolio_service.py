@@ -449,6 +449,10 @@ class PortfolioService:
                     current_period = weeks_passed // interval_weeks
                     prev_period = prev_weeks_passed // interval_weeks
 
+                    # 디버깅: 주기 변화 로깅
+                    if current_period != prev_period:
+                        logger.info(f"{current_date.date()}: {unique_key} 주기 변화 감지 - prev_period={prev_period}, current_period={current_period}, dca_periods={info['dca_periods']}, interval_weeks={interval_weeks}")
+
                     # 새로운 투자 주기에 진입했고, 아직 투자 횟수를 초과하지 않았으면 투자
                     if current_period > prev_period and current_period < info['dca_periods']:
                         if unique_key in current_prices:
@@ -458,7 +462,9 @@ class PortfolioService:
                             shares[unique_key] += invest_amount / price
                             total_trades += 1  # DCA 추가 매수 거래
                             daily_cash_inflow += period_amount  # DCA 추가 투자 유입 기록
-                            logger.debug(f"{current_date.date()}: {unique_key} DCA 추가 매수 (주기 {current_period + 1}/{info['dca_periods']})")
+                            logger.info(f"{current_date.date()}: {unique_key} DCA 추가 매수 실행! (주기 {current_period + 1}/{info['dca_periods']}, 금액: ${period_amount:,.2f})")
+                        else:
+                            logger.warning(f"{current_date.date()}: {unique_key} DCA 매수 시점이지만 가격 데이터 없음 (주기 {current_period + 1}/{info['dca_periods']})")
 
             # 리밸런싱 실행
             should_rebalance = RebalanceHelper.is_rebalance_date(
@@ -1202,9 +1208,10 @@ class PortfolioService:
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_frequency = getattr(item, 'dca_frequency', 'weekly_4')
 
-                # DCA 투자 횟수 계산: 백테스트 기간(주) / 투자 간격(주)
+                # DCA 투자 횟수 계산: 백테스트 기간(주) / 투자 간격(주) + 1 (0주차 첫 투자 포함)
                 interval_weeks = DCA_FREQUENCY_MAP.get(dca_frequency, 4)
-                dca_periods = max(1, backtest_weeks // interval_weeks) if investment_type == 'dca' else 1
+                # 예: 52주 / 24주 = 2, 2 + 1 = 3회 (0주, 24주, 48주)
+                dca_periods = max(1, (backtest_weeks // interval_weeks) + 1) if investment_type == 'dca' else 1
 
                 asset_type = getattr(item, 'asset_type', 'stock')
 
