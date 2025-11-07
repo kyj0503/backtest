@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => ({
           // 차트 라이브러리 분리
           'chart-vendor': ['recharts'],
           // 아이콘 라이브러리 분리
-          'icon-vendor': ['react-icons'],
+          'icon-vendor': ['lucide-react'],
           // 유틸리티 라이브러리 분리
           'util-vendor': ['axios']
         }

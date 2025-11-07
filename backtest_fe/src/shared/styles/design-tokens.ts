@@ -58,6 +58,9 @@ export const SPACING = {
   gap: 'gap-6',
   gapCompact: 'gap-4',
   gapSmall: 'gap-2',
+  /** 버튼/제목과 컨텐츠 사이 간격 */
+  contentGap: 'mb-6',
+  contentGapCompact: 'mb-4',
 } as const;
 
 // ============================================
