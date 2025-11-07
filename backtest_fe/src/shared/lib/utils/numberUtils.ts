@@ -3,7 +3,12 @@
  */
 
 // 기본 포맷팅 함수들
-export const formatCurrency = (value: number): string => {
+
+/**
+ * 통화 값을 축약 형식으로 포맷팅
+ * @example formatCurrencyCompact(1500000) => "1.5M"
+ */
+export const formatCurrencyCompact = (value: number): string => {
   if (value >= 1e9) {
     return `${(value / 1e9).toFixed(1)}B`;
   } else if (value >= 1e6) {
@@ -14,9 +19,23 @@ export const formatCurrency = (value: number): string => {
   return value.toLocaleString();
 };
 
-export const formatPercent = (value: number, decimals = 2): string => {
+/**
+ * @deprecated Use formatCurrencyCompact instead
+ */
+export const formatCurrency = formatCurrencyCompact;
+
+/**
+ * 퍼센트 값을 +/- 기호와 함께 포맷팅
+ * @example formatPercentWithSign(12.34) => "+12.34%"
+ */
+export const formatPercentWithSign = (value: number, decimals = 2): string => {
   return `${value > 0 ? '+' : ''}${value.toFixed(decimals)}%`;
 };
+
+/**
+ * @deprecated Use formatPercentWithSign for signed format
+ */
+export const formatPercent = formatPercentWithSign;
 
 export const formatPrice = (value: number, decimals = 2): string => {
   return `$${value.toFixed(decimals)}`;

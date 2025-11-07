@@ -48,15 +48,9 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
     try {
       // 포트폴리오 데이터 준비 (백엔드 API 스키마에 맞춘 변환)
       const portfolioData = state.portfolio.map(stock => {
-        // amount와 weight는 동시에 보낼 수 없음 (백엔드 검증)
-        const hasWeight = typeof stock.weight === 'number';
-        
         return {
           symbol: stock.symbol.toUpperCase(),
-          // 비중 기준일 때는 amount를 보내지 않음
-          ...(hasWeight ? {} : { amount: stock.amount }),
-          // 금액 기준일 때는 weight를 보내지 않음
-          ...(hasWeight ? { weight: stock.weight } : {}),
+          amount: stock.amount,  // 항상 amount를 전송 (비중 모드에서도 reducer가 계산함)
           investment_type: stock.investmentType,
           dca_frequency: stock.dcaFrequency || 'weekly_4',
           asset_type: stock.assetType || ASSET_TYPES.STOCK

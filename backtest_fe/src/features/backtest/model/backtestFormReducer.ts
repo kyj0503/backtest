@@ -1,14 +1,77 @@
 import { ASSET_TYPES } from './strategyConfig';
+import { calculateDcaPeriods } from '../utils/calculateDcaPeriods';
 import { BacktestFormState, BacktestFormAction, Stock } from './backtest-form-types';
 
 export function backtestFormReducer(state: BacktestFormState, action: BacktestFormAction): BacktestFormState {
-  // 비중 기반 모드에서 amount 자동 계산
-  const recalcAmountsByWeight = (portfolio: Stock[], totalInvestment: number) => {
-    return portfolio.map(s =>
-      typeof s.weight === 'number'
-        ? { ...s, amount: Math.round((s.weight / 100) * totalInvestment) }
-        : s
-    );
+  // 비중 기반 모드에서 amount 자동 계산 (DCA 고려)
+  const recalcAmountsByWeight = (portfolio: Stock[], totalInvestment: number, startDate?: string, endDate?: string) => {
+    if (!startDate || !endDate || totalInvestment === 0) {
+      // 날짜 정보 없으면 기본 계산
+      return portfolio.map(s =>
+        typeof s.weight === 'number'
+          ? { ...s, amount: Math.round((s.weight / 100) * totalInvestment) }
+          : s
+      );
+    }
+
+    // Step 1: weight 항목들의 인덱스 찾기
+    const weightIndices: number[] = [];
+    portfolio.forEach((s, index) => {
+      if (typeof s.weight === 'number') {
+        weightIndices.push(index);
+      }
+    });
+
+    if (weightIndices.length === 0) return portfolio;
+
+    // Step 2: 각 weight 항목의 amount 계산
+    const perPeriodAmounts: (number | null)[] = new Array(portfolio.length).fill(null);
+    let accumulatedTotalAmount = 0;  // 비 DCA 종목들의 누적 투자액
+
+    weightIndices.forEach((index, pos) => {
+      const s = portfolio[index];
+      const weightPercent = s.weight || 0;
+      const totalAmountForStock = (weightPercent / 100) * totalInvestment;
+      const isLastWeightItem = pos === weightIndices.length - 1;
+
+      if (s.investmentType === 'dca') {
+        const dcaPeriods = calculateDcaPeriods(startDate, endDate, s.dcaFrequency || 'weekly_4');
+        
+        if (isLastWeightItem) {
+          // 마지막 DCA 항목: 정확한 오차 보정
+          // remainingTotal = 총액 - (이전 종목들의 실제 투자액)
+          const remainingTotal = totalInvestment - accumulatedTotalAmount;
+          // 회당 금액 = 남은 총액 / 기간 (반올림으로 일관성 있게 계산)
+          const perPeriodAmount = Math.round(remainingTotal / dcaPeriods);
+          perPeriodAmounts[index] = perPeriodAmount;
+        } else {
+          // 일반 DCA 항목
+          const perPeriodAmount = Math.round(totalAmountForStock / dcaPeriods);
+          perPeriodAmounts[index] = perPeriodAmount;
+          // 누적: 회당 금액 × 기간 (실제 투자액 기반, 반올림된 회당 금액 사용)
+          accumulatedTotalAmount += Math.round(perPeriodAmount * dcaPeriods);
+        }
+      } else {
+        // 일시불 항목
+        const amount = Math.round(totalAmountForStock);
+        perPeriodAmounts[index] = amount;
+        if (!isLastWeightItem) {
+          accumulatedTotalAmount += amount;
+        } else {
+          // 마지막 일시불 항목: 오차 보정
+          const remainingTotal = totalInvestment - accumulatedTotalAmount;
+          perPeriodAmounts[index] = remainingTotal;
+        }
+      }
+    });
+
+    // Step 3: 최종 결과 반영
+    return portfolio.map((s, index) => {
+      if (perPeriodAmounts[index] !== null) {
+        return { ...s, amount: perPeriodAmounts[index]! };
+      }
+      return s;
+    });
   };
 
   switch (action.type) {
@@ -33,6 +96,10 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           if (field === 'weight') {
             return { ...stock, weight: Number(value) };
           }
+          // DCA 주기 변경시에도 amount 자동 계산 필요
+          if (field === 'dcaFrequency' || field === 'investmentType') {
+            return { ...stock, [field]: value };
+          }
           // 나머지 필드는 그대로
           return { ...stock, [field]: value };
         } else {
@@ -46,12 +113,17 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           return { ...stock, [field]: value };
         }
       });
-      // 비중 기반 모드면 amount 자동 계산
+      // 비중 기반 모드면 amount 자동 계산 (DCA 고려)
       if (state.portfolioInputMode === 'weight') {
-        updatedPortfolio = recalcAmountsByWeight(updatedPortfolio, state.totalInvestment);
+        updatedPortfolio = recalcAmountsByWeight(
+          updatedPortfolio,
+          state.totalInvestment,
+          state.dates.startDate,
+          state.dates.endDate
+        );
       } else {
         // 금액 기반 모드에서 weight가 하나라도 있으면 amount를 weight 기준으로 동기화
-        const hasAnyWeight = updatedPortfolio.some(s => typeof s.weight === 'number');
+        const hasAnyWeight = updatedPortfolio.some((s) => typeof s.weight === 'number');
         if (hasAnyWeight) {
           const totalBudget = backtestFormHelpers.getTotalAmount(updatedPortfolio);
           updatedPortfolio = backtestFormHelpers.applyWeightsToAmounts(updatedPortfolio, totalBudget);
@@ -68,15 +140,20 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
       if (action.payload === 'weight') {
         // 금액→비중: 현재 금액 비율로 weight 세팅
         const total = backtestFormHelpers.getTotalAmount(state.portfolio);
-        updatedPortfolio = state.portfolio.map(s => ({
+        updatedPortfolio = state.portfolio.map((s) => ({
           ...s,
           weight: total > 0 ? Number(((s.amount / total) * 100).toFixed(2)) : 0
         }));
-        // amount는 totalInvestment 기준으로 재계산
-        updatedPortfolio = recalcAmountsByWeight(updatedPortfolio, state.totalInvestment);
+        // amount는 totalInvestment 기준으로 재계산 (DCA 고려)
+        updatedPortfolio = recalcAmountsByWeight(
+          updatedPortfolio,
+          state.totalInvestment,
+          state.dates.startDate,
+          state.dates.endDate
+        );
       } else {
         // 비중→금액: weight를 undefined로 초기화
-        updatedPortfolio = state.portfolio.map(s => ({ ...s, weight: undefined }));
+        updatedPortfolio = state.portfolio.map((s) => ({ ...s, weight: undefined }));
       }
       return {
         ...state,
@@ -86,10 +163,15 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
     }
 
     case 'SET_TOTAL_INVESTMENT': {
-      // 전체 투자금액 변경 시 비중 기반 모드면 amount 자동 계산
+      // 전체 투자금액 변경 시 비중 기반 모드면 amount 자동 계산 (DCA 고려)
       let updatedPortfolio = state.portfolio;
       if (state.portfolioInputMode === 'weight') {
-        updatedPortfolio = recalcAmountsByWeight(state.portfolio, action.payload);
+        updatedPortfolio = recalcAmountsByWeight(
+          state.portfolio,
+          action.payload,
+          state.dates.startDate,
+          state.dates.endDate
+        );
       }
       return {
         ...state,
@@ -104,23 +186,49 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
         portfolio: state.portfolio.filter((_, index) => index !== action.payload)
       };
 
-    case 'SET_START_DATE':
+    case 'SET_START_DATE': {
+      const newDates = {
+        ...state.dates,
+        startDate: action.payload
+      };
+      // 비중 기반 모드일 때 날짜 변경 시 amount 재계산 (DCA 기간이 바뀔 수 있음)
+      let updatedPortfolio = state.portfolio;
+      if (state.portfolioInputMode === 'weight') {
+        updatedPortfolio = recalcAmountsByWeight(
+          state.portfolio,
+          state.totalInvestment,
+          action.payload,
+          state.dates.endDate
+        );
+      }
       return {
         ...state,
-        dates: {
-          ...state.dates,
-          startDate: action.payload
-        }
+        dates: newDates,
+        portfolio: updatedPortfolio
       };
+    }
 
-    case 'SET_END_DATE':
+    case 'SET_END_DATE': {
+      const newDates = {
+        ...state.dates,
+        endDate: action.payload
+      };
+      // 비중 기반 모드일 때 날짜 변경 시 amount 재계산 (DCA 기간이 바뀔 수 있음)
+      let updatedPortfolio = state.portfolio;
+      if (state.portfolioInputMode === 'weight') {
+        updatedPortfolio = recalcAmountsByWeight(
+          state.portfolio,
+          state.totalInvestment,
+          state.dates.startDate,
+          action.payload
+        );
+      }
       return {
         ...state,
-        dates: {
-          ...state.dates,
-          endDate: action.payload
-        }
+        dates: newDates,
+        portfolio: updatedPortfolio
       };
+    }
 
     case 'SET_STRATEGY':
       return {
@@ -294,8 +402,15 @@ export const backtestFormHelpers = {
     const hasAnyWeight = weights.some(w => w > 0);
     if (hasAnyWeight) {
       const totalWeight = weights.reduce((a, b) => a + b, 0);
-      if (Math.abs(totalWeight - 100) > 0.5) {
-        errors.push(`포트폴리오 비중 합계가 100%가 아닙니다 (현재 ${totalWeight.toFixed(1)}%).`);
+      // 비중 합계 검증: 100% ± 5 percentage points 범위 허용 (95~105%)
+      // 반올림 오차 및 DCA 계산 오차를 고려한 허용 범위
+      // 예: 50% + 50% = 100% OK
+      //     50.1% + 49.9% = 100% OK
+      //     60% + 40% = 100% OK
+      //     52.5% + 52.5% = 105% OK (±5pp 이내)
+      //     55% + 55% = 110% NG (±5pp 초과)
+      if (totalWeight < 95 || totalWeight > 105) {
+        errors.push(`포트폴리오 비중 합계가 95~105% 범위여야 합니다. 현재 ${totalWeight.toFixed(1)}%.`);
       }
     }
 

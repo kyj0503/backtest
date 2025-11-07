@@ -16,31 +16,23 @@ import {
   TableRow,
 } from '@/shared/ui/table';
 import { Stock, PortfolioInputMode } from '../model/types/backtest-form-types';
-import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaWeeks, VALIDATION_RULES } from '../model/strategyConfig';
+import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, VALIDATION_RULES } from '../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
+import { getDcaAdjustedTotal } from '../utils/portfolioCalculations';
+import { calculateDcaPeriods } from '../utils/calculateDcaPeriods';
 
 // DCA 프리뷰 컴포넌트
 const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string }> = ({ stock, startDate, endDate }) => {
-  const intervalWeeks = getDcaWeeks(stock.dcaFrequency || 'weekly_4');
   const periodAmount = stock.amount || 0;  // 입력한 금액이 회당 투자 금액
   const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
 
-  // 백테스트 기간 계산 (주 수)
+  // 백테스트 기간 계산 (DCA 횟수)
   let dcaPeriods = 1;
   let totalAmount = periodAmount;
 
   if (startDate && endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    // 백테스트 기간을 주 단위로 계산 (백엔드와 동일한 로직)
-    const timeDiff = end.getTime() - start.getTime();
-    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-    const weeks = Math.floor(days / 7);
-
-    // 투자 횟수 = (백테스트 기간(주) / 투자 간격(주)) + 1 (0주차 첫 투자 포함)
-    // 예: 52주 / 24주 = 2, 2 + 1 = 3회 (0주, 24주, 48주)
-    dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+    // calculateDcaPeriods를 사용하여 중복 제거
+    dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
     totalAmount = periodAmount * dcaPeriods;
   }
 
@@ -114,7 +106,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               <Input
                 type="number"
                 min={1}
-                step={10}
+                step={0.01}
                 value={totalInvestment}
                 onChange={e => setTotalInvestment(Number(e.target.value))}
                 className="h-8 w-28 rounded-full border-0 bg-background text-right text-sm shadow-none focus-visible:ring-1"
@@ -168,13 +160,14 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               </TableHead>
               <TableHead className="w-32">
                 <FinancialTermTooltip term="투자 금액">
-                  <div className="flex flex-col gap-0.5">
-                    <span>투자 금액 ($)</span>
-                    <span className="text-xs font-normal text-muted-foreground">분할매수: 회당 금액</span>
-                  </div>
+                  투자 금액 ($)
                 </FinancialTermTooltip>
               </TableHead>
-              <TableHead className="w-28">투자 방식</TableHead>
+              <TableHead className="w-28">
+                <FinancialTermTooltip term="투자 방식">
+                  투자 방식
+                </FinancialTermTooltip>
+              </TableHead>
               <TableHead className="w-24">
                 <FinancialTermTooltip term="자산">
                   자산 타입
@@ -309,7 +302,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                   </div>
                 </TableCell>
                 <TableCell className="w-24">
-                  {/* 비중(%) 입력: weight 기반 모드면 직접 입력, 금액 기반 모드면 자동 계산 */}
+                  {/* 비중(%) 입력: weight 기반 모드면 직접 입력, 금액 기반 모드면 자동 계산 (DCA 고려) */}
                   {portfolioInputMode === 'weight' ? (
                     <Input
                       type="number"
@@ -321,8 +314,28 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                       className="w-20 px-2 py-1 text-sm"
                     />
                   ) : (
-                    <span title="투자 금액 비율로 자동 계산됨. 비중을 직접 입력하려면 비중 기반 모드로 전환하세요.">
-                      {((stock.amount / getTotalAmount()) * 100).toFixed(1)}%
+                    <span title="DCA를 포함한 총 투자금액 비율로 자동 계산됨. 비중을 직접 입력하려면 비중 기반 모드로 전환하세요.">
+                      {(() => {
+                        // 날짜가 설정되지 않으면 가중치 계산 불가
+                        if (!startDate || !endDate) {
+                          return 'N/A';
+                        }
+
+                        const dcaAdjustedTotal = getDcaAdjustedTotal(portfolio, startDate, endDate);
+                        
+                        // 각 종목의 실제 총 투자액 계산
+                        let stockTotalAmount = stock.amount;
+                        if (stock.investmentType === 'dca') {
+                          // DCA: 회당 금액 × 투자 횟수
+                          const dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
+                          stockTotalAmount = stock.amount * dcaPeriods;
+                        }
+                        // 일시불: 입력한 금액 그대로
+                        
+                        return dcaAdjustedTotal > 0 
+                          ? ((stockTotalAmount / dcaAdjustedTotal) * 100).toFixed(1)
+                          : '0.0';
+                      })()}%
                     </span>
                   )}
                 </TableCell>
@@ -343,10 +356,34 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
             <TableFooter>
               <TableRow>
                 <TableHead className="text-left font-medium">합계</TableHead>
-                <TableHead className="text-left font-medium">${getTotalAmount().toLocaleString()}</TableHead>
+                <TableHead className="text-left font-medium">${(() => {
+                  const dcaAdjustedTotal = getDcaAdjustedTotal(portfolio, startDate, endDate);
+                  return dcaAdjustedTotal.toLocaleString();
+                })()}</TableHead>
                 <TableHead className="text-left font-medium">-</TableHead>
                 <TableHead className="text-left font-medium">-</TableHead>
-                <TableHead className="text-left font-medium">100.0%</TableHead>
+                <TableHead className="text-left font-medium">
+                  {(() => {
+                    // 실제 비중 합계 계산
+                    if (portfolioInputMode === 'weight') {
+                      const totalWeight = portfolio.reduce((sum, stock) => {
+                        return sum + (typeof stock.weight === 'number' ? stock.weight : 0);
+                      }, 0);
+                      
+                      const isValid = Math.abs(totalWeight - 100) < 0.01; // 반올림 오차 허용
+                      const displayWeight = totalWeight.toFixed(1);
+                      
+                      return (
+                        <span className={isValid ? 'text-foreground' : 'text-destructive font-bold'}>
+                          {displayWeight}%
+                        </span>
+                      );
+                    } else {
+                      // 금액 기준 모드에서는 항상 100%
+                      return '100.0%';
+                    }
+                  })()}
+                </TableHead>
                 <TableHead className="text-left font-medium"></TableHead>
               </TableRow>
             </TableFooter>
