@@ -588,6 +588,11 @@ def load_news_from_db(ticker: str, max_age_hours: int = 3) -> Optional[list]:
 
     Returns:
         뉴스 리스트 또는 None (데이터가 없거나 너무 오래된 경우)
+        각 뉴스는 다음 키를 포함하는 딕셔너리:
+            - title: 뉴스 제목
+            - link: 뉴스 링크
+            - description: 뉴스 설명
+            - pubDate: 발행일 (RFC 2822 형식)
     """
     engine = _get_engine()
     conn = engine.connect()
@@ -634,6 +639,9 @@ def load_news_from_db(ticker: str, max_age_hours: int = 3) -> Optional[list]:
 def save_news_to_db(ticker: str, news_list: list) -> int:
     """
     뉴스 데이터를 DB에 저장
+
+    ⚠️ 주의: 이 함수는 해당 ticker의 기존 뉴스를 모두 삭제한 후 새 뉴스를 저장합니다.
+    이는 중복 방지와 최신 데이터 유지를 위한 설계입니다.
 
     Args:
         ticker: 종목 심볼

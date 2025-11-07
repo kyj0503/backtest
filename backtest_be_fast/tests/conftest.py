@@ -7,7 +7,7 @@ Pytest Configuration and Global Fixtures
 
 import pytest
 import asyncio
-from typing import AsyncGenerator, Generator, Optional
+from typing import AsyncGenerator
 from unittest.mock import Mock, AsyncMock
 from decimal import Decimal
 from datetime import datetime
@@ -15,7 +15,6 @@ from datetime import datetime
 # Optional imports for integration tests
 try:
     from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-    from sqlalchemy.orm import sessionmaker
     HAS_SQLALCHEMY = True
 except ImportError:
     HAS_SQLALCHEMY = False
