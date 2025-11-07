@@ -41,6 +41,7 @@ from typing import List, Dict, Any
 from datetime import datetime, timedelta
 
 from ..core.config import settings
+from ..constants import TICKER_TO_COMPANY_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -48,82 +49,8 @@ logger = logging.getLogger(__name__)
 class NaverNewsService:
     """네이버 검색 API를 사용한 뉴스 서비스"""
 
-    # 티커에 따른 한국어 검색어 매핑
-    TICKER_MAPPING = {
-        # 미국 주요 종목
-        "AAPL": "애플",
-        "MSFT": "마이크로소프트",
-        "GOOGL": "구글",
-        "AMZN": "아마존",
-        "TSLA": "테슬라",
-        "META": "메타",
-        "NVDA": "엔비디아",
-        "NFLX": "넷플릭스",
-        "AMD": "AMD",
-        "INTC": "인텔",
-        "CRM": "세일즈포스",
-        "ORCL": "오라클",
-        "ADBE": "어도비",
-        "PYPL": "페이팔",
-        "UBER": "우버",
-        "SNAP": "스냅챗",
-        "SPOT": "스포티파이",
-        "SQ": "스퀘어",
-        "ZOOM": "줌",
-        "SHOP": "쇼피파이",
-        "ROKU": "로쿠",
-        "PINS": "핀터레스트",
-        "DOCU": "도큐사인",
-        "OKTA": "옥타",
-        "DDOG": "데이터독",
-        "SNOW": "스노우플레이크",
-        "PLTR": "팔란티어",
-        "RBLX": "로블록스",
-        "U": "유니티",
-        "COIN": "코인베이스",
-        "RIVN": "리비안",
-        "LCID": "루시드",
-
-        # 한국 주요 종목
-        "005930.KS": "삼성전자",
-        "000660.KS": "SK하이닉스",
-        "035420.KS": "NAVER",
-        "207940.KS": "삼성바이오로직스",
-        "006400.KS": "삼성SDI",
-        "051910.KS": "LG화학",
-        "373220.KS": "LG에너지솔루션",
-        "000270.KS": "기아",
-        "005380.KS": "현대차",
-        "035720.KS": "카카오",
-        "096770.KS": "SK이노베이션",
-        "017670.KS": "SK텔레콤",
-        "030200.KS": "KT",
-        "055550.KS": "신한지주",
-        "105560.KS": "KB금융",
-        "086790.KS": "하나금융지주",
-        "316140.KS": "우리금융지주",
-        "028260.KS": "삼성물산",
-        "010950.KS": "S-Oil",
-        "009150.KS": "삼성전기",
-        "323410.KS": "카카오뱅크",
-        "018260.KS": "삼성에스디에스",
-        "068270.KS": "셀트리온",
-        "003670.KS": "포스코퓨처엠",
-        "066570.KS": "LG전자",
-        "034730.KS": "SK",
-        "015760.KS": "한국전력",
-        "036570.KS": "엔씨소프트",
-        "012330.KS": "현대모비스",
-        "003550.KS": "LG",
-        "251270.KS": "넷마블",
-        "009540.KS": "HD한국조선해양",
-        "032830.KS": "삼성생명",
-        "033780.KS": "KT&G",
-        "090430.KS": "아모레퍼시픽",
-        "180640.KS": "한진칼",
-        "128940.KS": "한미약품",
-        "047050.KS": "포스코인터내셔널"
-    }
+    # 티커 매핑을 외부 상수에서 가져옴
+    TICKER_MAPPING = TICKER_TO_COMPANY_NAME
 
     def __init__(self):
         self.client_id = settings.naver_client_id
