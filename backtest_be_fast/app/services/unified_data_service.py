@@ -248,7 +248,7 @@ class UnifiedDataService:
     def collect_latest_news(
         self,
         symbols: List[str],
-        display: int = 15,
+        display: int = 20,
         max_cache_hours: int = 3
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
@@ -303,7 +303,7 @@ class UnifiedDataService:
         start_date: str,
         end_date: str,
         include_news: bool = True,
-        news_display_count: int = 15
+        news_display_count: int = 20
     ) -> Dict[str, Any]:
         """
         모든 통합 데이터를 한 번에 수집
