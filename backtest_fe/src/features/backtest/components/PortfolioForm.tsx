@@ -16,38 +16,36 @@ import {
   TableRow,
 } from '@/shared/ui/table';
 import { Stock, PortfolioInputMode } from '../model/types/backtest-form-types';
-import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths, VALIDATION_RULES } from '../model/strategyConfig';
+import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaWeeks, VALIDATION_RULES } from '../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 // DCA 프리뷰 컴포넌트
 const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string }> = ({ stock, startDate, endDate }) => {
-  const intervalMonths = getDcaMonths(stock.dcaFrequency || 'monthly');
-  const monthlyAmount = stock.amount || 0;  // 입력한 금액이 회당 투자 금액
+  const intervalWeeks = getDcaWeeks(stock.dcaFrequency || 'weekly_4');
+  const periodAmount = stock.amount || 0;  // 입력한 금액이 회당 투자 금액
   const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
 
-  // 백테스트 기간 계산 (개월 수)
+  // 백테스트 기간 계산 (주 수)
   let dcaPeriods = 1;
-  let totalAmount = monthlyAmount;
+  let totalAmount = periodAmount;
 
   if (startDate && endDate) {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    // 개월 수 계산 (백엔드와 동일한 로직)
-    const yearsDiff = end.getFullYear() - start.getFullYear();
-    const monthsDiff = end.getMonth() - start.getMonth();
-    const daysDiff = end.getDate() - start.getDate();
+    // 백테스트 기간을 주 단위로 계산 (백엔드와 동일한 로직)
+    const timeDiff = end.getTime() - start.getTime();
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const weeks = Math.floor(days / 7);
 
-    const months = yearsDiff * 12 + monthsDiff + (daysDiff > 0 ? 1 : 0);
-
-    // 투자 횟수 = 백테스트 기간 / 투자 간격
-    dcaPeriods = Math.max(1, Math.floor(months / intervalMonths));
-    totalAmount = monthlyAmount * dcaPeriods;
+    // 투자 횟수 = 백테스트 기간(주) / 투자 간격(주)
+    dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks));
+    totalAmount = periodAmount * dcaPeriods;
   }
 
   return (
     <p className={`${TEXT_STYLES.captionSmall} mt-1`}>
-      {frequencyLabel}: 총 {dcaPeriods}회, 회당 ${monthlyAmount.toLocaleString()} (총 ${totalAmount.toLocaleString()})
+      {frequencyLabel}: 총 {dcaPeriods}회, 회당 ${periodAmount.toLocaleString()} (총 ${totalAmount.toLocaleString()})
     </p>
   );
 };
