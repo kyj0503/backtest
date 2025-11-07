@@ -54,7 +54,8 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           // 일반 DCA 항목
           const perPeriodAmount = Math.round(totalAmountForStock / dcaPeriods);
           perPeriodAmounts[index] = perPeriodAmount;
-          accumulatedTotalAmount += Math.round(totalAmountForStock);
+          // 누적: 회당 금액 × 기간 (실제 투자액 기반, 반올림된 회당 금액 사용)
+          accumulatedTotalAmount += Math.round(perPeriodAmount * dcaPeriods);
         }
       } else {
         // 일시불 항목
