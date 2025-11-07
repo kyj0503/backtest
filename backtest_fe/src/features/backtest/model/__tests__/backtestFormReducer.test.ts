@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { backtestFormReducer, backtestFormHelpers } from '../backtestFormReducer'
-import { initialBacktestFormState, type BacktestFormState } from '../backtest-form-types'
+import { initialBacktestFormState, type BacktestFormState } from '../types/backtest-form-types'
 import { ASSET_TYPES } from '../strategyConfig'
 
 const cloneState = (state: BacktestFormState): BacktestFormState => JSON.parse(JSON.stringify(state))
@@ -107,7 +107,7 @@ describe('backtestFormHelpers', () => {
         symbol: '',
         amount: 50,
         investmentType: 'lump_sum',
-        dcaPeriods: 12,
+        dcaFrequency: 'weekly_4',
         assetType: ASSET_TYPES.STOCK,
       },
       {
@@ -115,7 +115,7 @@ describe('backtestFormHelpers', () => {
         amount: 900,
         weight: 70,
         investmentType: 'dca',
-        dcaPeriods: 0,
+        dcaFrequency: undefined, // DCA이지만 주기가 설정되지 않음
         assetType: ASSET_TYPES.STOCK,
       },
       {
@@ -123,14 +123,15 @@ describe('backtestFormHelpers', () => {
         amount: 200,
         weight: 40,
         investmentType: 'lump_sum',
-        dcaPeriods: 12,
+        dcaFrequency: 'weekly_4',
         assetType: ASSET_TYPES.CASH,
       },
     ])
 
     expect(errors).toContain('1번째 종목의 심볼을 입력해주세요.')
     expect(errors).toContain('1번째 종목의 투자 금액은 최소 $100 이상이어야 합니다.')
-    expect(errors).toContain('2번째 종목의 DCA 기간을 설정해주세요.')
-    expect(errors.some(error => error.includes('포트폴리오 비중 합계가 100%가 아닙니다'))).toBe(true)
+    expect(errors).toContain('2번째 종목의 DCA 투자 주기를 선택해주세요.')
+    // 비중 합계가 95~105% 범위를 벗어남 (70 + 40 = 110)
+    expect(errors.some(error => error.includes('포트폴리오 비중 합계'))).toBe(true)
   })
 })
