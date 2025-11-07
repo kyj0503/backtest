@@ -33,6 +33,17 @@ export const useFormValidation = (): UseFormValidationReturn => {
         newErrors.push(`${index + 1}번째 종목의 DCA 투자 주기를 선택해주세요.`);
       }
     });
+
+    // 비중 기준 모드에서 비중 합계 검증
+    if (formState.portfolioInputMode === 'weight') {
+      const totalWeight = formState.portfolio.reduce((sum, stock) => {
+        return sum + (typeof stock.weight === 'number' ? stock.weight : 0);
+      }, 0);
+      
+      if (Math.abs(totalWeight - 100) > 0.5) {
+        newErrors.push(`❌ 종목 비중 합계가 정확히 100%여야 합니다. 현재: ${totalWeight.toFixed(1)}% (오차: ${(totalWeight - 100).toFixed(1)}%)`);
+      }
+    }
     
     // 날짜 검증
     if (!formState.dates.startDate) {
