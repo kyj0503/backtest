@@ -134,6 +134,7 @@ class DCACalculator:
                     'EntryTime': actual_date.isoformat(),
                     'EntryPrice': float(period_price),
                     'Size': float(shares_bought),
+                    'Type': 'BUY',
                     'ExitTime': None,  # DCA는 매수만 있고 매도 없음
                     'ExitPrice': None,
                     'PnL': None,
@@ -1417,6 +1418,7 @@ class PortfolioService:
                                 'EntryTime': start_date.isoformat(),
                                 'EntryPrice': float(start_price),
                                 'Size': float(total_shares),
+                                'Type': 'BUY',
                                 'ExitTime': None,
                                 'ExitPrice': None,
                                 'PnL': None,
@@ -1485,6 +1487,36 @@ class PortfolioService:
             # 리밸런싱 히스토리와 비중 변화 데이터 추출
             rebalance_history = portfolio_result.attrs.get('rebalance_history', [])
             weight_history = portfolio_result.attrs.get('weight_history', [])
+
+            # 리밸런싱 거래를 각 종목의 trade_log에 추가
+            for rebalance_event in rebalance_history:
+                rebalance_date = rebalance_event['date']
+                for trade in rebalance_event['trades']:
+                    symbol = trade['symbol']
+                    action = trade['action']
+
+                    # unique_key 찾기 (symbol로 매칭)
+                    unique_key = None
+                    for key in dca_info.keys():
+                        if dca_info[key]['symbol'] == symbol:
+                            unique_key = key
+                            break
+
+                    if unique_key and unique_key in strategy_details:
+                        # 거래 타입 결정 (buy/sell만 처리, 현금은 제외)
+                        if action in ['buy', 'sell']:
+                            trade_entry = {
+                                'EntryTime': rebalance_date,
+                                'EntryPrice': float(trade['price']),
+                                'Size': float(trade['shares']),
+                                'Type': 'BUY' if action == 'buy' else 'SELL',
+                                'ExitTime': None,
+                                'ExitPrice': None,
+                                'PnL': None,
+                                'ReturnPct': None,
+                                'Duration': None,
+                            }
+                            strategy_details[unique_key]['trade_log'].append(trade_entry)
 
             # 결과 포맷팅
             result = {
