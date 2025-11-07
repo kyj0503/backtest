@@ -156,22 +156,26 @@ class UnifiedDataService:
         symbols: List[str],
         start_date: str,
         end_date: str,
-        threshold: float = 5.0,
+        threshold: float = None,
         max_events_per_symbol: int = 10
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         급등/급락 이벤트 수집
-        
+
         Args:
             symbols: 종목 심볼 리스트
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
-            threshold: 급등/급락 기준 (%) - 기본값 5%
+            threshold: 급등/급락 기준 (%) - 기본값은 settings.volatility_threshold_pct
             max_events_per_symbol: 종목당 최대 이벤트 수
-            
+
         Returns:
             종목별 급등/급락 이벤트 딕셔너리
         """
+        # threshold가 None이면 설정값 사용
+        if threshold is None:
+            threshold = settings.volatility_threshold_pct
+
         volatility_events = {}
         
         for symbol in symbols:
