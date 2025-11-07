@@ -3,30 +3,12 @@
  * 비중, 금액, DCA 등의 계산 로직
  */
 
-/**
- * DCA 주기를 주 수로 변환
- */
-export const DCA_WEEKS_MAP: Record<string, number> = {
-  weekly_1: 1,
-  weekly_2: 2,
-  weekly_4: 4,
-  weekly_8: 8,
-  weekly_12: 12,
-  weekly_24: 24,
-  weekly_48: 48,
-};
-
-/**
- * DCA 주기에 따른 주 수 반환
- */
-export const getDcaWeeks = (frequency: string): number => {
-  return DCA_WEEKS_MAP[frequency] || 4;
-};
+import { getDcaWeeks, type DcaFrequency } from '../model/strategyConfig';
 
 /**
  * 회당 투자 금액 계산 (주 단위)
  */
-export const calculateDcaPeriodAmount = (totalAmount: number, frequency: string): number => {
+export const calculateDcaPeriodAmount = (totalAmount: number, frequency: DcaFrequency): number => {
   const weeks = getDcaWeeks(frequency);
   return Math.round(totalAmount / weeks);
 };
@@ -52,6 +34,12 @@ export const amountToWeight = (amount: number, totalAmount: number): number => {
   if (totalAmount === 0) return 0;
   return (amount / totalAmount) * 100;
 };
+
+/**
+ * 비중 계산 (amountToWeight의 별칭)
+ * @deprecated Use amountToWeight instead
+ */
+export const calculateWeight = amountToWeight;
 
 /**
  * 포트폴리오 비중 합계 계산
@@ -81,7 +69,7 @@ export const getDcaAdjustedTotal = (
   portfolio: Array<{
     amount: number;
     investmentType?: 'lump_sum' | 'dca';
-    dcaFrequency?: string;
+    dcaFrequency?: DcaFrequency;
   }>,
   startDate?: string,
   endDate?: string
@@ -126,7 +114,7 @@ export const getDcaAdjustedTotal = (
 export const getDcaAmountFromWeight = (
   weight: number,
   totalInvestment: number,
-  dcaFrequency: string,
+  dcaFrequency: DcaFrequency,
   startDate?: string,
   endDate?: string
 ): number => {

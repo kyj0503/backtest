@@ -1,6 +1,5 @@
-import { ASSET_TYPES } from './strategyConfig';
+import { ASSET_TYPES, getDcaWeeks } from './strategyConfig';
 import { BacktestFormState, BacktestFormAction, Stock } from './backtest-form-types';
-import { getDcaWeeks } from '../utils/portfolioCalculations';
 
 export function backtestFormReducer(state: BacktestFormState, action: BacktestFormAction): BacktestFormState {
   // 비중 기반 모드에서 amount 자동 계산 (DCA 고려)
