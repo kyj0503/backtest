@@ -96,10 +96,17 @@ class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
     
     @staticmethod
-    def calculate_dca_shares_and_return(df: pd.DataFrame, monthly_amount: float,
-                                      dca_periods: int, start_date: str) -> Tuple[float, float, float, List[Dict]]:
+    def calculate_dca_shares_and_return(df: pd.DataFrame, period_amount: float,
+                                      dca_periods: int, start_date: str, interval_weeks: int = 4) -> Tuple[float, float, float, List[Dict]]:
         """
-        DCA 투자의 총 주식 수량과 평균 단가, 수익률, 매수 로그를 계산
+        DCA 투자의 총 주식 수량과 평균 단가, 수익률, 매수 로그를 계산 (주 단위)
+
+        Args:
+            df: 가격 데이터
+            period_amount: 회당 투자 금액
+            dca_periods: 투자 횟수
+            start_date: 시작 날짜
+            interval_weeks: 투자 간격 (주 단위)
 
         Returns:
             (total_shares, average_price, return_rate, trade_log)
@@ -109,22 +116,23 @@ class DCACalculator:
         total_invested = 0
         trade_log = []  # DCA 매수 기록
 
-        for month in range(dca_periods):
-            # Use relativedelta for accurate calendar month arithmetic.
-            investment_date = start_date_obj + relativedelta(months=month)
-            month_price_data = df[df.index.date >= investment_date.date()]
+        for period in range(dca_periods):
+            # 주 단위 계산: 시작일 + (period × interval_weeks × 7일)
+            days_to_add = period * interval_weeks * 7
+            investment_date = start_date_obj + timedelta(days=days_to_add)
+            period_price_data = df[df.index.date >= investment_date.date()]
 
-            if not month_price_data.empty:
-                month_price = month_price_data['Close'].iloc[0]
-                actual_date = month_price_data.index[0]
-                shares_bought = monthly_amount / month_price
+            if not period_price_data.empty:
+                period_price = period_price_data['Close'].iloc[0]
+                actual_date = period_price_data.index[0]
+                shares_bought = period_amount / period_price
                 total_shares += shares_bought
-                total_invested += monthly_amount
+                total_invested += period_amount
 
                 # DCA 매수 기록 추가
                 trade_log.append({
                     'EntryTime': actual_date.isoformat(),
-                    'EntryPrice': float(month_price),
+                    'EntryPrice': float(period_price),
                     'Size': float(shares_bought),
                     'ExitTime': None,  # DCA는 매수만 있고 매도 없음
                     'ExitPrice': None,
@@ -1435,10 +1443,11 @@ class PortfolioService:
                         else:  # DCA
                             # 분할매수: DCACalculator를 사용하여 수익률 계산
                             dca_periods = dca_info[unique_key]['dca_periods']
-                            monthly_amount = dca_info[unique_key]['monthly_amount']
+                            period_amount = dca_info[unique_key]['monthly_amount']  # 회당 투자 금액
+                            interval_weeks = dca_info[unique_key].get('interval_weeks', 4)  # 투자 간격
 
                             total_shares, average_price, individual_return, dca_trade_log = DCACalculator.calculate_dca_shares_and_return(
-                                df, monthly_amount, dca_periods, request.start_date
+                                df, period_amount, dca_periods, request.start_date, interval_weeks
                             )
 
                             end_price = df['Close'].iloc[-1]
