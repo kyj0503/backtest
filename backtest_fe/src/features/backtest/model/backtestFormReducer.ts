@@ -1,4 +1,5 @@
-import { ASSET_TYPES, getDcaWeeks } from './strategyConfig';
+import { ASSET_TYPES } from './strategyConfig';
+import { calculateDcaPeriods } from '../utils/calculateDcaPeriods';
 import { BacktestFormState, BacktestFormAction, Stock } from './backtest-form-types';
 
 export function backtestFormReducer(state: BacktestFormState, action: BacktestFormAction): BacktestFormState {
@@ -12,12 +13,6 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           : s
       );
     }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const timeDiff = end.getTime() - start.getTime();
-    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-    const weeks = Math.floor(days / 7);
 
     // Step 1: weight 항목들의 인덱스 찾기
     const weightIndices: number[] = [];
@@ -40,8 +35,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
       const isLastWeightItem = pos === weightIndices.length - 1;
 
       if (s.investmentType === 'dca') {
-        const intervalWeeks = getDcaWeeks(s.dcaFrequency || 'weekly_4');
-        const dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+        const dcaPeriods = calculateDcaPeriods(startDate, endDate, s.dcaFrequency || 'weekly_4');
         
         if (isLastWeightItem) {
           // 마지막 DCA 항목: 정확한 오차 보정

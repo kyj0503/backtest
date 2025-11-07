@@ -3,15 +3,8 @@
  * 비중, 금액, DCA 등의 계산 로직
  */
 
-import { getDcaWeeks, type DcaFrequency } from '../model/strategyConfig';
-
-/**
- * 회당 투자 금액 계산 (주 단위)
- */
-export const calculateDcaPeriodAmount = (totalAmount: number, frequency: DcaFrequency): number => {
-  const weeks = getDcaWeeks(frequency);
-  return Math.round(totalAmount / weeks);
-};
+import type { DcaFrequency } from '../model/strategyConfig';
+import { calculateDcaPeriods } from './calculateDcaPeriods';
 
 /**
  * 포트폴리오 총 투자 금액 계산
@@ -79,20 +72,12 @@ export const getDcaAdjustedTotal = (
     return portfolio.reduce((sum, stock) => sum + (stock.amount || 0), 0);
   }
 
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const timeDiff = end.getTime() - start.getTime();
-  const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-  const weeks = Math.floor(days / 7);
-
   return portfolio.reduce((sum, stock) => {
     const amount = stock.amount || 0;
     
     if (stock.investmentType === 'dca') {
       // DCA: 회당 금액 × (투자 횟수)
-      // 투자 횟수 = (백테스트 기간(주) / 투자 간격(주)) + 1 (0주차 첫 투자 포함)
-      const intervalWeeks = getDcaWeeks(stock.dcaFrequency || 'weekly_4');
-      const dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+      const dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
       return sum + (amount * dcaPeriods);
     } else {
       // 일시불: 입력한 금액 그대로
@@ -126,15 +111,8 @@ export const getDcaAmountFromWeight = (
     return Math.round(totalAmount);
   }
 
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const timeDiff = end.getTime() - start.getTime();
-  const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-  const weeks = Math.floor(days / 7);
-
-  // DCA 투자 횟수 = (백테스트 기간(주) / 투자 간격(주)) + 1
-  const intervalWeeks = getDcaWeeks(dcaFrequency || 'weekly_4');
-  const dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+  // DCA 투자 횟수 계산
+  const dcaPeriods = calculateDcaPeriods(startDate, endDate, dcaFrequency);
 
   // 회당 투자 금액 = 총액 / 투자 횟수
   return Math.round(totalAmount / dcaPeriods);

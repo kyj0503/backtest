@@ -16,32 +16,23 @@ import {
   TableRow,
 } from '@/shared/ui/table';
 import { Stock, PortfolioInputMode } from '../model/types/backtest-form-types';
-import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaWeeks, VALIDATION_RULES } from '../model/strategyConfig';
+import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, VALIDATION_RULES } from '../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 import { getDcaAdjustedTotal } from '../utils/portfolioCalculations';
+import { calculateDcaPeriods } from '../utils/calculateDcaPeriods';
 
 // DCA 프리뷰 컴포넌트
 const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string }> = ({ stock, startDate, endDate }) => {
-  const intervalWeeks = getDcaWeeks(stock.dcaFrequency || 'weekly_4');
   const periodAmount = stock.amount || 0;  // 입력한 금액이 회당 투자 금액
   const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
 
-  // 백테스트 기간 계산 (주 수)
+  // 백테스트 기간 계산 (DCA 횟수)
   let dcaPeriods = 1;
   let totalAmount = periodAmount;
 
   if (startDate && endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    // 백테스트 기간을 주 단위로 계산 (백엔드와 동일한 로직)
-    const timeDiff = end.getTime() - start.getTime();
-    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-    const weeks = Math.floor(days / 7);
-
-    // 투자 횟수 = (백테스트 기간(주) / 투자 간격(주)) + 1 (0주차 첫 투자 포함)
-    // 예: 52주 / 24주 = 2, 2 + 1 = 3회 (0주, 24주, 48주)
-    dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+    // calculateDcaPeriods를 사용하여 중복 제거
+    dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
     totalAmount = periodAmount * dcaPeriods;
   }
 
@@ -329,14 +320,10 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                         
                         // 각 종목의 실제 총 투자액 계산
                         let stockTotalAmount = stock.amount;
-                        if (stock.investmentType === 'dca') {
+                        if (stock.investmentType === 'dca' && startDate && endDate) {
                           // DCA: 회당 금액 × 투자 횟수
-                          const start = new Date(startDate || '2025-01-01');
-                          const end = new Date(endDate || '2025-01-01');
-                          const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-                          const weeks = Math.floor(days / 7);
-                          const intervalWeeks = getDcaWeeks(stock.dcaFrequency || 'weekly_4');
-                          const dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+                          // calculateDcaPeriods를 사용하여 중복 제거
+                          const dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
                           stockTotalAmount = stock.amount * dcaPeriods;
                         }
                         // 일시불: 입력한 금액 그대로
