@@ -148,9 +148,10 @@ class PortfolioBacktestRequest(BaseModel):
         
         if has_weight:
             total_weight = sum(item.weight or 0 for item in v)
-            # 0~100 허용, 100±0.01 이내만 통과
-            if not (99.99 <= total_weight <= 100.01):
-                raise ValueError(f'종목 비중(weight) 합계가 100이 아닙니다. 현재 합계: {total_weight}')
+            # 비중 합계 검증: 정확히 100% (오차 범위 ±0.1%)
+            # 이미지 버그 수정: GOOGL 30% + AAPL 20% + MSFT 20% = 70% (100% 아님) -> 오류 발생!
+            if abs(total_weight - 100) > 0.5:  # 0.5% 이상 오차면 오류
+                raise ValueError(f'❌ 종목 비중(weight) 합계가 정확히 100%여야 합니다. 현재 합계: {total_weight:.1f}% (오차: {total_weight - 100:.1f}%). 모든 종목의 비중을 다시 확인하세요.')
         else:
             total_amount = sum(item.amount or 0 for item in v)
             if total_amount <= 0:
