@@ -51,10 +51,27 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
     [nasdaqData]
   );
 
-  const normalizedPortfolio = useMemo(
-    () => normalizeData(portfolioEquityData, 'value'),
-    [portfolioEquityData]
-  );
+  // 포트폴리오 누적 수익률 계산 (일일 수익률 기반)
+  const normalizedPortfolio = useMemo(() => {
+    if (!portfolioEquityData || portfolioEquityData.length === 0) return [];
+
+    let cumulativeValue = 100; // 시작점 = 100
+
+    return portfolioEquityData.map((point, index) => {
+      if (index === 0) {
+        return { date: point.date, normalized: 100 };
+      }
+
+      // 일일 수익률을 누적: 현재 가치 = 이전 가치 × (1 + 수익률/100)
+      const dailyReturn = point.return_pct || 0;
+      cumulativeValue = cumulativeValue * (1 + dailyReturn / 100);
+
+      return {
+        date: point.date,
+        normalized: cumulativeValue,
+      };
+    });
+  }, [portfolioEquityData]);
 
   // 세 데이터를 날짜별로 병합
   const mergedData = useMemo(() => {
