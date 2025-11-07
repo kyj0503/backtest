@@ -167,6 +167,8 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
           setPortfolioInputMode={actions.setPortfolioInputMode}
           totalInvestment={state.totalInvestment}
           setTotalInvestment={actions.setTotalInvestment}
+          startDate={state.dates.startDate}
+          endDate={state.dates.endDate}
         />
 
         <FormSection

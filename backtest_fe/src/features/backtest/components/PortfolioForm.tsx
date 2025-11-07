@@ -20,15 +20,32 @@ import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths, VA
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 // DCA 프리뷰 컴포넌트
-const DcaPreview: React.FC<{ stock: Stock }> = ({ stock }) => {
-  const dcaMonths = getDcaMonths(stock.dcaFrequency || 'monthly');
+const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string }> = ({ stock, startDate, endDate }) => {
+  const intervalMonths = getDcaMonths(stock.dcaFrequency || 'monthly');
   const monthlyAmount = stock.amount;  // 입력한 금액이 회당 투자 금액
-  const totalAmount = stock.amount * dcaMonths;  // 총 투자 금액
   const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
+
+  // 백테스트 기간 계산 (개월 수)
+  let dcaPeriods = 1;
+  let totalAmount = monthlyAmount;
+
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // 개월 수 계산
+    const months = (end.getFullYear() - start.getFullYear()) * 12 +
+                   (end.getMonth() - start.getMonth()) +
+                   (end.getDate() > start.getDate() ? 1 : 0);
+
+    // 투자 횟수 = 백테스트 기간 / 투자 간격
+    dcaPeriods = Math.max(1, Math.floor(months / intervalMonths));
+    totalAmount = monthlyAmount * dcaPeriods;
+  }
 
   return (
     <p className={`${TEXT_STYLES.captionSmall} mt-1`}>
-      {frequencyLabel}: 총 {dcaMonths}회, 회당 ${monthlyAmount.toLocaleString()} (총 ${totalAmount.toLocaleString()})
+      {frequencyLabel}: 총 {dcaPeriods}회, 회당 ${monthlyAmount.toLocaleString()} (총 ${totalAmount.toLocaleString()})
     </p>
   );
 };
@@ -44,10 +61,14 @@ export interface PortfolioFormProps {
   setPortfolioInputMode: (mode: PortfolioInputMode) => void;
   totalInvestment: number;
   setTotalInvestment: (amount: number) => void;
+  startDate?: string;
+  endDate?: string;
 }
 
 const PortfolioForm: React.FC<PortfolioFormProps> = ({
   portfolio,
+  startDate,
+  endDate,
   updateStock,
   addStock,
   addCash,
@@ -266,7 +287,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     )}
                   </div>
                   {stock.investmentType === 'dca' && stock.dcaFrequency && (
-                    <DcaPreview stock={stock} />
+                    <DcaPreview stock={stock} startDate={startDate} endDate={endDate} />
                   )}
                 </TableCell>
                 <TableCell className="w-24">

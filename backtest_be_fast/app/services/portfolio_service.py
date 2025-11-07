@@ -1156,6 +1156,18 @@ class PortfolioService:
             # DCA 주기 매핑
             from ..schemas.schemas import DCA_FREQUENCY_MAP
 
+            # 백테스트 기간 계산 (개월 수)
+            from datetime import datetime
+            from dateutil.relativedelta import relativedelta
+            start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
+            end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
+
+            # 정확한 개월 수 계산
+            delta = relativedelta(end_date_obj, start_date_obj)
+            backtest_months = delta.years * 12 + delta.months + (1 if delta.days > 0 else 0)
+
+            logger.info(f"백테스트 기간: {request.start_date} ~ {request.end_date} ({backtest_months}개월)")
+
             # 분할 매수 정보 수집 및 총 투자 금액 계산
             dca_info = {}
             cash_amount = 0
@@ -1165,7 +1177,11 @@ class PortfolioService:
                 symbol = item.symbol
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_frequency = getattr(item, 'dca_frequency', 'monthly')
-                dca_periods = DCA_FREQUENCY_MAP.get(dca_frequency, 1)
+
+                # DCA 투자 횟수 계산: 백테스트 기간 / 투자 간격
+                interval_months = DCA_FREQUENCY_MAP.get(dca_frequency, 1)
+                dca_periods = max(1, backtest_months // interval_months) if investment_type == 'dca' else 1
+
                 asset_type = getattr(item, 'asset_type', 'stock')
 
                 # amount 또는 weight 기반으로 회당 투자 금액 계산
