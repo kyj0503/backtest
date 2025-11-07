@@ -115,7 +115,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               <Input
                 type="number"
                 min={1}
-                step="any"
+                step={0.01}
                 value={totalInvestment}
                 onChange={e => setTotalInvestment(Number(e.target.value))}
                 className="h-8 w-28 rounded-full border-0 bg-background text-right text-sm shadow-none focus-visible:ring-1"
