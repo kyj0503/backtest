@@ -407,13 +407,15 @@ export const backtestFormHelpers = {
     const hasAnyWeight = weights.some(w => w > 0);
     if (hasAnyWeight) {
       const totalWeight = weights.reduce((a, b) => a + b, 0);
-      // 비중 합계 검증: 100% ± 5% 범위 허용 (반올림 오차 대비)
+      // 비중 합계 검증: 100% ± 5 percentage points 범위 허용 (95~105%)
+      // 반올림 오차 및 DCA 계산 오차를 고려한 허용 범위
       // 예: 50% + 50% = 100% OK
       //     50.1% + 49.9% = 100% OK
       //     60% + 40% = 100% OK
-      //     52.5% + 52.5% = 105% NG (5% 초과)
+      //     52.5% + 52.5% = 105% OK (±5pp 이내)
+      //     55% + 55% = 110% NG (±5pp 초과)
       if (totalWeight < 95 || totalWeight > 105) {
-        errors.push(`포트폴리오 비중 합계가 100%에 가까워야 합니다 (95~105% 범위). 현재 ${totalWeight.toFixed(1)}%.`);
+        errors.push(`포트폴리오 비중 합계가 95~105% 범위여야 합니다. 현재 ${totalWeight.toFixed(1)}%.`);
       }
     }
 
