@@ -640,7 +640,7 @@ def save_news_to_db(ticker: str, news_list: list) -> int:
     """
     뉴스 데이터를 DB에 저장
 
-    ⚠️ 주의: 이 함수는 해당 ticker의 기존 뉴스를 모두 삭제한 후 새 뉴스를 저장합니다.
+    이 함수는 해당 ticker의 기존 뉴스를 모두 삭제한 후 새 뉴스를 저장합니다.
     이는 중복 방지와 최신 데이터 유지를 위한 설계입니다.
 
     Args:
@@ -741,3 +741,4 @@ def delete_old_news(days: int = 30) -> int:
         return 0
     finally:
         conn.close()
+
