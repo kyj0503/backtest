@@ -89,7 +89,7 @@ const UnifiedInfoSection: React.FC<UnifiedInfoSectionProps> = ({
         onSelectSymbol={setSelectedSymbol}
         badges={badges}
         disabledSymbols={disabledSymbols}
-        className={SPACING.contentGap}
+        className={allSymbols.length > 1 ? SPACING.contentGap : ''}
       />
 
       {/* 급등락/뉴스 탭 */}

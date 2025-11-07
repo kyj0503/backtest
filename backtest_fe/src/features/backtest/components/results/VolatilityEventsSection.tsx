@@ -69,7 +69,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
 
   return (
     <div className={CARD_STYLES.base}>
-      <div className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between ${SPACING.itemCompact}`}>
+      <div className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between ${SPACING.itemCompact} ${SPACING.contentGap}`}>
         <div className={SPACING.itemCompact}>
           <h3 className={HEADING_STYLES.h3}>급등락 이벤트</h3>
           <p className={TEXT_STYLES.caption}>
@@ -83,7 +83,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
         symbols={allSymbols}
         selectedSymbol={selectedSymbol}
         onSelectSymbol={setSelectedSymbol}
-        className={SPACING.contentGap}
+        className={allSymbols.length > 1 ? SPACING.contentGap : ''}
       />
 
       {/* 급등락 이벤트 내용 */}
