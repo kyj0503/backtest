@@ -7,9 +7,15 @@ import { getDcaWeeks } from '../../model/strategyConfig';
 import type { DcaFrequency } from '../../model/strategyConfig';
 
 describe('portfolioCalculations', () => {
-  // 테스트 날짜: 약 40주 (280일)
+  // 테스트 날짜: 39주 (279일)
+  // 2025-01-01 ~ 2025-10-07 = 279일 = 39주
   const startDate = '2025-01-01';
   const endDate = '2025-10-07';
+
+  // DCA 횟수 계산:
+  // - weekly_4: 39주 / 4주 = 9, +1 = 10회
+  // - weekly_8: 39주 / 8주 = 4, +1 = 5회
+  // - weekly_12: 39주 / 12주 = 3, +1 = 4회
 
   describe('getDcaAdjustedTotal', () => {
     it('should calculate DCA-adjusted total correctly', () => {
@@ -31,11 +37,11 @@ describe('portfolioCalculations', () => {
 
       const total = getDcaAdjustedTotal(portfolio, startDate, endDate);
 
-      // 40주 / 4주 = 10, +1 = 11회 DCA
-      // AAPL: 10,000 × 11 = 110,000
-      // GOOGL: 10,000 × 1 = 10,000
-      // 총액: 120,000
-      expect(total).toBe(120000);
+      // 39주 / 4주 = 9, +1 = 10회 DCA
+      // AAPL DCA: 10,000 × 10 = 100,000
+      // GOOGL lump_sum: 10,000 × 1 = 10,000
+      // 총액: 110,000
+      expect(total).toBe(110000);
     });
 
     it('should return sum of amounts when no dates provided', () => {
@@ -103,16 +109,19 @@ describe('portfolioCalculations', () => {
       const aapl_weight = (10000 / total) * 100; // 회당 금액 기준
       const googl_weight = (10000 / total) * 100;
 
-      expect(aapl_weight).toBeCloseTo(8.33, 1); // 10,000 / 120,000
-      expect(googl_weight).toBeCloseTo(8.33, 1); // 10,000 / 120,000
+      // 총액: 110,000
+      // AAPL: 10,000 / 110,000 = 9.09%
+      // GOOGL: 10,000 / 110,000 = 9.09%
+      expect(aapl_weight).toBeCloseTo(9.09, 1);
+      expect(googl_weight).toBeCloseTo(9.09, 1);
     });
   });
 
   describe('getDcaAmountFromWeight', () => {
     it('should calculate DCA per-period amount from weight', () => {
       // 총 $20,000, AAPL 60% = $12,000
-      // 40주 / 4주 = 10, +1 = 11회 DCA
-      // 회당 금액 = 12,000 / 11 = 1,090.9 ≈ 1,091
+      // 39주 / 4주 = 9, +1 = 10회 DCA
+      // 회당 금액 = 12,000 / 10 = 1,200
       const amount = getDcaAmountFromWeight(
         60,
         20000,
@@ -121,7 +130,7 @@ describe('portfolioCalculations', () => {
         endDate
       );
 
-      expect(amount).toBe(1091);
+      expect(amount).toBe(1200);
     });
 
     it('should return full amount for lump_sum investment', () => {
@@ -136,12 +145,12 @@ describe('portfolioCalculations', () => {
       );
 
       // GOOGL 40% = $8,000
-      // 하지만 DCA로 계산되면: 8,000 / 11 = 727.27 ≈ 727
-      expect(amount).toBe(727);
+      // DCA로 계산: 8,000 / 10 = 800
+      expect(amount).toBe(800);
     });
 
     it('should handle different DCA frequencies', () => {
-      // 8주 주기: 40주 / 8주 = 5, +1 = 6회
+      // 8주 주기: 39주 / 8주 = 4, +1 = 5회
       const amount_8weeks = getDcaAmountFromWeight(
         60,
         20000,
@@ -150,7 +159,7 @@ describe('portfolioCalculations', () => {
         endDate
       );
 
-      // 12주 주기: 40주 / 12주 = 3.33, floor = 3, +1 = 4회
+      // 12주 주기: 39주 / 12주 = 3, +1 = 4회
       const amount_12weeks = getDcaAmountFromWeight(
         60,
         20000,
@@ -159,8 +168,8 @@ describe('portfolioCalculations', () => {
         endDate
       );
 
-      // 12,000 / 6 = 2,000
-      expect(amount_8weeks).toBe(2000);
+      // 12,000 / 5 = 2,400
+      expect(amount_8weeks).toBe(2400);
 
       // 12,000 / 4 = 3,000
       expect(amount_12weeks).toBe(3000);
@@ -218,12 +227,13 @@ describe('portfolioCalculations', () => {
       const aapl_weight = (portfolio[0].amount / total) * 100;
       const googl_weight = (portfolio[1].amount / total) * 100;
 
-      // AAPL: 10,000 / 120,000 = 8.33%
-      // GOOGL: 10,000 / 120,000 = 8.33%
+      // 총액: 110,000
+      // AAPL: 10,000 / 110,000 = 9.09%
+      // GOOGL: 10,000 / 110,000 = 9.09%
       // (회당 금액 기준이 맞음 - 실제 투자액이 아닌 입력값)
-      expect(aapl_weight).toBeCloseTo(8.33, 1);
-      expect(googl_weight).toBeCloseTo(8.33, 1);
-      expect(aapl_weight + googl_weight).toBeCloseTo(16.67, 1);
+      expect(aapl_weight).toBeCloseTo(9.09, 1);
+      expect(googl_weight).toBeCloseTo(9.09, 1);
+      expect(aapl_weight + googl_weight).toBeCloseTo(18.18, 1);
     });
   });
 
@@ -252,16 +262,17 @@ describe('portfolioCalculations', () => {
         endDate
       );
 
-      // AAPL: 60% × $20,000 = $12,000 / 11회 = $1,091
-      // GOOGL: 40% × $20,000 = $8,000 / 11회 = $727
-      expect(aapl_amount).toBe(1091);
-      expect(googl_amount).toBe(727);
+      // 39주 / 4주 = 9, +1 = 10회
+      // AAPL: 60% × $20,000 = $12,000 / 10회 = $1,200
+      // GOOGL: 40% × $20,000 = $8,000 / 10회 = $800
+      expect(aapl_amount).toBe(1200);
+      expect(googl_amount).toBe(800);
 
       // 실제 총 투자액 검증
-      const actualAAPL = aapl_amount * 11;
-      const actualGOOGL = googl_amount * 11;
-      expect(actualAAPL).toBe(12001); // 약간의 반올림 오차
-      expect(actualGOOGL).toBe(7997); // 약간의 반올림 오차
+      const actualAAPL = aapl_amount * 10;
+      const actualGOOGL = googl_amount * 10;
+      expect(actualAAPL).toBe(12000);
+      expect(actualGOOGL).toBe(8000);
     });
   });
 });

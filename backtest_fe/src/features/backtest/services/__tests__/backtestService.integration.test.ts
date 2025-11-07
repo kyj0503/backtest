@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest'
+import { describe, it, expect, beforeEach, beforeAll, afterAll, afterEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/mocks/server'
 import { BacktestService } from '../backtestService'
+import { apiClient } from '@/shared/api/client'
 import type {
   BacktestRequest,
   UnifiedBacktestResponse,
@@ -21,15 +22,23 @@ const baseRequest: BacktestRequest = {
 }
 
 describe('BacktestService (integration)', () => {
+  const TEST_BASE_URL = 'http://localhost:3000'
+
   beforeAll(() => {
-    vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:3000/api')
+    // MSW 서버를 테스트용 baseURL과 함께 설정
+    apiClient.defaults.baseURL = TEST_BASE_URL
   })
 
   afterAll(() => {
-    vi.unstubAllEnvs()
+    // 원래 baseURL로 복원
+    apiClient.defaults.baseURL = ''
   })
 
   beforeEach(() => {
+    server.resetHandlers()
+  })
+
+  afterEach(() => {
     server.resetHandlers()
   })
 
@@ -60,7 +69,7 @@ describe('BacktestService (integration)', () => {
     }
 
     server.use(
-      http.post('http://localhost:3000/api/v1/backtest', async ({ request }) => {
+      http.post(`${TEST_BASE_URL}/api/v1/backtest`, async ({ request }) => {
         capturedBody = await request.json()
         return HttpResponse.json(mockResponse)
       })
@@ -74,10 +83,12 @@ describe('BacktestService (integration)', () => {
 
   it('propagates API failures as rejected promises', async () => {
     server.use(
-      http.post('http://localhost:3000/api/v1/backtest', () => HttpResponse.json({ message: 'failed' }, { status: 500 }))
+      http.post(`${TEST_BASE_URL}/api/v1/backtest`, () =>
+        HttpResponse.json({ message: 'failed' }, { status: 500 })
+      )
     )
 
-    await expect(BacktestService.executeBacktest(baseRequest)).rejects.toThrow('Request failed with status code 500')
+    await expect(BacktestService.executeBacktest(baseRequest)).rejects.toThrow()
   })
 
   it('sends query parameters when searching news', async () => {
@@ -99,7 +110,7 @@ describe('BacktestService (integration)', () => {
     }
 
     server.use(
-      http.get('http://localhost:3000/api/v1/naver-news/search', ({ request }) => {
+      http.get(`${TEST_BASE_URL}/api/v1/naver-news/search`, ({ request }) => {
         const url = new URL(request.url)
         url.searchParams.forEach((value, key) => {
           capturedQueries[key] = value

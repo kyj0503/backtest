@@ -40,11 +40,11 @@ const RebalanceHistoryTable: React.FC<RebalanceHistoryTableProps> = ({ rebalance
 
   return (
     <div className={SPACING.item}>
-      <div className={TEXT_STYLES.caption + ' mb-4'}>
+      <div className={`${TEXT_STYLES.caption} ${SPACING.contentGap}`}>
         총 {rebalanceHistory.length}회의 리밸런싱이 발생했습니다
       </div>
 
-      <div className={`${SPACING.itemCompact} max-h-[600px] overflow-y-auto`}>
+      <div className={`${SPACING.itemCompact} max-h-[400px] overflow-y-auto`}>
         {rebalanceHistory.map((event, index) => {
           const isExpanded = expandedRows.has(index);
 

@@ -58,9 +58,8 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
     const day = date.getDate();
     const koreanDate = `${year}년 ${month}월 ${day}일`;
 
-    // 구글 검색 쿼리 생성 (표시 이름 사용)
-    const displayName = getStockDisplayName(symbol);
-    const query = `${displayName} ${koreanDate} 뉴스`;
+    // 구글 검색 쿼리 생성 (티커 심볼 사용)
+    const query = `${symbol} ${koreanDate} 뉴스`;
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
     // 새 탭에서 열기
@@ -69,7 +68,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
 
   return (
     <div className={CARD_STYLES.base}>
-      <div className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between ${SPACING.itemCompact}`}>
+      <div className={`flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between ${SPACING.itemCompact} ${SPACING.contentGap}`}>
         <div className={SPACING.itemCompact}>
           <h3 className={HEADING_STYLES.h3}>급등락 이벤트</h3>
           <p className={TEXT_STYLES.caption}>
@@ -83,7 +82,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
         symbols={allSymbols}
         selectedSymbol={selectedSymbol}
         onSelectSymbol={setSelectedSymbol}
-        className="mb-4"
+        className={allSymbols.length > 1 ? SPACING.contentGap : ''}
       />
 
       {/* 급등락 이벤트 내용 */}
