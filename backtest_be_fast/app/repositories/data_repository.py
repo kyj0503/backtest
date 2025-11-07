@@ -36,6 +36,7 @@
 - Repository Pattern: 데이터 접근 로직 캡슐화
 - Strategy Pattern: 다양한 데이터 소스 전략
 """
+import asyncio
 from typing import Dict, Any, List, Optional, Union
 from datetime import datetime, date
 import pandas as pd
@@ -94,7 +95,9 @@ class YFinanceDataRepository(DataRepositoryInterface):
             
             # 2. MySQL 캐시 확인
             try:
-                cached_data = yfinance_db.load_ticker_data(ticker, start_date, end_date)
+                cached_data = await asyncio.to_thread(
+                    yfinance_db.load_ticker_data, ticker, start_date, end_date
+                )
                 if cached_data is not None and not cached_data.empty:
                     self.logger.debug(f"MySQL 캐시에서 데이터 반환: {ticker}")
                     # 메모리 캐시에도 저장
@@ -108,8 +111,10 @@ class YFinanceDataRepository(DataRepositoryInterface):
             
             # 3. 실시간 데이터 페칭
             self.logger.info(f"실시간 데이터 페칭: {ticker}")
-            fresh_data = self.data_fetcher.get_stock_data(ticker, start_date, end_date)
-            
+            fresh_data = await asyncio.to_thread(
+                self.data_fetcher.get_stock_data, ticker, start_date, end_date
+            )
+
             # 4. 캐시에 저장
             await self.cache_stock_data(ticker, fresh_data)
             
@@ -129,11 +134,13 @@ class YFinanceDataRepository(DataRepositoryInterface):
         """주식 데이터 캐시 저장"""
         try:
             # MySQL 캐시에 저장 (yfinance_db 함수 사용)
-            success = yfinance_db.save_ticker_data(ticker, data)
+            success = await asyncio.to_thread(
+                yfinance_db.save_ticker_data, ticker, data
+            )
             if success > 0:
                 self.logger.info(f"데이터 캐시 저장 완료: {ticker}, {success}행")
                 return True
-            
+
             return False
             
         except Exception as e:
