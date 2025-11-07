@@ -77,8 +77,8 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
   // - 수익률 비교: 120 vs 110 (시작점 100 기준, 순수 성과만 비교 가능)
   //
   // **관련 파일:**
-  // - 백엔드: portfolio_service.py:1494 (return_val * 100으로 백분율 변환)
-  // - 이 파일: BenchmarkIndexChart.tsx:67 (dailyReturn / 100으로 소수 변환)
+  // - 백엔드: portfolio_service.py의 API 응답 생성 (return_val * 100으로 백분율 변환)
+  // - 이 파일: normalizedPortfolio 계산 (dailyReturn / 100으로 소수 변환)
   // ============================================================
   const normalizedPortfolio = useMemo(() => {
     if (!portfolioEquityData || portfolioEquityData.length === 0) return [];
