@@ -249,15 +249,15 @@ class UnifiedDataService:
         self,
         symbols: List[str],
         display: int = 15,
-        max_cache_hours: int = 48
+        max_cache_hours: int = 24
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
-        최신 뉴스 수집 (DB 캐시 우선, 2일 이상 오래되면 API 호출)
+        최신 뉴스 수집 (DB 캐시 우선, 1일 이상 오래되면 API 호출)
 
         Args:
             symbols: 종목 심볼 리스트
             display: 종목당 뉴스 개수
-            max_cache_hours: 캐시 최대 유효 시간 (기본 48시간 = 2일)
+            max_cache_hours: 캐시 최대 유효 시간 (기본 24시간 = 1일)
 
         Returns:
             종목별 뉴스 딕셔너리

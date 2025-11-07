@@ -578,7 +578,7 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
         conn.close()
 
 
-def load_news_from_db(ticker: str, max_age_hours: int = 48) -> Optional[list]:
+def load_news_from_db(ticker: str, max_age_hours: int = 24) -> Optional[list]:
     """
     DB에서 뉴스 데이터 조회 (최대 age 체크)
 
@@ -656,14 +656,6 @@ def save_news_to_db(ticker: str, news_list: list) -> int:
             WHERE ticker = :ticker
         """)
         conn.execute(delete_query, {"ticker": ticker})
-
-        # 오래된 뉴스 정리 (7일 이상, 모든 티커)
-        delete_old_query = text("""
-            DELETE FROM stock_news
-            WHERE created_at < :cutoff_time
-        """)
-        cutoff_time = datetime.now() - timedelta(days=7)
-        conn.execute(delete_old_query, {"cutoff_time": cutoff_time})
 
         # 새 뉴스 저장
         saved_count = 0
