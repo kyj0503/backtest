@@ -54,11 +54,11 @@ export type BacktestFormAction =
   | { type: 'RESET_FORM' };
 
 export const initialBacktestFormState: BacktestFormState = {
-  portfolio: [{ 
-    symbol: '', 
-    amount: 10000, 
+  portfolio: [{
+    symbol: '',
+    amount: 10000,
     investmentType: 'lump_sum',
-    dcaFrequency: 'monthly' 
+    dcaFrequency: 'weekly_4'
   }],
   dates: {
     startDate: '2025-01-01',
@@ -69,7 +69,7 @@ export const initialBacktestFormState: BacktestFormState = {
     strategyParams: {}
   },
   settings: {
-    rebalanceFrequency: 'monthly',
+    rebalanceFrequency: 'weekly_4',
     commission: 0.2
   },
   ui: {

@@ -16,18 +16,37 @@ import {
   TableRow,
 } from '@/shared/ui/table';
 import { Stock, PortfolioInputMode } from '../model/types/backtest-form-types';
-import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaMonths, VALIDATION_RULES } from '../model/strategyConfig';
+import { PREDEFINED_STOCKS, ASSET_TYPES, DCA_FREQUENCY_OPTIONS, getDcaWeeks, VALIDATION_RULES } from '../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 // DCA 프리뷰 컴포넌트
-const DcaPreview: React.FC<{ stock: Stock }> = ({ stock }) => {
-  const dcaMonths = getDcaMonths(stock.dcaFrequency || 'monthly');
-  const monthlyAmount = Math.round(stock.amount / dcaMonths);
+const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string }> = ({ stock, startDate, endDate }) => {
+  const intervalWeeks = getDcaWeeks(stock.dcaFrequency || 'weekly_4');
+  const periodAmount = stock.amount || 0;  // 입력한 금액이 회당 투자 금액
   const frequencyLabel = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === stock.dcaFrequency)?.label || '';
+
+  // 백테스트 기간 계산 (주 수)
+  let dcaPeriods = 1;
+  let totalAmount = periodAmount;
+
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // 백테스트 기간을 주 단위로 계산 (백엔드와 동일한 로직)
+    const timeDiff = end.getTime() - start.getTime();
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const weeks = Math.floor(days / 7);
+
+    // 투자 횟수 = (백테스트 기간(주) / 투자 간격(주)) + 1 (0주차 첫 투자 포함)
+    // 예: 52주 / 24주 = 2, 2 + 1 = 3회 (0주, 24주, 48주)
+    dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+    totalAmount = periodAmount * dcaPeriods;
+  }
 
   return (
     <p className={`${TEXT_STYLES.captionSmall} mt-1`}>
-      {frequencyLabel}: 총 {dcaMonths}회, 회당 ${monthlyAmount.toLocaleString()}
+      {frequencyLabel}: 총 {dcaPeriods}회, 회당 ${periodAmount.toLocaleString()} (총 ${totalAmount.toLocaleString()})
     </p>
   );
 };
@@ -43,10 +62,14 @@ export interface PortfolioFormProps {
   setPortfolioInputMode: (mode: PortfolioInputMode) => void;
   totalInvestment: number;
   setTotalInvestment: (amount: number) => void;
+  startDate?: string;
+  endDate?: string;
 }
 
 const PortfolioForm: React.FC<PortfolioFormProps> = ({
   portfolio,
+  startDate,
+  endDate,
   updateStock,
   addStock,
   addCash,
@@ -145,7 +168,10 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               </TableHead>
               <TableHead className="w-32">
                 <FinancialTermTooltip term="투자 금액">
-                  투자 금액 ($)
+                  <div className="flex flex-col gap-0.5">
+                    <span>투자 금액 ($)</span>
+                    <span className="text-xs font-normal text-muted-foreground">분할매수: 회당 금액</span>
+                  </div>
                 </FinancialTermTooltip>
               </TableHead>
               <TableHead className="w-28">투자 방식</TableHead>
@@ -245,24 +271,24 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     </Select>
                     {stock.investmentType === 'dca' && (
                       <Select
-                        value={stock.dcaFrequency || 'monthly'}
+                        value={stock.dcaFrequency || 'weekly_4'}
                         onValueChange={(value) => updateStock(index, 'dcaFrequency', value)}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="monthly">매달 투자</SelectItem>
-                          <SelectItem value="bimonthly">격달로 투자</SelectItem>
-                          <SelectItem value="quarterly">매 분기 투자</SelectItem>
-                          <SelectItem value="semiannually">반년마다 투자</SelectItem>
-                          <SelectItem value="annually">매년 투자</SelectItem>
+                          {DCA_FREQUENCY_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     )}
                   </div>
                   {stock.investmentType === 'dca' && stock.dcaFrequency && (
-                    <DcaPreview stock={stock} />
+                    <DcaPreview stock={stock} startDate={startDate} endDate={endDate} />
                   )}
                 </TableCell>
                 <TableCell className="w-24">

@@ -190,11 +190,11 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
 
     case 'RESET_FORM':
       return {
-        portfolio: [{ 
-          symbol: '', 
-          amount: 10000, 
+        portfolio: [{
+          symbol: '',
+          amount: 10000,
           investmentType: 'lump_sum',
-          dcaFrequency: 'monthly' 
+          dcaFrequency: 'weekly_4'
         }],
         dates: {
           startDate: '2023-01-01',
@@ -205,7 +205,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           strategyParams: {}
         },
         settings: {
-          rebalanceFrequency: 'monthly',
+          rebalanceFrequency: 'weekly_4',
           commission: 0.2
         },
         ui: {
@@ -228,7 +228,7 @@ export const backtestFormHelpers = {
     amount: 10000,
     weight: undefined,
     investmentType: 'lump_sum',
-    dcaFrequency: 'monthly',
+    dcaFrequency: 'weekly_4',
     assetType: ASSET_TYPES.STOCK
   }),
 
@@ -237,7 +237,7 @@ export const backtestFormHelpers = {
     amount: 10000,
     weight: undefined,
     investmentType: 'lump_sum',
-    dcaFrequency: 'monthly',
+    dcaFrequency: 'weekly_4',
     assetType: ASSET_TYPES.CASH
   }),
 

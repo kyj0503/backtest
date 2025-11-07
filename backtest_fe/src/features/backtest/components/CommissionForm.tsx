@@ -1,5 +1,6 @@
 import React from 'react';
 import { FormField, FinancialTermTooltip } from '@/shared/components';
+import { REBALANCE_OPTIONS } from '../model/strategyConfig';
 
 export interface CommissionFormProps {
   rebalanceFrequency: string;
@@ -18,13 +19,6 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
   stockCount = 0,
   selectedStrategy = 'buy_hold_strategy'
 }) => {
-  const rebalanceOptions = [
-    { value: 'none', label: '리밸런싱 안함' },
-    { value: 'monthly', label: '매월' },
-    { value: 'quarterly', label: '분기별' },
-    { value: 'annually', label: '연간' }
-  ];
-
   // 기술적 전략 목록 (리밸런싱 불가)
   const technicalStrategies = [
     'sma_strategy',
@@ -59,7 +53,7 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
         type="select"
         value={isRebalanceDisabled ? 'none' : rebalanceFrequency}
         onChange={(value) => setRebalanceFrequency(value as string)}
-        options={rebalanceOptions}
+        options={REBALANCE_OPTIONS}
         disabled={isRebalanceDisabled}
         helpText={rebalanceHelpText}
       />

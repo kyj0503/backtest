@@ -195,12 +195,16 @@ export const ASSET_TYPES = {
 
 export type AssetType = typeof ASSET_TYPES[keyof typeof ASSET_TYPES];
 
-// 리밸런싱 옵션
+// 리밸런싱 옵션 (주 단위)
 export const REBALANCE_OPTIONS = [
-  { value: 'never', label: '리밸런싱 안함' },
-  { value: 'monthly', label: '매월' },
-  { value: 'quarterly', label: '분기별' },
-  { value: 'yearly', label: '연간' }
+  { value: 'none', label: '리밸런싱 안함' },
+  { value: 'weekly_1', label: '매주' },
+  { value: 'weekly_2', label: '2주마다' },
+  { value: 'weekly_4', label: '4주마다 (약 1달)' },
+  { value: 'weekly_8', label: '8주마다 (약 2달)' },
+  { value: 'weekly_12', label: '12주마다 (약 1분기)' },
+  { value: 'weekly_24', label: '24주마다 (약 반년)' },
+  { value: 'weekly_48', label: '48주마다 (약 1년)' }
 ];
 
 // 투자 방식 옵션
@@ -209,21 +213,23 @@ export const INVESTMENT_TYPE_OPTIONS = [
   { value: 'dca', label: '분할 매수 (DCA)' }
 ];
 
-// DCA 주기 프리셋
-export type DcaFrequency = 'monthly' | 'bimonthly' | 'quarterly' | 'semiannually' | 'annually';
+// DCA 주기 프리셋 (주 단위)
+export type DcaFrequency = 'weekly_1' | 'weekly_2' | 'weekly_4' | 'weekly_8' | 'weekly_12' | 'weekly_24' | 'weekly_48';
 
 export const DCA_FREQUENCY_OPTIONS = [
-  { value: 'monthly', label: '매달 투자', months: 1 },
-  { value: 'bimonthly', label: '격달로 투자', months: 2 },
-  { value: 'quarterly', label: '매 분기 투자', months: 3 },
-  { value: 'semiannually', label: '반년마다 투자', months: 6 },
-  { value: 'annually', label: '매년 투자', months: 12 }
+  { value: 'weekly_1', label: '매주 투자', weeks: 1 },
+  { value: 'weekly_2', label: '2주마다 투자', weeks: 2 },
+  { value: 'weekly_4', label: '4주마다 투자 (약 1달)', weeks: 4 },
+  { value: 'weekly_8', label: '8주마다 투자 (약 2달)', weeks: 8 },
+  { value: 'weekly_12', label: '12주마다 투자 (약 1분기)', weeks: 12 },
+  { value: 'weekly_24', label: '24주마다 투자 (약 반년)', weeks: 24 },
+  { value: 'weekly_48', label: '48주마다 투자 (약 1년)', weeks: 48 }
 ] as const;
 
-// DCA 주기(개월)를 가져오는 헬퍼 함수
-export const getDcaMonths = (frequency: DcaFrequency): number => {
+// DCA 주기(주)를 가져오는 헬퍼 함수
+export const getDcaWeeks = (frequency: DcaFrequency): number => {
   const option = DCA_FREQUENCY_OPTIONS.find(opt => opt.value === frequency);
-  return option?.months || 1;
+  return option?.weeks || 1;
 };
 
 // 유효성 검증 규칙
@@ -265,7 +271,7 @@ export const DEFAULT_VALUES = {
   END_DATE: '2024-12-31',
   INITIAL_AMOUNT: 10000,
   COMMISSION: 0.2, // 퍼센트
-  DCA_FREQUENCY: 'monthly' as DcaFrequency,
-  REBALANCE_FREQUENCY: 'monthly',
+  DCA_FREQUENCY: 'weekly_4' as DcaFrequency,
+  REBALANCE_FREQUENCY: 'weekly_4',
   STRATEGY: 'buy_hold_strategy'
 };

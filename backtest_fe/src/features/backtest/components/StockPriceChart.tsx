@@ -20,6 +20,7 @@ interface TradeLog {
   EntryPrice: number;
   ExitPrice?: number;
   Size: number;
+  Type?: 'BUY' | 'SELL';  // 거래 타입 (리밸런싱용)
   PnL?: number;
   ReturnPct?: number;
 }
@@ -54,15 +55,28 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     const sellDates = new Set<string>();
 
     logs.forEach((trade) => {
-      if (trade.EntryTime) {
-        // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
-        const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
-        buyDates.add(entryDate);
-      }
-      if (trade.ExitTime) {
-        // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
-        const exitDate = trade.ExitTime.split('T')[0].split(' ')[0];
-        sellDates.add(exitDate);
+      // Type 필드가 있으면 타입으로 구분 (리밸런싱, DCA, 일시불)
+      if (trade.Type) {
+        if (trade.EntryTime) {
+          const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
+          if (trade.Type === 'BUY') {
+            buyDates.add(entryDate);
+          } else if (trade.Type === 'SELL') {
+            sellDates.add(entryDate);
+          }
+        }
+      } else {
+        // Type 필드가 없으면 기존 로직 (하위 호환성)
+        if (trade.EntryTime) {
+          // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
+          const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
+          buyDates.add(entryDate);
+        }
+        if (trade.ExitTime) {
+          // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
+          const exitDate = trade.ExitTime.split('T')[0].split(' ')[0];
+          sellDates.add(exitDate);
+        }
       }
     });
 
@@ -95,8 +109,20 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     const logs = tradeLogs[selectedSymbol];
     if (!logs || !Array.isArray(logs)) return { buys: 0, sells: 0 };
 
-    const buys = logs.filter(t => t.EntryTime && t.EntryPrice).length;
-    const sells = logs.filter(t => t.ExitTime && t.ExitPrice).length;
+    let buys = 0;
+    let sells = 0;
+
+    logs.forEach(t => {
+      // Type 필드가 있으면 타입으로 카운트
+      if (t.Type) {
+        if (t.Type === 'BUY') buys++;
+        if (t.Type === 'SELL') sells++;
+      } else {
+        // Type 필드가 없으면 기존 로직 (하위 호환성)
+        if (t.EntryTime && t.EntryPrice) buys++;
+        if (t.ExitTime && t.ExitPrice) sells++;
+      }
+    });
 
     return { buys, sells };
   }, [selectedSymbol, tradeLogs]);

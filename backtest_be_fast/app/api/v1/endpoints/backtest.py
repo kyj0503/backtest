@@ -75,7 +75,7 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     - **start_date**: 시작 날짜 (YYYY-MM-DD)
     - **end_date**: 종료 날짜 (YYYY-MM-DD)
     - **commission**: 수수료율 (0 ~ 0.1)
-    - **rebalance_frequency**: 리밸런싱 주기 (monthly, quarterly, yearly)
+    - **rebalance_frequency**: 리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)
     - **strategy**: 전략명 (기본: buy_and_hold)
     
     **응답 형식**:

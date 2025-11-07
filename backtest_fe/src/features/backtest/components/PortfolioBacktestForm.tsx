@@ -58,7 +58,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
           // 금액 기준일 때는 weight를 보내지 않음
           ...(hasWeight ? { weight: stock.weight } : {}),
           investment_type: stock.investmentType,
-          dca_frequency: stock.dcaFrequency || 'monthly',
+          dca_frequency: stock.dcaFrequency || 'weekly_4',
           asset_type: stock.assetType || ASSET_TYPES.STOCK
         };
       });
@@ -167,6 +167,8 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
           setPortfolioInputMode={actions.setPortfolioInputMode}
           totalInvestment={state.totalInvestment}
           setTotalInvestment={actions.setTotalInvestment}
+          startDate={state.dates.startDate}
+          endDate={state.dates.endDate}
         />
 
         <FormSection

@@ -4,28 +4,31 @@
  */
 
 /**
- * DCA 주기를 개월 수로 변환
+ * DCA 주기를 주 수로 변환
  */
-export const DCA_MONTHS_MAP: Record<string, number> = {
-  monthly: 1,
-  quarterly: 3,
-  semiannually: 6,
-  annually: 12,
+export const DCA_WEEKS_MAP: Record<string, number> = {
+  weekly_1: 1,
+  weekly_2: 2,
+  weekly_4: 4,
+  weekly_8: 8,
+  weekly_12: 12,
+  weekly_24: 24,
+  weekly_48: 48,
 };
 
 /**
- * DCA 주기에 따른 총 매수 횟수 계산
+ * DCA 주기에 따른 주 수 반환
  */
-export const getDcaMonths = (frequency: string): number => {
-  return DCA_MONTHS_MAP[frequency] || 1;
+export const getDcaWeeks = (frequency: string): number => {
+  return DCA_WEEKS_MAP[frequency] || 4;
 };
 
 /**
- * 회당 투자 금액 계산
+ * 회당 투자 금액 계산 (주 단위)
  */
-export const calculateDcaMonthlyAmount = (totalAmount: number, frequency: string): number => {
-  const months = getDcaMonths(frequency);
-  return Math.round(totalAmount / months);
+export const calculateDcaPeriodAmount = (totalAmount: number, frequency: string): number => {
+  const weeks = getDcaWeeks(frequency);
+  return Math.round(totalAmount / weeks);
 };
 
 /**
