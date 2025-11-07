@@ -420,6 +420,7 @@ class PortfolioService:
                         shares[unique_key] = invest_amount / price
                         total_trades += 1  # 초기 매수 거래
                         daily_cash_inflow += amount  # 일시불도 첫 날 유입
+                        logger.info(f"{current_date.date()}: {unique_key} 일시불 첫 투자 (금액: ${amount:,.2f}, 가격: ${price:.2f})")
                     else:  # DCA
                         # DCA 첫 달 투자
                         monthly_amount = info['monthly_amount']
@@ -427,6 +428,7 @@ class PortfolioService:
                         shares[unique_key] = invest_amount / price
                         total_trades += 1  # 첫 DCA 매수 거래
                         daily_cash_inflow += monthly_amount  # DCA 첫 투자 유입
+                        logger.info(f"{current_date.date()}: {unique_key} DCA 첫 투자 (금액: ${monthly_amount:,.2f}, interval_weeks: {info.get('interval_weeks', '?')})")
 
                 is_first_day = False
                 prev_date = current_date
@@ -1256,6 +1258,7 @@ class PortfolioService:
 
                 if investment_type == 'dca':
                     logger.info(f"분할 매수: {dca_periods}회에 걸쳐 회당 ${per_period_amount:,.2f}씩 (총 ${total_investment:,.2f})")
+                    logger.info(f"DCA 설정: frequency={dca_frequency}, interval_weeks={interval_weeks}, dca_periods={dca_periods}")
 
                 # DB에서 데이터 로드
                 df = load_ticker_data(symbol, request.start_date, request.end_date)
