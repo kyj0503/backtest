@@ -1151,65 +1151,76 @@ class PortfolioService:
         try:
             # 각 종목의 데이터 수집 (중복 종목 지원)
             portfolio_data = {}
-            amounts = {}
-            # amount/weight 동시 지원: amount가 없고 weight만 있으면 환산
-            if all(item.amount is not None for item in request.portfolio):
-                total_amount = sum(item.amount for item in request.portfolio)
-                amounts = {item.symbol: item.amount for item in request.portfolio}
-            elif all(item.weight is not None for item in request.portfolio):
-                total_amount = 100.0
-                amounts = {item.symbol: total_amount * (item.weight / 100.0) for item in request.portfolio}
-            else:
-                raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
-            cash_amount = 0
-            
-            # 분할 매수 정보 수집
-            dca_info = {}
-            
+            amounts = {}  # 실제 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
+
             # DCA 주기 매핑
             from ..schemas.schemas import DCA_FREQUENCY_MAP
-            
+
+            # 분할 매수 정보 수집 및 총 투자 금액 계산
+            dca_info = {}
+            cash_amount = 0
+
+            # 먼저 모든 종목의 투자 타입을 확인하고 총 금액 계산
             for item in request.portfolio:
                 symbol = item.symbol
-                amount = amounts[symbol]
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_frequency = getattr(item, 'dca_frequency', 'monthly')
-                dca_periods = DCA_FREQUENCY_MAP.get(dca_frequency, 1)  # 주기를 개월 수로 변환
-                asset_type = getattr(item, 'asset_type', 'stock')  # 자산 타입 확인
-                
+                dca_periods = DCA_FREQUENCY_MAP.get(dca_frequency, 1)
+                asset_type = getattr(item, 'asset_type', 'stock')
+
+                # amount 또는 weight 기반으로 회당 투자 금액 계산
+                if item.amount is not None:
+                    per_period_amount = item.amount  # 입력한 금액 = 회당 투자 금액
+                elif item.weight is not None:
+                    # weight 모드는 나중에 처리
+                    per_period_amount = 0
+                else:
+                    raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight를 입력해야 합니다.')
+
+                # 총 투자 금액 계산
+                if investment_type == 'dca':
+                    # 분할 매수: 회당 금액 × 횟수
+                    total_investment = per_period_amount * dca_periods
+                else:
+                    # 일시불: 회당 금액 = 총 금액
+                    total_investment = per_period_amount
+
+                amounts[symbol] = total_investment
+
                 # 분할 매수 정보 저장
-                # 분할 매수 시: amount는 "회당 투자 금액"으로 해석
-                # 일시불 시: amount는 "총 투자 금액"으로 해석
                 dca_info[symbol] = {
                     'symbol': symbol,
                     'investment_type': investment_type,
                     'dca_frequency': dca_frequency,
                     'dca_periods': dca_periods,
-                    'monthly_amount': amount,  # 분할 매수 시 amount는 회당 투자 금액
+                    'monthly_amount': per_period_amount,  # 회당 투자 금액
                     'asset_type': asset_type
                 }
-                
+
                 # 진짜 현금 자산 처리 (asset_type이 'cash'인 경우)
                 if asset_type == 'cash':
                     # 현금 처리
-                    cash_amount += amount
-                    logger.info(f"현금 자산 {symbol} 추가 (금액: ${amount:,.2f})")
+                    cash_amount += total_investment
+                    logger.info(f"현금 자산 {symbol} 추가 (금액: ${total_investment:,.2f})")
                     continue
-                
-                logger.info(f"종목 {symbol} 데이터 로드 중 (투자금액: ${amount:,.2f}, 방식: {investment_type})")
+
+                logger.info(f"종목 {symbol} 데이터 로드 중 (총 투자금액: ${total_investment:,.2f}, 방식: {investment_type})")
 
                 if investment_type == 'dca':
-                    logger.info(f"분할 매수: {dca_periods}회에 걸쳐 회당 ${amount:,.2f}씩 (총 ${amount * dca_periods:,.2f})")
-                
+                    logger.info(f"분할 매수: {dca_periods}회에 걸쳐 회당 ${per_period_amount:,.2f}씩 (총 ${total_investment:,.2f})")
+
                 # DB에서 데이터 로드
                 df = load_ticker_data(symbol, request.start_date, request.end_date)
-                
+
                 if df is None or df.empty:
                     logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
                     continue
-                
+
                 portfolio_data[symbol] = df
                 logger.info(f"종목 {symbol} 데이터 로드 완료: {len(df)} 행")
+
+            # 총 투자 금액 계산
+            total_amount = sum(amounts.values())
             
             # 현금만 있는 경우 처리
             if not portfolio_data and cash_amount > 0:
