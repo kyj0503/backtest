@@ -34,14 +34,15 @@ export const useFormValidation = (): UseFormValidationReturn => {
       }
     });
 
-    // 비중 기준 모드에서 비중 합계 검증
+    // 비중 기준 모드에서 비중 합계 검증 (±5% 범위 허용)
     if (formState.portfolioInputMode === 'weight') {
       const totalWeight = formState.portfolio.reduce((sum, stock) => {
         return sum + (typeof stock.weight === 'number' ? stock.weight : 0);
       }, 0);
       
-      if (Math.abs(totalWeight - 100) > 0.5) {
-        newErrors.push(`❌ 종목 비중 합계가 정확히 100%여야 합니다. 현재: ${totalWeight.toFixed(1)}% (오차: ${(totalWeight - 100).toFixed(1)}%)`);
+      // 95~105% 범위 허용 (반올림 오차 및 DCA 계산 오차 고려)
+      if (totalWeight < 95 || totalWeight > 105) {
+        newErrors.push(`❌ 종목 비중 합계가 95%~105% 사이여야 합니다. 현재: ${totalWeight.toFixed(1)}% (허용 오차: ±5%)`);
       }
     }
     
