@@ -270,18 +270,18 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     </Select>
                     {stock.investmentType === 'dca' && (
                       <Select
-                        value={stock.dcaFrequency || 'monthly'}
+                        value={stock.dcaFrequency || 'weekly_4'}
                         onValueChange={(value) => updateStock(index, 'dcaFrequency', value)}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="monthly">매달 투자</SelectItem>
-                          <SelectItem value="bimonthly">격달로 투자</SelectItem>
-                          <SelectItem value="quarterly">매 분기 투자</SelectItem>
-                          <SelectItem value="semiannually">반년마다 투자</SelectItem>
-                          <SelectItem value="annually">매년 투자</SelectItem>
+                          {DCA_FREQUENCY_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     )}
