@@ -58,9 +58,8 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
     const day = date.getDate();
     const koreanDate = `${year}년 ${month}월 ${day}일`;
 
-    // 구글 검색 쿼리 생성 (표시 이름 사용)
-    const displayName = getStockDisplayName(symbol);
-    const query = `${displayName} ${koreanDate} 뉴스`;
+    // 구글 검색 쿼리 생성 (티커 심볼 사용)
+    const query = `${symbol} ${koreanDate} 뉴스`;
     const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
     // 새 탭에서 열기
