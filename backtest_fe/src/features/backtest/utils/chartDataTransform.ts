@@ -4,17 +4,18 @@
  */
 
 import { EquityPoint, TradeMarker, OhlcPoint, ChartData, PortfolioData } from '../model/types/backtest-result-types';
+import { formatChartDate } from '@/shared/lib/utils/dateUtils';
 
 // ============================================
 // 포맷팅 함수들 (차트 표시용)
 // ============================================
 
 /**
- * 통화 값을 축약 형식으로 포맷팅
- * @example formatCurrency(1500000) => "1.5M"
- * @example formatCurrency(1500) => "1.5K"
+ * 통화 값을 축약 형식으로 포맷팅 (차트용)
+ * @example formatCurrencyCompact(1500000) => "1.5M"
+ * @example formatCurrencyCompact(1500) => "1.5K"
  */
-export const formatCurrency = (value: number): string => {
+export const formatCurrencyCompact = (value: number): string => {
   if (value >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
   if (value >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
   if (value >= 1e3) return `${(value / 1e3).toFixed(1)}K`;
@@ -22,13 +23,15 @@ export const formatCurrency = (value: number): string => {
 };
 
 /**
+ * @deprecated Use formatCurrencyCompact instead
+ */
+export const formatCurrency = formatCurrencyCompact;
+
+/**
  * 날짜를 짧은 형식으로 포맷팅 (차트용)
  * @example formatDateShort("2025-01-15") => "1/15"
  */
-export const formatDateShort = (value: string): string => {
-  const date = new Date(value);
-  return `${date.getMonth() + 1}/${date.getDate()}`;
-};
+export const formatDateShort = formatChartDate;
 
 /**
  * 원화를 포맷팅
