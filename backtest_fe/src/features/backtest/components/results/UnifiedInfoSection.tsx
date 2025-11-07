@@ -18,7 +18,7 @@
 import React, { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import StockSymbolSelector from './StockSymbolSelector';
-import { CARD_STYLES } from '@/shared/styles/design-tokens';
+import { CARD_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
 interface VolatilityEvent {
   date: string;
@@ -89,7 +89,7 @@ const UnifiedInfoSection: React.FC<UnifiedInfoSectionProps> = ({
         onSelectSymbol={setSelectedSymbol}
         badges={badges}
         disabledSymbols={disabledSymbols}
-        className="mb-4"
+        className={SPACING.contentGap}
       />
 
       {/* 급등락/뉴스 탭 */}

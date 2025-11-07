@@ -60,7 +60,7 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
         symbols={allSymbols}
         selectedSymbol={selectedSymbol}
         onSelectSymbol={setSelectedSymbol}
-        className="mb-4"
+        className={SPACING.contentGap}
       />
 
       {/* 최신 뉴스 내용 */}
