@@ -1465,8 +1465,33 @@ class PortfolioService:
                         date.strftime('%Y-%m-%d'): value * total_amount
                         for date, value in portfolio_result['Portfolio_Value'].items()
                     },
+                    # ============================================================
+                    # 수익률 표현 형식: 백분율(Percentage) vs 소수(Decimal)
+                    # ============================================================
+                    #
+                    # **API 응답 형식: 백분율 (2.5 = 2.5%)**
+                    # - 사용자에게 표시되는 모든 수익률은 백분율로 반환
+                    # - 예: 0.025 (decimal) → 2.5 (percentage)
+                    # - 이유: UI 표시, 툴팁, 차트 레이블 등 90%의 사용 사례가 백분율 표시
+                    # - API 응답의 가독성 향상 ({"daily_return": 2.5} vs {"daily_return": 0.025})
+                    #
+                    # **계산에서의 형식: 소수 (0.025 = 2.5%)**
+                    # - 내부 계산(복리 수익률, 누적 수익률 등)은 소수 형식 사용
+                    # - 예: 복리 계산 시 1.025 = 1 + 0.025 (2.5% 수익)
+                    # - 프론트엔드에서 계산 필요 시 `/100`으로 소수로 변환
+                    #
+                    # **변환 흐름:**
+                    # 1. 백엔드 계산: 0.025 (소수)
+                    # 2. API 응답: 2.5 (백분율, `return_val * 100`)  ← 여기서 한 번만 변환
+                    # 3. 프론트 표시: "2.5%" (그대로 사용)
+                    # 4. 프론트 계산: 2.5 / 100 = 0.025 (필요 시 역변환)
+                    #
+                    # **주의사항:**
+                    # - 이중 변환 방지: API에서 이미 백분율로 반환했으므로 추가 변환 불필요
+                    # - 계산 필요 시에만 `/100` 사용 (예: BenchmarkIndexChart의 복리 계산)
+                    # ============================================================
                     'daily_returns': {
-                        date.strftime('%Y-%m-%d'): return_val * 100
+                        date.strftime('%Y-%m-%d'): return_val * 100  # 소수 → 백분율 변환 (0.025 → 2.5)
                         for date, return_val in portfolio_result['Daily_Return'].items()
                     },
                     'strategy_details': strategy_details,  # 거래 로그 포함

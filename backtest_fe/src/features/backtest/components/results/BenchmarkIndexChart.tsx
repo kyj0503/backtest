@@ -51,7 +51,35 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
     [nasdaqData]
   );
 
+  // ============================================================
   // 포트폴리오 누적 수익률 계산 (일일 수익률 기반)
+  // ============================================================
+  //
+  // **목적: DCA(분할 매수) 전략과 벤치마크 지수를 공정하게 비교**
+  // - DCA는 시간에 따라 투자금이 증가하므로 절대 금액(equity curve)으로는 비교 불가
+  // - 대신 일일 수익률을 복리로 누적하여 상대적 성과를 비교
+  // - 시작점을 100으로 normalize하여 직관적 비교 가능
+  //
+  // **수익률 형식 변환:**
+  // - API에서 받는 return_pct: 백분율 (2.5 = 2.5%)
+  // - 복리 계산에 필요한 형식: 소수 (0.025 = 2.5%)
+  // - 변환: dailyReturn / 100
+  //
+  // **복리 누적 공식:**
+  // - 현재 가치 = 이전 가치 × (1 + 수익률)
+  // - 예: 100 × (1 + 0.025) = 102.5 (첫날 2.5% 수익)
+  // - 예: 102.5 × (1 + 0.03) = 105.575 (둘째날 3% 수익)
+  //
+  // **사용 예시:**
+  // - 포트폴리오: 매달 $1000 투자, 총 $10000 → 최종 equity $12000
+  // - 벤치마크: 고정 $10000 투자 → 최종 equity $11000
+  // - 절대 금액 비교: $12000 > $11000 (잘못된 비교, 투자금 차이 무시)
+  // - 수익률 비교: 120 vs 110 (normalize된 값, 올바른 비교)
+  //
+  // **관련 파일:**
+  // - 백엔드: portfolio_service.py:1494 (return_val * 100으로 백분율 변환)
+  // - 이 파일: BenchmarkIndexChart.tsx:67 (dailyReturn / 100으로 소수 변환)
+  // ============================================================
   const normalizedPortfolio = useMemo(() => {
     if (!portfolioEquityData || portfolioEquityData.length === 0) return [];
 
@@ -63,6 +91,9 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
       }
 
       // 일일 수익률을 누적: 현재 가치 = 이전 가치 × (1 + 수익률/100)
+      // - dailyReturn: API에서 받은 백분율 (예: 2.5 = 2.5%)
+      // - dailyReturn / 100: 복리 계산용 소수로 변환 (예: 2.5 / 100 = 0.025)
+      // - (1 + 0.025): 수익률 승수 (1.025 = 2.5% 증가)
       const dailyReturn = point.return_pct || 0;
       cumulativeValue = cumulativeValue * (1 + dailyReturn / 100);
 
