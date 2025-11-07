@@ -32,7 +32,7 @@
 
 **리밸런싱**:
 - 주기적으로 포트폴리오 비중을 원래대로 조정
-- 지원 주기: monthly, quarterly, annually, none
+- 지원 주기: weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none
 
 **의존성**:
 - app/services/backtest_service.py: 단일 종목 백테스트
@@ -236,7 +236,7 @@ class PortfolioService:
         dca_info: Dict[str, Dict],
         start_date: str,
         end_date: str,
-        rebalance_frequency: str = "monthly",
+        rebalance_frequency: str = "weekly_4",
         commission: float = 0.0
     ) -> pd.DataFrame:
         """
@@ -245,10 +245,10 @@ class PortfolioService:
         Args:
             portfolio_data: 각 종목의 가격 데이터 {symbol: DataFrame}
             amounts: 각 종목의 총 투자 금액 {symbol: amount}
-            dca_info: 분할 매수 정보 {symbol: {investment_type, dca_periods, monthly_amount}}
+            dca_info: 분할 매수 정보 {symbol: {investment_type, dca_periods, period_amount, interval_weeks}}
             start_date: 시작 날짜
             end_date: 종료 날짜
-            rebalance_frequency: 리밸런싱 주기 (monthly, quarterly, annually, none)
+            rebalance_frequency: 리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)
             commission: 거래 수수료율 (예: 0.002 = 0.2%)
 
         Returns:
