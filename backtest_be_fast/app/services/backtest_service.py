@@ -25,16 +25,12 @@
 - Repository Pattern: 데이터 접근은 repository를 통해서만 수행
 - Factory Pattern: 전략 객체 생성은 strategy_factory를 통해 수행
 """
-import time
-import signal
 from datetime import datetime, date
 from typing import Dict, Any, Optional, List
 import pandas as pd
 import numpy as np
 import logging
-import traceback
 from fastapi import HTTPException
-from decimal import Decimal
 
 # Repository 패턴 import
 from app.repositories import data_repository
