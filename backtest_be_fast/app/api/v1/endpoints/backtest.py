@@ -122,25 +122,34 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
         news_display_count=15
     )
 
-    # 3.5. 상장일 검증 (ValidationError 발생 시 백테스트 실패)
+    # 3.5. 상장일 포함 여부 확인 (중간 참여 허용)
     ticker_info = unified_data.get('ticker_info', {})
     validation_errors = []
+    listing_warnings = []
 
     for symbol in symbols:
         if symbol in ticker_info:
             try:
-                validation_service.validate_listing_date(
+                warning = validation_service.check_listing_date_inclusion(
                     ticker_info[symbol],
-                    request.start_date
+                    request.start_date,
+                    request.end_date
                 )
+                if warning:
+                    listing_warnings.append(warning)
             except ValidationError as e:
+                # 전체 기간에 데이터가 없는 종목만 에러 처리
                 validation_errors.append(str(e))
-                logger.error(f"상장일 검증 실패: {e}")
+                logger.error(f"상장일 검증 실패 (데이터 없음): {e}")
 
-    # 상장일 검증 실패가 있으면 백테스트 실패
+    # 전체 기간에 데이터가 없는 종목이 있으면 백테스트 실패
     if validation_errors:
-        error_message = "다음 종목들의 상장일 검증 실패:\n" + "\n".join(f"- {err}" for err in validation_errors)
+        error_message = "다음 종목들은 백테스트 기간 동안 거래 데이터가 없습니다:\n" + "\n".join(f"- {err}" for err in validation_errors)
         raise ValidationError(error_message)
+
+    # 중간 참여 종목이 있으면 경고 로그 출력
+    if listing_warnings:
+        logger.info("중간 참여 종목 안내:\n" + "\n".join(f"- {warn}" for warn in listing_warnings))
 
     # 4. S&P 500 벤치마크 통계 계산 및 추가
     sp500_benchmark = unified_data.get('sp500_benchmark', [])
