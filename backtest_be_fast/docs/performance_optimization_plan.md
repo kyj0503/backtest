@@ -18,10 +18,11 @@
 - 위치: `data_fetcher.py:215`
 - 예상 개선: 20-30ms 절약
 
-✅ **3. MySQL 인덱스 스크립트** (생성 완료)
-- 파일: `database/check_and_create_indexes.sql`
-- 인덱스: `idx_ticker_date ON daily_prices(ticker, date)`
-- 예상 개선: MySQL 쿼리 30-50% 빠름 (500ms → 250ms)
+✅ **3. MySQL 인덱스 검증** (확인 완료)
+- 파일: `database/check_and_create_indexes.sql` (검증 스크립트)
+- 기존 인덱스: `PRIMARY KEY (stock_id, date)` - 이미 최적화됨
+- schema.sql로 생성된 DB는 추가 인덱스 불필요
+- 참고: daily_prices 테이블은 stock_id를 사용 (ticker 아님)
 
 ✅ **4. Async/Sync 경계 수정** (이전 커밋에서 완료)
 - 모든 동기 I/O를 `asyncio.to_thread()`로 래핑
@@ -57,15 +58,23 @@
 3. **MySQL 쿼리**: 전체 시간의 5-10% (인덱스로 개선 가능)
 4. **데이터 검증 및 변환**: 전체 시간의 5-10% (✅ 최적화 완료)
 
-## MySQL 인덱스 적용 방법
+## MySQL 인덱스 검증 방법
+
+**참고**: `schema.sql`로 생성된 데이터베이스는 이미 최적의 인덱스를 포함하고 있습니다.
+검증 스크립트는 기존 DB의 인덱스 상태를 확인하는 용도입니다.
 
 ```bash
-# Docker 환경에서 실행
-docker compose -f compose.dev.yaml exec mysql mysql -u root -p backtest < database/check_and_create_indexes.sql
+# Docker 환경에서 인덱스 상태 확인
+docker compose -f compose.dev.yaml exec mysql mysql -u root -p stock_data_cache < database/check_and_create_indexes.sql
 
 # 또는 MySQL 클라이언트에서 직접 실행
-mysql -u root -p backtest < database/check_and_create_indexes.sql
+mysql -u root -p stock_data_cache < database/check_and_create_indexes.sql
 ```
+
+**schema.sql의 최적 인덱스**:
+- `PRIMARY KEY (stock_id, date)` - 종목별 날짜 범위 조회에 최적
+- `INDEX idx_date_range (date)` - 날짜 범위 조회
+- `INDEX idx_stock_date_desc (stock_id, date DESC)` - 최신 데이터 조회
 
 ## 향후 최적화 계획 (Phase 2)
 
@@ -125,20 +134,27 @@ Expected improvement: Popular tickers respond instantly (<100ms)
 
 ### 2. Database Query Optimization
 
-#### Current MySQL Schema Check
+#### MySQL 인덱스 현황
 
-Need to verify indexes exist:
+✅ **이미 최적화 완료**: schema.sql에 포함된 인덱스로 충분
 
+현재 인덱스:
 ```sql
--- Check current indexes
-SHOW INDEX FROM daily_prices;
-
--- Required indexes
-CREATE INDEX idx_ticker_date ON daily_prices(ticker, date);
-CREATE INDEX idx_date ON daily_prices(date);
+-- PRIMARY KEY (stock_id, date) - 메인 쿼리 최적화
+-- INDEX idx_date_range (date) - 날짜 범위 조회
+-- INDEX idx_stock_date_desc (stock_id, date DESC) - 최신 데이터 조회
 ```
 
-Expected improvement: 30-50% faster MySQL cache hits (500ms → 250ms)
+쿼리 패턴:
+```sql
+-- 이 쿼리는 PRIMARY KEY를 사용하여 최적 성능 제공
+SELECT * FROM daily_prices
+WHERE stock_id = :id
+  AND date BETWEEN :start AND :end
+ORDER BY date ASC;
+```
+
+**추가 인덱스 불필요**: PRIMARY KEY (stock_id, date)가 이미 최적 성능 제공
 
 ### 3. Parallel Data Loading
 
