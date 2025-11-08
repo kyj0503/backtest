@@ -483,7 +483,7 @@ class UnifiedDataService:
                     full_date_range = pd.date_range(start=start_date, end=end_date, freq='D')
                     
                     # reindex로 누락된 날짜 추가 후 forward-fill
-                    df_normalized = df_normalized.reindex(full_date_range, method='ffill')
+                    df_normalized = df_normalized.reindex(full_date_range).ffill()
                     
                     # 시작 부분에 NaN이 있으면 backward-fill
                     df_normalized = df_normalized.bfill()
