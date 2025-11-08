@@ -211,9 +211,8 @@ class DataFetcher:
             # 컬럼 순서 맞추기
             data = data[required_columns]
             
-            # NaN 값 및 무한대 값 처리
-            data = data.replace([np.inf, -np.inf], np.nan)
-            data = data.dropna()
+            # NaN 값 및 무한대 값 처리 (최적화: 체이닝으로 단일 패스)
+            data = data.replace([np.inf, -np.inf], np.nan).dropna()
             
             if data.empty:
                 raise DataNotFoundError(f"'{ticker}' 종목의 유효한 데이터가 없습니다.")

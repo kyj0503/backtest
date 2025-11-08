@@ -74,14 +74,37 @@ class DataRepositoryInterface(ABC):
 
 class YFinanceDataRepository(DataRepositoryInterface):
     """yfinance 기반 데이터 Repository"""
-    
+
     def __init__(self):
         self.data_fetcher = data_fetcher
         self.logger = logging.getLogger(__name__)
         self._memory_cache: Dict[str, Dict[str, Any]] = {}
-        self._cache_ttl = 3600  # 1시간 TTL
-    
-    async def get_stock_data(self, ticker: str, start_date: Union[date, str], 
+        # 동적 TTL: 과거 데이터 24시간, 최근 데이터 1시간
+
+    def _get_cache_ttl(self, end_date: Union[date, str]) -> int:
+        """날짜에 따라 캐시 TTL 결정 (과거 데이터는 길게, 최근 데이터는 짧게)"""
+        from datetime import date as date_type
+
+        # 문자열을 date 객체로 변환
+        if isinstance(end_date, str):
+            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+        elif isinstance(end_date, datetime):
+            end_date_obj = end_date.date()
+        else:
+            end_date_obj = end_date
+
+        today = date_type.today()
+
+        # 과거 데이터 (종료일이 오늘 이전): 24시간 캐시
+        # 주가 데이터는 변하지 않으므로 오래 캐싱 가능
+        if end_date_obj < today:
+            return 86400  # 24시간
+
+        # 최근 데이터 (종료일이 오늘 이후): 1시간 캐시
+        # 실시간 데이터 반영 필요
+        return 3600  # 1시간
+
+    async def get_stock_data(self, ticker: str, start_date: Union[date, str],
                            end_date: Union[date, str]) -> pd.DataFrame:
         """주식 데이터 조회 (캐시 우선)"""
         try:
@@ -89,10 +112,10 @@ class YFinanceDataRepository(DataRepositoryInterface):
             cache_key = f"{ticker}_{start_date}_{end_date}"
             
             # 1. 메모리 캐시 확인
-            if self._is_cache_valid(cache_key):
+            if self._is_cache_valid(cache_key, end_date):
                 self.logger.debug(f"메모리 캐시에서 데이터 반환: {cache_key}")
                 return self._memory_cache[cache_key]['data']
-            
+
             # 2. MySQL 캐시 확인
             try:
                 cached_data = await asyncio.to_thread(
@@ -103,12 +126,13 @@ class YFinanceDataRepository(DataRepositoryInterface):
                     # 메모리 캐시에도 저장
                     self._memory_cache[cache_key] = {
                         'data': cached_data,
-                        'timestamp': datetime.now()
+                        'timestamp': datetime.now(),
+                        'end_date': end_date
                     }
                     return cached_data
             except Exception as e:
                 self.logger.warning(f"MySQL 캐시 조회 실패: {str(e)}")
-            
+
             # 3. 실시간 데이터 페칭
             self.logger.info(f"실시간 데이터 페칭: {ticker}")
             fresh_data = await asyncio.to_thread(
@@ -117,11 +141,12 @@ class YFinanceDataRepository(DataRepositoryInterface):
 
             # 4. 캐시에 저장
             await self.cache_stock_data(ticker, fresh_data)
-            
+
             # 5. 메모리 캐시에 저장
             self._memory_cache[cache_key] = {
                 'data': fresh_data,
-                'timestamp': datetime.now()
+                'timestamp': datetime.now(),
+                'end_date': end_date
             }
             
             return fresh_data
@@ -200,15 +225,18 @@ class YFinanceDataRepository(DataRepositoryInterface):
             self.logger.error(f"캐시 통계 조회 실패: {str(e)}")
             return {}
     
-    def _is_cache_valid(self, cache_key: str) -> bool:
-        """캐시 유효성 검사"""
+    def _is_cache_valid(self, cache_key: str, end_date: Union[date, str]) -> bool:
+        """캐시 유효성 검사 (동적 TTL 적용)"""
         if cache_key not in self._memory_cache:
             return False
-        
+
         cached_time = self._memory_cache[cache_key]['timestamp']
         elapsed = (datetime.now() - cached_time).total_seconds()
-        
-        return elapsed < self._cache_ttl
+
+        # 동적 TTL 계산
+        ttl = self._get_cache_ttl(end_date)
+
+        return elapsed < ttl
     
     def _calculate_hit_rate(self) -> float:
         """캐시 히트율 계산 (간단한 구현)"""
