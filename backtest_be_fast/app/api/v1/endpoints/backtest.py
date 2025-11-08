@@ -107,13 +107,19 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     ]
     symbols = list(set(symbols))  # 중복 제거
     
-    # 종목 정보 조회 (상장일 확인용)
+    # 종목 정보 조회 (상장일 확인용) - 병렬 처리로 성능 최적화
     from ....services.yfinance_db import get_ticker_info_from_db
     from datetime import datetime
+    
+    # 모든 종목의 ticker 정보를 병렬로 조회
+    ticker_infos = await asyncio.gather(
+        *[asyncio.to_thread(get_ticker_info_from_db, symbol) for symbol in symbols]
+    )
+    
     validation_errors = []
     
-    for symbol in symbols:
-        ticker_info = await asyncio.to_thread(get_ticker_info_from_db, symbol)
+    for symbol, ticker_info in zip(symbols, ticker_infos):
+        first_trade_date_str = ticker_info.get('first_trade_date')
         first_trade_date_str = ticker_info.get('first_trade_date')
         
         if first_trade_date_str:

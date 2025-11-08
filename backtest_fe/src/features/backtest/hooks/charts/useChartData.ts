@@ -142,7 +142,7 @@ export const useChartData = (
     return extractBenchmarkData(data, 'nasdaq');
   }, [data]);
 
-  // 백엔드에서 이미 return_pct를 계산해서 보내므로 그대로 사용
+  // 백엔드에서 이미 return_pct를 계산해서 보내므로 그대로 사용 (unified_data_service.py 참고)
   const sp500BenchmarkWithReturn = sp500Benchmark;
   const nasdaqBenchmarkWithReturn = nasdaqBenchmark;
 

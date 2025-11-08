@@ -66,18 +66,13 @@ def update_listing_dates():
                 else:
                     logger.warning(f"{ticker}: 상장일 정보 없음")
                     failed_count += 1
-                
-                # 배치 단위로 중간 커밋
-                if idx % batch_size == 0:
-                    conn.commit()
-                    logger.info(f"[배치 커밋] {idx}개 종목 처리 완료")
                     
             except Exception as e:
                 logger.error(f"{ticker}: 업데이트 실패 - {e}")
                 failed_count += 1
                 continue
         
-        # 마지막 배치는 with 블록 종료 시 자동 커밋
+        # with 블록 종료 시 자동 커밋
         logger.info(f"업데이트 완료: 성공 {updated_count}개, 실패 {failed_count}개")
 
 
