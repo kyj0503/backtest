@@ -40,11 +40,13 @@ yfinance 데이터 MySQL 저장 서비스
 import os
 import json
 import logging
+import time
 from typing import Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 import pandas as pd
 from datetime import datetime, date, timedelta
+from app.utils.data_fetcher import data_fetcher
 
 logger = logging.getLogger(__name__)
 
@@ -258,8 +260,6 @@ def load_ticker_data(ticker: str, start_date=None, end_date=None, max_retries: i
     Raises:
         ValueError: 모든 재시도 실패 시
     """
-    import time
-    
     last_exception = None
     
     for attempt in range(1, max_retries + 1):
@@ -524,7 +524,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                 
                 # 데이터 저장 후 커넥션을 닫고 새로 연결 - 트랜잭션 격리 문제 방지
                 conn.close()
-                import time
                 time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
                 conn = engine.connect()
             except Exception as e:
@@ -574,7 +573,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                     save_ticker_data(ticker, df_new)
                     # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
                     conn.close()
-                    import time
                     time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
                     conn = engine.connect()
                 else:
@@ -595,7 +593,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                             save_ticker_data(ticker, df_new)
                             # 데이터 저장 후 커넥션 갱신
                             conn.close()
-                            import time
                             time.sleep(0.1)
                             conn = engine.connect()
                     except Exception:
