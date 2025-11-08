@@ -21,9 +21,8 @@ logger = logging.getLogger(__name__)
 def update_listing_dates():
     """모든 stocks의 info_json에 상장일 추가"""
     engine = create_engine(settings.database_url)
-    conn = engine.connect()
     
-    try:
+    with engine.begin() as conn:
         # 모든 티커 조회
         result = conn.execute(text("SELECT id, ticker, info_json FROM stocks"))
         stocks = result.fetchall()
@@ -34,62 +33,52 @@ def update_listing_dates():
         failed_count = 0
         batch_size = 10  # 10개 종목마다 커밋
         
-        try:
-            for idx, (stock_id, ticker, info_json_str) in enumerate(stocks, 1):
-                try:
-                    # 기존 info 파싱
-                    if info_json_str:
-                        info = json.loads(info_json_str)
-                    else:
-                        info = {}
-                    
-                    # 이미 상장일이 있으면 스킵
-                    if info.get('first_trade_date'):
-                        logger.info(f"{ticker}: 상장일이 이미 존재 - {info['first_trade_date']}")
-                        continue
-                    
-                    # Yahoo Finance에서 상장일 조회
-                    logger.info(f"{ticker}: Yahoo Finance에서 상장일 조회 중...")
-                    ticker_info = data_fetcher.get_ticker_info(ticker)
-                    first_trade_date = ticker_info.get('first_trade_date')
-                    
-                    if first_trade_date:
-                        # info에 상장일 추가
-                        info['first_trade_date'] = first_trade_date
-                        
-                        # DB 업데이트 (커밋은 배치로)
-                        conn.execute(
-                            text("UPDATE stocks SET info_json = :info WHERE id = :id"),
-                            {"info": json.dumps(info), "id": stock_id}
-                        )
-                        
-                        logger.info(f"{ticker}: 상장일 업데이트 완료 - {first_trade_date}")
-                        updated_count += 1
-                    else:
-                        logger.warning(f"{ticker}: 상장일 정보 없음")
-                        failed_count += 1
-                    
-                    # 배치 단위로 커밋
-                    if idx % batch_size == 0:
-                        conn.commit()
-                        logger.info(f"[배치 커밋] {idx}개 종목 처리 완료")
-                        
-                except Exception as e:
-                    logger.error(f"{ticker}: 업데이트 실패 - {e}")
-                    failed_count += 1
+        for idx, (stock_id, ticker, info_json_str) in enumerate(stocks, 1):
+            try:
+                # 기존 info 파싱
+                if info_json_str:
+                    info = json.loads(info_json_str)
+                else:
+                    info = {}
+                
+                # 이미 상장일이 있으면 스킵
+                if info.get('first_trade_date'):
+                    logger.info(f"{ticker}: 상장일이 이미 존재 - {info['first_trade_date']}")
                     continue
-            
-            # 마지막 배치 커밋
-            conn.commit()
-            logger.info(f"업데이트 완료: 성공 {updated_count}개, 실패 {failed_count}개")
-            
-        except Exception as e:
-            conn.rollback()
-            logger.error(f"전체 업데이트 롤백: {e}")
-            raise
+                
+                # Yahoo Finance에서 상장일 조회
+                logger.info(f"{ticker}: Yahoo Finance에서 상장일 조회 중...")
+                ticker_info = data_fetcher.get_ticker_info(ticker)
+                first_trade_date = ticker_info.get('first_trade_date')
+                
+                if first_trade_date:
+                    # info에 상장일 추가
+                    info['first_trade_date'] = first_trade_date
+                    
+                    # DB 업데이트
+                    conn.execute(
+                        text("UPDATE stocks SET info_json = :info WHERE id = :id"),
+                        {"info": json.dumps(info), "id": stock_id}
+                    )
+                    
+                    logger.info(f"{ticker}: 상장일 업데이트 완료 - {first_trade_date}")
+                    updated_count += 1
+                else:
+                    logger.warning(f"{ticker}: 상장일 정보 없음")
+                    failed_count += 1
+                
+                # 배치 단위로 중간 커밋
+                if idx % batch_size == 0:
+                    conn.commit()
+                    logger.info(f"[배치 커밋] {idx}개 종목 처리 완료")
+                    
+            except Exception as e:
+                logger.error(f"{ticker}: 업데이트 실패 - {e}")
+                failed_count += 1
+                continue
         
-    finally:
-        conn.close()
+        # 마지막 배치는 with 블록 종료 시 자동 커밋
+        logger.info(f"업데이트 완료: 성공 {updated_count}개, 실패 {failed_count}개")
 
 
 if __name__ == "__main__":
