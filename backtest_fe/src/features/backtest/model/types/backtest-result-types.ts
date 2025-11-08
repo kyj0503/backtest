@@ -177,6 +177,9 @@ export interface PortfolioData {
   latest_news?: Record<string, NewsItem[]>;
   sp500_benchmark?: BenchmarkPoint[];
   nasdaq_benchmark?: BenchmarkPoint[];
+  
+  // 상장일 경고 메시지 (백테스트 실행 전 검증 실패 시 반환되지 않음)
+  warnings?: string[];
 }
 
 export interface BacktestResultsProps {
