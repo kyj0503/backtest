@@ -62,6 +62,8 @@ from app.schemas.schemas import PortfolioBacktestRequest, PortfolioStock
 from app.schemas.requests import BacktestRequest
 from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db
 from app.services.backtest_service import backtest_service
+from app.services.dca_calculator import DCACalculator
+from app.services.rebalance_helper import RebalanceHelper
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
     DataNotFoundError,
@@ -72,138 +74,6 @@ from app.core.config import settings
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
 
 logger = logging.getLogger(__name__)
-
-class DCACalculator:
-    """분할 매수(DCA) 계산 유틸리티"""
-    
-    @staticmethod
-    def calculate_dca_shares_and_return(df: pd.DataFrame, period_amount: float,
-                                      dca_periods: int, start_date: str, interval_weeks: int = 4) -> Tuple[float, float, float, List[Dict]]:
-        """
-        DCA 투자의 총 주식 수량과 평균 단가, 수익률, 매수 로그를 계산 (주 단위)
-
-        Args:
-            df: 가격 데이터
-            period_amount: 회당 투자 금액
-            dca_periods: 투자 횟수
-            start_date: 시작 날짜
-            interval_weeks: 투자 간격 (주 단위)
-
-        Returns:
-            (total_shares, average_price, return_rate, trade_log)
-        """
-        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
-        total_shares = 0
-        total_invested = 0
-        trade_log = []  # DCA 매수 기록
-
-        for period in range(dca_periods):
-            # 주 단위 계산: 시작일 + (period × interval_weeks × 7일)
-            days_to_add = period * interval_weeks * 7
-            investment_date = start_date_obj + timedelta(days=days_to_add)
-            period_price_data = df[df.index.date >= investment_date.date()]
-
-            if not period_price_data.empty:
-                period_price = period_price_data['Close'].iloc[0]
-                actual_date = period_price_data.index[0]
-                shares_bought = period_amount / period_price
-                total_shares += shares_bought
-                total_invested += period_amount
-
-                # DCA 매수 기록 추가
-                trade_log.append({
-                    'EntryTime': actual_date.isoformat(),
-                    'EntryPrice': float(period_price),
-                    'Size': float(shares_bought),
-                    'Type': 'BUY',
-                    'ExitTime': None,  # DCA는 매수만 있고 매도 없음
-                    'ExitPrice': None,
-                    'PnL': None,
-                    'ReturnPct': None,
-                    'Duration': None,
-                })
-
-        if total_shares > 0:
-            average_price = total_invested / total_shares
-            end_price = df['Close'].iloc[-1]
-            return_rate = (end_price / average_price - 1) * 100
-            return total_shares, average_price, return_rate, trade_log
-
-        return 0, 0, 0, []
-
-class RebalanceHelper:
-    """리밸런싱 유틸리티"""
-
-    @staticmethod
-    def is_rebalance_date(current_date: datetime, prev_date: datetime, frequency: str, start_date: datetime = None) -> bool:
-        """
-        현재 날짜가 리밸런싱 날짜인지 확인 (주 단위)
-
-        Args:
-            current_date: 현재 날짜
-            prev_date: 이전 날짜
-            frequency: 리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)
-            start_date: 시작 날짜 (주 단위 계산용)
-
-        Returns:
-            리밸런싱 실행 여부
-        """
-        if frequency == 'none':
-            return False
-
-        # 첫 날은 리밸런싱하지 않음 (초기 매수이므로)
-        if prev_date is None:
-            return False
-
-        # 주 단위 리밸런싱
-        from ..schemas.schemas import DCA_FREQUENCY_MAP
-        interval_weeks = DCA_FREQUENCY_MAP.get(frequency)
-
-        if interval_weeks is None:
-            # 알 수 없는 주기면 리밸런싱 안 함
-            logger.warning(f"알 수 없는 리밸런싱 주기: {frequency}")
-            return False
-
-        # start_date가 없으면 prev_date를 기준으로 사용
-        ref_date = start_date if start_date else prev_date
-
-        # 시작일로부터 경과한 주 수 계산
-        current_weeks = (current_date - ref_date).days // 7
-        prev_weeks = (prev_date - ref_date).days // 7
-
-        # 리밸런싱 주기(interval_weeks)마다 실행
-        # 예: interval_weeks=4이면 0, 4, 8, 12주차에 리밸런싱
-        current_period = current_weeks // interval_weeks
-        prev_period = prev_weeks // interval_weeks
-
-        # 새로운 리밸런싱 주기에 진입했으면 True
-        return current_period > prev_period
-
-    @staticmethod
-    def calculate_target_weights(amounts: Dict[str, float], dca_info: Dict[str, Dict]) -> Dict[str, float]:
-        """
-        목표 비중 계산 (현금 포함)
-
-        Args:
-            amounts: 각 종목의 투자 금액
-            dca_info: DCA 정보
-
-        Returns:
-            각 종목의 목표 비중 (합이 1.0)
-        """
-        # 전체 투자금 계산 (현금 포함)
-        total_amount = sum(amounts.values())
-
-        if total_amount == 0:
-            return {}
-
-        # 목표 비중 계산 (현금 포함)
-        target_weights = {
-            k: v / total_amount
-            for k, v in amounts.items()
-        }
-
-        return target_weights
 
 class PortfolioService:
     """포트폴리오 백테스트 서비스"""
