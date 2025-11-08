@@ -52,6 +52,7 @@ from app.utils.data_fetcher import data_fetcher
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
 from app.services.validation_service import validation_service
+from app.constants.currencies import SUPPORTED_CURRENCIES
 
 
 class BacktestEngine:
@@ -221,23 +222,6 @@ class BacktestEngine:
         # USD면 변환 불필요
         if currency == 'USD':
             return data
-
-        # 지원되는 통화 및 환율 티커 매핑 (portfolio_service.py와 동일)
-        SUPPORTED_CURRENCIES = {
-            'USD': None,
-            'KRW': 'KRW=X',
-            'JPY': 'JPY=X',
-            'EUR': 'EURUSD=X',
-            'GBP': 'GBPUSD=X',
-            'CNY': 'CNY=X',
-            'HKD': 'HKD=X',
-            'TWD': 'TWD=X',
-            'SGD': 'SGD=X',
-            'AUD': 'AUDUSD=X',
-            'CAD': 'CADUSD=X',
-            'CHF': 'CHFUSD=X',
-            'INR': 'INR=X'
-        }
 
         if currency not in SUPPORTED_CURRENCIES:
             self.logger.warning(f"지원하지 않는 통화: {currency}, 변환 없이 진행")

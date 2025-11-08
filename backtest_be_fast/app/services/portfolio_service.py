@@ -69,28 +69,9 @@ from app.core.exceptions import (
     ValidationError
 )
 from app.core.config import settings
+from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
 
 logger = logging.getLogger(__name__)
-
-# 환율 데이터 검색 설정
-EXCHANGE_RATE_LOOKBACK_DAYS = 30  # 환율 데이터 누락 시 과거 검색 일수
-
-# 지원하는 통화 및 환율 티커 매핑
-SUPPORTED_CURRENCIES = {
-    'USD': None,  # 기준 통화, 변환 불필요
-    'KRW': 'KRW=X',  # 원화
-    'JPY': 'JPY=X',  # 엔화
-    'EUR': 'EURUSD=X',  # 유로
-    'GBP': 'GBPUSD=X',  # 파운드
-    'CNY': 'CNY=X',  # 위안화
-    'HKD': 'HKD=X',  # 홍콩달러
-    'TWD': 'TWD=X',  # 대만달러
-    'SGD': 'SGD=X',  # 싱가포르달러
-    'AUD': 'AUDUSD=X',  # 호주달러
-    'CAD': 'CADUSD=X',  # 캐나다달러
-    'CHF': 'CHFUSD=X',  # 스위스프랑
-    'INR': 'INR=X',  # 루피
-}
 
 class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
