@@ -50,6 +50,7 @@
 - 최대 낙폭(Max Drawdown): 최고점 대비 최대 하락폭
 - 승률, 평균 수익/손실
 """
+import asyncio
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Tuple
@@ -83,7 +84,7 @@ class PortfolioService:
         logger.info("포트폴리오 서비스가 초기화되었습니다")
 
     @staticmethod
-    def calculate_dca_portfolio_returns(
+    async def calculate_dca_portfolio_returns(
         portfolio_data: Dict[str, pd.DataFrame],
         amounts: Dict[str, float],
         dca_info: Dict[str, Dict],
@@ -139,7 +140,9 @@ class PortfolioService:
         for unique_key in stock_amounts.keys():
             symbol = dca_info[unique_key]['symbol']
             try:
-                ticker_info = get_ticker_info_from_db(symbol)
+                ticker_info = await asyncio.to_thread(
+                    get_ticker_info_from_db, symbol
+                )
                 ticker_currencies[unique_key] = ticker_info.get('currency', 'USD')
                 logger.debug(f"{symbol} currency: {ticker_currencies[unique_key]}")
             except Exception as e:
@@ -164,7 +167,9 @@ class PortfolioService:
             if exchange_ticker:
                 try:
                     # 백테스트 시작일보다 60일 전부터 로드
-                    exchange_data = load_ticker_data(exchange_ticker, exchange_start_date, end_date)
+                    exchange_data = await asyncio.to_thread(
+                        load_ticker_data, exchange_ticker, exchange_start_date, end_date
+                    )
                     if exchange_data is not None and not exchange_data.empty:
                         # 백테스트 날짜 범위로 reindex하고 forward-fill 적용
                         # 이렇게 하면 환율 시장 휴일(주말, 공휴일)에도 이전 거래일의 환율이 채워짐
@@ -910,7 +915,9 @@ class PortfolioService:
                     logger.info(f"DCA 설정: frequency={dca_frequency}, interval_weeks={interval_weeks}, dca_periods={dca_periods}")
 
                 # DB에서 데이터 로드
-                df = load_ticker_data(symbol, request.start_date, request.end_date)
+                df = await asyncio.to_thread(
+                    load_ticker_data, symbol, request.start_date, request.end_date
+                )
 
                 if df is None or df.empty:
                     logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
@@ -998,7 +1005,7 @@ class PortfolioService:
             
             # 분할 매수를 고려한 포트폴리오 수익률 계산
             logger.info("분할 매수 및 리밸런싱을 고려한 포트폴리오 수익률 계산 중...")
-            portfolio_result = self.calculate_dca_portfolio_returns(
+            portfolio_result = await self.calculate_dca_portfolio_returns(
                 portfolio_data, amounts, dca_info, request.start_date, request.end_date,
                 request.rebalance_frequency, request.commission
             )
