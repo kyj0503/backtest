@@ -30,7 +30,7 @@ const WarningBanner: React.FC<WarningBannerProps> = ({ warnings }) => {
           </h3>
           <div className="space-y-1">
             {warnings.map((warning, index) => (
-              <p key={index} className={`${TEXT_STYLES.caption} text-yellow-700 dark:text-yellow-400`}>
+              <p key={`warning-${index}-${warning.slice(0, 20)}`} className={`${TEXT_STYLES.caption} text-yellow-700 dark:text-yellow-400`}>
                 • {warning}
               </p>
             ))}
