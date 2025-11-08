@@ -31,7 +31,6 @@ def update_listing_dates():
         
         updated_count = 0
         failed_count = 0
-        batch_size = 10  # 10개 종목마다 커밋
         
         for idx, (stock_id, ticker, info_json_str) in enumerate(stocks, 1):
             try:

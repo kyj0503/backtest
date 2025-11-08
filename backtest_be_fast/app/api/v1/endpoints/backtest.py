@@ -120,7 +120,6 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     
     for symbol, ticker_info in zip(symbols, ticker_infos):
         first_trade_date_str = ticker_info.get('first_trade_date')
-        first_trade_date_str = ticker_info.get('first_trade_date')
         
         if first_trade_date_str:
             # 날짜 문자열을 date 객체로 변환하여 안전하게 비교
