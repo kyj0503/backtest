@@ -7,6 +7,25 @@
 2. Review `REFACTORING_ANALYSIS.md` (20 min) - Detailed issues with line numbers
 3. Use this checklist to track progress
 
+## CRITICAL WARNING: Async/Sync Race Conditions
+
+**Before ANY refactoring work, READ THIS:**
+
+This codebase has experienced multiple critical race condition bugs caused by mixing synchronous I/O with async contexts. See `backtest_be_fast/docs/race_condition_reintroduced_analysis.md` for full details.
+
+**Mandatory checks for ALL code changes:**
+- [ ] Does this code move/create any database calls? (`load_ticker_data`, `save_ticker_data`, `get_ticker_info_from_db`)
+- [ ] Does this code move/create any API calls? (`data_fetcher.get_stock_data`, `yf.Ticker()`, `yf.download()`)
+- [ ] If YES to either: Are they wrapped with `await asyncio.to_thread()`?
+- [ ] If creating async functions: Do they properly await all I/O operations?
+- [ ] If creating static methods: Are they called from async contexts? Do they perform I/O?
+
+**Race condition symptoms:**
+- First execution with new ticker/date: Corrupted results
+- Second execution (same parameters): Correct results
+
+**If you see these symptoms, STOP and fix async/sync boundaries immediately.**
+
 ---
 
 ## Phase 1: Critical Issues (Week 1) - 12 hours total ✅ COMPLETED
