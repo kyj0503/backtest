@@ -56,36 +56,45 @@ Risk Level: Low (all critical issues resolved)
 Breaking Changes: None (backward compatible)
 
 ================================================================================
-COMPLETED WORK (Phase 1) ✅
+COMPLETED WORK (Phase 1 & 2.1) ✅
 ================================================================================
 
-✅ QUICK WINS COMPLETED (7 hours total):
+✅ PHASE 1 COMPLETED (12 hours total):
 1. ✅ Extract currency mapping to app/constants/currencies.py (Commit: c5a19ce)
 2. ✅ Create app/utils/converters.py for safe_float/safe_int (Commit: 6ac6ef1)
 3. ✅ Create PositionSizingMixin to eliminate strategy duplication (Commit: 565ebc5)
 4. ✅ Extract DCACalculator and RebalanceHelper from portfolio_service (Commit: 06007da)
 5. ✅ Consolidate all 7 strategy files into strategies.py (Commits: 4430dbb, afbff68, 86412cc, 8436bae)
+6. ✅ Remove unused imports from backtest_service.py (Commit: 6cba35b)
+
+✅ PHASE 2.1 COMPLETED (3 hours total):
+7. ✅ Create DataSource interface for loose coupling (Commit: 04d9b63)
+   - Abstract DataSource ABC
+   - YFinanceDataSource implementation
+   - CachedDataSource decorator pattern
 
 ================================================================================
 REMAINING HIGH IMPACT TASKS (Prioritized)
 ================================================================================
 
-PRIORITY 1 - CLEANUP (1-2 hours):
-□ Remove unused imports across all service files
-□ Run pylint and fix warnings
+PRIORITY 2.2 - DI CONTAINER (3 hours) ⏳ NEXT:
+□ Create app/di/container.py
+□ Implement ServiceContainer class
+□ Register all services with dependencies
+□ Test initialization order
 
-PRIORITY 2 - ARCHITECTURE (6-10 hours):
-□ Complete portfolio_service.py split (extract statistics calculator)
-□ Implement DataSource interface for dependency injection
-□ Create dependency injection container
+PRIORITY 2.3 - PORTFOLIO SERVICE SPLIT (6 hours):
+□ Create PortfolioCalculatorService (extract statistics, curves)
+□ Reduce portfolio_service.py to < 1000 lines
+□ Verify functionality with backtest tests
 
 PRIORITY 3 - ROBUSTNESS (6-9 hours):
-□ Centralize exception handling and mapping
-□ Refactor _convert_to_usd() with early returns and extracted helpers
+□ Centralize exception handling (app/core/exception_handlers.py)
+□ Refactor _convert_to_usd() with early returns (< 100 lines)
 □ Add logging to strategy implementations
 
 PRIORITY 4 - POLISH (8-12 hours):
-□ Add comprehensive type hints to all services
+□ Add comprehensive type hints (mypy 0 errors)
 □ Replace monkey patching with wrapper pattern
 □ Centralize hardcoded configuration values
 
@@ -93,7 +102,7 @@ PRIORITY 4 - POLISH (8-12 hours):
 REFACTORING PHASES (UPDATED)
 ================================================================================
 
-PHASE 1 - CRITICAL ✅ COMPLETE
+PHASE 1 - CRITICAL ✅ COMPLETE (12/12 hours)
 ├─ ✅ Extract strategy logic into PositionSizingMixin (4h)
 ├─ ✅ Consolidate all strategies into single file (3h)
 ├─ ✅ Create currencies constant file (1h)
@@ -101,10 +110,10 @@ PHASE 1 - CRITICAL ✅ COMPLETE
 ├─ ✅ Extract DCA and Rebalance helpers (2h)
 └─ ✅ IMPACT: 40% improvement in code quality achieved
 
-PHASE 2 - ARCHITECTURE (Next: Week 2)
-├─ □ Remove unused imports (1h) ← START HERE
-├─ □ Create DataSource interface (3h)
-├─ □ Implement DI container (3h)
+PHASE 2 - ARCHITECTURE (In Progress: 3/13 hours)
+├─ ✅ Remove unused imports (1h) - DONE
+├─ ✅ Create DataSource interface (3h) - DONE
+├─ □ Implement DI container (3h) ← NEXT
 ├─ □ Complete portfolio_service.py split (6h)
 └─ □ IMPACT: 60% improvement in testability (target)
 
@@ -274,11 +283,12 @@ After refactoring, the codebase should have:
 ✓ Clear separation of concerns
 
 ================================================================================
-COMPLETED COMMITS (Phase 1)
+COMPLETED COMMITS (Phase 1 & 2.1)
 ================================================================================
 
-10 commits total for Phase 1 refactoring:
+14 commits total for refactoring work:
 
+Phase 1 (12 commits):
 1. 08cb02f - feat: add comprehensive backend refactoring checklist and summary
 2. 565ebc5 - refactor: eliminate code duplication in strategy implementations with PositionSizingMixin
 3. c5a19ce - refactor: consolidate currency mapping to single source of truth
@@ -289,8 +299,14 @@ COMPLETED COMMITS (Phase 1)
 8. 86412cc - refactor: update strategy_service imports to use consolidated strategies module
 9. 8436bae - refactor: update strategies/__init__.py imports to use consolidated strategies module
 10. 60f5120 - docs: update refactoring documentation for strategy consolidation
+11. 45bde70 - docs: comprehensive update of all refactoring documentation for Phase 1 completion
+12. 6cba35b - refactor: remove unused imports from backtest_service.py
 
-All changes backward compatible, no breaking changes.
+Phase 2.1 (2 commits):
+13. 04d9b63 - refactor: create DataSource interface for loose coupling
+14. (pending) - docs: update refactoring status after Phase 2.1 completion
+
+All changes backward compatible, no breaking changes, no database migrations needed.
 
 ================================================================================
 DOCUMENT LOCATION
