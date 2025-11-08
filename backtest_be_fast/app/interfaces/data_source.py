@@ -40,7 +40,7 @@ cached_source = CachedDataSource(data_source)
 """
 from abc import ABC, abstractmethod
 from datetime import date
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import pandas as pd
 import logging
 

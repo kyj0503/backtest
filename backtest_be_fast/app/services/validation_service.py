@@ -40,7 +40,6 @@ from typing import Dict, Any, Optional
 
 from app.schemas.requests import BacktestRequest
 from app.utils.data_fetcher import data_fetcher
-from app.utils.converters import safe_float, safe_int
 from app.services.strategy_service import strategy_service
 from app.core.exceptions import ValidationError
 from app.repositories.data_repository import data_repository
