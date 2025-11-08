@@ -69,7 +69,7 @@ export const initialBacktestFormState: BacktestFormState = {
     strategyParams: {}
   },
   settings: {
-    rebalanceFrequency: 'weekly_4',
+    rebalanceFrequency: 'weekly_12',
     commission: 0.2
   },
   ui: {
