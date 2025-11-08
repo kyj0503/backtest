@@ -302,25 +302,50 @@ def get_ticker_info_from_db(ticker: str) -> dict:
         ticker: 종목 심볼
 
     Returns:
-        티커 정보 딕셔너리 (currency 포함)
+        티커 정보 딕셔너리 (currency, first_trade_date 포함)
+        
+    Note:
+        - 캐시된 info_json 사용으로 Yahoo Finance API 재호출 최소화
+        - first_trade_date가 없으면 Yahoo Finance에서 가져와 DB 업데이트
     """
     engine = _get_engine()
     conn = engine.connect()
     try:
         ticker = ticker.upper()
         row = conn.execute(
-            text("SELECT info_json FROM stocks WHERE ticker = :t"),
+            text("SELECT id, info_json FROM stocks WHERE ticker = :t"),
             {"t": ticker}
         ).fetchone()
 
-        if row and row[0]:
+        if row and row[1]:
             try:
-                info = json.loads(row[0])
+                stock_id = row[0]
+                info = json.loads(row[1])
+                
+                # 상장일이 없으면 Yahoo Finance에서 가져와 업데이트
+                if not info.get('first_trade_date'):
+                    logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
+                    try:
+                        from app.utils.data_fetcher import data_fetcher
+                        fresh_info = data_fetcher.get_ticker_info(ticker)
+                        if fresh_info.get('first_trade_date'):
+                            info['first_trade_date'] = fresh_info['first_trade_date']
+                            # DB 업데이트
+                            conn.execute(
+                                text("UPDATE stocks SET info_json = :info WHERE id = :id"),
+                                {"info": json.dumps(info), "id": stock_id}
+                            )
+                            conn.commit()
+                            logger.info(f"{ticker}: 상장일 업데이트 완료 - {info['first_trade_date']}")
+                    except Exception as e:
+                        logger.warning(f"{ticker}: 상장일 조회 실패 - {e}")
+                
                 return {
                     'symbol': ticker,
                     'currency': info.get('currency', 'USD'),
                     'company_name': info.get('company_name', ticker),
-                    'exchange': info.get('exchange', 'Unknown')
+                    'exchange': info.get('exchange', 'Unknown'),
+                    'first_trade_date': info.get('first_trade_date', None)
                 }
             except Exception as e:
                 logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
@@ -330,7 +355,8 @@ def get_ticker_info_from_db(ticker: str) -> dict:
             'symbol': ticker,
             'currency': 'USD',
             'company_name': ticker,
-            'exchange': 'Unknown'
+            'exchange': 'Unknown',
+            'first_trade_date': None
         }
     except Exception as e:
         logger.error(f"티커 정보 조회 실패: {ticker} - {e}")
@@ -338,7 +364,8 @@ def get_ticker_info_from_db(ticker: str) -> dict:
             'symbol': ticker,
             'currency': 'USD',
             'company_name': ticker,
-            'exchange': 'Unknown'
+            'exchange': 'Unknown',
+            'first_trade_date': None
         }
     finally:
         conn.close()
@@ -353,6 +380,10 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
 
     Returns:
         티커별 정보 딕셔너리 (key: ticker, value: info dict)
+        
+    Note:
+        상장일이 없는 종목이 있으면 로그에 경고를 출력합니다.
+        scripts/update_ticker_listing_dates.py를 실행하여 일괄 업데이트할 수 있습니다.
     """
     if not tickers:
         return {}
@@ -373,6 +404,7 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
         # 결과를 딕셔너리로 변환
         result = {}
         found_tickers = set()
+        missing_listing_dates = []
 
         for row in rows:
             ticker = row[0]
@@ -381,11 +413,18 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
             if row[1]:
                 try:
                     info = json.loads(row[1])
+                    first_trade_date = info.get('first_trade_date', None)
+                    
+                    # 상장일이 없으면 경고 리스트에 추가
+                    if not first_trade_date:
+                        missing_listing_dates.append(ticker)
+                    
                     result[ticker] = {
                         'symbol': ticker,
                         'currency': info.get('currency', 'USD'),
                         'company_name': info.get('company_name', ticker),
-                        'exchange': info.get('exchange', 'Unknown')
+                        'exchange': info.get('exchange', 'Unknown'),
+                        'first_trade_date': first_trade_date
                     }
                 except Exception as e:
                     logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
@@ -393,15 +432,25 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
                         'symbol': ticker,
                         'currency': 'USD',
                         'company_name': ticker,
-                        'exchange': 'Unknown'
+                        'exchange': 'Unknown',
+                        'first_trade_date': None
                     }
             else:
                 result[ticker] = {
                     'symbol': ticker,
                     'currency': 'USD',
                     'company_name': ticker,
-                    'exchange': 'Unknown'
+                    'exchange': 'Unknown',
+                    'first_trade_date': None
                 }
+        
+        # 상장일이 없는 종목이 있으면 경고
+        if missing_listing_dates:
+            logger.warning(
+                f"상장일 정보가 없는 종목: {', '.join(missing_listing_dates)}. "
+                f"'docker exec -it backtest-be-fast-dev python scripts/update_ticker_listing_dates.py' "
+                f"실행으로 업데이트할 수 있습니다."
+            )
 
         # DB에 없는 티커들은 기본값 추가
         for ticker in upper_tickers:
@@ -410,7 +459,8 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
                     'symbol': ticker,
                     'currency': 'USD',
                     'company_name': ticker,
-                    'exchange': 'Unknown'
+                    'exchange': 'Unknown',
+                    'first_trade_date': None
                 }
 
         return result

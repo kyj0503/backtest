@@ -242,6 +242,7 @@ export interface UnifiedBacktestResponse {
   backtest_type: 'single_stock' | 'portfolio';
   data: ChartDataResponse | PortfolioBacktestResponse;
   message?: string;
+  warnings?: string[];  // 상장일 등의 경고 메시지
 }
 
 // 통합 백테스트 결과 (프론트엔드 처리용)

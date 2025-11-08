@@ -177,6 +177,9 @@ export interface PortfolioData {
   latest_news?: Record<string, NewsItem[]>;
   sp500_benchmark?: BenchmarkPoint[];
   nasdaq_benchmark?: BenchmarkPoint[];
+  
+  // 경고 메시지 (상장일 등)
+  warnings?: string[];
 }
 
 export interface BacktestResultsProps {

@@ -120,6 +120,22 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
         news_display_count=15
     )
 
+    # 3.5. 상장일 체크 및 경고 메시지 생성
+    from ....services.validation_service import ValidationService
+    validation_service = ValidationService()
+    warnings = []
+    
+    ticker_info = unified_data.get('ticker_info', {})
+    for symbol in symbols:
+        if symbol in ticker_info:
+            warning = validation_service.check_listing_date_warnings(
+                ticker_info[symbol], 
+                request.start_date
+            )
+            if warning:
+                warnings.append(warning)
+                logger.warning(f"상장일 경고: {warning}")
+
     # 4. S&P 500 벤치마크 통계 계산 및 추가
     sp500_benchmark = unified_data.get('sp500_benchmark', [])
     if sp500_benchmark and len(sp500_benchmark) > 0:
@@ -139,6 +155,10 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
 
     # 5. 응답 데이터 병합
     backtest_result['data'].update(unified_data)
+    
+    # 6. 경고 메시지 추가
+    if warnings:
+        backtest_result['warnings'] = warnings
 
     return backtest_result
 
