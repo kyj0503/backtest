@@ -28,8 +28,10 @@ import pandas as pd
 from backtesting import Strategy
 from backtesting.lib import crossover
 
+from app.strategies.base_strategy import PositionSizingMixin
 
-class EMAStrategy(Strategy):
+
+class EMAStrategy(PositionSizingMixin, Strategy):
     """EMA 교차 전략"""
 
     fast_window = 12
@@ -44,10 +46,7 @@ class EMAStrategy(Strategy):
     def next(self):
         # 빠른 EMA가 느린 EMA를 상향 돌파: 골든크로스 → 매수
         if crossover(self.ema_fast, self.ema_slow) and not self.position:
-            price = self.data.Close[-1]
-            size = int((self.equity * self.position_size) / price)
-            if size > 0:
-                self.buy(size=size)
+            self.calculate_and_buy()
         # 빠른 EMA가 느린 EMA를 하향 돌파: 데드크로스 → 매도
         elif crossover(self.ema_slow, self.ema_fast) and self.position:
             self.position.close()

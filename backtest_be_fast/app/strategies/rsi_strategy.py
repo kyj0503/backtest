@@ -30,11 +30,13 @@ import pandas as pd
 import numpy as np
 from backtesting import Strategy
 
+from app.strategies.base_strategy import PositionSizingMixin
 
-class RSIStrategy(Strategy):
+
+class RSIStrategy(PositionSizingMixin, Strategy):
     """
     RSI 기반 매매 전략
-    
+
     RSI(Relative Strength Index) 지표를 사용하여 과매도/과매수 구간에서 매매하는 전략
     """
     rsi_period = 14
@@ -73,10 +75,7 @@ class RSIStrategy(Strategy):
 
             # 포지션이 없을 때: RSI 과매도 구간에서 매수
             if current_rsi < self.rsi_oversold and not self.position:
-                price = self.data.Close[-1]
-                size = int((self.equity * self.position_size) / price)
-                if size > 0:
-                    self.buy(size=size)
+                self.calculate_and_buy()
 
             # 포지션이 있을 때: RSI 과매수 구간 또는 중립선(50) 복귀 시 매도
             elif self.position:

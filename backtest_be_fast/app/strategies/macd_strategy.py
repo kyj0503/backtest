@@ -31,8 +31,10 @@ import numpy as np
 from backtesting import Strategy
 from backtesting.lib import crossover
 
+from app.strategies.base_strategy import PositionSizingMixin
 
-class MACDStrategy(Strategy):
+
+class MACDStrategy(PositionSizingMixin, Strategy):
     """MACD 전략"""
     fast_period = 12
     slow_period = 26
@@ -62,10 +64,7 @@ class MACDStrategy(Strategy):
 
             # MACD 선이 시그널 선을 상향 돌파: 매수
             if crossover(self.macd_line, self.signal_line) and not self.position:
-                price = self.data.Close[-1]
-                size = int((self.equity * self.position_size) / price)
-                if size > 0:
-                    self.buy(size=size)
+                self.calculate_and_buy()
             # MACD 선이 시그널 선을 하향 돌파: 매도
             elif crossover(self.signal_line, self.macd_line) and self.position:
                 self.position.close()

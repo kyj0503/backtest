@@ -30,8 +30,10 @@ import numpy as np
 from backtesting import Strategy
 from backtesting.test import SMA
 
+from app.strategies.base_strategy import PositionSizingMixin
 
-class BollingerBandsStrategy(Strategy):
+
+class BollingerBandsStrategy(PositionSizingMixin, Strategy):
     """볼린저 밴드 전략"""
     period = 20
     std_dev = 2
@@ -63,10 +65,7 @@ class BollingerBandsStrategy(Strategy):
 
             # 가격이 하단 밴드 아래로 떨어짐: 과매도 → 매수
             if current_price < self.lower_band[-1] and not self.position:
-                price = self.data.Close[-1]
-                size = int((self.equity * self.position_size) / price)
-                if size > 0:
-                    self.buy(size=size)
+                self.calculate_and_buy()
             # 가격이 상단 밴드 위로 올라감 또는 중심선(SMA) 복귀: 매도
             elif self.position:
                 if current_price > self.upper_band[-1]:

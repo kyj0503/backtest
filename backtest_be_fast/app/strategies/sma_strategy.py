@@ -30,6 +30,8 @@ import pandas as pd
 from backtesting import Strategy
 from backtesting.lib import crossover
 
+from app.strategies.base_strategy import PositionSizingMixin
+
 
 def SMA(values, n):
     """
@@ -50,7 +52,7 @@ def SMA(values, n):
     return pd.Series(values).rolling(n).mean()
 
 
-class SMACrossStrategy(Strategy):
+class SMACrossStrategy(PositionSizingMixin, Strategy):
     """
     이동평균 교차 전략
 
@@ -89,11 +91,7 @@ class SMACrossStrategy(Strategy):
         if not self.position:
             # 골든 크로스 (단기선이 장기선을 상향 돌파)
             if crossover(self.sma1, self.sma2):
-                # 매수 가능한 수량 계산 (정수 단위로 반올림)
-                price = self.data.Close[-1]
-                size = int((self.equity * self.position_size) / price)
-                if size > 0:  # 수량이 0보다 큰 경우에만 매수
-                    self.buy(size=size)
+                self.calculate_and_buy()
 
         # 포지션이 있을 때
         else:
