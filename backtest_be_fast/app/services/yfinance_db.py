@@ -471,15 +471,16 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                 if df_new is None or df_new.empty:
                     raise ValueError("yfinance에서 유효한 데이터가 반환되지 않았습니다.")
                 save_ticker_data(ticker, df_new)
+                
+                # 데이터 저장 후 커넥션을 닫고 새로 연결 - 트랜잭션 격리 문제 방지
+                conn.close()
+                import time
+                time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
+                conn = engine.connect()
             except Exception as e:
                 logger.exception("티커가 DB에 없고 yfinance 수집 실패")
                 raise ValueError(f"티커 '{ticker}'이(가) DB에 없고 yfinance 수집 실패: {e}")
 
-            # re-query using a fresh connection to avoid transaction snapshot issues
-            # (some MySQL isolation levels like REPEATABLE READ may not see rows inserted
-            #  by a different connection within the same snapshot)
-            conn.close()
-            conn = engine.connect()
             row = conn.execute(text("SELECT id FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
             if not row:
                 raise ValueError(f"티커 '{ticker}'을(를) DB에 추가할 수 없습니다.")
@@ -521,6 +522,11 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                 df_new = data_fetcher.get_stock_data(ticker, co_start, co_end, use_cache=True)
                 if df_new is not None and not df_new.empty:
                     save_ticker_data(ticker, df_new)
+                    # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
+                    conn.close()
+                    import time
+                    time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
+                    conn = engine.connect()
                 else:
                     logger.warning("통합 fetch가 빈 결과를 반환했습니다; 개별 구간으로 폴백합니다.")
                     raise ValueError("empty result from consolidated fetch")
@@ -537,6 +543,11 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                         df_new = data_fetcher.get_stock_data(ticker, s, e, use_cache=True)
                         if df_new is not None and not df_new.empty:
                             save_ticker_data(ticker, df_new)
+                            # 데이터 저장 후 커넥션 갱신
+                            conn.close()
+                            import time
+                            time.sleep(0.1)
+                            conn = engine.connect()
                     except Exception:
                         logger.exception("누락 기간 수집 실패")
         else:
