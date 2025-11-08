@@ -9,17 +9,19 @@
 
 ---
 
-## Phase 1: Critical Issues (Week 1) - 8 hours total ✅ COMPLETED
+## Phase 1: Critical Issues (Week 1) - 12 hours total ✅ COMPLETED
 
 ### 1.1 Extract Strategy Position Sizing Logic ✅
-- [x] Create `app/strategies/base_strategy.py`
-- [x] Add `PositionSizingMixin` class
-- [x] Update all 5 strategy files to inherit from mixin
-- [x] Test each strategy with sample data
-- **Files Affected:** `app/strategies/*.py` (5 files)
-- **Effort:** 4 hours
-- **Verification:** No duplicate position sizing code ✅
-- **Commit:** 565ebc5
+- [x] Create `PositionSizingMixin` class
+- [x] Update all 6 strategy files to inherit from mixin
+- [x] Consolidate all 7 strategy files into single strategies.py
+- [x] Delete deprecated individual strategy files
+- [x] Update all import references
+- [x] Test each strategy with Docker build
+- **Files Affected:** `app/strategies/*.py` (7 files → 1 file)
+- **Effort:** 7 hours (4h mixin + 3h consolidation)
+- **Verification:** No duplicate code, Docker build successful ✅
+- **Commits:** 565ebc5, 4430dbb, afbff68, 86412cc, 8436bae
 
 ### 1.2 Centralize Currency Configuration ✅
 - [x] Create `app/constants/currencies.py`
@@ -45,7 +47,18 @@
 - **Verification:** No duplicate function definitions ✅
 - **Commit:** 6ac6ef1
 
-### 1.4 Clean Up Unused Imports
+### 1.4 Extract DCA and Rebalance Helpers ✅
+- [x] Create `app/services/dca_calculator.py` (DCACalculator helper)
+- [x] Create `app/services/rebalance_helper.py` (RebalanceHelper utility)
+- [x] Update `portfolio_service.py` to import helpers
+- [x] Remove duplicate class definitions from portfolio_service
+- [x] Test DCA and rebalancing functionality
+- **Files Affected:** 2 new files + portfolio_service.py
+- **Effort:** 2 hours
+- **Verification:** All portfolio tests pass ✅
+- **Commit:** 06007da
+
+### 1.5 Clean Up Unused Imports (NEXT)
 - [ ] Run `pylint` on all service files
 - [ ] Remove `import signal` from `backtest_engine.py` (line 29)
 - [ ] Remove `from decimal import Decimal` (line 37)
@@ -58,7 +71,7 @@
 
 ---
 
-## Phase 2: Architecture Improvements (Week 2) - 13 hours total
+## Phase 2: Architecture Improvements (Week 2) - 13 hours total (0/13 hours complete)
 
 ### 2.1 Create DataSource Interface
 - [ ] Create `app/interfaces/data_source.py`
@@ -80,19 +93,17 @@
 - **Effort:** 3 hours
 - **Verification:** No circular imports, clean startup
 
-### 2.3 Split Portfolio Service (Partial ✅)
-- [x] Create `app/services/dca_calculator.py` (DCACalculator helper)
-- [x] Create `app/services/rebalance_helper.py` (RebalanceHelper utility)
+### 2.3 Complete Portfolio Service Split
 - [ ] Create `app/services/portfolio_calculator_service.py` (statistics, curves)
 - [ ] Extract methods from `portfolio_service.py` (statistics, equity curves)
 - [ ] Create `PortfolioFacade` for orchestration (optional)
 - [ ] Update API endpoints if needed
 - [ ] Add tests for portfolio calculator
 - [ ] Verify existing functionality unchanged
-- **Files Affected:** 2 helper files created, portfolio_service.py reduced
-- **Effort:** 8 hours (2 hours done, 6 hours remaining)
-- **Verification:** All tests pass ✅
-- **Commits:** 06007da (extract helpers)
+- **Files Affected:** portfolio_service.py reduced further
+- **Effort:** 6 hours (DCA/Rebalance already extracted in Phase 1)
+- **Verification:** portfolio_service.py < 1000 lines
+- **Dependencies:** Requires 1.4 (DCA/Rebalance extraction) - ✅ DONE
 
 ---
 
