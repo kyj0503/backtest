@@ -40,11 +40,13 @@ yfinance 데이터 MySQL 저장 서비스
 import os
 import json
 import logging
+import time
 from typing import Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 import pandas as pd
 from datetime import datetime, date, timedelta
+from app.utils.data_fetcher import data_fetcher
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +151,6 @@ def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
         # ensure stock exists
         info = {}
         try:
-            from app.utils.data_fetcher import data_fetcher
             info = data_fetcher.get_ticker_info(ticker)
         except Exception:
             logger.warning("티커 info 조회 실패")
@@ -258,8 +259,6 @@ def load_ticker_data(ticker: str, start_date=None, end_date=None, max_retries: i
     Raises:
         ValueError: 모든 재시도 실패 시
     """
-    import time
-    
     last_exception = None
     
     for attempt in range(1, max_retries + 1):
@@ -302,25 +301,49 @@ def get_ticker_info_from_db(ticker: str) -> dict:
         ticker: 종목 심볼
 
     Returns:
-        티커 정보 딕셔너리 (currency 포함)
+        티커 정보 딕셔너리 (currency, first_trade_date 포함)
+        
+    Note:
+        - 캐시된 info_json 사용으로 Yahoo Finance API 재호출 최소화
+        - first_trade_date가 없으면 Yahoo Finance에서 가져와 DB 업데이트
     """
     engine = _get_engine()
     conn = engine.connect()
     try:
         ticker = ticker.upper()
         row = conn.execute(
-            text("SELECT info_json FROM stocks WHERE ticker = :t"),
+            text("SELECT id, info_json FROM stocks WHERE ticker = :t"),
             {"t": ticker}
         ).fetchone()
 
-        if row and row[0]:
+        if row and row[1]:
             try:
-                info = json.loads(row[0])
+                stock_id = row[0]
+                info = json.loads(row[1])
+                
+                # 상장일이 없으면 Yahoo Finance에서 가져와 업데이트
+                if not info.get('first_trade_date'):
+                    logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
+                    try:
+                        fresh_info = data_fetcher.get_ticker_info(ticker)
+                        if fresh_info.get('first_trade_date'):
+                            info['first_trade_date'] = fresh_info['first_trade_date']
+                            # DB 업데이트
+                            conn.execute(
+                                text("UPDATE stocks SET info_json = :info WHERE id = :id"),
+                                {"info": json.dumps(info), "id": stock_id}
+                            )
+                            conn.commit()
+                            logger.info(f"{ticker}: 상장일 업데이트 완료 - {info['first_trade_date']}")
+                    except Exception as e:
+                        logger.warning(f"{ticker}: 상장일 조회 실패 - {e}")
+                
                 return {
                     'symbol': ticker,
                     'currency': info.get('currency', 'USD'),
                     'company_name': info.get('company_name', ticker),
-                    'exchange': info.get('exchange', 'Unknown')
+                    'exchange': info.get('exchange', 'Unknown'),
+                    'first_trade_date': info.get('first_trade_date', None)
                 }
             except Exception as e:
                 logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
@@ -330,7 +353,8 @@ def get_ticker_info_from_db(ticker: str) -> dict:
             'symbol': ticker,
             'currency': 'USD',
             'company_name': ticker,
-            'exchange': 'Unknown'
+            'exchange': 'Unknown',
+            'first_trade_date': None
         }
     except Exception as e:
         logger.error(f"티커 정보 조회 실패: {ticker} - {e}")
@@ -338,7 +362,8 @@ def get_ticker_info_from_db(ticker: str) -> dict:
             'symbol': ticker,
             'currency': 'USD',
             'company_name': ticker,
-            'exchange': 'Unknown'
+            'exchange': 'Unknown',
+            'first_trade_date': None
         }
     finally:
         conn.close()
@@ -353,6 +378,10 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
 
     Returns:
         티커별 정보 딕셔너리 (key: ticker, value: info dict)
+        
+    Note:
+        상장일이 없는 종목이 있으면 로그에 경고를 출력합니다.
+        scripts/update_ticker_listing_dates.py를 실행하여 일괄 업데이트할 수 있습니다.
     """
     if not tickers:
         return {}
@@ -373,6 +402,7 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
         # 결과를 딕셔너리로 변환
         result = {}
         found_tickers = set()
+        missing_listing_dates = []
 
         for row in rows:
             ticker = row[0]
@@ -381,11 +411,18 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
             if row[1]:
                 try:
                     info = json.loads(row[1])
+                    first_trade_date = info.get('first_trade_date', None)
+                    
+                    # 상장일이 없으면 경고 리스트에 추가
+                    if not first_trade_date:
+                        missing_listing_dates.append(ticker)
+                    
                     result[ticker] = {
                         'symbol': ticker,
                         'currency': info.get('currency', 'USD'),
                         'company_name': info.get('company_name', ticker),
-                        'exchange': info.get('exchange', 'Unknown')
+                        'exchange': info.get('exchange', 'Unknown'),
+                        'first_trade_date': first_trade_date
                     }
                 except Exception as e:
                     logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
@@ -393,15 +430,25 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
                         'symbol': ticker,
                         'currency': 'USD',
                         'company_name': ticker,
-                        'exchange': 'Unknown'
+                        'exchange': 'Unknown',
+                        'first_trade_date': None
                     }
             else:
                 result[ticker] = {
                     'symbol': ticker,
                     'currency': 'USD',
                     'company_name': ticker,
-                    'exchange': 'Unknown'
+                    'exchange': 'Unknown',
+                    'first_trade_date': None
                 }
+        
+        # 상장일이 없는 종목이 있으면 경고
+        if missing_listing_dates:
+            logger.warning(
+                f"상장일 정보가 없는 종목: {', '.join(missing_listing_dates)}. "
+                f"'docker exec -it backtest-be-fast-dev python scripts/update_ticker_listing_dates.py' "
+                f"실행으로 업데이트할 수 있습니다."
+            )
 
         # DB에 없는 티커들은 기본값 추가
         for ticker in upper_tickers:
@@ -410,7 +457,8 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
                     'symbol': ticker,
                     'currency': 'USD',
                     'company_name': ticker,
-                    'exchange': 'Unknown'
+                    'exchange': 'Unknown',
+                    'first_trade_date': None
                 }
 
         return result
@@ -466,20 +514,19 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
         if not row:
             logger.info(f"티커 '{ticker}'이 DB에 없음 — yfinance에서 수집 시도")
             try:
-                from app.utils.data_fetcher import data_fetcher
                 df_new = data_fetcher.get_stock_data(ticker, start_date, end_date, use_cache=True)
                 if df_new is None or df_new.empty:
                     raise ValueError("yfinance에서 유효한 데이터가 반환되지 않았습니다.")
                 save_ticker_data(ticker, df_new)
+                
+                # 데이터 저장 후 커넥션을 닫고 새로 연결 - 트랜잭션 격리 문제 방지
+                conn.close()
+                time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
+                conn = engine.connect()
             except Exception as e:
                 logger.exception("티커가 DB에 없고 yfinance 수집 실패")
                 raise ValueError(f"티커 '{ticker}'이(가) DB에 없고 yfinance 수집 실패: {e}")
 
-            # re-query using a fresh connection to avoid transaction snapshot issues
-            # (some MySQL isolation levels like REPEATABLE READ may not see rows inserted
-            #  by a different connection within the same snapshot)
-            conn.close()
-            conn = engine.connect()
             row = conn.execute(text("SELECT id FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
             if not row:
                 raise ValueError(f"티커 '{ticker}'을(를) DB에 추가할 수 없습니다.")
@@ -494,11 +541,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
             db_max = pd.to_datetime(date_row[1]).date()
 
         # fetch missing ranges if any
-        try:
-            from app.utils.data_fetcher import data_fetcher
-        except Exception:
-            data_fetcher = None
-
         missing_ranges = []
         if db_min is None:
             # no data at all in DB for this ticker -> fetch full requested range
@@ -521,6 +563,10 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                 df_new = data_fetcher.get_stock_data(ticker, co_start, co_end, use_cache=True)
                 if df_new is not None and not df_new.empty:
                     save_ticker_data(ticker, df_new)
+                    # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
+                    conn.close()
+                    time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
+                    conn = engine.connect()
                 else:
                     logger.warning("통합 fetch가 빈 결과를 반환했습니다; 개별 구간으로 폴백합니다.")
                     raise ValueError("empty result from consolidated fetch")
@@ -537,11 +583,12 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                         df_new = data_fetcher.get_stock_data(ticker, s, e, use_cache=True)
                         if df_new is not None and not df_new.empty:
                             save_ticker_data(ticker, df_new)
+                            # 데이터 저장 후 커넥션 갱신
+                            conn.close()
+                            time.sleep(0.1)
+                            conn = engine.connect()
                     except Exception:
                         logger.exception("누락 기간 수집 실패")
-        else:
-            if data_fetcher is None and missing_ranges:
-                logger.warning("data_fetcher 모듈을 찾을 수 없어 누락 데이터를 가져올 수 없습니다.")
 
         # build query to return requested interval
         q = "SELECT date, open, high, low, close, adj_close, volume FROM daily_prices WHERE stock_id = :sid"

@@ -211,9 +211,8 @@ class DataFetcher:
             # 컬럼 순서 맞추기
             data = data[required_columns]
             
-            # NaN 값 및 무한대 값 처리
-            data = data.replace([np.inf, -np.inf], np.nan)
-            data = data.dropna()
+            # NaN 값 및 무한대 값 처리 (최적화: 체이닝으로 단일 패스)
+            data = data.replace([np.inf, -np.inf], np.nan).dropna()
             
             if data.empty:
                 raise DataNotFoundError(f"'{ticker}' 종목의 유효한 데이터가 없습니다.")
@@ -282,12 +281,23 @@ class DataFetcher:
             ticker: 티커 심볼
             
         Returns:
-            티커 정보 딕셔너리
+            티커 정보 딕셔너리 (상장일 포함)
         """
         try:
+            from datetime import datetime
             ticker = ticker.upper()
             stock = yf.Ticker(ticker)
             info = stock.info
+            
+            # 상장일 추출 (firstTradeDateMilliseconds - 밀리초 단위)
+            first_trade_date = None
+            first_trade_millis = info.get('firstTradeDateMilliseconds')
+            if first_trade_millis:
+                try:
+                    # 밀리초를 초로 변환
+                    first_trade_date = datetime.fromtimestamp(first_trade_millis / 1000).strftime('%Y-%m-%d')
+                except Exception as e:
+                    logger.warning(f"상장일 변환 실패: {ticker}, {e}")
             
             # 기본 정보 추출
             result = {
@@ -299,7 +309,8 @@ class DataFetcher:
                 'current_price': info.get('regularMarketPrice', info.get('previousClose', None)),
                 'currency': info.get('currency', 'USD'),
                 'exchange': info.get('exchange', 'Unknown'),
-                'country': info.get('country', 'Unknown')
+                'country': info.get('country', 'Unknown'),
+                'first_trade_date': first_trade_date  # 상장일 추가
             }
             
             return result
@@ -311,7 +322,8 @@ class DataFetcher:
                 'error': str(e),
                 'company_name': ticker,
                 'sector': 'Unknown',
-                'industry': 'Unknown'
+                'industry': 'Unknown',
+                'first_trade_date': None
             }
 
 

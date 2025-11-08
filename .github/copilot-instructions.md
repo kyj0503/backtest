@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 
-**라고할때살걸** - 트레이딩 전략 백테스팅 플랫폼 (v1.6.6)
+**라고할때살걸** - 트레이딩 전략 백테스팅 플랫폼 (v1.6.10)
 - **Backend**: FastAPI + Python 3.x, backtesting.py 라이브러리 래퍼
 - **Frontend**: React 18 + TypeScript + Vite, shadcn/ui 컴포넌트
 - **배포**: Docker Compose 기반 개발/프로덕션 환경
@@ -50,6 +50,67 @@ src/
 ```
 
 **라우팅**: `react-router-dom` 사용, `/backtest` 메인 페이지 (레거시 redirect 존재)
+
+## CRITICAL: Async/Sync 경계 관리 (Race Condition 방지)
+
+**중요도**: CRITICAL - 백테스트 결과 정확성에 직접 영향
+
+### 문제 패턴
+
+FastAPI는 async 프레임워크이지만, yfinance, SQLAlchemy 등 많은 라이브러리는 동기 I/O를 사용합니다. 동기 함수를 async 컨텍스트에서 직접 호출하면 **레이스 컨디션**이 발생하여 첫 실행 시 데이터 손상이 발생합니다.
+
+**증상**:
+- 첫 실행: 잘못된 결과 (그래프 급락, 통계 오류)
+- 두 번째 실행 (동일 파라미터): 정상 결과
+- 새로운 종목/날짜 범위에서 반복 발생
+
+### 필수 규칙
+
+**NEVER: 동기 I/O를 async 함수에서 직접 호출**
+```python
+# WRONG - 이벤트 루프 블로킹, 레이스 컨디션 발생
+async def process():
+    data = load_ticker_data(ticker, start, end)  # 동기 함수
+    return data
+```
+
+**ALWAYS: asyncio.to_thread()로 래핑**
+```python
+# CORRECT - 스레드 풀에서 안전하게 실행
+import asyncio
+
+async def process():
+    data = await asyncio.to_thread(
+        load_ticker_data, ticker, start, end
+    )
+    return data
+```
+
+### 주의해야 할 함수들
+
+**데이터베이스 호출** (동기):
+- `yfinance_db.load_ticker_data()`
+- `yfinance_db.save_ticker_data()`
+- `yfinance_db.get_ticker_info_from_db()`
+
+**외부 API 호출** (동기):
+- `data_fetcher.get_stock_data()`
+- `yf.Ticker().history()`
+- `yf.download()`
+
+**모두 `asyncio.to_thread()`로 래핑 필수!**
+
+### 체크리스트
+
+코드 작성/리뷰 시 반드시 확인:
+- [ ] async 함수 내부의 모든 I/O 호출이 `await`로 시작하는가?
+- [ ] 동기 I/O 함수가 `asyncio.to_thread()`로 래핑되었는가?
+- [ ] 정적 메서드/일반 함수가 async 컨텍스트에서 호출되는 경우, 내부에 동기 I/O가 없는가?
+- [ ] 리팩토링 시 async/sync 경계가 유지되는가?
+
+### 참고 문서
+
+상세 분석: `backtest_be_fast/docs/race_condition_reintroduced_analysis.md`
 
 ## 코드 컨벤션
 

@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # API 설정
     api_v1_str: str = "/api/v1"
     project_name: str = "라고할때살걸"
-    version: str = "1.6.6"
+    version: str = "1.6.10"
     description: str = "FastAPI server for backtesting.py library"
     
     # 서버 설정
@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     # 백테스팅 설정
     default_initial_cash: float = 10000.0
     max_backtest_duration_days: int = 3650  # 10년
-    max_backtest_duration_years: int = 5  # 포트폴리오 백테스트 최대 기간
+    max_backtest_duration_years: int = 10  # 포트폴리오 백테스트 최대 기간
     default_commission: float = 0.002  # 0.2%
     
     # 포트폴리오 설정

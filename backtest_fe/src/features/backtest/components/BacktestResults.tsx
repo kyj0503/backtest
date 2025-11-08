@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import ChartsSection from './results/ChartsSection';
+import WarningBanner from './results/WarningBanner';
 import { BacktestResultsProps, TradeMarker, ExchangeRatePoint } from '../model/types/backtest-result-types';
 import { AlertCircle, FileDown } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -218,6 +219,11 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
 
   return (
     <div ref={resultsRef} className="mx-auto w-full max-w-screen-2xl space-y-6">
+      {/* 경고 메시지 배너 */}
+      {isPortfolio && 'warnings' in data && data.warnings && data.warnings.length > 0 && (
+        <WarningBanner warnings={data.warnings} />
+      )}
+
       {/* 리포트 다운로드 버튼 */}
       <div className="flex justify-end">
         <Button variant="outline" size="default" onClick={downloadAsTextReport} className="shadow-sm">
