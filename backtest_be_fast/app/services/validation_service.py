@@ -116,7 +116,7 @@ class ValidationService:
                 company_name = ticker_info.get('company_name', symbol)
                 return (
                     f"{company_name}({symbol})는 {first_trade_date}에 상장했습니다. "
-                    f"백테스트 시작일({start_date})보다 늦은 상장일로 인해 "
+                    f"백테스트 시작일이 상장일보다 빠릅니다. "
                     f"초기 기간({start_date} ~ {first_trade_date})의 데이터가 없습니다."
                 )
         except Exception as e:
