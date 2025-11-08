@@ -128,6 +128,67 @@ import { useTheme } from '@/shared/hooks/useTheme';
 import { backtestApi } from '@/features/backtest/api/backtestApi';
 ```
 
+## CRITICAL: Async/Sync Boundary Management (Prevent Race Conditions)
+
+**Severity**: CRITICAL - Directly impacts backtest result accuracy
+
+### Problem Pattern
+
+FastAPI is async, but many libraries (yfinance, SQLAlchemy) use synchronous I/O. Calling synchronous functions directly in async contexts causes **race conditions** that corrupt data on first execution.
+
+**Symptoms**:
+- First run: Wrong results (graph crashes, incorrect statistics)
+- Second run (same parameters): Correct results
+- Repeats with new tickers/date ranges
+
+### Required Rules
+
+**NEVER: Call synchronous I/O directly in async functions**
+```python
+# WRONG - Blocks event loop, causes race conditions
+async def process():
+    data = load_ticker_data(ticker, start, end)  # Sync function
+    return data
+```
+
+**ALWAYS: Wrap with asyncio.to_thread()**
+```python
+# CORRECT - Safely executes in thread pool
+import asyncio
+
+async def process():
+    data = await asyncio.to_thread(
+        load_ticker_data, ticker, start, end
+    )
+    return data
+```
+
+### Functions Requiring Wrapping
+
+**Database calls** (synchronous):
+- `yfinance_db.load_ticker_data()`
+- `yfinance_db.save_ticker_data()`
+- `yfinance_db.get_ticker_info_from_db()`
+
+**External API calls** (synchronous):
+- `data_fetcher.get_stock_data()`
+- `yf.Ticker().history()`
+- `yf.download()`
+
+**All must be wrapped with `asyncio.to_thread()`!**
+
+### Checklist
+
+When writing/reviewing code, verify:
+- [ ] All I/O calls in async functions start with `await`?
+- [ ] Synchronous I/O functions wrapped with `asyncio.to_thread()`?
+- [ ] Static methods/regular functions called from async contexts don't contain synchronous I/O?
+- [ ] Async/sync boundaries maintained during refactoring?
+
+### Reference Documents
+
+Detailed analysis: `backtest_be_fast/docs/race_condition_reintroduced_analysis.md`
+
 ## Code Conventions
 
 ### Python Backend
