@@ -40,6 +40,7 @@ from typing import Dict, Any, Optional
 
 from app.schemas.requests import BacktestRequest
 from app.utils.data_fetcher import data_fetcher
+from app.utils.converters import safe_float, safe_int
 from app.services.strategy_service import strategy_service
 from app.core.exceptions import ValidationError
 from app.repositories.data_repository import data_repository
@@ -90,25 +91,6 @@ class ValidationService:
         except Exception as e:
             self.logger.error(f"백테스트 요청 검증 중 오류: {str(e)}")
             raise ValidationError(f"요청 검증 실패: {str(e)}")
-    
-    def safe_float(self, value, default: float = 0.0) -> float:
-        """안전한 float 변환"""
-        try:
-            if pd.isna(value) or value is None:
-                return default
-            return float(value)
-        except (ValueError, TypeError):
-            return default
-    
-    def safe_int(self, value, default: int = 0) -> int:
-        """안전한 int 변환"""
-        try:
-            if pd.isna(value) or value is None:
-                return default
-            return int(value)
-        except (ValueError, TypeError):
-            return default
-    
     def safe_timedelta_to_days(self, timedelta):
         """Timedelta를 일수로 변환"""
         return timedelta.days if isinstance(timedelta, pd.Timedelta) else 0
