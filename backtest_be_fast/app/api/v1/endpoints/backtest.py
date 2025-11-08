@@ -34,11 +34,13 @@
 """
 from fastapi import APIRouter, status
 import logging
+import asyncio
 
 from ....schemas.schemas import PortfolioBacktestRequest
 from ....services.portfolio_service import PortfolioService
 from ....services.unified_data_service import unified_data_service
 from ....services.news_service import news_service
+from ....core.exceptions import ValidationError
 from ..decorators import handle_portfolio_errors
 
 
@@ -97,19 +99,43 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     }
     ```
     """
-    # 1. 백테스트 실행 (포트폴리오 서비스 위임)
-    backtest_result = await portfolio_service.run_portfolio_backtest(request)
-    
-    if backtest_result.get('status') != 'success':
-        return backtest_result
-    
-    # 2. 종목 심볼 추출 (현금 제외)
+    # 1. 상장일 검증: 백테스트 시작일보다 늦게 상장한 종목이 있으면 오류 반환
     symbols = [
         item.symbol 
         for item in request.portfolio 
         if item.symbol.upper() not in ['CASH', '현금']
     ]
     symbols = list(set(symbols))  # 중복 제거
+    
+    # 종목 정보 조회 (상장일 확인용)
+    from ....services.yfinance_db import get_ticker_info_from_db
+    validation_errors = []
+    
+    for symbol in symbols:
+        ticker_info = await asyncio.to_thread(get_ticker_info_from_db, symbol)
+        first_trade_date = ticker_info.get('first_trade_date')
+        
+        if first_trade_date:
+            if first_trade_date > request.start_date:
+                company_name = ticker_info.get('company_name', symbol)
+                validation_errors.append(
+                    f"{company_name}({symbol})는 {first_trade_date}에 상장했습니다. "
+                    f"백테스트 시작일({request.start_date})을 {first_trade_date} 이후로 변경해주세요."
+                )
+    
+    # 상장일 검증 실패 시 오류 반환
+    if validation_errors:
+        logger.error(f"상장일 검증 실패: {validation_errors}")
+        raise ValidationError(
+            "포트폴리오에 백테스트 시작일 이전에 상장한 종목이 포함되어 있습니다.\n\n" + 
+            "\n".join(f"• {err}" for err in validation_errors)
+        )
+    
+    # 2. 백테스트 실행 (포트폴리오 서비스 위임)
+    backtest_result = await portfolio_service.run_portfolio_backtest(request)
+    
+    if backtest_result.get('status') != 'success':
+        return backtest_result
     
     # 3. 추가 데이터 수집 (데이터 서비스 위임)
     unified_data = unified_data_service.collect_all_unified_data(
@@ -119,22 +145,6 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
         include_news=True,
         news_display_count=15
     )
-
-    # 3.5. 상장일 체크 및 경고 메시지 생성
-    from ....services.validation_service import ValidationService
-    validation_service = ValidationService()
-    warnings = []
-    
-    ticker_info = unified_data.get('ticker_info', {})
-    for symbol in symbols:
-        if symbol in ticker_info:
-            warning = validation_service.check_listing_date_warnings(
-                ticker_info[symbol], 
-                request.start_date
-            )
-            if warning:
-                warnings.append(warning)
-                logger.warning(f"상장일 경고: {warning}")
 
     # 4. S&P 500 벤치마크 통계 계산 및 추가
     sp500_benchmark = unified_data.get('sp500_benchmark', [])
@@ -155,10 +165,6 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
 
     # 5. 응답 데이터 병합
     backtest_result['data'].update(unified_data)
-    
-    # 6. 경고 메시지 추가
-    if warnings:
-        backtest_result['warnings'] = warnings
 
     return backtest_result
 
