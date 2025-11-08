@@ -39,6 +39,8 @@ from ....schemas.schemas import PortfolioBacktestRequest
 from ....services.portfolio_service import PortfolioService
 from ....services.unified_data_service import unified_data_service
 from ....services.news_service import news_service
+from ....services.validation_service import validation_service
+from ....core.exceptions import ValidationError
 from ..decorators import handle_portfolio_errors
 
 
@@ -120,21 +122,25 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
         news_display_count=15
     )
 
-    # 3.5. 상장일 체크 및 경고 메시지 생성
-    from ....services.validation_service import ValidationService
-    validation_service = ValidationService()
-    warnings = []
-    
+    # 3.5. 상장일 검증 (ValidationError 발생 시 백테스트 실패)
     ticker_info = unified_data.get('ticker_info', {})
+    validation_errors = []
+
     for symbol in symbols:
         if symbol in ticker_info:
-            warning = validation_service.check_listing_date_warnings(
-                ticker_info[symbol], 
-                request.start_date
-            )
-            if warning:
-                warnings.append(warning)
-                logger.warning(f"상장일 경고: {warning}")
+            try:
+                validation_service.validate_listing_date(
+                    ticker_info[symbol],
+                    request.start_date
+                )
+            except ValidationError as e:
+                validation_errors.append(str(e))
+                logger.error(f"상장일 검증 실패: {e}")
+
+    # 상장일 검증 실패가 있으면 백테스트 실패
+    if validation_errors:
+        error_message = "다음 종목들의 상장일 검증 실패:\n" + "\n".join(f"- {err}" for err in validation_errors)
+        raise ValidationError(error_message)
 
     # 4. S&P 500 벤치마크 통계 계산 및 추가
     sp500_benchmark = unified_data.get('sp500_benchmark', [])
@@ -155,10 +161,6 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
 
     # 5. 응답 데이터 병합
     backtest_result['data'].update(unified_data)
-    
-    # 6. 경고 메시지 추가
-    if warnings:
-        backtest_result['warnings'] = warnings
 
     return backtest_result
 

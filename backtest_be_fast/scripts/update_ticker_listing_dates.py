@@ -19,20 +19,21 @@ logger = logging.getLogger(__name__)
 
 
 def update_listing_dates():
-    """모든 stocks의 info_json에 상장일 추가"""
+    """모든 stocks의 info_json에 상장일 추가 (트랜잭션 단위 처리)"""
     engine = create_engine(settings.database_url)
     conn = engine.connect()
-    
+    trans = conn.begin()
+
     try:
         # 모든 티커 조회
         result = conn.execute(text("SELECT id, ticker, info_json FROM stocks"))
         stocks = result.fetchall()
-        
+
         logger.info(f"총 {len(stocks)}개 종목의 상장일 업데이트 시작")
-        
+
         updated_count = 0
         failed_count = 0
-        
+
         for stock_id, ticker, info_json_str in stocks:
             try:
                 # 기존 info 파싱
@@ -40,41 +41,46 @@ def update_listing_dates():
                     info = json.loads(info_json_str)
                 else:
                     info = {}
-                
+
                 # 이미 상장일이 있으면 스킵
                 if info.get('first_trade_date'):
                     logger.info(f"{ticker}: 상장일이 이미 존재 - {info['first_trade_date']}")
                     continue
-                
+
                 # Yahoo Finance에서 상장일 조회
                 logger.info(f"{ticker}: Yahoo Finance에서 상장일 조회 중...")
                 ticker_info = data_fetcher.get_ticker_info(ticker)
                 first_trade_date = ticker_info.get('first_trade_date')
-                
+
                 if first_trade_date:
                     # info에 상장일 추가
                     info['first_trade_date'] = first_trade_date
-                    
-                    # DB 업데이트
+
+                    # DB 업데이트 (트랜잭션 내에서 누적)
                     conn.execute(
                         text("UPDATE stocks SET info_json = :info WHERE id = :id"),
                         {"info": json.dumps(info), "id": stock_id}
                     )
-                    conn.commit()
-                    
-                    logger.info(f"{ticker}: 상장일 업데이트 완료 - {first_trade_date}")
+
+                    logger.info(f"{ticker}: 상장일 업데이트 준비 완료 - {first_trade_date}")
                     updated_count += 1
                 else:
                     logger.warning(f"{ticker}: 상장일 정보 없음")
                     failed_count += 1
-                    
+
             except Exception as e:
                 logger.error(f"{ticker}: 업데이트 실패 - {e}")
                 failed_count += 1
                 continue
-        
-        logger.info(f"업데이트 완료: 성공 {updated_count}개, 실패 {failed_count}개")
-        
+
+        # 모든 업데이트를 한번에 커밋
+        trans.commit()
+        logger.info(f"트랜잭션 커밋 완료: 성공 {updated_count}개, 실패 {failed_count}개")
+
+    except Exception as e:
+        trans.rollback()
+        logger.error(f"트랜잭션 롤백: {e}")
+        raise
     finally:
         conn.close()
 

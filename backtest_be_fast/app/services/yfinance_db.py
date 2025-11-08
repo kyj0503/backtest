@@ -40,11 +40,13 @@ yfinance 데이터 MySQL 저장 서비스
 import os
 import json
 import logging
+import time
 from typing import Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 import pandas as pd
 from datetime import datetime, date, timedelta
+from app.utils.data_fetcher import data_fetcher
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +151,6 @@ def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
         # ensure stock exists
         info = {}
         try:
-            from app.utils.data_fetcher import data_fetcher
             info = data_fetcher.get_ticker_info(ticker)
         except Exception:
             logger.warning("티커 info 조회 실패")
@@ -296,50 +297,31 @@ def load_ticker_data(ticker: str, start_date=None, end_date=None, max_retries: i
 
 def get_ticker_info_from_db(ticker: str) -> dict:
     """
-    DB에서 티커의 메타데이터 조회
+    DB에서 티커의 메타데이터 조회 (Read-only)
 
     Args:
         ticker: 종목 심볼
 
     Returns:
         티커 정보 딕셔너리 (currency, first_trade_date 포함)
-        
+
     Note:
         - 캐시된 info_json 사용으로 Yahoo Finance API 재호출 최소화
-        - first_trade_date가 없으면 Yahoo Finance에서 가져와 DB 업데이트
+        - first_trade_date가 없으면 None 반환 (업데이트하지 않음)
+        - 상장일 정보 업데이트는 scripts/update_ticker_listing_dates.py 사용
     """
     engine = _get_engine()
     conn = engine.connect()
     try:
         ticker = ticker.upper()
         row = conn.execute(
-            text("SELECT id, info_json FROM stocks WHERE ticker = :t"),
+            text("SELECT info_json FROM stocks WHERE ticker = :t"),
             {"t": ticker}
         ).fetchone()
 
-        if row and row[1]:
+        if row and row[0]:
             try:
-                stock_id = row[0]
-                info = json.loads(row[1])
-                
-                # 상장일이 없으면 Yahoo Finance에서 가져와 업데이트
-                if not info.get('first_trade_date'):
-                    logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
-                    try:
-                        from app.utils.data_fetcher import data_fetcher
-                        fresh_info = data_fetcher.get_ticker_info(ticker)
-                        if fresh_info.get('first_trade_date'):
-                            info['first_trade_date'] = fresh_info['first_trade_date']
-                            # DB 업데이트
-                            conn.execute(
-                                text("UPDATE stocks SET info_json = :info WHERE id = :id"),
-                                {"info": json.dumps(info), "id": stock_id}
-                            )
-                            conn.commit()
-                            logger.info(f"{ticker}: 상장일 업데이트 완료 - {info['first_trade_date']}")
-                    except Exception as e:
-                        logger.warning(f"{ticker}: 상장일 조회 실패 - {e}")
-                
+                info = json.loads(row[0])
                 return {
                     'symbol': ticker,
                     'currency': info.get('currency', 'USD'),
@@ -516,15 +498,13 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
         if not row:
             logger.info(f"티커 '{ticker}'이 DB에 없음 — yfinance에서 수집 시도")
             try:
-                from app.utils.data_fetcher import data_fetcher
                 df_new = data_fetcher.get_stock_data(ticker, start_date, end_date, use_cache=True)
                 if df_new is None or df_new.empty:
                     raise ValueError("yfinance에서 유효한 데이터가 반환되지 않았습니다.")
                 save_ticker_data(ticker, df_new)
-                
+
                 # 데이터 저장 후 커넥션을 닫고 새로 연결 - 트랜잭션 격리 문제 방지
                 conn.close()
-                import time
                 time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
                 conn = engine.connect()
             except Exception as e:
@@ -545,11 +525,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
             db_max = pd.to_datetime(date_row[1]).date()
 
         # fetch missing ranges if any
-        try:
-            from app.utils.data_fetcher import data_fetcher
-        except Exception:
-            data_fetcher = None
-
         missing_ranges = []
         if db_min is None:
             # no data at all in DB for this ticker -> fetch full requested range
@@ -561,7 +536,7 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                 missing_ranges.append((db_max + timedelta(days=1), end_date))
 
         # If there are multiple small missing ranges, try to coalesce into one padded fetch
-        if missing_ranges and data_fetcher is not None:
+        if missing_ranges:
             min_start = min(s for s, _ in missing_ranges if s is not None)
             max_end = max(e for _, e in missing_ranges if e is not None)
             PAD_DAYS = 3
@@ -574,7 +549,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                     save_ticker_data(ticker, df_new)
                     # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
                     conn.close()
-                    import time
                     time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
                     conn = engine.connect()
                 else:
@@ -595,14 +569,10 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                             save_ticker_data(ticker, df_new)
                             # 데이터 저장 후 커넥션 갱신
                             conn.close()
-                            import time
                             time.sleep(0.1)
                             conn = engine.connect()
                     except Exception:
                         logger.exception("누락 기간 수집 실패")
-        else:
-            if data_fetcher is None and missing_ranges:
-                logger.warning("data_fetcher 모듈을 찾을 수 없어 누락 데이터를 가져올 수 없습니다.")
 
         # build query to return requested interval
         q = "SELECT date, open, high, low, close, adj_close, volume FROM daily_prices WHERE stock_id = :sid"

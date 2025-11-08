@@ -276,15 +276,14 @@ class DataFetcher:
     def get_ticker_info(self, ticker: str) -> dict:
         """
         티커 정보 조회
-        
+
         Args:
             ticker: 티커 심볼
-            
+
         Returns:
             티커 정보 딕셔너리 (상장일 포함)
         """
         try:
-            from datetime import datetime
             ticker = ticker.upper()
             stock = yf.Ticker(ticker)
             info = stock.info

@@ -200,7 +200,7 @@ class UnifiedDataService:
         self,
         start_date: str,
         end_date: str,
-        fill_missing_dates: bool = True
+        fill_missing_dates: bool = False
     ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         벤치마크 데이터 수집 (S&P 500, NASDAQ)
@@ -208,7 +208,9 @@ class UnifiedDataService:
         Args:
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
-            fill_missing_dates: 누락된 날짜를 forward-fill로 채울지 여부 (기본: True)
+            fill_missing_dates: 누락된 날짜를 forward-fill로 채울지 여부 (기본: False)
+                - True: 주말/공휴일 포함 모든 날짜 생성 (데이터 크기 ~45% 증가)
+                - False: 실제 거래일만 포함 (권장)
 
         Returns:
             (S&P 500 데이터, NASDAQ 데이터) 튜플
