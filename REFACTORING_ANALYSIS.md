@@ -1,9 +1,16 @@
 # Backend Codebase Refactoring Analysis
 
-**Analyzed:** `/home/kyj/source/backtest/backtest_be_fast`  
-**Scope:** Service layer, Strategy implementations, API routes  
-**Files Examined:** 15+ core files  
+**Analyzed:** `/home/kyj/source/backtest/backtest_be_fast`
+**Scope:** Service layer, Strategy implementations, API routes
+**Files Examined:** 15+ core files
 **Total Lines:** 5,139 (services only)
+
+**Status Update (2025-11-08):**
+- ✅ **Issue #1**: Strategy code duplication RESOLVED (PositionSizingMixin created)
+- ✅ **Issue #2**: Currency mapping duplication RESOLVED (app/constants/currencies.py)
+- ✅ **Issue #3**: Utility function duplication RESOLVED (app/utils/converters.py)
+- ✅ **Issue #4**: Portfolio Service decomposition PARTIAL (DCACalculator, RebalanceHelper extracted)
+- 🔄 **In Progress**: Strategy file consolidation (merging 7 files into 1)
 
 ---
 

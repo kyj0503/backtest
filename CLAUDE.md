@@ -75,9 +75,9 @@ npm run lint:fix
 ### Backend Service Layer Flow
 ```
 API Layer (app/api/v1/)
-  → Service Layer (app/services/*_service.py)
+  → Service Layer (app/services/*_service.py, app/services/*_calculator.py, app/services/*_helper.py)
   → Repository Layer (app/repositories/)
-  → Strategy Layer (app/strategies/)
+  → Strategy Layer (app/strategies/strategies.py)
 ```
 
 **Core services chain**:
@@ -86,6 +86,13 @@ API Layer (app/api/v1/)
 3. `backtest_engine.py` - Wraps backtesting.py, executes backtests
 4. `chart_data_service.py` - Serializes chart data for frontend
 5. `strategy_service.py` - Strategy class management and parameter validation
+
+**Helper/Calculator services**:
+6. `dca_calculator.py` - DCA share and return calculations
+7. `rebalance_helper.py` - Rebalancing schedule and weight calculations
+
+**Strategy implementations** (consolidated in single file):
+- `strategies.py` - All 6 backtesting strategies + PositionSizingMixin
 
 **Singleton pattern**: All services are provided as module-level instances (e.g., `strategy_service`, `validation_service`)
 
@@ -147,9 +154,13 @@ import { backtestApi } from '@/features/backtest/api/backtestApi';
 ```
 See examples in `app/main.py`, `app/services/backtest_engine.py`, `app/strategies/sma_strategy.py`
 
-**Strategy implementation**: Inherit from `backtesting.Strategy`, implement `init()` and `next()` methods
+**Strategy implementation**: Located in `app/strategies/strategies.py`
+- All 6 strategies (SMA, EMA, RSI, Bollinger, MACD, BuyHold) in single file
+- Inherit from `backtesting.Strategy` and `PositionSizingMixin`
+- Implement `init()` and `next()` methods
 - Parameters defined as class attributes (e.g., `sma_short = 10`)
 - Register in `STRATEGY_CLASSES` dict in `strategy_service.py`
+- Use `calculate_and_buy()` from PositionSizingMixin for consistent position sizing
 
 **Error handling**: Use custom exceptions from `app/core/exceptions.py`, includes error ID generation
 
