@@ -83,8 +83,6 @@ class YFinanceDataRepository(DataRepositoryInterface):
 
     def _get_cache_ttl(self, end_date: Union[date, str]) -> int:
         """날짜에 따라 캐시 TTL 결정 (과거 데이터는 길게, 최근 데이터는 짧게)"""
-        from datetime import date as date_type
-
         # 문자열을 date 객체로 변환
         if isinstance(end_date, str):
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
@@ -93,14 +91,14 @@ class YFinanceDataRepository(DataRepositoryInterface):
         else:
             end_date_obj = end_date
 
-        today = date_type.today()
+        today = date.today()
 
         # 과거 데이터 (종료일이 오늘 이전): 24시간 캐시
         # 주가 데이터는 변하지 않으므로 오래 캐싱 가능
         if end_date_obj < today:
             return 86400  # 24시간
 
-        # 최근 데이터 (종료일이 오늘 이후): 1시간 캐시
+        # 최근 데이터 (종료일이 오늘이거나 이후): 1시간 캐시
         # 실시간 데이터 반영 필요
         return 3600  # 1시간
 
