@@ -151,7 +151,6 @@ def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
         # ensure stock exists
         info = {}
         try:
-            from app.utils.data_fetcher import data_fetcher
             info = data_fetcher.get_ticker_info(ticker)
         except Exception:
             logger.warning("티커 info 조회 실패")
@@ -326,7 +325,6 @@ def get_ticker_info_from_db(ticker: str) -> dict:
                 if not info.get('first_trade_date'):
                     logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
                     try:
-                        from app.utils.data_fetcher import data_fetcher
                         fresh_info = data_fetcher.get_ticker_info(ticker)
                         if fresh_info.get('first_trade_date'):
                             info['first_trade_date'] = fresh_info['first_trade_date']
@@ -516,7 +514,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
         if not row:
             logger.info(f"티커 '{ticker}'이 DB에 없음 — yfinance에서 수집 시도")
             try:
-                from app.utils.data_fetcher import data_fetcher
                 df_new = data_fetcher.get_stock_data(ticker, start_date, end_date, use_cache=True)
                 if df_new is None or df_new.empty:
                     raise ValueError("yfinance에서 유효한 데이터가 반환되지 않았습니다.")
@@ -544,11 +541,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
             db_max = pd.to_datetime(date_row[1]).date()
 
         # fetch missing ranges if any
-        try:
-            from app.utils.data_fetcher import data_fetcher
-        except Exception:
-            data_fetcher = None
-
         missing_ranges = []
         if db_min is None:
             # no data at all in DB for this ticker -> fetch full requested range
@@ -597,9 +589,6 @@ def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> p
                             conn = engine.connect()
                     except Exception:
                         logger.exception("누락 기간 수집 실패")
-        else:
-            if data_fetcher is None and missing_ranges:
-                logger.warning("data_fetcher 모듈을 찾을 수 없어 누락 데이터를 가져올 수 없습니다.")
 
         # build query to return requested interval
         q = "SELECT date, open, high, low, close, adj_close, volume FROM daily_prices WHERE stock_id = :sid"
