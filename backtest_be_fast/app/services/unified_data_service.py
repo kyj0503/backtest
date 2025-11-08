@@ -199,7 +199,8 @@ class UnifiedDataService:
     def collect_benchmark_data(
         self,
         start_date: str,
-        end_date: str
+        end_date: str,
+        fill_missing_dates: bool = True
     ) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         벤치마크 데이터 수집 (S&P 500, NASDAQ)
@@ -207,12 +208,17 @@ class UnifiedDataService:
         Args:
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
+            fill_missing_dates: 누락된 날짜를 forward-fill로 채울지 여부 (기본: True)
 
         Returns:
             (S&P 500 데이터, NASDAQ 데이터) 튜플
+            
+        Note:
+            fill_missing_dates=True일 경우, 벤치마크 시장 휴장일을 이전 거래일 가격으로 채웁니다.
+            이를 통해 다른 시장(예: 한국) 종목과 날짜를 일치시켜 그래프 끊김 현상을 방지합니다.
         """
-        sp500_benchmark = self._collect_single_benchmark('^GSPC', start_date, end_date)
-        nasdaq_benchmark = self._collect_single_benchmark('^IXIC', start_date, end_date)
+        sp500_benchmark = self._collect_single_benchmark('^GSPC', start_date, end_date, fill_missing_dates)
+        nasdaq_benchmark = self._collect_single_benchmark('^IXIC', start_date, end_date, fill_missing_dates)
 
         return sp500_benchmark, nasdaq_benchmark
 
@@ -444,12 +450,26 @@ class UnifiedDataService:
         self,
         ticker: str,
         start_date: str,
-        end_date: str
+        end_date: str,
+        fill_missing_dates: bool = True
     ) -> List[Dict[str, Any]]:
         """
         단일 벤치마크 데이터 수집
 
-        Note: 모든 키를 소문자로 정규화하여 일관성 유지
+        Args:
+            ticker: 벤치마크 티커 (^GSPC, ^IXIC 등)
+            start_date: 시작 날짜 (YYYY-MM-DD)
+            end_date: 종료 날짜 (YYYY-MM-DD)
+            fill_missing_dates: 누락된 날짜 채우기 여부
+
+        Returns:
+            벤치마크 데이터 리스트 [{'date': 'YYYY-MM-DD', 'close': float, 'return_pct': float}]
+
+        Note:
+            모든 키를 소문자로 정규화하여 일관성 유지.
+            fill_missing_dates=True일 경우, 전체 날짜 범위에 대해 forward-fill을 적용하여
+            다른 시장 종목과 날짜를 일치시킵니다. 이를 통해 벤치마크 그래프 끊김 현상을 방지합니다.
+            일일 수익률(return_pct)도 함께 계산하여 반환합니다.
         """
         try:
             df = data_service.get_ticker_data_sync(ticker, start_date, end_date)
@@ -458,12 +478,29 @@ class UnifiedDataService:
                 df_normalized = df.copy()
                 df_normalized.columns = [col.lower() for col in df_normalized.columns]
 
+                if fill_missing_dates:
+                    # 전체 날짜 범위 생성 (주말 포함)
+                    full_date_range = pd.date_range(start=start_date, end=end_date, freq='D')
+                    
+                    # reindex로 누락된 날짜 추가 후 forward-fill
+                    df_normalized = df_normalized.reindex(full_date_range, method='ffill')
+                    
+                    # 시작 부분에 NaN이 있으면 backward-fill
+                    df_normalized = df_normalized.bfill()
+
+                # 일일 수익률 계산
+                df_normalized['return_pct'] = df_normalized['close'].pct_change() * 100
+                # 첫 날은 0으로 설정
+                df_normalized['return_pct'] = df_normalized['return_pct'].fillna(0)
+
                 return [
                     {
                         'date': date.strftime('%Y-%m-%d'),
-                        'close': float(row['close'])
+                        'close': float(row['close']),
+                        'return_pct': float(row['return_pct'])
                     }
                     for date, row in df_normalized.iterrows()
+                    if pd.notna(row['close'])  # NaN 제외
                 ]
         except Exception as e:
             logger.warning(f"{ticker} 벤치마크 데이터 수집 실패: {str(e)}")

@@ -10,7 +10,6 @@ import {
   transformSingleEquityData,
   transformTradeMarkers,
   transformOhlcData,
-  withBenchmarkReturn,
   extractTradeLogs,
   extractBenchmarkData,
   extractStatsPayload,
@@ -143,13 +142,9 @@ export const useChartData = (
     return extractBenchmarkData(data, 'nasdaq');
   }, [data]);
 
-  const sp500BenchmarkWithReturn = useMemo(() => {
-    return withBenchmarkReturn(sp500Benchmark);
-  }, [sp500Benchmark]);
-
-  const nasdaqBenchmarkWithReturn = useMemo(() => {
-    return withBenchmarkReturn(nasdaqBenchmark);
-  }, [nasdaqBenchmark]);
+  // 백엔드에서 이미 return_pct를 계산해서 보내므로 그대로 사용
+  const sp500BenchmarkWithReturn = sp500Benchmark;
+  const nasdaqBenchmarkWithReturn = nasdaqBenchmark;
 
   // 환율 데이터
   const exchangeRates = useMemo(() => {
