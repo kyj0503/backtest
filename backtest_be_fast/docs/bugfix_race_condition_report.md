@@ -370,4 +370,39 @@ The bug affected 100% of first-time backtest executions, causing corrupted equit
 - SQLAlchemy async documentation: https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html
 - Commits:
   - Initial fix (incomplete): 3624bd6
-  - Complete fix: [current commit]
+  - Complete fix: f16755f
+
+---
+
+## Update (2025-11-08)
+
+### ⚠️ RACE CONDITION REINTRODUCED
+
+**Status**: Reintroduced → Fixed Again
+
+이 이슈가 리팩터링 작업 중 `portfolio_service.py`에서 **재발생**했습니다.
+
+**재발생 원인**:
+- Phase 2 리팩터링에서 DCA 및 Rebalance 로직을 통합하는 과정
+- `calculate_dca_portfolio_returns()` static method에서 동기 I/O 호출
+- `run_buy_and_hold_portfolio_backtest()`에서 동기 DB 호출
+
+**재발생 위치**:
+- `portfolio_service.py:142` - `get_ticker_info_from_db(symbol)`
+- `portfolio_service.py:167` - `load_ticker_data(exchange_ticker, ...)`
+- `portfolio_service.py:913` - `load_ticker_data(symbol, ...)`
+
+**재해결**:
+- Commit: b316cb3 - "fix: resolve async/sync race conditions in portfolio_service.py"
+- 모든 동기 I/O를 `asyncio.to_thread()`로 래핑
+- `calculate_dca_portfolio_returns()`를 async static method로 변경
+
+**상세 분석**:
+- 문서: `backtest_be_fast/docs/race_condition_reintroduced_analysis.md`
+
+**교훈**:
+- ✅ 리팩터링 시 async/sync 경계 체크리스트 필수
+- ✅ 모든 개발 가이드라인에 경고 추가 완료
+- ✅ Static method에서도 I/O 호출 시 주의 필요
+
+**현재 상태**: 완전히 해결됨 (2025-11-08)

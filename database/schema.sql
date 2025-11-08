@@ -42,6 +42,13 @@ CREATE TABLE stocks (
 
 -- === `daily_prices` 테이블: 일별 시세 정보 ===
 -- 가장 빈번하게 조회되고 데이터가 많이 쌓이는 테이블입니다.
+--
+-- 성능 최적화:
+-- 1. PRIMARY KEY (stock_id, date): 종목별 날짜 범위 조회에 최적 (가장 중요!)
+--    - WHERE stock_id = X AND date BETWEEN Y AND Z 쿼리에 사용
+--    - 추가 인덱스 불필요 (이미 최적 성능 제공)
+-- 2. INDEX idx_date_range (date): 전체 종목의 특정 날짜 조회
+-- 3. INDEX idx_stock_date_desc (stock_id, date DESC): 최신 N일 데이터 조회
 CREATE TABLE daily_prices (
     stock_id INT NOT NULL,                        -- stocks 테이블의 ID (Foreign Key)
     date DATE NOT NULL,                           -- 날짜
@@ -53,7 +60,7 @@ CREATE TABLE daily_prices (
     volume BIGINT UNSIGNED DEFAULT 0,             -- 거래량 (음수 없음)
     data_quality ENUM('good', 'estimated', 'suspicious') DEFAULT 'good', -- 데이터 품질
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (stock_id, date),                 -- 복합 기본 키
+    PRIMARY KEY (stock_id, date),                 -- 복합 기본 키 (성능 최적화의 핵심)
     INDEX idx_date_range (date),                  -- 날짜 범위 조회 최적화
     INDEX idx_stock_date_desc (stock_id, date DESC), -- 종목별 최신 데이터 조회 최적화
     FOREIGN KEY (stock_id) REFERENCES stocks(id) ON DELETE CASCADE,
