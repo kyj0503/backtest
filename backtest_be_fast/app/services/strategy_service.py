@@ -24,7 +24,7 @@
 - 런타임에 전략 선택 가능
 
 **의존성**:
-- app/strategies/*.py: 모든 전략 클래스
+- app/strategies/strategies.py: 모든 전략 클래스 (통합)
 - backtesting.Strategy: 베이스 클래스
 
 **연관 컴포넌트**:
@@ -42,12 +42,14 @@ import logging
 
 from backtesting import Strategy
 
-from app.strategies.sma_strategy import SMAStrategy
-from app.strategies.rsi_strategy import RSIStrategy
-from app.strategies.bollinger_strategy import BollingerBandsStrategy
-from app.strategies.macd_strategy import MACDStrategy
-from app.strategies.ema_strategy import EMAStrategy
-from app.strategies.buy_hold_strategy import BuyAndHoldStrategy
+from app.strategies.strategies import (
+    SMACrossStrategy,
+    RSIStrategy,
+    BollingerBandsStrategy,
+    MACDStrategy,
+    EMAStrategy,
+    BuyAndHoldStrategy
+)
 
 
 logger = logging.getLogger(__name__)
@@ -55,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 STRATEGIES: Dict[str, Dict[str, Any]] = {
     'sma_strategy': {
-        'class': SMAStrategy,
+        'class': SMACrossStrategy,
         'name': 'Simple Moving Average Crossover',
         'description': 'SMA 단기/장기 이동평균 교차 전략',
         'parameters': {
