@@ -127,7 +127,7 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     if validation_errors:
         logger.error(f"상장일 검증 실패: {validation_errors}")
         raise ValidationError(
-            "포트폴리오에 백테스트 시작일 이전에 상장한 종목이 포함되어 있습니다.\n\n" + 
+            "포트폴리오에 백테스트 시작일 이후에 상장한 종목이 포함되어 있습니다.\n\n" + 
             "\n".join(f"• {err}" for err in validation_errors)
         )
     
