@@ -25,16 +25,12 @@
 - Repository Pattern: 데이터 접근은 repository를 통해서만 수행
 - Factory Pattern: 전략 객체 생성은 strategy_factory를 통해 수행
 """
-import time
-import signal
 from datetime import datetime, date
 from typing import Dict, Any, Optional, List
 import pandas as pd
 import numpy as np
 import logging
-import traceback
 from fastapi import HTTPException
-from decimal import Decimal
 
 # Repository 패턴 import
 from app.repositories import data_repository
@@ -191,14 +187,6 @@ class BacktestService:
             }
         }
     
-    # 호환성을 위한 유틸리티 메서드들 (ValidationService 위임)
-    def safe_float(self, value, default: float = 0.0) -> float:
-        """안전한 float 변환 - ValidationService에 위임"""
-        return self.validation_service.safe_float(value, default)
-    
-    def safe_int(self, value, default: int = 0) -> int:
-        """안전한 int 변환 - ValidationService에 위임"""
-        return self.validation_service.safe_int(value, default)
 
 
 # 전역 인스턴스

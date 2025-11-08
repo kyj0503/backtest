@@ -35,6 +35,7 @@
 - 샤프 비율, 소르티노 비율
 - 최대 낙폭, 평균 거래 수익
 """
+import asyncio
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional, List
@@ -51,6 +52,7 @@ from app.utils.data_fetcher import data_fetcher
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
 from app.services.validation_service import validation_service
+from app.constants.currencies import SUPPORTED_CURRENCIES
 
 
 class BacktestEngine:
@@ -170,7 +172,9 @@ class BacktestEngine:
         if self.data_repository:
             data = await self.data_repository.get_stock_data(ticker, start_date, end_date)
         else:
-            data = self.data_fetcher.get_stock_data(
+            # 동기 data_fetcher를 안전하게 async로 실행
+            data = await asyncio.to_thread(
+                self.data_fetcher.get_stock_data,
                 ticker=ticker,
                 start_date=start_date,
                 end_date=end_date,
@@ -219,23 +223,6 @@ class BacktestEngine:
         if currency == 'USD':
             return data
 
-        # 지원되는 통화 및 환율 티커 매핑 (portfolio_service.py와 동일)
-        SUPPORTED_CURRENCIES = {
-            'USD': None,
-            'KRW': 'KRW=X',
-            'JPY': 'JPY=X',
-            'EUR': 'EURUSD=X',
-            'GBP': 'GBPUSD=X',
-            'CNY': 'CNY=X',
-            'HKD': 'HKD=X',
-            'TWD': 'TWD=X',
-            'SGD': 'SGD=X',
-            'AUD': 'AUDUSD=X',
-            'CAD': 'CADUSD=X',
-            'CHF': 'CHFUSD=X',
-            'INR': 'INR=X'
-        }
-
         if currency not in SUPPORTED_CURRENCIES:
             self.logger.warning(f"지원하지 않는 통화: {currency}, 변환 없이 진행")
             return data
@@ -260,7 +247,9 @@ class BacktestEngine:
             exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
 
             self.logger.info(f"{currency} 환율 데이터 로드 중: {exchange_ticker}")
-            exchange_data = load_ticker_data(exchange_ticker, exchange_start_date, end_date)
+            exchange_data = await asyncio.to_thread(
+                load_ticker_data, exchange_ticker, exchange_start_date, end_date
+            )
 
             if exchange_data is None or exchange_data.empty:
                 self.logger.warning(f"{currency} 환율 데이터 없음, 변환 없이 진행")
@@ -573,4 +562,4 @@ class BacktestEngine:
 
 
 # 글로벌 인스턴스
-backtest_engine = BacktestEngine()
+backtest_engine = BacktestEngine(data_repository=data_repository)
