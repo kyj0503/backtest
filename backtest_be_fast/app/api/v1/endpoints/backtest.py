@@ -109,18 +109,23 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     
     # 종목 정보 조회 (상장일 확인용)
     from ....services.yfinance_db import get_ticker_info_from_db
+    from datetime import datetime
     validation_errors = []
     
     for symbol in symbols:
         ticker_info = await asyncio.to_thread(get_ticker_info_from_db, symbol)
-        first_trade_date = ticker_info.get('first_trade_date')
+        first_trade_date_str = ticker_info.get('first_trade_date')
         
-        if first_trade_date:
-            if first_trade_date > request.start_date:
+        if first_trade_date_str:
+            # 날짜 문자열을 date 객체로 변환하여 안전하게 비교
+            listing_date = datetime.strptime(first_trade_date_str, '%Y-%m-%d').date()
+            start_date = datetime.strptime(request.start_date, '%Y-%m-%d').date()
+            
+            if listing_date > start_date:
                 company_name = ticker_info.get('company_name', symbol)
                 validation_errors.append(
-                    f"{company_name}({symbol})는 {first_trade_date}에 상장했습니다. "
-                    f"백테스트 시작일({request.start_date})을 {first_trade_date} 이후로 변경해주세요."
+                    f"{company_name}({symbol})는 {first_trade_date_str}에 상장했습니다. "
+                    f"백테스트 시작일({request.start_date})을 {first_trade_date_str} 이후로 변경해주세요."
                 )
     
     # 상장일 검증 실패 시 오류 반환
