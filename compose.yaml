@@ -1,0 +1,38 @@
+name: backtest-prod
+
+services:
+  backtest-be-fast:
+    build:
+      context: ./backtest_be_fast
+      dockerfile: Dockerfile
+    image: backtest-be-fast:latest
+    container_name: backtest-be-fast-prod
+    networks:
+      - backtest-net
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DEBUG=false
+    restart: unless-stopped
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  backtest-fe:
+    build:
+      context: ./backtest_fe
+      dockerfile: Dockerfile
+    image: backtest-fe:latest
+    container_name: backtest-fe-prod
+    networks:
+      - backtest-net
+    depends_on:
+      backtest-be-fast:
+        condition: service_started
+    ports:
+      - "5173:80"
+    restart: unless-stopped
+
+networks:
+  backtest-net:
+    name: backtest-network-prod
