@@ -546,27 +546,49 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
     const item = dailyReturns[i];
     const itemDate = parseLocalDate(item.date);
 
-    currentMonthData.push(item);
-
     // 다음 달 경계를 넘었거나 마지막 데이터일 때
     const isLastItem = i === dailyReturns.length - 1;
     const crossedMonthBoundary = itemDate >= currentMonthEndDate;
 
     if (crossedMonthBoundary || isLastItem) {
-      if (currentMonthData.length > 0) {
-        const monthlyReturn = calculateCompoundReturn(currentMonthData);
-        const lastDay = currentMonthData[currentMonthData.length - 1];
-        monthly.push({
-          ...lastDay,
-          return_pct: monthlyReturn,
-        });
-
-        // 다음 달 경계 계산
-        if (!isLastItem) {
-          currentMonthEndDate = getNextMonthNthWeekday(currentMonthEndDate, originalNth);
+      // 여러 달을 건너뛴 경우 처리
+      while (itemDate >= currentMonthEndDate && !isLastItem) {
+        if (currentMonthData.length > 0) {
+          // 현재 달 데이터 마감
+          const monthlyReturn = calculateCompoundReturn(currentMonthData);
+          const lastDay = currentMonthData[currentMonthData.length - 1];
+          monthly.push({
+            ...lastDay,
+            return_pct: monthlyReturn,
+          });
           currentMonthData = [];
         }
+        
+        // 다음 달 경계로 이동
+        currentMonthEndDate = getNextMonthNthWeekday(currentMonthEndDate, originalNth);
+        
+        // 현재 아이템이 새로운 경계 내에 있으면 추가하고 종료
+        if (itemDate < currentMonthEndDate) {
+          currentMonthData.push(item);
+          break;
+        }
       }
+      
+      // 마지막 아이템 처리
+      if (isLastItem) {
+        currentMonthData.push(item);
+        if (currentMonthData.length > 0) {
+          const monthlyReturn = calculateCompoundReturn(currentMonthData);
+          const lastDay = currentMonthData[currentMonthData.length - 1];
+          monthly.push({
+            ...lastDay,
+            return_pct: monthlyReturn,
+          });
+        }
+      }
+    } else {
+      // 경계를 넘지 않은 경우 현재 달 데이터에 추가
+      currentMonthData.push(item);
     }
   }
 
