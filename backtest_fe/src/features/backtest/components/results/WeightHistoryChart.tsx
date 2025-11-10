@@ -71,8 +71,8 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <AreaChart data={chartData}>
+    <ResponsiveContainer width="100%" height={400} debounce={300}>
+      <AreaChart data={chartData} syncId="weightHistoryChart">
         <defs>
           {symbols.map((symbol, index) => (
             <linearGradient key={symbol} id={`color${index}`} x1="0" y1="0" x2="0" y2="1">
@@ -133,6 +133,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
             stroke={COLORS[index % COLORS.length]}
             fill={`url(#color${index})`}
             strokeWidth={2}
+            isAnimationActive={false}
           />
         ))}
       </AreaChart>

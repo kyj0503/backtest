@@ -79,35 +79,36 @@ const TradesChart: React.FC<TradesChartProps> = memo(({ trades, showCard = true 
   }
 
   const chartContent = (
-    <ResponsiveContainer width="100%" height={250}>
-      <ScatterChart data={exitTrades} margin={chartConfig.margin}>
-        <CartesianGrid 
-          strokeDasharray="3 3" 
-          opacity={chartConfig.opacity.grid} 
+    <ResponsiveContainer width="100%" height={250} debounce={300}>
+      <ScatterChart data={exitTrades} margin={chartConfig.margin} syncId="tradesChart">
+        <CartesianGrid
+          strokeDasharray="3 3"
+          opacity={chartConfig.opacity.grid}
         />
-        <XAxis 
-          dataKey="date" 
-          tick={{ fontSize: 12 }} 
-        />
-        <YAxis 
-          dataKey="pnl_pct" 
+        <XAxis
+          dataKey="date"
           tick={{ fontSize: 12 }}
-          label={{ 
-            value: 'P&L (%)', 
-            angle: -90, 
-            position: 'insideLeft' 
+        />
+        <YAxis
+          dataKey="pnl_pct"
+          tick={{ fontSize: 12 }}
+          label={{
+            value: 'P&L (%)',
+            angle: -90,
+            position: 'insideLeft'
           }}
         />
-        <Scatter 
-          dataKey="pnl_pct" 
+        <Scatter
+          dataKey="pnl_pct"
           fill={chartConfig.colors.default}
+          isAnimationActive={false}
         >
           {renderCells()}
         </Scatter>
-        <ReferenceLine 
-          y={0} 
-          stroke={chartConfig.colors.reference} 
-          strokeDasharray="2 2" 
+        <ReferenceLine
+          y={0}
+          stroke={chartConfig.colors.reference}
+          strokeDasharray="2 2"
         />
       </ScatterChart>
     </ResponsiveContainer>
