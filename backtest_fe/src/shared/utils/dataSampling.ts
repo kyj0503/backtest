@@ -129,6 +129,12 @@ function parseLocalDate(dateStr: string): Date {
  *
  * @param date 확인할 날짜
  * @returns 1-5: 몇 번째 해당 요일인지
+ * 
+ * @note Weekday 인덱싱 차이:
+ * - JavaScript getDay(): 0=일요일, 1=월요일, ..., 6=토요일
+ * - Python weekday(): 0=월요일, 1=화요일, ..., 6=일요일
+ * - 두 시스템은 독립적으로 같은 날짜의 "N번째 발생"을 계산하므로 결과는 동일
+ *   (예: "2024-01-08"은 JS/Python 모두 "1월의 2번째 월요일"로 계산)
  */
 function getWeekdayOccurrence(date: Date): number {
   const jsWeekday = date.getDay(); // JavaScript: 0=일요일, 6=토요일
