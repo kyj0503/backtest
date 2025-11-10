@@ -60,6 +60,7 @@ weights = RebalanceHelper.calculate_target_weights(
 from typing import Dict
 from datetime import datetime
 import logging
+from app.schemas.schemas import DCA_FREQUENCY_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,6 @@ class RebalanceHelper:
             return False
 
         # 주 단위 리밸런싱
-        from app.schemas.schemas import DCA_FREQUENCY_MAP
         interval_weeks = DCA_FREQUENCY_MAP.get(frequency)
 
         if interval_weeks is None:
@@ -123,17 +123,21 @@ class RebalanceHelper:
             logger.warning(f"알 수 없는 리밸런싱 주기: {frequency}")
             return False
 
-        # 마지막 리밸런싱 날짜를 우선 사용, 없으면 시작일 사용
-        ref_date = last_rebalance_date if last_rebalance_date else (start_date if start_date else prev_date)
-
-        # 마지막 리밸런싱(또는 시작일)로부터 경과한 일수 계산
-        days_since_last = (current_date - ref_date).days
-        
         # interval_weeks 주(7일 * interval_weeks) 이상 경과했는지 확인
         required_days = interval_weeks * 7
-        
-        # 리밸런싱 주기 이상 경과했으면 True
-        return days_since_last >= required_days
+
+        # 첫 리밸런싱: last_rebalance_date가 없으면 start_date 기준으로 체크
+        if last_rebalance_date is None:
+            # start_date와 current_date가 같으면 첫날이므로 리밸런싱하지 않음
+            if start_date and current_date == start_date:
+                return False
+            # 시작일로부터 경과한 일수 계산
+            days_since_start = (current_date - start_date).days if start_date else (current_date - prev_date).days
+            return days_since_start >= required_days
+        else:
+            # 이후 리밸런싱: 마지막 리밸런싱 날짜 기준
+            days_since_last = (current_date - last_rebalance_date).days
+            return days_since_last >= required_days
 
     @staticmethod
     def calculate_target_weights(
