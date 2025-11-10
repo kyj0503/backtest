@@ -601,6 +601,9 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
 
     if (crossedMonthBoundary || isLastItem) {
       // 여러 달을 건너뛴 경우 처리 (마지막 아이템 포함)
+      // Note: 데이터가 없는 달은 월별 집계에 포함하지 않음 (의도된 동작)
+      // 예: 상장폐지/거래정지로 3개월 갭 발생 시, 해당 3개월은 결과에 나타나지 않음
+      // 백엔드도 동일하게 처리 (실제 거래 데이터가 있는 월만 집계)
       while (itemDate >= currentMonthEndDate) {
         if (currentMonthData.length > 0) {
           // 현재 달 데이터 마감
