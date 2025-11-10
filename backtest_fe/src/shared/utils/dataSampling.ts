@@ -270,18 +270,22 @@ export function filterRebalanceMarkers<T extends { date?: string; timestamp?: st
 
 /**
  * 일간 수익률을 주간/월간 수익률로 변환
- * 
+ *
  * @param dailyReturns 일간 수익률 데이터 { date: string, return_pct: number }
- * @param aggregationType 'weekly' | 'monthly'
+ * @param aggregationType 'daily' | 'weekly' | 'monthly'
  * @returns 집계된 수익률 데이터
  */
 export function aggregateReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
   dailyReturns: T[],
-  aggregationType: 'weekly' | 'monthly'
+  aggregationType: 'daily' | 'weekly' | 'monthly'
 ): T[] {
   if (!dailyReturns || dailyReturns.length === 0) return [];
+
+  // 명시적으로 daily 처리 (타입 안정성 향상)
+  if (aggregationType === 'daily') return dailyReturns;
   if (aggregationType === 'weekly') return aggregateWeeklyReturns(dailyReturns);
   if (aggregationType === 'monthly') return aggregateMonthlyReturns(dailyReturns);
+
   return dailyReturns;
 }
 
