@@ -240,7 +240,10 @@ export const useChartData = (
 
     return aggregatedReturns.map(r => {
       const eq = equityByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawEquity, r.date);
-      if (!eq) return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
+      if (!eq) {
+        console.warn(`[포트폴리오 차트] ${r.date} 날짜의 equity 데이터 없음 (집계수익률=${r.return_pct}%)`);
+        return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
+      }
       return {
         ...eq,
         date: r.date, // 집계 날짜로 덮어씀
@@ -283,7 +286,10 @@ export const useChartData = (
 
     return aggregatedReturns.map(r => {
       const eq = equityByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawEquity, r.date);
-      if (!eq) return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
+      if (!eq) {
+        console.warn(`[단일종목 차트] ${r.date} 날짜의 equity 데이터 없음 (집계수익률=${r.return_pct}%)`);
+        return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
+      }
       return {
         ...eq,
         date: r.date,
@@ -339,7 +345,10 @@ export const useChartData = (
 
     return aggregatedReturns.map(r => {
       const item = dataByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawData, r.date);
-      if (!item) return { date: r.date, value: 0, return_pct: r.return_pct };
+      if (!item) {
+        console.warn(`[S&P 500 벤치마크] ${r.date} 날짜의 데이터 없음 (집계수익률=${r.return_pct}%)`);
+        return { date: r.date, value: 0, return_pct: r.return_pct };
+      }
       return {
         ...item,
         date: r.date,
@@ -375,7 +384,10 @@ export const useChartData = (
 
     return aggregatedReturns.map(r => {
       const item = dataByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawData, r.date);
-      if (!item) return { date: r.date, value: 0, return_pct: r.return_pct };
+      if (!item) {
+        console.warn(`[NASDAQ 벤치마크] ${r.date} 날짜의 데이터 없음 (집계수익률=${r.return_pct}%)`);
+        return { date: r.date, value: 0, return_pct: r.return_pct };
+      }
       return {
         ...item,
         date: r.date,

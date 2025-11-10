@@ -131,10 +131,10 @@ export function smartSampleByPeriod<T extends { date: string; [key: string]: any
 
   const yearDuration = calculateYearDuration(startDate, endDate);
 
-  // 1일 미만: 오류 (호출자가 처리해야 함)
+  // 1일 미만: 원본 데이터 반환 (다운스트림 처리 안전성)
   if (yearDuration < (2 / 365.25)) {
     return {
-      data: [],
+      data,
       aggregationType: 'daily',
       warning: '백테스트 기간은 최소 2일 이상이어야 합니다.',
     };

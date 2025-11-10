@@ -84,7 +84,6 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
           date: event.date,
         };
         // 모든 심볼에 대해 null 값 설정
-        // Note: symbols는 chartData에서 파생되므로 dependency로 불필요
         symbols.forEach(symbol => {
           nullPoint[symbol] = null;
         });
