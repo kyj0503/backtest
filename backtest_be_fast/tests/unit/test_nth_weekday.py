@@ -4,7 +4,7 @@ Nth Weekday 함수 테스트
 get_nth_weekday_of_month, get_next_nth_weekday 함수의 정확성을 검증합니다.
 """
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 from app.services.rebalance_helper import get_nth_weekday_of_month, get_next_nth_weekday
 
 
