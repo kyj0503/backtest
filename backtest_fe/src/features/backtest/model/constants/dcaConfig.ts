@@ -23,17 +23,3 @@ export const getDcaPeriodInfo = (frequency: DcaFrequency): { type: string; inter
   return { type: option?.type || 'monthly', interval: option?.interval || 1 };
 };
 
-/**
- * @deprecated 백엔드에서 더 이상 주 단위를 사용하지 않음. getDcaPeriodInfo() 사용 권장
- * 기존 코드 호환성을 위한 레거시 함수
- */
-export const getDcaWeeks = (frequency: DcaFrequency): number => {
-  const info = getDcaPeriodInfo(frequency);
-  // 근사 계산: monthly는 4주(약 1개월)로 환산
-  if (info.type === 'weekly') {
-    return info.interval;
-  } else if (info.type === 'monthly') {
-    return info.interval * 4;
-  }
-  return 1;
-};

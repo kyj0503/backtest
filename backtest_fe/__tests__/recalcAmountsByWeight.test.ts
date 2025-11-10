@@ -1,17 +1,15 @@
 import { describe, it, expect } from 'vitest';
+import { getDcaPeriodInfo } from '../src/features/backtest/model/constants/dcaConfig';
 
-// 기본 설정 가져오기
-const getDcaWeeks = (frequency: string): number => {
-  const freqMap: Record<string, number> = {
-    'weekly_1': 1,
-    'weekly_2': 2,
-    'monthly_1': 4,    // 매월 (약 4주)
-    'monthly_2': 8,    // 2개월마다
-    'monthly_3': 12,   // 분기
-    'monthly_6': 24,   // 반년
-    'monthly_12': 48,  // 1년
-  };
-  return freqMap[frequency] || 4;
+// DCA 주기를 근사 일수로 변환하는 헬퍼 함수
+const getDcaApproxDays = (frequency: string): number => {
+  const { type, interval } = getDcaPeriodInfo(frequency as any);
+  if (type === 'weekly') {
+    return interval * 7;
+  } else if (type === 'monthly') {
+    return interval * 30; // 월 평균 30일
+  }
+  return 30;
 };
 
 // reducer의 recalcAmountsByWeight 함수 복사
@@ -29,7 +27,6 @@ const recalcAmountsByWeight = (portfolio: any[], totalInvestment: number, startD
   const end = new Date(endDate);
   const timeDiff = end.getTime() - start.getTime();
   const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-  const weeks = Math.floor(days / 7);
 
   // Step 1: weight 항목들만 먼저 처리해서 총 투자액 누적
   const weightIndices: number[] = [];
@@ -53,8 +50,8 @@ const recalcAmountsByWeight = (portfolio: any[], totalInvestment: number, startD
       const correctedTotalAmount = totalInvestment - accumulatedTotal;
       
       if (s.investmentType === 'dca') {
-        const intervalWeeks = getDcaWeeks(s.dcaFrequency || 'monthly_1');
-        const dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+        const intervalDays = getDcaApproxDays(s.dcaFrequency || 'monthly_1');
+        const dcaPeriods = Math.max(1, Math.floor(days / intervalDays) + 1);
         const perPeriodAmount = Math.round(correctedTotalAmount / dcaPeriods);
         results.set(index, perPeriodAmount);
       } else {
@@ -63,8 +60,8 @@ const recalcAmountsByWeight = (portfolio: any[], totalInvestment: number, startD
     } else {
       // 일반 weight 항목
       if (s.investmentType === 'dca') {
-        const intervalWeeks = getDcaWeeks(s.dcaFrequency || 'monthly_1');
-        const dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
+        const intervalDays = getDcaApproxDays(s.dcaFrequency || 'monthly_1');
+        const dcaPeriods = Math.max(1, Math.floor(days / intervalDays) + 1);
         const perPeriodAmount = Math.round(totalAmountForStock / dcaPeriods);
         results.set(index, perPeriodAmount);
         accumulatedTotal += Math.round(totalAmountForStock);
