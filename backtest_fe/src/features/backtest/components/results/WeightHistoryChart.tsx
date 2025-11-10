@@ -95,7 +95,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
     return [...chartData, ...rebalanceDatesToAdd].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [chartData, rebalanceHistory]);
+  }, [chartData, rebalanceHistory, symbols]);
 
   if (!weightHistory || weightHistory.length === 0) {
     return (
