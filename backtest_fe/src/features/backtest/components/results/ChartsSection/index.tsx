@@ -98,7 +98,13 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       </div>
 
       {/* 3. 모든 분석 차트 */}
-      <div className={`grid gap-6 ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+      <div
+        className={`grid gap-6 transition-all duration-300 ease-in-out ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}
+        style={{
+          willChange: isCompactView ? 'auto' : 'grid-template-columns',
+          contain: 'layout style'
+        }}
+      >
         {/* 3.1 기본 차트 (포트폴리오 또는 단일 종목) */}
         {isPortfolio && portfolioData ? (
           <PortfolioCharts
