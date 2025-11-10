@@ -59,7 +59,7 @@ from dateutil.relativedelta import relativedelta
 import logging
 from decimal import Decimal
 
-from app.schemas.schemas import PortfolioBacktestRequest, PortfolioStock
+from app.schemas.schemas import PortfolioBacktestRequest, PortfolioStock, DCA_FREQUENCY_MAP
 from app.schemas.requests import BacktestRequest
 from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db
 from app.services.backtest_service import backtest_service
@@ -482,7 +482,6 @@ class PortfolioService:
                         })
                         # 마지막 리밸런싱 날짜 업데이트
                         last_rebalance_date = current_date
-                        from app.schemas.schemas import DCA_FREQUENCY_MAP
                         weeks = DCA_FREQUENCY_MAP.get(rebalance_frequency, 4)
                         next_rebalance_date = current_date + timedelta(weeks=weeks)
                         logger.info(f"{current_date.date()}: 리밸런싱 완료 (거래 {trades_in_rebalance}건), 다음 리밸런싱 예정일: {next_rebalance_date.date()}")
