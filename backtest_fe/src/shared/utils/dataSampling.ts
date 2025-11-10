@@ -255,8 +255,11 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
   const lastDateStr = data[data.length - 1].date;
   const lastDate = parseLocalDate(lastDateStr);
 
-  // 무한 루프 방지: 최대 반복 횟수 설정
-  const maxIterations = data.length;
+  // 무한 루프 방지: 백테스트 기간의 최대 월 수 기반 상한 설정
+  // data.length는 일별 데이터이므로 너무 큼 (예: 10년 = 2500일)
+  // 실제 필요한 반복: 백테스트 월 수 (예: 10년 = ~120회)
+  const daysDiff = (lastDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+  const maxIterations = Math.ceil(daysDiff / 20) + 10; // ~20 거래일/월 + 여유분
   let iterations = 0;
 
   while (true) {
