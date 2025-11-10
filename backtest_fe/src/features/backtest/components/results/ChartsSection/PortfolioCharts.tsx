@@ -60,6 +60,31 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
     monthly: '4주간',
   }[aggregationType];
 
+  // 리밸런싱 날짜를 차트 데이터에 병합 (빈 데이터 포인트로 추가)
+  const equityDataWithRebalancePoints = useMemo(() => {
+    if (!rebalance_history || rebalance_history.length === 0) {
+      return portfolioEquityData;
+    }
+
+    // 기존 차트 데이터의 날짜 Set
+    const existingDates = new Set(portfolioEquityData.map(d => d.date));
+    
+    // 차트에 없는 리밸런싱 날짜만 추가
+    const rebalanceDatesToAdd = rebalance_history
+      .filter(event => !existingDates.has(event.date))
+      .map(event => ({
+        date: event.date,
+        value: null, // null로 설정하여 선이 끊기지 않도록
+        return_pct: null,
+        drawdown_pct: null,
+      }));
+
+    // 병합 후 날짜순 정렬
+    return [...portfolioEquityData, ...rebalanceDatesToAdd].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  }, [portfolioEquityData, rebalance_history]);
+
   // 일일 수익률 Y축 도메인 계산 (메모이제이션)
   const dailyReturnYAxisDomain = useMemo<[number, number]>(() => {
     const returnValues = portfolioEquityData
@@ -82,7 +107,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
         description="기간 동안 누적 자산 가치 변화를 확인하세요 (리밸런싱 시점 표시)"
       >
         <ResponsiveContainer width="100%" height={360}>
-          <AreaChart data={portfolioEquityData}>
+          <AreaChart data={equityDataWithRebalancePoints}>
             <defs>
               {PORTFOLIO_VALUE_GRADIENT}
             </defs>
@@ -96,7 +121,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
               ]}
               labelFormatter={(label: string) => `날짜: ${label}`}
             />
-            {/* 리밸런싱 마커 */}
+            {/* 리밸런싱 마커 - 차트 데이터에 포함된 날짜 기준 */}
             {rebalance_history?.map((event, idx) => (
               <ReferenceLine
                 key={idx}
@@ -118,6 +143,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
               strokeWidth={2} 
               fill="url(#portfolioValue)" 
               isAnimationActive={false}
+              connectNulls={true}
             />
           </AreaChart>
         </ResponsiveContainer>

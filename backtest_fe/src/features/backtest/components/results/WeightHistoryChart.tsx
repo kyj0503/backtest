@@ -67,28 +67,34 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
     });
   }, [weightHistory, symbols]);
 
-  // 리밸런싱 마커 필터링 (차트에 표시된 날짜 범위 내에서만)
-  const filteredRebalanceEvents = useMemo(() => {
-    if (!rebalanceHistory || rebalanceHistory.length === 0) return [];
-    if (chartData.length === 0) return [];
-    
-    // 차트 데이터 범위 내의 리밸런싱 이벤트 필터링
-    const eventsInRange = rebalanceHistory.filter(event => {
-      // 이벤트 날짜가 차트 데이터 범위 내에 있는지 확인
-      const eventDate = new Date(event.date).getTime();
-      const minDate = new Date(chartData[0].date).getTime();
-      const maxDate = new Date(chartData[chartData.length - 1].date).getTime();
-      return eventDate >= minDate && eventDate <= maxDate;
-    });
-    
-    // 최대 20개로 제한 (너무 많으면 차트가 복잡해짐)
-    // 주간/월간 집계 시 많은 이벤트가 있을 수 있으므로 최신 20개만 표시
-    if (eventsInRange.length > 20) {
-      return eventsInRange.slice(-20);
+  // 리밸런싱 날짜를 차트 데이터에 병합 (Recharts categorical X-axis 제약 대응)
+  const chartDataWithRebalancePoints = useMemo(() => {
+    if (!rebalanceHistory || rebalanceHistory.length === 0) {
+      return chartData;
     }
     
-    return eventsInRange;
-  }, [rebalanceHistory, chartData]);
+    // 기존 차트 데이터에 있는 날짜들
+    const existingDates = new Set(chartData.map(d => d.date));
+    
+    // 차트 데이터에 없는 리밸런싱 날짜들을 null 값 포인트로 추가
+    const rebalanceDatesToAdd = rebalanceHistory
+      .filter(event => !existingDates.has(event.date))
+      .map(event => {
+        const nullPoint: Record<string, any> = {
+          date: event.date,
+        };
+        // 모든 심볼에 대해 null 값 설정
+        symbols.forEach(symbol => {
+          nullPoint[symbol] = null;
+        });
+        return nullPoint;
+      });
+    
+    // 병합 후 날짜순 정렬
+    return [...chartData, ...rebalanceDatesToAdd].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  }, [chartData, rebalanceHistory, symbols]);
 
   if (!weightHistory || weightHistory.length === 0) {
     return (
@@ -100,7 +106,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
 
   return (
     <ResponsiveContainer width="100%" height={400} debounce={300}>
-      <AreaChart data={chartData} syncId="weightHistoryChart">
+      <AreaChart data={chartDataWithRebalancePoints} syncId="weightHistoryChart">
         <defs>
           {symbols.map((symbol, index) => (
             <linearGradient key={symbol} id={`color${index}`} x1="0" y1="0" x2="0" y2="1">
@@ -137,8 +143,8 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
           iconType="square"
           formatter={(value: string) => symbolDisplayNames[value] || value}
         />
-        {/* 리밸런싱 마커 - 성능 최적화 (최대 20개) */}
-        {filteredRebalanceEvents.length > 0 && filteredRebalanceEvents.map((event, idx) => (
+        {/* 리밸런싱 마커 - 차트 데이터에 포함된 날짜 기준 */}
+        {rebalanceHistory && rebalanceHistory.length > 0 && rebalanceHistory.map((event, idx) => (
           <ReferenceLine
             key={idx}
             x={event.date}
@@ -162,6 +168,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
             fill={`url(#color${index})`}
             strokeWidth={2}
             isAnimationActive={false}
+            connectNulls={true}
           />
         ))}
       </AreaChart>
