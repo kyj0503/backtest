@@ -77,6 +77,14 @@ from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBAC
 
 logger = logging.getLogger(__name__)
 
+# 상장폐지 감지 임계값 (일 단위)
+# 30일로 설정한 이유:
+# - 실제 상장폐지를 조기에 감지 (대부분의 거래소는 20-30일 내 절차 진행)
+# - 거래 정지(regulatory review, 인수합병 등) 오탐 최소화
+# - 거래량이 적은 종목의 단기 데이터 공백과 구분
+# 시장별 규칙 차이가 있으나, 30일은 균형잡힌 기본값
+DELISTING_THRESHOLD_DAYS = 30
+
 class PortfolioService:
     """포트폴리오 백테스트 서비스"""
     def __init__(self):
@@ -107,6 +115,11 @@ class PortfolioService:
 
         Returns:
             포트폴리오 가치와 수익률이 포함된 DataFrame
+            
+        Note:
+            - last_rebalance_date는 리밸런싱 예정일 추적용 (거래 여부 무관)
+            - rebalance_history는 실제 거래가 발생한 리밸런싱만 기록
+            - 이는 의도된 동작: 다음 리밸런싱 스케줄 계산을 위해 예정일 기준 추적
         """
         # 현금 처리
         cash_amount = 0
@@ -276,7 +289,6 @@ class PortfolioService:
                             current_prices[unique_key] = raw_price
 
             # 상장폐지 감지: 가격 데이터가 30일 이상 없으면 상장폐지로 판단
-            DELISTING_THRESHOLD_DAYS = 30
             for unique_key in stock_amounts.keys():
                 # 현재 가격이 있으면 마지막 유효 가격 갱신
                 if unique_key in current_prices:
