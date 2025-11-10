@@ -604,6 +604,8 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
       // Note: 데이터가 없는 달은 월별 집계에 포함하지 않음 (의도된 동작)
       // 예: 상장폐지/거래정지로 3개월 갭 발생 시, 해당 3개월은 결과에 나타나지 않음
       // 백엔드도 동일하게 처리 (실제 거래 데이터가 있는 월만 집계)
+      let itemAddedInWhile = false;
+      
       while (itemDate >= currentMonthEndDate) {
         if (currentMonthData.length > 0) {
           // 현재 달 데이터 마감
@@ -622,13 +624,14 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
         // 현재 아이템이 새로운 경계 내에 있으면 추가하고 종료
         if (itemDate < currentMonthEndDate) {
           currentMonthData.push(item);
+          itemAddedInWhile = true;
           break;
         }
       }
       
       // 마지막 아이템 처리 (while 루프를 거치지 않은 경우만)
       // while 조건이 처음부터 false였다면 (itemDate < currentMonthEndDate)
-      if (isLastItem && itemDate < currentMonthEndDate && !currentMonthData.includes(item)) {
+      if (isLastItem && itemDate < currentMonthEndDate && !itemAddedInWhile) {
         currentMonthData.push(item);
       }
       

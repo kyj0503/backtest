@@ -449,15 +449,18 @@ class PortfolioService:
                             # 조정된 비중 로깅
                             for unique_key in delisted_stocks:
                                 symbol = dca_info[unique_key]['symbol']
+                                original_weight = target_weights.get(unique_key, 0.0)
                                 logger.debug(
-                                    f"  {symbol}: {target_weights[unique_key]:.2%} -> 0.00% (상장폐지)"
+                                    f"  {symbol}: {original_weight:.2%} -> 0.00% (상장폐지)"
                                 )
                             for unique_key, adj_weight in adjusted_target_weights.items():
-                                if unique_key not in delisted_stocks and target_weights[unique_key] != adj_weight:
-                                    symbol = dca_info[unique_key]['symbol']
-                                    logger.debug(
-                                        f"  {symbol}: {target_weights[unique_key]:.2%} -> {adj_weight:.2%}"
-                                    )
+                                if unique_key not in delisted_stocks:
+                                    original_weight = target_weights.get(unique_key, 0.0)
+                                    if original_weight != adj_weight:
+                                        symbol = dca_info[unique_key]['symbol']
+                                        logger.debug(
+                                            f"  {symbol}: {original_weight:.2%} -> {adj_weight:.2%}"
+                                        )
                 
                 # 현재 포트폴리오 총 가치 계산 (주식 + 현금, 상장폐지 종목 포함)
                 total_stock_value = sum(
@@ -518,12 +521,20 @@ class PortfolioService:
                             # 상장폐지 종목은 보유 주식 수 유지 (거래 불가)
                             if unique_key in delisted_stocks:
                                 new_shares[unique_key] = shares[unique_key]
-                                current_value = shares[unique_key] * current_prices.get(unique_key, 0)
+                                current_price = current_prices.get(unique_key, 0)
                                 symbol = dca_info[unique_key]['symbol']
-                                logger.debug(
-                                    f"  {symbol} 상장폐지 종목: 보유 주식 {shares[unique_key]:.4f}주 유지 "
-                                    f"(가치: ${current_value:,.2f}, 리밸런싱 불가)"
-                                )
+                                
+                                if current_price == 0:
+                                    logger.warning(
+                                        f"  {symbol} 상장폐지 종목: 가격 정보 없음, "
+                                        f"보유 주식 {shares[unique_key]:.4f}주만 유지"
+                                    )
+                                else:
+                                    current_value = shares[unique_key] * current_price
+                                    logger.debug(
+                                        f"  {symbol} 상장폐지 종목: 보유 주식 {shares[unique_key]:.4f}주 유지 "
+                                        f"(가치: ${current_value:,.2f}, 리밸런싱 불가)"
+                                    )
                                 continue
                             
                             if unique_key not in current_prices:
