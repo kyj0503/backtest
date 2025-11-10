@@ -16,11 +16,31 @@
 
 /**
  * 백테스트 기간 계산 (년 단위)
+ * 
+ * @param startDate 시작 날짜 (문자열 또는 Date 객체)
+ * @param endDate 종료 날짜 (문자열 또는 Date 객체)
+ * @returns 백테스트 기간 (년 단위)
+ * @throws Error 유효하지 않은 날짜 또는 endDate가 startDate보다 작은 경우
  */
 function calculateYearDuration(startDate: string | Date, endDate: string | Date): number {
   const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
   const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+  
+  // 날짜 유효성 검증
+  if (isNaN(start.getTime())) {
+    throw new Error(`유효하지 않은 시작 날짜: ${startDate}`);
+  }
+  if (isNaN(end.getTime())) {
+    throw new Error(`유효하지 않은 종료 날짜: ${endDate}`);
+  }
+  
   const diffMs = end.getTime() - start.getTime();
+  
+  // 종료 날짜가 시작 날짜보다 작은 경우
+  if (diffMs < 0) {
+    throw new Error(`종료 날짜가 시작 날짜보다 작을 수 없습니다: ${startDate} ~ ${endDate}`);
+  }
+  
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
   return diffDays / 365.25; // 윤년 고려
 }
