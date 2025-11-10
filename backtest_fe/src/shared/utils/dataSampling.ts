@@ -233,7 +233,11 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
     let searchDate = nextDate;
 
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const searchDateStr = searchDate.toISOString().split('T')[0];
+      // 로컬 타임존 기준으로 날짜 문자열 생성 (parseLocalDate와 일관성 유지)
+      const year = searchDate.getFullYear();
+      const month = String(searchDate.getMonth() + 1).padStart(2, '0');
+      const day = String(searchDate.getDate()).padStart(2, '0');
+      const searchDateStr = `${year}-${month}-${day}`;
       const foundItem = dataByDate.get(searchDateStr);
 
       if (foundItem) {
