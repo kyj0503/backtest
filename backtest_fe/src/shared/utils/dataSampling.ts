@@ -168,6 +168,8 @@ function getNthWeekdayOfMonth(year: number, month: number, weekday: number, n: n
   const firstWeekday = firstDay.getDay();
 
   // 첫 번째 해당 요일까지의 일수
+  // (weekday - firstWeekday + 7) % 7 는 백엔드의 (weekday - first_weekday) % 7과 수학적으로 동일
+  // +7은 음수 방지용 (JS 모듈로는 음수 결과 가능)
   const daysUntilTarget = (weekday - firstWeekday + 7) % 7;
 
   // N번째 해당 요일
