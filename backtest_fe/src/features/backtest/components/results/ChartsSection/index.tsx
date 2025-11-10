@@ -67,7 +67,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
   const aggregationLabel = {
     daily: '일간',
     weekly: '주간',
-    monthly: '4주간',
+    monthly: '월간',
   }[aggregationType];
 
   return (

@@ -1,9 +1,9 @@
 /**
  * 벤치마크 수익률 비교 차트 컴포넌트
- * 
+ *
  * **역할**:
  * - 포트폴리오, S&P 500, NASDAQ 수익률을 한 그래프에 겹쳐서 표시
- * - 집계 타입(일일/주간/4주간)에 따라 복리 수익률 비교
+ * - 집계 타입(일일/주간/월간)에 따라 복리 수익률 비교
  * - 각 라인을 다른 색상으로 구분하여 비교 용이
  * - 범례 클릭으로 개별 라인 토글 가능
  */
@@ -33,7 +33,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
   const periodLabel = {
     daily: '일일',
     weekly: '주간',
-    monthly: '4주간',
+    monthly: '월간',
   }[aggregationType];
 
   // 각 라인의 표시 여부를 관리하는 상태

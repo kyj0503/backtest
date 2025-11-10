@@ -81,36 +81,152 @@ function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data:
 }
 
 /**
- * 가격/가치 데이터를 월간 간격으로 샘플링합니다 (단순 샘플링)
- * 
+ * 날짜가 해당 월의 몇 번째 요일인지 계산
+ * 백엔드의 get_weekday_occurrence 함수와 동일한 로직
+ *
+ * @param date 확인할 날짜
+ * @returns 1-5: 몇 번째 해당 요일인지
+ */
+function getWeekdayOccurrence(date: Date): number {
+  const weekday = date.getDay(); // 0=일요일, 6=토요일
+  const year = date.getFullYear();
+  const month = date.getMonth();
+
+  let occurrence = 0;
+  for (let day = 1; day <= date.getDate(); day++) {
+    const checkDate = new Date(year, month, day);
+    if (checkDate.getDay() === weekday) {
+      occurrence++;
+    }
+  }
+
+  return occurrence;
+}
+
+/**
+ * 월의 N번째 특정 요일 날짜 계산
+ * 백엔드의 get_nth_weekday_of_month 함수와 동일한 로직
+ *
+ * @param year 연도
+ * @param month 월 (0-11, JavaScript Date 기준)
+ * @param weekday 요일 (0=일요일, 6=토요일)
+ * @param n 몇 번째 주인지 (1-5)
+ * @returns 해당 월의 N번째 요일 날짜 (day)
+ */
+function getNthWeekdayOfMonth(year: number, month: number, weekday: number, n: number): number {
+  // 해당 월의 첫날
+  const firstDay = new Date(year, month, 1);
+  const firstWeekday = firstDay.getDay();
+
+  // 첫 번째 해당 요일까지의 일수
+  const daysUntilTarget = (weekday - firstWeekday + 7) % 7;
+
+  // N번째 해당 요일
+  let targetDay = 1 + daysUntilTarget + (n - 1) * 7;
+
+  // 월의 마지막 날 확인
+  const lastDay = new Date(year, month + 1, 0).getDate();
+
+  // N번째 요일이 월을 벗어나면 마지막 해당 요일 반환
+  if (targetDay > lastDay) {
+    targetDay = lastDay;
+    while (new Date(year, month, targetDay).getDay() !== weekday) {
+      targetDay--;
+    }
+  }
+
+  return targetDay;
+}
+
+/**
+ * 다음 Nth Weekday 날짜 계산 (달력 월 기준)
+ * 백엔드의 get_next_nth_weekday 함수와 동일한 로직
+ *
+ * @param currentDate 기준 날짜
+ * @param originalNth 원본 "몇 번째 요일" 값 (1-5)
+ * @returns 다음 달의 같은 N번째 요일 날짜
+ */
+function getNextMonthNthWeekday(currentDate: Date, originalNth: number): Date {
+  const weekday = currentDate.getDay();
+
+  // 다음 달 계산
+  let targetYear = currentDate.getFullYear();
+  let targetMonth = currentDate.getMonth() + 1;
+
+  if (targetMonth > 11) {
+    targetMonth = 0;
+    targetYear++;
+  }
+
+  // 원본 N번째 요일 계산 (없으면 자동으로 마지막 해당 요일로 폴백)
+  const targetDay = getNthWeekdayOfMonth(targetYear, targetMonth, weekday, originalNth);
+
+  return new Date(targetYear, targetMonth, targetDay);
+}
+
+/**
+ * 가격/가치 데이터를 월간 간격으로 샘플링합니다 (실제 달력 월 기준)
+ *
  * ⚠️ 주의:
- * - 이 함수는 가격/가치/equity 데이터용으로, 매 28번째 항목을 선택합니다 (단순 샘플링)
+ * - 이 함수는 가격/가치/equity 데이터용으로, 실제 달력 월 기준으로 샘플링합니다
  * - 수익률 데이터는 이 함수를 사용하지 않습니다 (aggregateReturns() 사용)
- * - 28일(4주) 단위이므로 실제 달력 월(30일, 31일)과 다릅니다
- * - 배열 인덱스 기반이므로 실제 월말(1일~말일)과 일치하지 않습니다
- * - 예: 데이터가 15일에 시작하면 첫 "월간" 포인트는 28일 후 데이터입니다
- * 
+ * - Nth Weekday 방식: 시작일이 1월 10일(2번째 수요일)이면, 다음은 2월의 2번째 수요일
+ * - 백엔드의 DCA/리밸런싱 로직과 동일한 방식으로 월 경계를 계산합니다
+ *
  * @param data 원본 일간 데이터 (가격, equity, value 등)
- * @returns 매 28번째 데이터 포인트만 포함된 배열
+ * @returns 실제 달력 월 기준으로 샘플링된 배열
  */
 function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
 
   const monthly: T[] = [];
-  const DAYS_PER_MONTH = 28; // 4주 = 28일
-  
+
   // 첫 데이터는 항상 포함
   monthly.push(data[0]);
-  
-  // 28일 간격으로 데이터 추출
-  for (let i = DAYS_PER_MONTH; i < data.length; i += DAYS_PER_MONTH) {
-    monthly.push(data[i]);
+
+  // 시작 날짜의 "몇 번째 요일" 계산
+  const startDate = new Date(data[0].date);
+  const originalNth = getWeekdayOccurrence(startDate);
+
+  // 데이터를 Map으로 변환 (빠른 조회)
+  const dataByDate = new Map<string, T>();
+  for (const item of data) {
+    dataByDate.set(item.date, item);
   }
-  
-  // 마지막 데이터가 28일 간격에 포함되지 않았다면 추가
-  const lastIndex = data.length - 1;
-  if (lastIndex > 0 && data[lastIndex] !== monthly[monthly.length - 1]) {
-    monthly.push(data[lastIndex]);
+
+  // 다음 월 날짜 계산하며 샘플링
+  let currentDate = startDate;
+
+  while (true) {
+    // 다음 달의 Nth Weekday 계산
+    const nextDate = getNextMonthNthWeekday(currentDate, originalNth);
+    const nextDateStr = nextDate.toISOString().split('T')[0];
+
+    // 해당 날짜 또는 그 이후의 첫 데이터 찾기
+    let found = false;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].date >= nextDateStr) {
+        // 이미 추가된 데이터가 아니면 추가
+        if (monthly[monthly.length - 1] !== data[i]) {
+          monthly.push(data[i]);
+          found = true;
+        }
+        currentDate = new Date(data[i].date);
+        break;
+      }
+    }
+
+    // 더 이상 데이터가 없으면 종료
+    if (!found) break;
+
+    // 마지막 데이터에 도달했으면 종료
+    if (currentDate >= new Date(data[data.length - 1].date)) break;
+  }
+
+  // 마지막 데이터가 포함되지 않았다면 추가
+  const lastItem = data[data.length - 1];
+  if (monthly[monthly.length - 1] !== lastItem) {
+    monthly.push(lastItem);
   }
 
   return monthly;
@@ -363,16 +479,15 @@ function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [k
 }
 
 /**
- * 월간 수익률 계산 (28일 = 4주 단위, 복리 기반)
- * 
- * ⚠️ 주의: 배열 인덱스 기반 집계로, 실제 달력 월 경계와 일치하지 않습니다.
- * - 28일(4주) 단위로 집계되므로 실제 월말(30일, 31일)과 다릅니다.
- * - 데이터 시작 시점에 따라 실제 월 경계(1일~말일)와 달라질 수 있습니다.
- * - 월말 리밸런싱, 월간 리포팅 등에서 실제 월과 다를 수 있습니다.
- * - 매 28번째 항목마다 집계되므로 중간에 거래일이 없는 날이 있어도 카운트됩니다.
- * 
+ * 월간 수익률 계산 (실제 달력 월 기준, 복리 기반)
+ *
+ * ⚠️ 주의: 실제 달력 월 경계로 집계됩니다.
+ * - Nth Weekday 방식: 시작일이 1월 10일(2번째 수요일)이면, 2월의 2번째 수요일까지가 한 달
+ * - 백엔드의 DCA/리밸런싱 로직과 동일한 방식으로 월 경계를 계산합니다
+ * - 복리 수익률: (1 + r1) * (1 + r2) * ... - 1
+ *
  * @param dailyReturns 일간 수익률 배열
- * @returns 28일 단위로 집계된 복리 수익률
+ * @returns 실제 달력 월 단위로 집계된 복리 수익률
  */
 function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
   dailyReturns: T[]
@@ -380,14 +495,25 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
   if (!dailyReturns || dailyReturns.length === 0) return [];
 
   const monthly: T[] = [];
-  const DAYS_PER_MONTH = 28; // 4주
+
+  // 시작 날짜의 "몇 번째 요일" 계산
+  const startDate = new Date(dailyReturns[0].date);
+  const originalNth = getWeekdayOccurrence(startDate);
+
   let currentMonthData: T[] = [];
+  let currentMonthEndDate = getNextMonthNthWeekday(startDate, originalNth);
 
   for (let i = 0; i < dailyReturns.length; i++) {
-    currentMonthData.push(dailyReturns[i]);
+    const item = dailyReturns[i];
+    const itemDate = new Date(item.date);
 
-    // 28일마다 또는 마지막 데이터일 때 월간 수익률 계산
-    if ((i + 1) % DAYS_PER_MONTH === 0 || i === dailyReturns.length - 1) {
+    currentMonthData.push(item);
+
+    // 다음 달 경계를 넘었거나 마지막 데이터일 때
+    const isLastItem = i === dailyReturns.length - 1;
+    const crossedMonthBoundary = itemDate >= currentMonthEndDate;
+
+    if (crossedMonthBoundary || isLastItem) {
       if (currentMonthData.length > 0) {
         const monthlyReturn = calculateCompoundReturn(currentMonthData);
         const lastDay = currentMonthData[currentMonthData.length - 1];
@@ -395,7 +521,12 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
           ...lastDay,
           return_pct: monthlyReturn,
         });
-        currentMonthData = [];
+
+        // 다음 달 경계 계산
+        if (!isLastItem) {
+          currentMonthEndDate = getNextMonthNthWeekday(currentMonthEndDate, originalNth);
+          currentMonthData = [];
+        }
       }
     }
   }
