@@ -1,6 +1,23 @@
 /**
  * ChartsSection 데이터 변환 훅
- * ChartsSection의 복잡한 데이터 변환 로직을 커스텀 훅으로 분리
+ * 
+ * **역할**:
+ * - ChartsSection의 복잡한 데이터 변환 로직을 커스텀 훅으로 분리
+ * - 백테스트 기간에 따라 스마트 샘플링 적용 (일간/주간/4주간)
+ * - 가격 데이터: 단순 샘플링 (간격마다 데이터 포인트 추출)
+ * - 수익률 데이터: 복리 집계 (여러 일간 수익률을 주간/4주간 복리 수익률로 변환)
+ * 
+ * **샘플링 전략**:
+ * - 2일~2년: 일간 데이터 (원본 그대로)
+ * - 2년~5년: 주간 집계 (7일 간격)
+ * - 5년~10년: 4주간 집계 (28일 간격)
+ * - 10년 초과: 4주간 집계 + 경고 표시
+ * 
+ * **복리 계산 대상**:
+ * - portfolioEquityData.return_pct
+ * - singleEquityData.return_pct
+ * - sp500Benchmark.return_pct
+ * - nasdaqBenchmark.return_pct
  */
 
 import { useMemo } from 'react';
@@ -14,7 +31,7 @@ import {
   extractBenchmarkData,
   extractStatsPayload,
 } from '../../utils';
-import { smartSampleByPeriod } from '@/shared/utils/dataSampling';
+import { smartSampleByPeriod, aggregateReturns } from '@/shared/utils/dataSampling';
 
 export interface UseChartDataReturn {
   // 데이터 타입 구분
@@ -138,34 +155,96 @@ export const useChartData = (
     return extractStatsPayload(data, isPortfolio);
   }, [data, isPortfolio]);
 
-  // 포트폴리오 equity 데이터 (스마트 샘플링 적용)
+  // 샘플링 메타 정보 계산 (먼저 계산하여 다른 곳에서 사용)
+  const { aggregationType, samplingWarning } = useMemo(() => {
+    if (!startDate || !endDate) {
+      return { aggregationType: 'daily' as const, samplingWarning: undefined };
+    }
+
+    // 임시 데이터로 샘플링 전략 확인
+    const { aggregationType: type, warning } = smartSampleByPeriod(
+      [{ date: startDate }],
+      startDate,
+      endDate
+    );
+
+    return { aggregationType: type, samplingWarning: warning };
+  }, [startDate, endDate]);
+
+  // 포트폴리오 equity 데이터 (스마트 샘플링 + 수익률 복리 집계)
   const portfolioEquityData = useMemo<EquityPoint[]>(() => {
     if (!portfolioData) return [];
-    const rawData = transformPortfolioEquityData(
+    
+    // 원본 데이터 변환
+    const rawEquityData = transformPortfolioEquityData(
       portfolioData.equity_curve,
       portfolioData.daily_returns
     );
 
-    if (startDate && endDate) {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
+    // 날짜 범위가 없으면 원본 반환
+    if (!startDate || !endDate) {
+      return rawEquityData;
     }
 
-    return rawData;
-  }, [portfolioData, startDate, endDate]);
+    // equity curve는 샘플링만 (가격 데이터)
+    const { data: sampledEquityData } = smartSampleByPeriod(rawEquityData, startDate, endDate);
 
-  // 단일 종목 equity 데이터 (스마트 샘플링 적용)
+    // 수익률은 복리 집계 (daily_returns를 기반으로)
+    if (aggregationType !== 'daily') {
+      const dailyReturnsArray = Object.entries(portfolioData.daily_returns).map(([date, return_pct]) => ({
+        date,
+        return_pct: return_pct as number,
+      }));
+
+      const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
+      
+      // 집계된 수익률을 sampledEquityData에 매핑
+      const returnMap = new Map(aggregatedReturns.map(r => [r.date, r.return_pct]));
+      
+      return sampledEquityData.map(eq => ({
+        ...eq,
+        return_pct: returnMap.get(eq.date) ?? eq.return_pct,
+      }));
+    }
+
+    return sampledEquityData;
+  }, [portfolioData, startDate, endDate, aggregationType]);
+
+  // 단일 종목 equity 데이터 (스마트 샘플링 + 수익률 복리 집계)
   const singleEquityData = useMemo<EquityPoint[]>(() => {
     if (!chartData?.equity_data) return [];
+    
+    // 원본 데이터 변환
     const rawData = transformSingleEquityData(chartData.equity_data);
 
-    if (startDate && endDate) {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
+    // 날짜 범위가 없으면 원본 반환
+    if (!startDate || !endDate) {
+      return rawData;
     }
 
-    return rawData;
-  }, [chartData?.equity_data, startDate, endDate]);
+    // equity curve는 샘플링만 (가격 데이터)
+    const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+
+    // 수익률은 복리 집계
+    if (aggregationType !== 'daily') {
+      const dailyReturnsArray = rawData.map(point => ({
+        date: point.date,
+        return_pct: point.return_pct,
+      }));
+
+      const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
+      
+      // 집계된 수익률을 sampledData에 매핑
+      const returnMap = new Map(aggregatedReturns.map(r => [r.date, r.return_pct]));
+      
+      return sampledData.map(eq => ({
+        ...eq,
+        return_pct: returnMap.get(eq.date) ?? eq.return_pct,
+      }));
+    }
+
+    return sampledData;
+  }, [chartData?.equity_data, startDate, endDate, aggregationType]);
 
   // 단일 종목 거래 마커
   const singleTrades = useMemo<TradeMarker[]>(() => {
@@ -186,24 +265,62 @@ export const useChartData = (
     return rawData;
   }, [chartData?.ohlc_data, startDate, endDate]);
 
-  // 벤치마크 데이터 (스마트 샘플링 적용)
+  // 벤치마크 데이터 (스마트 샘플링 + 수익률 복리 집계)
   const sp500Benchmark = useMemo<any[]>(() => {
     const rawData = extractBenchmarkData(data, 'sp500');
-    if (startDate && endDate && rawData.length > 0) {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
+    if (!startDate || !endDate || rawData.length === 0) {
+      return rawData;
     }
-    return rawData;
-  }, [data, startDate, endDate]);
+
+    // 가격 데이터는 샘플링
+    const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+
+    // 수익률은 복리 집계
+    if (aggregationType !== 'daily') {
+      const dailyReturnsArray = rawData.map(point => ({
+        date: point.date,
+        return_pct: point.return_pct ?? 0,
+      }));
+
+      const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
+      const returnMap = new Map(aggregatedReturns.map(r => [r.date, r.return_pct]));
+
+      return sampledData.map(item => ({
+        ...item,
+        return_pct: returnMap.get(item.date) ?? item.return_pct,
+      }));
+    }
+
+    return sampledData;
+  }, [data, startDate, endDate, aggregationType]);
 
   const nasdaqBenchmark = useMemo<any[]>(() => {
     const rawData = extractBenchmarkData(data, 'nasdaq');
-    if (startDate && endDate && rawData.length > 0) {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
+    if (!startDate || !endDate || rawData.length === 0) {
+      return rawData;
     }
-    return rawData;
-  }, [data, startDate, endDate]);
+
+    // 가격 데이터는 샘플링
+    const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+
+    // 수익률은 복리 집계
+    if (aggregationType !== 'daily') {
+      const dailyReturnsArray = rawData.map(point => ({
+        date: point.date,
+        return_pct: point.return_pct ?? 0,
+      }));
+
+      const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
+      const returnMap = new Map(aggregatedReturns.map(r => [r.date, r.return_pct]));
+
+      return sampledData.map(item => ({
+        ...item,
+        return_pct: returnMap.get(item.date) ?? item.return_pct,
+      }));
+    }
+
+    return sampledData;
+  }, [data, startDate, endDate, aggregationType]);
 
   // 백엔드에서 이미 return_pct를 계산해서 보내므로 그대로 사용
   const sp500BenchmarkWithReturn = sp500Benchmark;
@@ -259,22 +376,6 @@ export const useChartData = (
     }
     return rawData;
   }, [portfolioData, startDate, endDate]);
-
-  // 샘플링 메타 정보 계산
-  const { aggregationType, samplingWarning } = useMemo(() => {
-    if (!startDate || !endDate) {
-      return { aggregationType: 'daily' as const, samplingWarning: undefined };
-    }
-
-    // 임시 데이터로 샘플링 전략 확인
-    const { aggregationType: type, warning } = smartSampleByPeriod(
-      [{ date: startDate }],
-      startDate,
-      endDate
-    );
-
-    return { aggregationType: type, samplingWarning: warning };
-  }, [startDate, endDate]);
 
   return {
     portfolioData,

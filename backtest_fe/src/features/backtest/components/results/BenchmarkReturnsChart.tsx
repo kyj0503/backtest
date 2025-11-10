@@ -1,8 +1,9 @@
 /**
- * 벤치마크 일일 수익률 비교 차트 컴포넌트
+ * 벤치마크 수익률 비교 차트 컴포넌트
  * 
  * **역할**:
- * - 포트폴리오, S&P 500, NASDAQ 일일 수익률을 한 그래프에 겹쳐서 표시
+ * - 포트폴리오, S&P 500, NASDAQ 수익률을 한 그래프에 겹쳐서 표시
+ * - 집계 타입(일일/주간/4주간)에 따라 복리 수익률 비교
  * - 각 라인을 다른 색상으로 구분하여 비교 용이
  * - 범례 클릭으로 개별 라인 토글 가능
  */
@@ -10,18 +11,19 @@ import React, { useMemo, useState, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
+import { EquityPoint } from '../../model/types';
 
 interface BenchmarkReturnsChartProps {
   sp500Data: any[];
   nasdaqData: any[];
-  portfolioDailyReturns?: Record<string, number>;
+  portfolioEquityData: EquityPoint[];
   aggregationType?: 'daily' | 'weekly' | 'monthly';
 }
 
 const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
   sp500Data,
   nasdaqData,
-  portfolioDailyReturns,
+  portfolioEquityData,
   aggregationType = 'daily',
 }) => {
   // 성능 모니터링
@@ -31,7 +33,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
   const periodLabel = {
     daily: '일일',
     weekly: '주간',
-    monthly: '월간',
+    monthly: '4주간',
   }[aggregationType];
 
   // 각 라인의 표시 여부를 관리하는 상태
@@ -41,17 +43,19 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
     nasdaq: true,
   });
 
-  // 모든 데이터를 날짜 기준으로 병합 (샘플링은 useChartData에서 처리됨)
+  // 모든 데이터를 날짜 기준으로 병합
   const mergedData = useMemo(() => {
     const dataMap = new Map<string, any>();
 
-    // 포트폴리오 일일 수익률 추가
-    if (portfolioDailyReturns) {
-      Object.entries(portfolioDailyReturns).forEach(([date, returnPct]) => {
-        dataMap.set(date, {
-          date,
-          portfolio: returnPct,
-        });
+    // 포트폴리오 수익률 추가 (배열 형태로 받음)
+    if (portfolioEquityData && portfolioEquityData.length > 0) {
+      portfolioEquityData.forEach(point => {
+        if (point.return_pct !== undefined) {
+          dataMap.set(point.date, {
+            date: point.date,
+            portfolio: point.return_pct,
+          });
+        }
       });
     }
 
@@ -73,7 +77,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
     return Array.from(dataMap.values()).sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [sp500Data, nasdaqData, portfolioDailyReturns]);
+  }, [sp500Data, nasdaqData, portfolioEquityData]);
 
   // Y축 범위 계산 (표시된 라인만 고려) - 효율적인 계산
   const yAxisDomain = useMemo(() => {
@@ -178,7 +182,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
           />
 
           {/* 포트폴리오 라인 */}
-          {portfolioDailyReturns && (
+          {portfolioEquityData && portfolioEquityData.length > 0 && (
             <Line
               type="monotone"
               dataKey="portfolio"

@@ -57,7 +57,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
   const periodLabel = {
     daily: '일일',
     weekly: '주간',
-    monthly: '월간',
+    monthly: '4주간',
   }[aggregationType];
 
   // 일일 수익률 Y축 도메인 계산 (메모이제이션)

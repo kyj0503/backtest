@@ -14,7 +14,6 @@ interface BenchmarkSectionProps {
   sp500BenchmarkWithReturn: any[];
   nasdaqBenchmarkWithReturn: any[];
   equityDataForBenchmark: EquityPoint[];
-  portfolioDailyReturns?: Record<string, number>;
   aggregationType?: 'daily' | 'weekly' | 'monthly';
 }
 
@@ -24,7 +23,6 @@ export const BenchmarkSection: React.FC<BenchmarkSectionProps> = memo(({
   sp500BenchmarkWithReturn,
   nasdaqBenchmarkWithReturn,
   equityDataForBenchmark,
-  portfolioDailyReturns,
   aggregationType = 'daily',
 }) => {
   const hasBenchmarkData = sp500Benchmark.length > 0 || nasdaqBenchmark.length > 0;
@@ -42,11 +40,11 @@ export const BenchmarkSection: React.FC<BenchmarkSectionProps> = memo(({
         portfolioEquityData={equityDataForBenchmark}
       />
 
-      {/* 일일 수익률 벤치마크 비교 차트 */}
+      {/* 수익률 벤치마크 비교 차트 */}
       <BenchmarkReturnsChart 
         sp500Data={sp500BenchmarkWithReturn} 
         nasdaqData={nasdaqBenchmarkWithReturn}
-        portfolioDailyReturns={portfolioDailyReturns}
+        portfolioEquityData={equityDataForBenchmark}
         aggregationType={aggregationType}
       />
     </>

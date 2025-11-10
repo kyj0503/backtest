@@ -62,15 +62,12 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
   // 벤치마크용 equity 데이터 선택
   const equityDataForBenchmark = isPortfolio ? portfolioEquityData : singleEquityData;
-  
-  // 포트폴리오 일일 수익률 추출
-  const portfolioDailyReturns = portfolioData?.daily_returns;
 
   // 집계 타입에 따른 라벨
   const aggregationLabel = {
     daily: '일간',
     weekly: '주간',
-    monthly: '월간',
+    monthly: '4주간',
   }[aggregationType];
 
   return (
@@ -152,7 +149,6 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           sp500BenchmarkWithReturn={sp500BenchmarkWithReturn}
           nasdaqBenchmarkWithReturn={nasdaqBenchmarkWithReturn}
           equityDataForBenchmark={equityDataForBenchmark}
-          portfolioDailyReturns={portfolioDailyReturns}
           aggregationType={aggregationType}
         />
 

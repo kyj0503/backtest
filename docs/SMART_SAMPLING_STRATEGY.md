@@ -11,8 +11,8 @@
 | **1일 미만** | 오류 | 최소 2일 이상 필요 |
 | **2일 ~ 2년** | 일간 (Daily) | 원본 데이터 그대로 표시 |
 | **2년 초과 ~ 5년** | 주간 (Weekly) | 7일(1주) 단위로 집계 |
-| **5년 초과 ~ 10년** | 월간 (Monthly) | 28일(4주) 단위로 집계 |
-| **10년 초과** | 월간 (Monthly) + 경고 | 28일 단위 + 경고 메시지 표시 |
+| **5년 초과 ~ 10년** | 4주간 (4-Week) | 28일(4주) 단위로 집계 |
+| **10년 초과** | 4주간 (4-Week) + 경고 | 28일 단위 + 경고 메시지 표시 |
 
 ## 집계 방식
 
@@ -30,9 +30,10 @@
 - **이유**: 주간 집계와 일관성 유지 (4주 × 7일 = 28일)
 - **예시**: 1일, 29일, 57일, 85일...
 - **수익률**: 28일간의 일일 수익률을 복리로 계산
+- **표현**: "4주간 수익률" (달력상 월과 구분하기 위해)
 
 ```
-월간 수익률 = (1 + r1) × (1 + r2) × ... × (1 + r28) - 1
+4주간 수익률 = (1 + r1) × (1 + r2) × ... × (1 + r28) - 1
 ```
 
 ### 달력 기준이 아닌 고정 일수 기준인 이유
@@ -82,18 +83,46 @@ const weeklyReturns = aggregateReturns(dailyReturns, 'weekly');
 const monthlyReturns = aggregateReturns(dailyReturns, 'monthly');
 ```
 
-## 적용된 차트
+## 적용된 차트 및 데이터 처리
 
-다음 차트들이 자동으로 기간에 따라 집계됩니다:
+### 가격/자산 가치 데이터 (단순 샘플링)
+다음 데이터는 간격마다 데이터 포인트를 추출합니다:
 
-1. **누적 자산 가치** (Equity Curve)
-2. **일일/주간/월간 수익률** (Returns)
-3. **개별 자산 주가** (Stock Prices)
-4. **벤치마크 비교** (Benchmark Comparison)
-   - S&P 500
-   - NASDAQ
-5. **환율 추이** (Exchange Rates)
-6. **포트폴리오 비중 변화** (Weight History)
+1. **누적 자산 가치** (Equity Curve) - `portfolioEquityData.value`, `singleEquityData.value`
+2. **개별 자산 주가** (Stock Prices) - `stocksData`
+3. **벤치마크 지수** (Benchmark Indices) - `sp500Benchmark.value`, `nasdaqBenchmark.value`
+4. **환율 추이** (Exchange Rates) - `exchangeRates.rate`
+5. **포트폴리오 비중 변화** (Weight History) - `weightHistory`
+
+### 수익률 데이터 (복리 집계) ⚠️ 중요!
+다음 데이터는 복리 수익률을 계산합니다:
+
+1. **포트폴리오 수익률** - `portfolioEquityData.return_pct`
+   - 일일 수익률 → 주간/4주간 복리 수익률로 변환
+   - 차트 제목: "일일/주간/4주간 수익률"
+2. **단일 종목 수익률** - `singleEquityData.return_pct`
+   - 동일하게 복리 집계 적용
+3. **벤치마크 수익률** - `sp500Benchmark.return_pct`, `nasdaqBenchmark.return_pct`
+   - S&P 500, NASDAQ 수익률도 복리 집계
+   - 차트: "수익률 벤치마크 비교"
+
+### 복리 계산의 중요성
+**잘못된 방법** (단순 샘플링):
+```typescript
+// 7일째 데이터 포인트만 선택 → 잘못된 주간 수익률!
+const weeklyReturn = dailyReturns[6].return_pct; // ❌ 7일째 일일 수익률
+```
+
+**올바른 방법** (복리 집계):
+```typescript
+// 7일간의 일일 수익률을 복리로 계산
+const weeklyReturn = (1 + r1) × (1 + r2) × ... × (1 + r7) - 1; // ✅ 진짜 주간 수익률
+```
+
+**예시**:
+- 일일 수익률: [1%, 2%, -1%, 1.5%, 0.5%, -0.5%, 1%]
+- 단순 샘플링: 1% (7일째 값) ← 잘못됨!
+- 복리 집계: 5.1% ← 정확한 주간 수익률!
 
 ## 성능 이점
 
