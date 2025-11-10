@@ -3,7 +3,7 @@
  * S&P 500, NASDAQ 벤치마크 차트
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import BenchmarkIndexChart from '../BenchmarkIndexChart';
 import BenchmarkReturnsChart from '../BenchmarkReturnsChart';
 import { EquityPoint } from '../../../model/types';
@@ -17,7 +17,7 @@ interface BenchmarkSectionProps {
   portfolioDailyReturns?: Record<string, number>;
 }
 
-export const BenchmarkSection: React.FC<BenchmarkSectionProps> = ({
+export const BenchmarkSection: React.FC<BenchmarkSectionProps> = memo(({
   sp500Benchmark,
   nasdaqBenchmark,
   sp500BenchmarkWithReturn,
@@ -48,4 +48,6 @@ export const BenchmarkSection: React.FC<BenchmarkSectionProps> = ({
       />
     </>
   );
-};
+});
+
+BenchmarkSection.displayName = 'BenchmarkSection';

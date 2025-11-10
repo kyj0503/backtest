@@ -3,7 +3,7 @@
  * 환율, 급등락 이벤트, 최신 뉴스, 리밸런싱 히스토리, 포트폴리오 비중 변화
  */
 
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -38,7 +38,7 @@ interface SupplementaryChartsProps {
   portfolioComposition?: any[];
 }
 
-export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = ({
+export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
   exchangeRates,
   exchangeStats,
   volatilityEvents,
@@ -58,6 +58,13 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = ({
     portfolioComposition &&
     portfolioComposition.length > 1;
 
+  // 환율 Y축 domain 계산 메모이제이션 (매 렌더링마다 재계산 방지)
+  const exchangeRateDomain = useMemo(() => {
+    if (!hasExchangeRates) return [0, 100];
+    const rates = exchangeRates.map((d: any) => d.rate);
+    return [Math.min(...rates), Math.max(...rates)];
+  }, [exchangeRates, hasExchangeRates]);
+
   return (
     <>
       {/* 환율 차트 */}
@@ -69,10 +76,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = ({
                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} tickFormatter={formatDateShort} />
                 <YAxis
-                  domain={[
-                    Math.min(...exchangeRates.map((d: any) => d.rate)),
-                    Math.max(...exchangeRates.map((d: any) => d.rate)),
-                  ]}
+                  domain={exchangeRateDomain}
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value: number) => formatKRW(value)}
                 />
@@ -167,4 +171,6 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = ({
       )}
     </>
   );
-};
+});
+
+SupplementaryCharts.displayName = 'SupplementaryCharts';

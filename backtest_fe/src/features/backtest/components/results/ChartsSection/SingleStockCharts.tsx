@@ -3,7 +3,7 @@
  * OHLC, 수익률&드로우다운, 개별 주가, 거래 내역, 매매신호 차트
  */
 
-import React, { Suspense } from 'react';
+import React, { Suspense, memo } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   LazyOHLCChart,
@@ -27,7 +27,7 @@ interface SingleStockChartsProps {
   loadingStockData?: boolean;
 }
 
-export const SingleStockCharts: React.FC<SingleStockChartsProps> = ({
+export const SingleStockCharts: React.FC<SingleStockChartsProps> = memo(({
   chartData,
   singleEquityData,
   singleTrades,
@@ -93,4 +93,6 @@ export const SingleStockCharts: React.FC<SingleStockChartsProps> = ({
       )}
     </>
   );
-};
+});
+
+SingleStockCharts.displayName = 'SingleStockCharts';

@@ -6,7 +6,7 @@
  * - 시작점을 100으로 normalize하여 직관적 비교
  * - 범례 클릭으로 개별 라인 토글 가능
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
@@ -16,7 +16,7 @@ interface BenchmarkIndexChartProps {
   portfolioEquityData: any[];  // 포트폴리오 equity curve 데이터
 }
 
-const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
+const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   sp500Data,
   nasdaqData,
   portfolioEquityData,
@@ -169,6 +169,16 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
+  const handleLegendClick = useCallback((data: any) => {
+    const dataKey = data.dataKey;
+    if (dataKey && typeof dataKey === 'string') {
+      setVisibleLines(prev => ({
+        ...prev,
+        [dataKey]: !prev[dataKey],
+      }));
+    }
+  }, []);
+
   if (!hasData) return null;
 
   return (
@@ -211,15 +221,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
           />
           <Legend
             wrapperStyle={{ paddingTop: '10px', cursor: 'pointer' }}
-            onClick={(data) => {
-              const dataKey = data.dataKey;
-              if (dataKey && typeof dataKey === 'string') {
-                setVisibleLines(prev => ({
-                  ...prev,
-                  [dataKey]: !prev[dataKey],
-                }));
-              }
-            }}
+            onClick={handleLegendClick}
             formatter={(value: string) => {
               const labels: Record<string, string> = {
                 portfolio: '내 포트폴리오',
@@ -285,6 +287,8 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
       </ResponsiveContainer>
     </div>
   );
-};
+});
+
+BenchmarkIndexChart.displayName = 'BenchmarkIndexChart';
 
 export default BenchmarkIndexChart;

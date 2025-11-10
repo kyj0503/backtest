@@ -3,7 +3,7 @@
  * 누적 자산 가치, 일일 수익률, 개별 자산 주가 차트
  */
 
-import React, { Suspense, useMemo } from 'react';
+import React, { Suspense, useMemo, memo } from 'react';
 import {
   LineChart,
   Line,
@@ -32,7 +32,15 @@ interface PortfolioChartsProps {
   loadingStockData?: boolean;
 }
 
-export const PortfolioCharts: React.FC<PortfolioChartsProps> = ({
+// 정적 gradient 정의를 컴포넌트 외부로 추출 (매 렌더링마다 재생성 방지)
+const PORTFOLIO_VALUE_GRADIENT = (
+  <linearGradient id="portfolioValue" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+  </linearGradient>
+);
+
+export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
   portfolioData,
   portfolioEquityData,
   stocksData,
@@ -67,10 +75,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = ({
         <ResponsiveContainer width="100%" height={360}>
           <AreaChart data={portfolioEquityData}>
             <defs>
-              <linearGradient id="portfolioValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-              </linearGradient>
+              {PORTFOLIO_VALUE_GRADIENT}
             </defs>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tickFormatter={formatDateShort} />
@@ -138,4 +143,6 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = ({
       </ResultBlock>
     </>
   );
-};
+});
+
+PortfolioCharts.displayName = 'PortfolioCharts';

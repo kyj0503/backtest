@@ -6,7 +6,7 @@
  * - 각 라인을 다른 색상으로 구분하여 비교 용이
  * - 범례 클릭으로 개별 라인 토글 가능
  */
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 
@@ -16,7 +16,7 @@ interface BenchmarkReturnsChartProps {
   portfolioDailyReturns?: Record<string, number>;
 }
 
-const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
+const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
   sp500Data,
   nasdaqData,
   portfolioDailyReturns,
@@ -96,6 +96,16 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
+  const handleLegendClick = useCallback((data: any) => {
+    const dataKey = data.dataKey;
+    if (dataKey && typeof dataKey === 'string') {
+      setVisibleLines(prev => ({
+        ...prev,
+        [dataKey]: !prev[dataKey],
+      }));
+    }
+  }, []);
+
   if (!hasData) return null;
 
   return (
@@ -138,15 +148,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
           />
           <Legend
             wrapperStyle={{ paddingTop: '10px', cursor: 'pointer' }}
-            onClick={(data) => {
-              const dataKey = data.dataKey;
-              if (dataKey && typeof dataKey === 'string') {
-                setVisibleLines(prev => ({
-                  ...prev,
-                  [dataKey]: !prev[dataKey],
-                }));
-              }
-            }}
+            onClick={handleLegendClick}
             formatter={(value: string) => {
               const labels: Record<string, string> = {
                 portfolio: '내 포트폴리오',
@@ -212,6 +214,8 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
       </ResponsiveContainer>
     </div>
   );
-};
+});
+
+BenchmarkReturnsChart.displayName = 'BenchmarkReturnsChart';
 
 export default BenchmarkReturnsChart;

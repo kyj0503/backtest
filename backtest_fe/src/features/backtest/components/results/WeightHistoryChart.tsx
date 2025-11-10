@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
@@ -31,7 +31,7 @@ const COLORS = [
   '#14b8a6', // teal
 ];
 
-const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
+const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
   weightHistory,
   portfolioComposition,
   rebalanceHistory
@@ -139,6 +139,8 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
       </AreaChart>
     </ResponsiveContainer>
   );
-};
+});
+
+WeightHistoryChart.displayName = 'WeightHistoryChart';
 
 export default WeightHistoryChart;
