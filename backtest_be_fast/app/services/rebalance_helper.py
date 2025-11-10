@@ -184,9 +184,6 @@ def get_next_nth_weekday(
     - 해당 월에 N번째 요일이 없으면 마지막 해당 요일로 폴백
     - 다음 달에 다시 존재하면 원래 N으로 복귀
     """
-    if current_date is None:
-        raise ValueError("current_date는 None일 수 없습니다")
-
     if period_type == 'weekly':
         # 주 단위는 단순히 7일 * interval
         return current_date + timedelta(weeks=interval)
