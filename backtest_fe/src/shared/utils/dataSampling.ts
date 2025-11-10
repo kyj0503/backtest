@@ -261,7 +261,8 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
     // 다음 달의 Nth Weekday 계산
     const nextDate = getNextMonthNthWeekday(currentDate, originalNth);
 
-    // Map을 사용한 O(1) 조회 (최대 7일 탐색)
+    // 실제 거래일 탐색: 계산된 날짜가 비거래일(주말/공휴일)일 수 있으므로
+    // 최대 7일 앞으로 이동하며 실제 데이터가 있는 날짜 찾기
     let found = false;
     let searchDate = nextDate;
 
