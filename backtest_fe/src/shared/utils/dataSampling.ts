@@ -551,8 +551,8 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
     const crossedMonthBoundary = itemDate >= currentMonthEndDate;
 
     if (crossedMonthBoundary || isLastItem) {
-      // 여러 달을 건너뛴 경우 처리
-      while (itemDate >= currentMonthEndDate && !isLastItem) {
+      // 여러 달을 건너뛴 경우 처리 (마지막 아이템 포함)
+      while (itemDate >= currentMonthEndDate) {
         if (currentMonthData.length > 0) {
           // 현재 달 데이터 마감
           const monthlyReturn = calculateCompoundReturn(currentMonthData);
@@ -574,17 +574,19 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
         }
       }
       
-      // 마지막 아이템 처리
-      if (isLastItem) {
+      // 마지막 아이템이 경계를 넘지 않았다면 추가
+      if (isLastItem && itemDate < currentMonthEndDate) {
         currentMonthData.push(item);
-        if (currentMonthData.length > 0) {
-          const monthlyReturn = calculateCompoundReturn(currentMonthData);
-          const lastDay = currentMonthData[currentMonthData.length - 1];
-          monthly.push({
-            ...lastDay,
-            return_pct: monthlyReturn,
-          });
-        }
+      }
+      
+      // 마지막 아이템 처리: 남은 데이터 마감
+      if (isLastItem && currentMonthData.length > 0) {
+        const monthlyReturn = calculateCompoundReturn(currentMonthData);
+        const lastDay = currentMonthData[currentMonthData.length - 1];
+        monthly.push({
+          ...lastDay,
+          return_pct: monthlyReturn,
+        });
       }
     } else {
       // 경계를 넘지 않은 경우 현재 달 데이터에 추가
