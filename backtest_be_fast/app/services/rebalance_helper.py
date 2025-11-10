@@ -131,13 +131,20 @@ class RebalanceHelper:
             # start_date와 current_date가 같으면 첫날이므로 리밸런싱하지 않음
             if start_date and current_date == start_date:
                 return False
-            # 시작일로부터 경과한 일수 계산
-            days_since_start = (current_date - start_date).days if start_date else (current_date - prev_date).days
-            return days_since_start >= required_days
+            # Period 기반 로직: 새로운 기간에 진입했을 때만 True
+            if start_date:
+                current_period = ((current_date - start_date).days) // required_days
+                prev_period = ((prev_date - start_date).days) // required_days
+                return current_period > prev_period
+            else:
+                # start_date가 없으면 prev_date 기준
+                current_period = ((current_date - prev_date).days) // required_days
+                return current_period > 0
         else:
-            # 이후 리밸런싱: 마지막 리밸런싱 날짜 기준
-            days_since_last = (current_date - last_rebalance_date).days
-            return days_since_last >= required_days
+            # 이후 리밸런싱: 마지막 리밸런싱 날짜 기준, period 기반
+            current_period = ((current_date - last_rebalance_date).days) // required_days
+            prev_period = ((prev_date - last_rebalance_date).days) // required_days
+            return current_period > prev_period
 
     @staticmethod
     def calculate_target_weights(
