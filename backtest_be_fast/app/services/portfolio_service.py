@@ -320,7 +320,6 @@ class PortfolioService:
                     if interval_weeks is None:
                         logger.error(f"{symbol}: interval_weeks가 dca_info에 없습니다! dca_info 내용: {info}")
                         logger.error(f"기본값 4 대신 DCA_FREQUENCY_MAP에서 다시 조회 시도: {info.get('dca_frequency')}")
-                        from ..schemas.schemas import DCA_FREQUENCY_MAP
                         interval_weeks = DCA_FREQUENCY_MAP.get(info.get('dca_frequency', 'weekly_4'), 4)
 
                     # 현재 주차가 투자 주기의 배수이고, 이전 날짜와 다른 주기에 속하는지 확인
@@ -728,10 +727,8 @@ class PortfolioService:
                 result['weight'] * result.get('strategy_stats', {}).get('profit_factor', 1.0)
                 for result in portfolio_results.values()
             )
-            
+
             # 백테스트 기간 계산
-            from datetime import datetime
-            import numpy as np
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
             duration_days = (end_date_obj - start_date_obj).days
@@ -846,11 +843,7 @@ class PortfolioService:
             portfolio_data = {}
             amounts = {}  # 실제 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
 
-            # DCA 주기 매핑
-            from ..schemas.schemas import DCA_FREQUENCY_MAP
-
             # 백테스트 기간 계산 (주 수)
-            from datetime import datetime
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
 
@@ -938,9 +931,8 @@ class PortfolioService:
             # 현금만 있는 경우 처리
             if not portfolio_data and cash_amount > 0:
                 logger.info("현금만 있는 포트폴리오로 백테스트 실행")
-                
+
                 # 현금 전용 결과 생성
-                from datetime import datetime
                 start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
                 end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
                 duration_days = (end_date_obj - start_date_obj).days
