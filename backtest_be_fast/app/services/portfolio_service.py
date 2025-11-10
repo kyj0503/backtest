@@ -207,6 +207,7 @@ class PortfolioService:
         total_trades = 0  # 총 거래 횟수 추적
         rebalance_history = []  # 리밸런싱 히스토리
         weight_history = []  # 포트폴리오 비중 변화 이력
+        last_rebalance_date = None  # 마지막 리밸런싱 날짜 추적
 
         for current_date in date_range:
             daily_cash_inflow = 0.0  # 당일 추가 투자금 (DCA)
@@ -345,7 +346,7 @@ class PortfolioService:
 
             # 리밸런싱 실행
             should_rebalance = RebalanceHelper.is_rebalance_date(
-                current_date, prev_date, rebalance_frequency, start_date_obj
+                current_date, prev_date, rebalance_frequency, start_date_obj, last_rebalance_date
             )
 
             if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
@@ -479,6 +480,12 @@ class PortfolioService:
                             'weights_after': weights_after,
                             'commission_cost': total_commission_cost
                         })
+                        # 마지막 리밸런싱 날짜 업데이트
+                        last_rebalance_date = current_date
+                        from app.schemas.schemas import DCA_FREQUENCY_MAP
+                        weeks = DCA_FREQUENCY_MAP.get(rebalance_frequency, 4)
+                        next_rebalance_date = current_date + timedelta(weeks=weeks)
+                        logger.info(f"{current_date.date()}: 리밸런싱 완료 (거래 {trades_in_rebalance}건), 다음 리밸런싱 예정일: {next_rebalance_date.date()}")
 
                     total_trades += trades_in_rebalance  # 리밸런싱 거래 추가
 

@@ -72,7 +72,8 @@ class RebalanceHelper:
         current_date: datetime,
         prev_date: datetime,
         frequency: str,
-        start_date: datetime = None
+        start_date: datetime = None,
+        last_rebalance_date: datetime = None
     ) -> bool:
         """
         현재 날짜가 리밸런싱 날짜인지 확인 (주 단위)
@@ -86,7 +87,9 @@ class RebalanceHelper:
         frequency : str
             리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)
         start_date : datetime, optional
-            시작 날짜 (주 단위 계산용)
+            시작 날짜 (폴백용)
+        last_rebalance_date : datetime, optional
+            마지막 리밸런싱 날짜 (우선 사용)
 
         Returns
         -------
@@ -120,20 +123,17 @@ class RebalanceHelper:
             logger.warning(f"알 수 없는 리밸런싱 주기: {frequency}")
             return False
 
-        # start_date가 없으면 prev_date를 기준으로 사용
-        ref_date = start_date if start_date else prev_date
+        # 마지막 리밸런싱 날짜를 우선 사용, 없으면 시작일 사용
+        ref_date = last_rebalance_date if last_rebalance_date else (start_date if start_date else prev_date)
 
-        # 시작일로부터 경과한 주 수 계산
-        current_weeks = (current_date - ref_date).days // 7
-        prev_weeks = (prev_date - ref_date).days // 7
-
-        # 리밸런싱 주기(interval_weeks)마다 실행
-        # 예: interval_weeks=4이면 0, 4, 8, 12주차에 리밸런싱
-        current_period = current_weeks // interval_weeks
-        prev_period = prev_weeks // interval_weeks
-
-        # 새로운 리밸런싱 주기에 진입했으면 True
-        return current_period > prev_period
+        # 마지막 리밸런싱(또는 시작일)로부터 경과한 일수 계산
+        days_since_last = (current_date - ref_date).days
+        
+        # interval_weeks 주(7일 * interval_weeks) 이상 경과했는지 확인
+        required_days = interval_weeks * 7
+        
+        # 리밸런싱 주기 이상 경과했으면 True
+        return days_since_last >= required_days
 
     @staticmethod
     def calculate_target_weights(
