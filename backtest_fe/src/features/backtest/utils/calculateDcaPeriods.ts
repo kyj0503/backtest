@@ -57,24 +57,7 @@ export const calculateDcaPeriods = (
   const { type, interval } = getDcaPeriodInfo(frequency);
   
   // 주기를 일 단위로 변환 (근사값)
-  // NOTE: The calculateDcaPeriods function uses a simple 30-day-per-month approximation for
-  // monthly DCA calculations, which doesn't align with the backend's precise Nth Weekday logic
-  // implemented in get_next_nth_weekday.
-  //
-  // The backend accurately calculates each DCA date by finding the Nth occurrence of a specific
-  // weekday in each month, which can result in intervals ranging from 28 to 35 days depending on
-  // the calendar. The frontend's 30-day approximation will cause discrepancies in:
-  //
-  // 1. DCA period counts: The frontend may calculate a different number of expected DCA executions
-  //    than actually occur in the backend
-  // 2. Total investment estimates: UI displays (like DcaPreview and total investment calculations)
-  //    will show inaccurate amounts
-  // 3. Weight-based calculations: When converting weights to amounts, the per-period amounts will
-  //    be incorrect
-  //
-  // This is particularly problematic for longer backtest periods where the cumulative error becomes
-  // significant. Consider implementing a more accurate calculation that mirrors the backend's Nth
-  // weekday logic, or at minimum add a comment documenting this known limitation.
+  // UI 표시용 30일 근사 사용 - 상세 내용은 함수 독스트링 참조
   let intervalDays: number;
   if (type === 'weekly') {
     intervalDays = interval * 7;
