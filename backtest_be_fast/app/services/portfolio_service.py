@@ -328,7 +328,7 @@ class PortfolioService:
                         logger.debug(f"{symbol}: 원본 Nth 값 설정 = {info['original_nth_weekday']}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
                     
                     # 다음 DCA 날짜 계산 (original_nth 유지)
-                    reference_date = info.get('last_dca_date', start_date_obj)
+                    reference_date = info.get('last_dca_date') or start_date_obj
                     original_nth = info.get('original_nth_weekday')
                     next_dca_date = get_next_nth_weekday(reference_date, period_type, interval, original_nth)
                     
@@ -495,8 +495,8 @@ class PortfolioService:
                     for unique_key in cash_holdings.keys():
                         weights_after[dca_info[unique_key]['symbol']] = cash_holdings[unique_key] / new_total_portfolio_value
 
-                    # 리밸런싱 히스토리에 추가
-                    if rebalance_trades:  # 실제 거래가 발생한 경우만
+                    # 리밸런싱 히스토리에 추가 (실제 거래가 발생한 경우만)
+                    if rebalance_trades:
                         rebalance_history.append({
                             'date': current_date.strftime('%Y-%m-%d'),
                             'trades': rebalance_trades,
@@ -504,9 +504,12 @@ class PortfolioService:
                             'weights_after': weights_after,
                             'commission_cost': total_commission_cost
                         })
-                        # 마지막 리밸런싱 날짜 업데이트
-                        last_rebalance_date = current_date
                         logger.info(f"{current_date.date()}: 리밸런싱 완료 (거래 {trades_in_rebalance}건)")
+                    else:
+                        logger.debug(f"{current_date.date()}: 리밸런싱 날짜이지만 거래 불필요 (이미 균형 잡힘)")
+
+                    # 마지막 리밸런싱 날짜 업데이트 (거래 여부와 무관하게 항상 업데이트)
+                    last_rebalance_date = current_date
 
                     total_trades += trades_in_rebalance  # 리밸런싱 거래 추가
 
