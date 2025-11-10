@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Line, Area, ReferenceLine } from 'recharts';
 import { CustomTooltip } from './shared';
-import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
+import { useRenderPerformance } from '@/shared/components';
 
 interface EquityChartData {
   date: string;

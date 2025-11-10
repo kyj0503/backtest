@@ -18,7 +18,7 @@ import {
 } from 'recharts';
 import { Loader2 } from 'lucide-react';
 import { LazyStockPriceChart } from '../../lazy/LazyChartComponents';
-import ChartLoading from '@/shared/components/ChartLoading';
+import { ChartLoading } from '@/shared/components';
 import { ResultBlock } from '../../shared';
 import { EquityPoint, PortfolioData } from '../../../model/types';
 import { formatCurrency, formatDateShort } from '../../../utils';

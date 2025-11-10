@@ -23,6 +23,12 @@ export default defineConfig({
     sequence: {
       concurrent: false,
     },
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**',  // E2E 테스트 제외 (Playwright 사용)
+      '**/.{idea,git,cache,output,temp}/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'text-summary'],

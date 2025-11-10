@@ -11,7 +11,7 @@ import {
   LazyTradesChart,
   LazyStockPriceChart,
 } from '../../lazy/LazyChartComponents';
-import ChartLoading from '@/shared/components/ChartLoading';
+import { ChartLoading } from '@/shared/components';
 import { ResultBlock } from '../../shared';
 import TradeSignalsChart from '../../TradeSignalsChart';
 import { ChartData, EquityPoint, TradeMarker, OhlcPoint } from '../../../model/types';

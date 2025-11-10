@@ -3,7 +3,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
-import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
+import { useRenderPerformance } from '@/shared/components';
 
 interface RebalanceEvent {
   date: string;

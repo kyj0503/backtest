@@ -1,6 +1,6 @@
 import React, { useState, memo, useMemo } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Scatter } from "recharts";
-import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
+import { useRenderPerformance } from "@/shared/components";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
 import { TickerInfo } from '../model/types/backtest-result-types';

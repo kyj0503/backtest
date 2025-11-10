@@ -9,7 +9,7 @@
 import React, { useState, useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
-import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
+import { useRenderPerformance } from '@/shared/components';
 
 interface BenchmarkIndexChartProps {
   sp500Data: any[];

@@ -12,7 +12,7 @@
 import React, { Suspense, memo, useState } from 'react';
 import { Grid3X3, Grid } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
-import ChartLoading from '@/shared/components/ChartLoading';
+import { ChartLoading } from '@/shared/components';
 import { LazyStatsSummary } from '../../lazy/LazyChartComponents';
 import { ChartData, PortfolioData } from '../../../model/types';
 import { useChartData } from '../../../hooks/charts/useChartData';
