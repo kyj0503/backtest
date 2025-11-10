@@ -57,7 +57,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
   const periodLabel = {
     daily: '일일',
     weekly: '주간',
-    monthly: '4주간',
+    monthly: '월간',
   }[aggregationType];
 
   // 리밸런싱 날짜를 차트 데이터에 병합 (빈 데이터 포인트로 추가)

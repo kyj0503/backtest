@@ -77,6 +77,14 @@ from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBAC
 
 logger = logging.getLogger(__name__)
 
+# 상장폐지 감지 임계값 (일 단위)
+# 30일로 설정한 이유:
+# - 실제 상장폐지를 조기에 감지 (대부분의 거래소는 20-30일 내 절차 진행)
+# - 거래 정지(regulatory review, 인수합병 등) 오탐 최소화
+# - 거래량이 적은 종목의 단기 데이터 공백과 구분
+# 시장별 규칙 차이가 있으나, 30일은 균형잡힌 기본값
+DELISTING_THRESHOLD_DAYS = 30
+
 class PortfolioService:
     """포트폴리오 백테스트 서비스"""
     def __init__(self):
@@ -107,6 +115,11 @@ class PortfolioService:
 
         Returns:
             포트폴리오 가치와 수익률이 포함된 DataFrame
+            
+        Note:
+            - last_rebalance_date는 리밸런싱 예정일 추적용 (거래 여부 무관)
+            - rebalance_history는 실제 거래가 발생한 리밸런싱만 기록
+            - 이는 의도된 동작: 다음 리밸런싱 스케줄 계산을 위해 예정일 기준 추적
         """
         # 현금 처리
         cash_amount = 0
@@ -210,6 +223,11 @@ class PortfolioService:
         last_rebalance_date = None  # 마지막 리밸런싱 날짜 추적
         original_rebalance_nth = None  # 리밸런싱 원본 "몇 번째 요일" 추적
 
+        # 상장폐지 종목 추적을 위한 변수
+        last_valid_prices = {}  # 각 종목의 마지막 유효 가격 (USD)
+        last_price_date = {}  # 마지막 가격 확인 날짜
+        delisted_stocks = set()  # 상장폐지로 판단된 종목들
+
         for current_date in date_range:
             daily_cash_inflow = 0.0  # 당일 추가 투자금 (DCA)
             if current_date.date() < start_date_obj.date():
@@ -270,6 +288,40 @@ class PortfolioService:
                             logger.warning(f"{symbol} 지원하지 않는 통화 {currency}, 변환 없이 사용")
                             current_prices[unique_key] = raw_price
 
+            # 상장폐지 감지: 가격 데이터가 30일 이상 없으면 상장폐지로 판단
+            for unique_key in stock_amounts.keys():
+                # 현재 가격이 있으면 마지막 유효 가격 갱신
+                if unique_key in current_prices:
+                    last_valid_prices[unique_key] = current_prices[unique_key]
+                    last_price_date[unique_key] = current_date.date()
+                    if unique_key in delisted_stocks:
+                        # 상장 복원? (재상장 케이스, 드물지만 처리)
+                        logger.info(f"{unique_key} 가격 데이터 재등장 (재상장?), 상장폐지 상태 해제")
+                        delisted_stocks.remove(unique_key)
+                else:
+                    # 현재 가격이 없을 때
+                    if unique_key in last_price_date:
+                        days_without_price = (current_date.date() - last_price_date[unique_key]).days
+                        if days_without_price >= DELISTING_THRESHOLD_DAYS and unique_key not in delisted_stocks:
+                            # 상장폐지로 판단
+                            symbol = dca_info[unique_key]['symbol']
+                            logger.warning(
+                                f"{symbol} ({unique_key}) 상장폐지 감지: "
+                                f"마지막 가격 날짜 {last_price_date[unique_key]}, "
+                                f"{days_without_price}일간 가격 데이터 없음. "
+                                f"마지막 유효 가격 ${last_valid_prices[unique_key]:.2f} 유지"
+                            )
+                            delisted_stocks.add(unique_key)
+                    # else: 첫날이거나 아직 가격 데이터가 없는 경우, 대기
+
+            # 상장폐지된 종목의 가격을 마지막 유효 가격으로 유지
+            for unique_key in delisted_stocks:
+                if unique_key in last_valid_prices and unique_key not in current_prices:
+                    current_prices[unique_key] = last_valid_prices[unique_key]
+                    logger.debug(
+                        f"{unique_key} 상장폐지 종목, 마지막 유효 가격 ${last_valid_prices[unique_key]:.2f} 사용"
+                    )
+
             # 첫 날: 초기 매수 (일시불) 또는 DCA 시작
             if is_first_day:
                 for unique_key, amount in stock_amounts.items():
@@ -328,7 +380,9 @@ class PortfolioService:
                         logger.debug(f"{symbol}: 원본 Nth 값 설정 = {info['original_nth_weekday']}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
                     
                     # 다음 DCA 날짜 계산 (original_nth 유지)
-                    reference_date = info.get('last_dca_date', start_date_obj)
+                    # Note: info.get()과 get_next_nth_weekday()는 순수 계산 함수 (I/O 없음)
+                    # asyncio.to_thread() 불필요 - 동기 dict 접근 및 날짜 계산만 수행
+                    reference_date = info.get('last_dca_date') or start_date_obj
                     original_nth = info.get('original_nth_weekday')
                     next_dca_date = get_next_nth_weekday(reference_date, period_type, interval, original_nth)
                     
@@ -374,7 +428,55 @@ class PortfolioService:
             )
 
             if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
-                # 현재 포트폴리오 총 가치 계산 (주식 + 현금)
+                # 상장폐지 종목이 있는 경우 동적 비중 재계산
+                adjusted_target_weights = dict(target_weights)  # 복사본 생성
+                
+                if delisted_stocks:
+                    # 상장폐지 종목들의 원래 목표 비중 합계
+                    delisted_weight_sum = sum(
+                        target_weights[key] for key in delisted_stocks if key in target_weights
+                    )
+                    
+                    if delisted_weight_sum > 0:
+                        # 거래 가능한 종목들의 원래 비중 합계
+                        tradeable_weight_sum = 1.0 - delisted_weight_sum
+                        
+                        if tradeable_weight_sum > 0:
+                            # 거래 가능한 종목들의 비중을 비례적으로 증가
+                            scaling_factor = 1.0 / tradeable_weight_sum
+                            adjusted_target_weights = {}
+                            
+                            for unique_key, original_weight in target_weights.items():
+                                if unique_key in delisted_stocks:
+                                    # 상장폐지 종목은 목표 비중을 0으로 (거래 불가)
+                                    adjusted_target_weights[unique_key] = 0.0
+                                else:
+                                    # 거래 가능한 종목은 비중을 비례적으로 증가
+                                    adjusted_target_weights[unique_key] = original_weight * scaling_factor
+                            
+                            logger.info(
+                                f"리밸런싱 목표 비중 동적 조정: 상장폐지 종목 {len(delisted_stocks)}개 "
+                                f"(원래 비중 합계: {delisted_weight_sum:.2%}) -> "
+                                f"거래 가능 종목 비중 {scaling_factor:.2f}배 증가"
+                            )
+                            
+                            # 조정된 비중 로깅
+                            for unique_key in delisted_stocks:
+                                symbol = dca_info[unique_key]['symbol']
+                                original_weight = target_weights.get(unique_key, 0.0)
+                                logger.debug(
+                                    f"  {symbol}: {original_weight:.2%} -> 0.00% (상장폐지)"
+                                )
+                            for unique_key, adj_weight in adjusted_target_weights.items():
+                                if unique_key not in delisted_stocks:
+                                    original_weight = target_weights.get(unique_key, 0.0)
+                                    if original_weight != adj_weight:
+                                        symbol = dca_info[unique_key]['symbol']
+                                        logger.debug(
+                                            f"  {symbol}: {original_weight:.2%} -> {adj_weight:.2%}"
+                                        )
+                
+                # 현재 포트폴리오 총 가치 계산 (주식 + 현금, 상장폐지 종목 포함)
                 total_stock_value = sum(
                     shares[key] * current_prices.get(key, 0)
                     for key in shares.keys()
@@ -393,14 +495,14 @@ class PortfolioService:
                     for unique_key in cash_holdings.keys():
                         weights_before[dca_info[unique_key]['symbol']] = cash_holdings[unique_key] / total_portfolio_value
 
-                    # 목표 비중대로 재조정
+                    # 목표 비중대로 재조정 (조정된 비중 사용)
                     new_shares = {}
                     new_cash_holdings = {}
                     total_commission_cost = 0
                     trades_in_rebalance = 0
                     rebalance_trades = []  # 이번 리밸런싱의 거래 내역
 
-                    for unique_key, target_weight in target_weights.items():
+                    for unique_key, target_weight in adjusted_target_weights.items():
                         target_value = total_portfolio_value * target_weight
 
                         # 현금 처리
@@ -430,6 +532,25 @@ class PortfolioService:
 
                         # 주식 처리
                         else:
+                            # 상장폐지 종목은 보유 주식 수 유지 (거래 불가)
+                            if unique_key in delisted_stocks:
+                                new_shares[unique_key] = shares[unique_key]
+                                current_price = current_prices.get(unique_key, 0)
+                                symbol = dca_info[unique_key]['symbol']
+                                
+                                if current_price == 0:
+                                    logger.warning(
+                                        f"  {symbol} 상장폐지 종목: 가격 정보 없음, "
+                                        f"보유 주식 {shares[unique_key]:.4f}주만 유지"
+                                    )
+                                else:
+                                    current_value = shares[unique_key] * current_price
+                                    logger.debug(
+                                        f"  {symbol} 상장폐지 종목: 보유 주식 {shares[unique_key]:.4f}주 유지 "
+                                        f"(가치: ${current_value:,.2f}, 리밸런싱 불가)"
+                                    )
+                                continue
+                            
                             if unique_key not in current_prices:
                                 new_shares[unique_key] = shares[unique_key]
                                 continue
@@ -496,7 +617,7 @@ class PortfolioService:
                         weights_after[dca_info[unique_key]['symbol']] = cash_holdings[unique_key] / new_total_portfolio_value
 
                     # 리밸런싱 히스토리에 추가
-                    if rebalance_trades:  # 실제 거래가 발생한 경우만
+                    if rebalance_trades:
                         rebalance_history.append({
                             'date': current_date.strftime('%Y-%m-%d'),
                             'trades': rebalance_trades,
@@ -504,9 +625,12 @@ class PortfolioService:
                             'weights_after': weights_after,
                             'commission_cost': total_commission_cost
                         })
-                        # 마지막 리밸런싱 날짜 업데이트
-                        last_rebalance_date = current_date
                         logger.info(f"{current_date.date()}: 리밸런싱 완료 (거래 {trades_in_rebalance}건)")
+                    else:
+                        logger.debug(f"{current_date.date()}: 리밸런싱 날짜이지만 거래 불필요 (이미 균형 잡힘)")
+
+                    # 마지막 리밸런싱 날짜 업데이트 (거래 여부와 무관하게 항상 업데이트)
+                    last_rebalance_date = current_date
 
                     total_trades += trades_in_rebalance  # 리밸런싱 거래 추가
 

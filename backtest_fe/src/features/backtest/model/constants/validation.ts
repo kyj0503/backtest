@@ -23,7 +23,7 @@ export const DEFAULT_VALUES = {
   END_DATE: '2024-12-31',
   INITIAL_AMOUNT: 10000,
   COMMISSION: 0.2, // 퍼센트
-  DCA_FREQUENCY: 'weekly_4' as const,
-  REBALANCE_FREQUENCY: 'weekly_4',
+  DCA_FREQUENCY: 'monthly_1' as const,
+  REBALANCE_FREQUENCY: 'monthly_1',
   STRATEGY: 'buy_hold_strategy'
 };

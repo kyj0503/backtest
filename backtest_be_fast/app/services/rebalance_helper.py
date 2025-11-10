@@ -21,13 +21,13 @@
 - 위험 관리 목적
 
 **지원 리밸런싱 주기**:
-- weekly_1: 매주
+- weekly_1: 매주 (1주)
 - weekly_2: 2주마다
-- weekly_4: 4주마다 (월간)
-- weekly_8: 8주마다
-- weekly_12: 12주마다
-- weekly_24: 24주마다
-- weekly_48: 48주마다
+- monthly_1: 한 달마다
+- monthly_2: 두 달마다
+- monthly_3: 세 달마다
+- monthly_6: 반년마다
+- monthly_12: 1년마다
 - none: 리밸런싱 없음
 
 **사용 예**:
@@ -38,7 +38,7 @@ from app.services.rebalance_helper import RebalanceHelper
 is_rebalance = RebalanceHelper.is_rebalance_date(
     current_date=datetime(2023, 2, 1),
     prev_date=datetime(2023, 1, 1),
-    frequency='weekly_4',
+    frequency='monthly_1',
     start_date=datetime(2023, 1, 1)
 )
 
@@ -146,14 +146,14 @@ def get_nth_weekday_of_month(year: int, month: int, weekday: int, n: int) -> int
 
 
 def get_next_nth_weekday(
-    current_date: datetime, 
-    period_type: str, 
+    current_date: datetime,
+    period_type: str,
     interval: int,
     original_nth: int = None
 ) -> datetime:
     """
     다음 Nth Weekday 날짜 계산 (원본 N 값 유지)
-    
+
     Parameters
     ----------
     current_date : datetime
@@ -165,19 +165,19 @@ def get_next_nth_weekday(
     original_nth : int, optional
         원본 "몇 번째 요일" 값 (1-5)
         None이면 current_date에서 자동 계산
-    
+
     Returns
     -------
     datetime
         다음 Nth Weekday 날짜
-    
+
     Examples
     --------
     >>> current = datetime(2024, 1, 31)  # 2024년 1월 5번째 수요일
     >>> # 원본 N=5를 유지하면서 다음 달 계산
     >>> next_date = get_next_nth_weekday(current, 'monthly', 1, original_nth=5)
     >>> # 2월에 5번째 수요일이 없으면 마지막 수요일 반환
-    
+
     Notes
     -----
     - original_nth를 지정하면 해당 값을 계속 사용
