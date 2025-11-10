@@ -25,6 +25,7 @@ API 서버 설정 관리
 **싱글톤 패턴**:
 - `settings` 객체는 모듈 로드 시 한 번만 생성됨
 """
+import json
 from typing import Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field
@@ -37,7 +38,7 @@ class Settings(BaseSettings):
     # API 설정
     api_v1_str: str = "/api/v1"
     project_name: str = "라고할때살걸"
-    version: str = "1.6.10"
+    version: str = "1.6.12"
     description: str = "FastAPI server for backtesting.py library"
     
     # 서버 설정
@@ -62,8 +63,6 @@ class Settings(BaseSettings):
         v = v.strip()
         # try JSON first
         try:
-            import json
-
             parsed = json.loads(v)
             if isinstance(parsed, list):
                 return [str(x) for x in parsed]

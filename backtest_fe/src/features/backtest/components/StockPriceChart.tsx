@@ -1,6 +1,6 @@
 import React, { useState, memo, useMemo } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Scatter } from "recharts";
-import { useRenderPerformance } from "@/shared/components/PerformanceMonitor";
+import { useRenderPerformance } from "@/shared/components";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
 import { TickerInfo } from '../model/types/backtest-result-types';
@@ -162,8 +162,8 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
       {selectedStockData && (
         <>
           <div style={{ width: '100%', height: '400px' }}>
-            <ResponsiveContainer>
-              <ComposedChart data={chartDataWithSignals}>
+            <ResponsiveContainer debounce={300}>
+              <ComposedChart data={chartDataWithSignals} syncId="stockPriceChart">
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
@@ -194,6 +194,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                   dot={false}
                   activeDot={{ r: 6 }}
                   isAnimationActive={false}
+                  connectNulls={true}
                 />
                 {/* 매수 신호 (빨간점) */}
                 <Scatter

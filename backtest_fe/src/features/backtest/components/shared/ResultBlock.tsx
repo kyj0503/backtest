@@ -19,7 +19,7 @@ export const ResultBlock: React.FC<ResultBlockProps> = ({
   actions,
   children
 }) => (
-  <div className={CARD_STYLES.base}>
+  <div className={CARD_STYLES.base} style={{ contain: 'layout style paint' }}>
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
       <div className={SPACING.itemCompact}>
         <h3 className={HEADING_STYLES.h3}>{title}</h3>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { formatPercent, getStatVariant } from '@/shared/lib/utils/formatters';
-import FinancialTermTooltip from '@/shared/components/FinancialTermTooltip';
+import { FinancialTermTooltip } from '@/shared/components';
 import { Card, CardContent } from '@/shared/ui/card';
 import { cn } from '@/shared/lib/core/utils';
 import { HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';

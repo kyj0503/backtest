@@ -6,9 +6,10 @@
  * - 시작점을 100으로 normalize하여 직관적 비교
  * - 범례 클릭으로 개별 라인 토글 가능
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
+import { useRenderPerformance } from '@/shared/components';
 
 interface BenchmarkIndexChartProps {
   sp500Data: any[];
@@ -16,11 +17,14 @@ interface BenchmarkIndexChartProps {
   portfolioEquityData: any[];  // 포트폴리오 equity curve 데이터
 }
 
-const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
+const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   sp500Data,
   nasdaqData,
   portfolioEquityData,
 }) => {
+  // 성능 모니터링
+  useRenderPerformance('BenchmarkIndexChart');
+
   // 각 라인의 표시 여부를 관리하는 상태
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
     portfolio: true,
@@ -28,7 +32,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
     nasdaq: true,
   });
 
-  // 데이터를 시작점 100으로 normalize하는 함수
+  // 데이터를 시작점 100으로 normalize하는 함수 (샘플링은 useChartData에서 처리됨)
   const normalizeData = (data: any[], valueKey: string) => {
     if (!data || data.length === 0) return [];
     const startValue = data[0][valueKey];
@@ -52,33 +56,29 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
   );
 
   // ============================================================
-  // 포트폴리오 누적 수익률 계산 (일일 수익률 기반)
+  // 포트폴리오 누적 수익률 계산 (return_pct 기반)
   // ============================================================
   //
   // **목적: DCA(분할 매수) 전략과 벤치마크 지수를 공정하게 비교**
-  // - DCA는 시간에 따라 투자금이 증가하므로 절대 금액(equity curve)으로는 비교 불가
-  // - 대신 일일 수익률을 복리로 누적하여 상대적 성과를 비교
+  // - DCA는 시간에 따라 투자금이 증가하므로 절대 금액(equity value)으로는 비교 불가
+  // - return_pct(순수 수익률)를 복리로 누적하여 투자금 증액과 무관한 성과 비교
   // - 시작점을 100으로 normalize하여 직관적 비교 가능
   //
-  // **수익률 형식 변환:**
-  // - API에서 받는 return_pct: 백분율 (2.5 = 2.5%)
-  // - 복리 계산에 필요한 형식: 소수 (0.025 = 2.5%)
-  // - 변환: dailyReturn / 100
+  // **왜 value가 아닌 return_pct를 사용하는가?**
+  // - value: 투자금 + 수익 (DCA에서 투자금이 계속 증가함)
+  //   예) Day 1: $1000, Day 30: $2100 ($1000 추가 투자 + $100 수익)
+  //   → value 기반 정규화 시 투자금 증액이 수익률로 잘못 계산됨!
+  // - return_pct: 순수 수익률만 나타냄 (투자금 증액과 무관)
+  //   예) Day 1: 0%, Day 30: 5% (실제 수익률)
+  //   → return_pct 복리 누적 시 정확한 성과 비교 가능
   //
   // **복리 누적 공식:**
-  // - 현재 가치 = 이전 가치 × (1 + 수익률)
-  // - 예: 100 × (1 + 0.025) = 102.5 (첫날 2.5% 수익)
-  // - 예: 102.5 × (1 + 0.03) = 105.575 (둘째날 3% 수익)
-  //
-  // **사용 예시:**
-  // - 포트폴리오(DCA): 매달 $1000씩 10회 투자 → 총 투자금 $10,000, 최종 equity $12,000 (20% 수익)
-  // - 벤치마크(지수): 지수는 "투자금" 개념 없이 시작 가격 100에서 종료 가격 110으로 상승 (10% 수익)
-  // - 절대 equity 비교: $12,000 vs 110 (단위도 다르고, DCA 투자금 증가 효과 포함되어 무의미)
-  // - 수익률 비교: 120 vs 110 (시작점 100 기준, 순수 성과만 비교 가능)
+  // - cumulative = cumulative × (1 + return_pct / 100)
+  // - 시작점 100에서 매 기간 수익률을 곱하여 누적
   //
   // **관련 파일:**
-  // - 백엔드: portfolio_service.py의 API 응답 생성 (return_val * 100으로 백분율 변환)
-  // - 이 파일: normalizedPortfolio 계산 (dailyReturn / 100으로 소수 변환)
+  // - 백엔드: portfolio_service.py의 API 응답 생성 (return_pct 계산)
+  // - 프론트엔드: useChartData.ts에서 샘플링 및 복리 집계
   // ============================================================
   const normalizedPortfolio = useMemo(() => {
     if (!portfolioEquityData || portfolioEquityData.length === 0) return [];
@@ -90,12 +90,12 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
         return { date: point.date, normalized: 100 };
       }
 
-      // 일일 수익률을 누적: 현재 가치 = 이전 가치 × (1 + 수익률/100)
-      // - dailyReturn: API에서 받은 백분율 (예: 2.5 = 2.5%)
-      // - dailyReturn / 100: 복리 계산용 소수로 변환 (예: 2.5 / 100 = 0.025)
+      // 일일/주간/월간 수익률을 누적: 현재 가치 = 이전 가치 × (1 + 수익률/100)
+      // - return_pct: 백분율 (예: 2.5 = 2.5%)
+      // - return_pct / 100: 복리 계산용 소수로 변환 (예: 2.5 / 100 = 0.025)
       // - (1 + 0.025): 수익률 승수 (1.025 = 2.5% 증가)
-      const dailyReturn = point.return_pct || 0;
-      cumulativeValue = cumulativeValue * (1 + dailyReturn / 100);
+      const periodReturn = point.return_pct || 0;
+      cumulativeValue = cumulativeValue * (1 + periodReturn / 100);
 
       return {
         date: point.date,
@@ -169,6 +169,16 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
+  const handleLegendClick = useCallback((data: any) => {
+    const dataKey = data.dataKey;
+    if (dataKey && typeof dataKey === 'string') {
+      setVisibleLines(prev => ({
+        ...prev,
+        [dataKey]: !prev[dataKey],
+      }));
+    }
+  }, []);
+
   if (!hasData) return null;
 
   return (
@@ -180,11 +190,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
         </p>
       </div>
 
-      <ResponsiveContainer width="100%" height={320}>
-        <LineChart data={mergedData}>
+      <ResponsiveContainer width="100%" height={320} debounce={300}>
+        <LineChart data={mergedData} syncId="benchmarkChart">
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis 
-            dataKey="date" 
+          <XAxis
+            dataKey="date"
             tickFormatter={formatDateTick}
             tick={{ fontSize: 12 }}
           />
@@ -211,15 +221,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
           />
           <Legend
             wrapperStyle={{ paddingTop: '10px', cursor: 'pointer' }}
-            onClick={(data) => {
-              const dataKey = data.dataKey;
-              if (dataKey && typeof dataKey === 'string') {
-                setVisibleLines(prev => ({
-                  ...prev,
-                  [dataKey]: !prev[dataKey],
-                }));
-              }
-            }}
+            onClick={handleLegendClick}
             formatter={(value: string) => {
               const labels: Record<string, string> = {
                 portfolio: '내 포트폴리오',
@@ -234,7 +236,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               );
             }}
           />
-          
+
           {/* 포트폴리오 라인 */}
           {portfolioEquityData.length > 0 && (
             <Line
@@ -245,9 +247,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               dot={false}
               name="portfolio"
               hide={!visibleLines.portfolio}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
-          
+
           {/* S&P 500 라인 */}
           {sp500Data.length > 0 && (
             <Line
@@ -259,9 +263,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               strokeDasharray="5 5"
               name="sp500"
               hide={!visibleLines.sp500}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
-          
+
           {/* NASDAQ 라인 */}
           {nasdaqData.length > 0 && (
             <Line
@@ -273,12 +279,16 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               strokeDasharray="3 3"
               name="nasdaq"
               hide={!visibleLines.nasdaq}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
         </LineChart>
       </ResponsiveContainer>
     </div>
   );
-};
+});
+
+BenchmarkIndexChart.displayName = 'BenchmarkIndexChart';
 
 export default BenchmarkIndexChart;

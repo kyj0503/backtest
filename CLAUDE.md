@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**라고할때살걸** - Trading strategy backtesting platform (v1.6.10)
+**라고할때살걸** - Trading strategy backtesting platform (v1.6.12)
 - **Backend**: FastAPI + Python 3.x, wraps backtesting.py library
 - **Frontend**: React 18 + TypeScript + Vite, shadcn/ui components
 - **Deployment**: Docker Compose for dev/prod environments

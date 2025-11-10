@@ -44,6 +44,8 @@ from typing import Dict, List, Tuple
 from datetime import datetime, timedelta
 import pandas as pd
 import logging
+from app.schemas.schemas import FREQUENCY_MAP
+from app.services.rebalance_helper import get_next_nth_weekday
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +59,10 @@ class DCACalculator:
         period_amount: float,
         dca_periods: int,
         start_date: str,
-        interval_weeks: int = 4
+        frequency: str = 'monthly_1'
     ) -> Tuple[float, float, float, List[Dict]]:
         """
-        DCA 투자의 총 주식 수량과 평균 단가, 수익률, 매수 로그를 계산 (주 단위)
+        DCA 투자의 총 주식 수량과 평균 단가, 수익률, 매수 로그를 계산 (Nth Weekday 방식)
 
         Parameters
         ----------
@@ -72,8 +74,8 @@ class DCACalculator:
             총 투자 횟수
         start_date : str
             시작 날짜 (YYYY-MM-DD 형식)
-        interval_weeks : int, optional
-            투자 간격 (주 단위, 기본값: 4)
+        frequency : str, optional
+            투자 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12, 기본값: monthly_1)
 
         Returns
         -------
@@ -86,21 +88,33 @@ class DCACalculator:
         ...     df=df,
         ...     period_amount=1000.0,
         ...     dca_periods=12,
-        ...     start_date='2023-01-01',
-        ...     interval_weeks=4
+        ...     start_date='2024-01-10',
+        ...     frequency='monthly_1'
         ... )
         >>> print(f"Total shares: {total_shares}, Average price: {avg_price}")
         """
+        # 주기 정보 가져오기
+        period_info = FREQUENCY_MAP.get(frequency)
+        if not period_info:
+            logger.warning(f"알 수 없는 DCA 주기: {frequency}, 기본값 monthly_1 사용")
+            period_info = FREQUENCY_MAP['monthly_1']
+        
+        period_type, interval = period_info
+        
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         total_shares = 0
         total_invested = 0
         trade_log = []  # DCA 매수 기록
 
+        current_investment_date = start_date_obj
+
         for period in range(dca_periods):
-            # 주 단위 계산: 시작일 + (period × interval_weeks × 7일)
-            days_to_add = period * interval_weeks * 7
-            investment_date = start_date_obj + timedelta(days=days_to_add)
-            period_price_data = df[df.index.date >= investment_date.date()]
+            # Nth Weekday 방식으로 다음 투자 날짜 계산
+            if period > 0:
+                current_investment_date = get_next_nth_weekday(current_investment_date, period_type, interval)
+            
+            # 해당 날짜 이후의 첫 거래일 찾기
+            period_price_data = df[df.index.date >= current_investment_date.date()]
 
             if not period_price_data.empty:
                 period_price = period_price_data['Close'].iloc[0]
