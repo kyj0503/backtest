@@ -99,9 +99,8 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
       {/* 3. 모든 분석 차트 */}
       <div
-        className={`grid gap-6 transition-all duration-300 ease-in-out ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}
+        className={`grid gap-6 ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}
         style={{
-          willChange: isCompactView ? 'auto' : 'grid-template-columns',
           contain: 'layout style'
         }}
       >

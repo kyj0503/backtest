@@ -102,7 +102,14 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
                 }}
               />
             ))}
-            <Area type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2} fill="url(#portfolioValue)" />
+            <Area 
+              type="monotone" 
+              dataKey="value" 
+              stroke="#6366f1" 
+              strokeWidth={2} 
+              fill="url(#portfolioValue)" 
+              isAnimationActive={false}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </ResultBlock>
@@ -121,7 +128,14 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
               formatter={(value: number) => [`${value.toFixed(2)}%`, '일일 수익률']}
               labelFormatter={(label: string) => `날짜: ${label}`}
             />
-            <Line type="monotone" dataKey="return_pct" stroke="#f97316" strokeWidth={1.5} dot={false} />
+            <Line 
+              type="monotone" 
+              dataKey="return_pct" 
+              stroke="#f97316" 
+              strokeWidth={1.5} 
+              dot={false} 
+              isAnimationActive={false}
+            />
           </LineChart>
         </ResponsiveContainer>
       </ResultBlock>

@@ -84,7 +84,14 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
                   formatter={(value: number) => [formatKRW(value, 2), '환율']}
                   labelFormatter={(label: string) => `날짜: ${label}`}
                 />
-                <Line type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={2} dot={false} />
+                <Line 
+                  type="monotone" 
+                  dataKey="rate" 
+                  stroke="#10b981" 
+                  strokeWidth={2} 
+                  dot={false} 
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
 

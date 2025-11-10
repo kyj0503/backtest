@@ -9,6 +9,8 @@
 import React, { useMemo, useState, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
+import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
+import { sampleData } from '@/shared/utils/dataSampling';
 
 interface BenchmarkReturnsChartProps {
   sp500Data: any[];
@@ -21,6 +23,9 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
   nasdaqData,
   portfolioDailyReturns,
 }) => {
+  // 성능 모니터링
+  useRenderPerformance('BenchmarkReturnsChart');
+
   // 각 라인의 표시 여부를 관리하는 상태
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
     portfolio: true,
@@ -57,9 +62,12 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
     });
 
     // 날짜순으로 정렬
-    return Array.from(dataMap.values()).sort((a, b) => 
+    const sorted = Array.from(dataMap.values()).sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
+
+    // 성능 최적화: 데이터 샘플링
+    return sampleData(sorted, 500);
   }, [sp500Data, nasdaqData, portfolioDailyReturns]);
 
   // Y축 범위 계산 (표시된 라인만 고려) - 효율적인 계산

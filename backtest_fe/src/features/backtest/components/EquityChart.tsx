@@ -1,6 +1,8 @@
 import React, { memo, useMemo } from 'react';
 import { ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Line, Area, ReferenceLine } from 'recharts';
 import { CustomTooltip } from './shared';
+import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
+import { sampleData } from '@/shared/utils/dataSampling';
 
 interface EquityChartData {
   date: string;
@@ -21,20 +23,26 @@ const CHART_CONFIG = {
 } as const;
 
 const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
-  // 데이터 안전성 검사 및 메모이제이션
-  const safeData = useMemo(() => {
+  // 성능 모니터링
+  useRenderPerformance('EquityChart');
+
+  // 데이터 안전성 검사 및 샘플링 (성능 최적화)
+  const processedData = useMemo(() => {
     if (!data || !Array.isArray(data)) return [];
 
-    return data.map(item => ({
+    const sanitizedData = data.map(item => ({
       ...item,
       return_pct: Number(item.return_pct) || 0,
       drawdown_pct: Number(item.drawdown_pct) || 0
     }));
+
+    // 데이터가 500개 이상이면 샘플링 (Recharts 성능 최적화)
+    return sampleData(sanitizedData, 500);
   }, [data]);
 
   return (
     <ResponsiveContainer width="100%" height={320} debounce={300}>
-      <ComposedChart data={safeData} margin={CHART_CONFIG.margin} syncId="equityChart">
+      <ComposedChart data={processedData} margin={CHART_CONFIG.margin} syncId="equityChart">
         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
         <XAxis dataKey="date" tick={{ fontSize: 12 }} />
         <YAxis yAxisId="return" orientation="left" />

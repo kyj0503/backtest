@@ -3,6 +3,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
+import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
+import { sampleData, filterRebalanceMarkers } from '@/shared/utils/dataSampling';
 
 interface RebalanceEvent {
   date: string;
@@ -36,6 +38,9 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
   portfolioComposition,
   rebalanceHistory
 }) => {
+  // 성능 모니터링
+  useRenderPerformance('WeightHistoryChart');
+
   const symbols = useMemo(() => {
     // portfolioComposition에서 symbol 추출 (중복 제거)
     return Array.from(new Set(portfolioComposition.map(stock => stock.symbol)));
@@ -51,7 +56,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
   }, [symbols]);
 
   const chartData = useMemo(() => {
-    return weightHistory.map(point => {
+    const rawData = weightHistory.map(point => {
       const dataPoint: Record<string, any> = {
         date: point.date,
       };
@@ -60,7 +65,16 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
       });
       return dataPoint;
     });
+
+    // 성능 최적화: 데이터 샘플링
+    return sampleData(rawData, 500);
   }, [weightHistory, symbols]);
+
+  // 리밸런싱 마커 필터링 (성능 최적화)
+  const filteredRebalanceEvents = useMemo(() => {
+    if (!rebalanceHistory) return [];
+    return filterRebalanceMarkers(rebalanceHistory, 20);
+  }, [rebalanceHistory]);
 
   if (!weightHistory || weightHistory.length === 0) {
     return (
@@ -109,8 +123,8 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
           iconType="square"
           formatter={(value: string) => symbolDisplayNames[value] || value}
         />
-        {/* 리밸런싱 마커 */}
-        {rebalanceHistory && rebalanceHistory.length > 0 && rebalanceHistory.map((event, idx) => (
+        {/* 리밸런싱 마커 - 성능 최적화 (최대 20개) */}
+        {filteredRebalanceEvents.length > 0 && filteredRebalanceEvents.map((event, idx) => (
           <ReferenceLine
             key={idx}
             x={event.date}
