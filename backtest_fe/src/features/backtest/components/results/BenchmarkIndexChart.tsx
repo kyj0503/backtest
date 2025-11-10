@@ -56,37 +56,52 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   );
 
   // ============================================================
-  // 포트폴리오 누적 가치를 정규화 (equity value 기반)
+  // 포트폴리오 누적 수익률 계산 (return_pct 기반)
   // ============================================================
   //
   // **목적: DCA(분할 매수) 전략과 벤치마크 지수를 공정하게 비교**
-  // - DCA는 시간에 따라 투자금이 증가하므로 절대 금액(equity curve)으로는 비교 불가
-  // - equity value를 시작점 100으로 정규화하여 상대적 성과를 비교
+  // - DCA는 시간에 따라 투자금이 증가하므로 절대 금액(equity value)으로는 비교 불가
+  // - return_pct(순수 수익률)를 복리로 누적하여 투자금 증액과 무관한 성과 비교
   // - 시작점을 100으로 normalize하여 직관적 비교 가능
   //
-  // **왜 return_pct가 아닌 value를 사용하는가?**
-  // - return_pct: 일간/주간/4주간 수익률 (집계 타입에 따라 다름)
-  // - 장기간 백테스트 시 return_pct는 이미 복리 수익률임
-  // - 이를 다시 복리로 누적하면 중복 계산 발생!
-  // - value: 실제 포트폴리오 가치 (이미 모든 복리 효과가 반영됨)
+  // **왜 value가 아닌 return_pct를 사용하는가?**
+  // - value: 투자금 + 수익 (DCA에서 투자금이 계속 증가함)
+  //   예) Day 1: $1000, Day 30: $2100 ($1000 추가 투자 + $100 수익)
+  //   → value 기반 정규화 시 투자금 증액이 수익률로 잘못 계산됨!
+  // - return_pct: 순수 수익률만 나타냄 (투자금 증액과 무관)
+  //   예) Day 1: 0%, Day 30: 5% (실제 수익률)
+  //   → return_pct 복리 누적 시 정확한 성과 비교 가능
   //
-  // **정규화 공식:**
-  // - normalized = (현재 value / 시작 value) × 100
+  // **복리 누적 공식:**
+  // - cumulative = cumulative × (1 + return_pct / 100)
+  // - 시작점 100에서 매 기간 수익률을 곱하여 누적
   //
   // **관련 파일:**
-  // - 백엔드: portfolio_service.py의 API 응답 생성
+  // - 백엔드: portfolio_service.py의 API 응답 생성 (return_pct 계산)
   // - 프론트엔드: useChartData.ts에서 샘플링 및 복리 집계
   // ============================================================
   const normalizedPortfolio = useMemo(() => {
     if (!portfolioEquityData || portfolioEquityData.length === 0) return [];
 
-    const startValue = portfolioEquityData[0].value;
-    if (!startValue || startValue === 0) return [];
+    let cumulativeValue = 100; // 시작점 = 100
 
-    return portfolioEquityData.map((point) => ({
-      date: point.date,
-      normalized: (point.value / startValue) * 100,
-    }));
+    return portfolioEquityData.map((point, index) => {
+      if (index === 0) {
+        return { date: point.date, normalized: 100 };
+      }
+
+      // 일일/주간/월간 수익률을 누적: 현재 가치 = 이전 가치 × (1 + 수익률/100)
+      // - return_pct: 백분율 (예: 2.5 = 2.5%)
+      // - return_pct / 100: 복리 계산용 소수로 변환 (예: 2.5 / 100 = 0.025)
+      // - (1 + 0.025): 수익률 승수 (1.025 = 2.5% 증가)
+      const periodReturn = point.return_pct || 0;
+      cumulativeValue = cumulativeValue * (1 + periodReturn / 100);
+
+      return {
+        date: point.date,
+        normalized: cumulativeValue,
+      };
+    });
   }, [portfolioEquityData]);
 
   // 세 데이터를 날짜별로 병합
