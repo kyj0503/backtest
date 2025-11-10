@@ -154,12 +154,17 @@ function getNthWeekdayOfMonth(year: number, month: number, weekday: number, n: n
 }
 
 /**
- * 다음 Nth Weekday 날짜 계산 (달력 월 기준)
- * 백엔드의 get_next_nth_weekday 함수와 동일한 로직
- *
+ * 다음 Nth Weekday 날짜 계산 (달력 월 기준, 1개월 간격 고정)
+ * 
  * @param currentDate 기준 날짜
  * @param originalNth 원본 "몇 번째 요일" 값 (1-5)
  * @returns 다음 달의 같은 N번째 요일 날짜
+ * 
+ * @note 백엔드 API 차이점:
+ * - Frontend: 1개월 간격만 지원 (월별 수익률 집계용)
+ * - Backend: get_next_nth_weekday(current_date, period_type, interval, original_nth)
+ *   - monthly_1 (1개월), monthly_2 (2개월), monthly_3 (3개월) 등 지원
+ *   - 리밸런싱/DCA 스케줄링에 사용
  */
 function getNextMonthNthWeekday(currentDate: Date, originalNth: number): Date {
   const weekday = currentDate.getDay();
