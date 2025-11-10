@@ -57,7 +57,7 @@ weights = RebalanceHelper.calculate_target_weights(
 - Backend: app/services/portfolio_service.py (포트폴리오 백테스트)
 - Backend: app/schemas/schemas.py (DCA_FREQUENCY_MAP)
 """
-from typing import Dict, Tuple
+from typing import Dict
 from datetime import datetime, timedelta
 import calendar
 import logging
