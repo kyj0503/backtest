@@ -76,9 +76,9 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
         date: event.date,
         // null 값으로 설정: Recharts의 connectNulls={true} 속성으로 인해
         // null 포인트를 건너뛰며 선이 연결됨 (ReferenceLine만 표시됨)
-        value: null as any,
-        return_pct: null as any,
-        drawdown_pct: null as any,
+        value: null as unknown as number,
+        return_pct: null as unknown as number,
+        drawdown_pct: null as unknown as number,
       } as EquityPoint));
 
     // 병합 후 날짜순 정렬
@@ -90,7 +90,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
   // 일일 수익률 Y축 도메인 계산 (메모이제이션)
   const dailyReturnYAxisDomain = useMemo<[number, number]>(() => {
     const returnValues = portfolioEquityData
-      .map((d: any) => d.return_pct || 0)
+      .map((d: EquityPoint) => d.return_pct || 0)
       .filter((value): value is number => typeof value === 'number' && !isNaN(value));
     
     if (returnValues.length === 0) return [0, 100];
