@@ -81,6 +81,21 @@ function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data:
 }
 
 /**
+ * ISO 날짜 문자열을 로컬 타임존의 Date 객체로 파싱
+ *
+ * ⚠️ 주의:
+ * - new Date("2024-01-15")는 UTC 자정으로 파싱되어 타임존에 따라 요일이 달라질 수 있음
+ * - 이 함수는 날짜를 로컬 타임존으로 파싱하여 한국 시간대 사용자에게 일관된 결과 제공
+ *
+ * @param dateStr ISO 형식 날짜 문자열 (예: "2024-01-15")
+ * @returns 로컬 타임존의 Date 객체
+ */
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day); // month는 0-indexed
+}
+
+/**
  * 날짜가 해당 월의 몇 번째 요일인지 계산
  * 백엔드의 get_weekday_occurrence 함수와 동일한 로직
  *
@@ -184,11 +199,11 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
   // 첫 데이터는 항상 포함
   monthly.push(data[0]);
 
-  // 시작 날짜의 "몇 번째 요일" 계산
-  const startDate = new Date(data[0].date);
+  // 시작 날짜의 "몇 번째 요일" 계산 (로컬 타임존)
+  const startDate = parseLocalDate(data[0].date);
   const originalNth = getWeekdayOccurrence(startDate);
 
-  // 데이터를 Map으로 변환 (빠른 조회)
+  // 데이터를 Map으로 변환 (O(1) 조회를 위함)
   const dataByDate = new Map<string, T>();
   for (const item of data) {
     dataByDate.set(item.date, item);
@@ -196,31 +211,51 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
 
   // 다음 월 날짜 계산하며 샘플링
   let currentDate = startDate;
+  const lastDateStr = data[data.length - 1].date;
+  const lastDate = parseLocalDate(lastDateStr);
+
+  // 무한 루프 방지: 최대 반복 횟수 설정
+  const maxIterations = data.length;
+  let iterations = 0;
 
   while (true) {
+    // 안전장치: 무한 루프 방지
+    if (++iterations > maxIterations) {
+      console.error('[dataSampling] Monthly sampling exceeded max iterations');
+      break;
+    }
+
     // 다음 달의 Nth Weekday 계산
     const nextDate = getNextMonthNthWeekday(currentDate, originalNth);
     const nextDateStr = nextDate.toISOString().split('T')[0];
 
-    // 해당 날짜 또는 그 이후의 첫 데이터 찾기
+    // Map을 사용한 O(1) 조회 (최대 7일 탐색)
     let found = false;
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].date >= nextDateStr) {
+    let searchDate = nextDate;
+
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const searchDateStr = searchDate.toISOString().split('T')[0];
+      const foundItem = dataByDate.get(searchDateStr);
+
+      if (foundItem) {
         // 이미 추가된 데이터가 아니면 추가
-        if (monthly[monthly.length - 1] !== data[i]) {
-          monthly.push(data[i]);
+        if (monthly[monthly.length - 1] !== foundItem) {
+          monthly.push(foundItem);
           found = true;
         }
-        currentDate = new Date(data[i].date);
+        currentDate = parseLocalDate(foundItem.date);
         break;
       }
+
+      // 다음 날짜로 이동 (1일 증가)
+      searchDate = new Date(searchDate.getTime() + 24 * 60 * 60 * 1000);
     }
 
     // 더 이상 데이터가 없으면 종료
     if (!found) break;
 
     // 마지막 데이터에 도달했으면 종료
-    if (currentDate >= new Date(data[data.length - 1].date)) break;
+    if (currentDate >= lastDate) break;
   }
 
   // 마지막 데이터가 포함되지 않았다면 추가
@@ -496,8 +531,8 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
 
   const monthly: T[] = [];
 
-  // 시작 날짜의 "몇 번째 요일" 계산
-  const startDate = new Date(dailyReturns[0].date);
+  // 시작 날짜의 "몇 번째 요일" 계산 (로컬 타임존)
+  const startDate = parseLocalDate(dailyReturns[0].date);
   const originalNth = getWeekdayOccurrence(startDate);
 
   let currentMonthData: T[] = [];
@@ -505,7 +540,7 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
 
   for (let i = 0; i < dailyReturns.length; i++) {
     const item = dailyReturns[i];
-    const itemDate = new Date(item.date);
+    const itemDate = parseLocalDate(item.date);
 
     currentMonthData.push(item);
 
