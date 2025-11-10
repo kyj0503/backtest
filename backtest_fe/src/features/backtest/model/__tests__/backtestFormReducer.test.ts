@@ -14,14 +14,12 @@ describe('backtestFormReducer', () => {
           symbol: 'AAPL',
           amount: 6000,
           investmentType: 'lump_sum',
-          dcaPeriods: 12,
           assetType: ASSET_TYPES.STOCK,
         },
         {
           symbol: 'MSFT',
           amount: 4000,
           investmentType: 'lump_sum',
-          dcaPeriods: 12,
           assetType: ASSET_TYPES.STOCK,
         },
       ],
@@ -107,7 +105,7 @@ describe('backtestFormHelpers', () => {
         symbol: '',
         amount: 50,
         investmentType: 'lump_sum',
-        dcaFrequency: 'weekly_4',
+        dcaFrequency: 'monthly_1',
         assetType: ASSET_TYPES.STOCK,
       },
       {
@@ -123,7 +121,7 @@ describe('backtestFormHelpers', () => {
         amount: 200,
         weight: 40,
         investmentType: 'lump_sum',
-        dcaFrequency: 'weekly_4',
+        dcaFrequency: 'monthly_1',
         assetType: ASSET_TYPES.CASH,
       },
     ])
