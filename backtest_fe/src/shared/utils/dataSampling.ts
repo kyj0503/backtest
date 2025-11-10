@@ -210,11 +210,22 @@ function getNthWeekdayOfMonth(year: number, month: number, weekday: number, n: n
  * @param originalNth 원본 "몇 번째 요일" 값 (1-5)
  * @returns 다음 달의 같은 N번째 요일 날짜
  * 
- * @note 백엔드 API 차이점:
- * - Frontend: 1개월 간격만 지원 (월별 수익률 집계용)
- * - Backend: get_next_nth_weekday(current_date, period_type, interval, original_nth)
- *   - monthly_1 (1개월), monthly_2 (2개월), monthly_3 (3개월) 등 지원
- *   - 리밸런싱/DCA 스케줄링에 사용
+ * @note 백엔드 API와의 차이점 (의도된 설계):
+ * **Frontend (이 함수):**
+ * - 1개월 간격만 지원
+ * - 용도: 월별 수익률 집계 (차트 표시용)
+ * - 이유: 리밸런싱 주기와 무관하게 월간 집계는 항상 1개월 단위
+ * 
+ * **Backend (get_next_nth_weekday):**
+ * - 가변 interval 지원 (monthly_1, monthly_2, monthly_3 등)
+ * - 용도: 리밸런싱/DCA 스케줄링
+ * - 시그니처: get_next_nth_weekday(current_date, period_type, interval, original_nth)
+ * 
+ * **예시:**
+ * - 사용자가 monthly_3 (3개월) 리밸런싱 선택 시:
+ *   - 백엔드: 3개월마다 리밸런싱 실행
+ *   - 프론트엔드: 차트는 여전히 월간 집계로 표시 (더 세밀한 시각화)
+ *   - 리밸런싱 마커는 3개월마다 표시됨
  */
 function getNextMonthNthWeekday(currentDate: Date, originalNth: number): Date {
   const weekday = currentDate.getDay();

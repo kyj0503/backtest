@@ -380,6 +380,8 @@ class PortfolioService:
                         logger.debug(f"{symbol}: 원본 Nth 값 설정 = {info['original_nth_weekday']}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
                     
                     # 다음 DCA 날짜 계산 (original_nth 유지)
+                    # Note: info.get()과 get_next_nth_weekday()는 순수 계산 함수 (I/O 없음)
+                    # asyncio.to_thread() 불필요 - 동기 dict 접근 및 날짜 계산만 수행
                     reference_date = info.get('last_dca_date') or start_date_obj
                     original_nth = info.get('original_nth_weekday')
                     next_dca_date = get_next_nth_weekday(reference_date, period_type, interval, original_nth)
