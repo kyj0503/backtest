@@ -77,7 +77,7 @@ export const getDcaAdjustedTotal = (
     
     if (stock.investmentType === 'dca') {
       // DCA: 회당 금액 × (투자 횟수)
-      const dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
+      const dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'monthly_1');
       return sum + (amount * dcaPeriods);
     } else {
       // 일시불: 입력한 금액 그대로

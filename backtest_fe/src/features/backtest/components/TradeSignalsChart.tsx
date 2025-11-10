@@ -97,9 +97,10 @@ const TradeSignalsChart: React.FC<TradeSignalsChartProps> = memo(({ trades }) =>
   }
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
+    <ResponsiveContainer width="100%" height={400} debounce={300}>
       <ScatterChart
         margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+        syncId="tradeSignalsChart"
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
@@ -123,7 +124,7 @@ const TradeSignalsChart: React.FC<TradeSignalsChartProps> = memo(({ trades }) =>
           height={36}
           iconType="circle"
         />
-        
+
         {/* 매수 신호 */}
         <Scatter
           name="매수 신호"
@@ -131,8 +132,9 @@ const TradeSignalsChart: React.FC<TradeSignalsChartProps> = memo(({ trades }) =>
           fill="#10B981"
           shape="triangle"
           line={false}
+          isAnimationActive={false}
         />
-        
+
         {/* 매도 신호 */}
         <Scatter
           name="매도 신호"
@@ -140,6 +142,7 @@ const TradeSignalsChart: React.FC<TradeSignalsChartProps> = memo(({ trades }) =>
           fill="#EF4444"
           shape="cross"
           line={false}
+          isAnimationActive={false}
         />
       </ScatterChart>
     </ResponsiveContainer>

@@ -95,6 +95,8 @@ const OHLCChart: React.FC<OHLCChartProps> = memo(({ data, indicators, trades }) 
         dot={false}
         name={indicator.name}
         strokeDasharray={index % 2 === 1 ? '5 5' : undefined}
+        isAnimationActive={false}
+        connectNulls={true}
       />
     ));
   }, [safeIndicators, chartConfig.strokeWidth.indicator]);
@@ -115,29 +117,32 @@ const OHLCChart: React.FC<OHLCChartProps> = memo(({ data, indicators, trades }) 
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart data={mergedData} margin={chartConfig.margin}>
+      <ResponsiveContainer width="100%" height={400} debounce={300}>
+        <ComposedChart data={mergedData} margin={chartConfig.margin} syncId="ohlcChart">
           <CartesianGrid strokeDasharray="3 3" opacity={chartConfig.opacity.grid} />
           <XAxis dataKey="date" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
           <YAxis yAxisId="price" orientation="right" />
           <YAxis yAxisId="volume" orientation="left" />
           <RechartsTooltip content={<CustomTooltip />} />
           <Legend />
-          <Bar 
-            yAxisId="volume" 
-            dataKey="volume" 
-            fill="#6c757d" 
-            opacity={chartConfig.opacity.volume} 
-            name="거래량" 
+          <Bar
+            yAxisId="volume"
+            dataKey="volume"
+            fill="#6c757d"
+            opacity={chartConfig.opacity.volume}
+            name="거래량"
+            isAnimationActive={false}
           />
-          <Line 
-            yAxisId="price" 
-            type="monotone" 
-            dataKey="close" 
-            stroke="#0d6efd" 
-            strokeWidth={chartConfig.strokeWidth.main} 
-            dot={false} 
-            name="종가" 
+          <Line
+            yAxisId="price"
+            type="monotone"
+            dataKey="close"
+            stroke="#0d6efd"
+            strokeWidth={chartConfig.strokeWidth.main}
+            dot={false}
+            name="종가"
+            isAnimationActive={false}
+            connectNulls={true}
           />
           {renderIndicatorLines()}
           {renderTradeMarks()}

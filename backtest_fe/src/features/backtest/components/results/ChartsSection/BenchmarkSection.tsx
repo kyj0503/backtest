@@ -3,7 +3,7 @@
  * S&P 500, NASDAQ 벤치마크 차트
  */
 
-import React from 'react';
+import React, { memo } from 'react';
 import BenchmarkIndexChart from '../BenchmarkIndexChart';
 import BenchmarkReturnsChart from '../BenchmarkReturnsChart';
 import { EquityPoint } from '../../../model/types';
@@ -14,16 +14,16 @@ interface BenchmarkSectionProps {
   sp500BenchmarkWithReturn: any[];
   nasdaqBenchmarkWithReturn: any[];
   equityDataForBenchmark: EquityPoint[];
-  portfolioDailyReturns?: Record<string, number>;
+  aggregationType?: 'daily' | 'weekly' | 'monthly';
 }
 
-export const BenchmarkSection: React.FC<BenchmarkSectionProps> = ({
+export const BenchmarkSection: React.FC<BenchmarkSectionProps> = memo(({
   sp500Benchmark,
   nasdaqBenchmark,
   sp500BenchmarkWithReturn,
   nasdaqBenchmarkWithReturn,
   equityDataForBenchmark,
-  portfolioDailyReturns,
+  aggregationType = 'daily',
 }) => {
   const hasBenchmarkData = sp500Benchmark.length > 0 || nasdaqBenchmark.length > 0;
 
@@ -40,12 +40,15 @@ export const BenchmarkSection: React.FC<BenchmarkSectionProps> = ({
         portfolioEquityData={equityDataForBenchmark}
       />
 
-      {/* 일일 수익률 벤치마크 비교 차트 */}
+      {/* 수익률 벤치마크 비교 차트 */}
       <BenchmarkReturnsChart 
         sp500Data={sp500BenchmarkWithReturn} 
         nasdaqData={nasdaqBenchmarkWithReturn}
-        portfolioDailyReturns={portfolioDailyReturns}
+        portfolioEquityData={equityDataForBenchmark}
+        aggregationType={aggregationType}
       />
     </>
   );
-};
+});
+
+BenchmarkSection.displayName = 'BenchmarkSection';

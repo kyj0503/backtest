@@ -58,7 +58,7 @@ export const initialBacktestFormState: BacktestFormState = {
     symbol: '',
     amount: 10000,
     investmentType: 'lump_sum',
-    dcaFrequency: 'weekly_4'
+    dcaFrequency: 'monthly_1'
   }],
   dates: {
     startDate: '2025-01-01',
@@ -69,7 +69,7 @@ export const initialBacktestFormState: BacktestFormState = {
     strategyParams: {}
   },
   settings: {
-    rebalanceFrequency: 'weekly_4',
+    rebalanceFrequency: 'monthly_3',
     commission: 0.2
   },
   ui: {

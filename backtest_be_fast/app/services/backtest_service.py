@@ -35,6 +35,7 @@ from fastapi import HTTPException
 # Repository 패턴 import
 from app.repositories import data_repository
 from app.services.strategy_service import strategy_service
+from app.utils.data_fetcher import data_fetcher
 
 # Monkey patch for pandas Timedelta compatibility issue
 def _patch_backtesting_stats():
@@ -138,10 +139,8 @@ class BacktestService:
         
         # Repository 접근
         self.data_repository = data_repository
-        
+
         # 호환성을 위해 기존 속성들 유지
-        from app.utils.data_fetcher import data_fetcher
-        from app.services.strategy_service import strategy_service
         self.data_fetcher = data_fetcher
         self.strategy_service = strategy_service
 
