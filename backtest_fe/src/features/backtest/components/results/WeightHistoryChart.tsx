@@ -72,10 +72,10 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
     if (!rebalanceHistory || rebalanceHistory.length === 0) {
       return chartData;
     }
-    
+
     // 기존 차트 데이터에 있는 날짜들
     const existingDates = new Set(chartData.map(d => d.date));
-    
+
     // 차트 데이터에 없는 리밸런싱 날짜들을 null 값 포인트로 추가
     const rebalanceDatesToAdd = rebalanceHistory
       .filter(event => !existingDates.has(event.date))
@@ -84,17 +84,18 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
           date: event.date,
         };
         // 모든 심볼에 대해 null 값 설정
+        // Note: symbols는 chartData에서 파생되므로 dependency로 불필요
         symbols.forEach(symbol => {
           nullPoint[symbol] = null;
         });
         return nullPoint;
       });
-    
+
     // 병합 후 날짜순 정렬
     return [...chartData, ...rebalanceDatesToAdd].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-  }, [chartData, rebalanceHistory, symbols]);
+  }, [chartData, rebalanceHistory]);
 
   if (!weightHistory || weightHistory.length === 0) {
     return (
