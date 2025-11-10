@@ -4,7 +4,6 @@ import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
-import { filterRebalanceMarkers } from '@/shared/utils/dataSampling';
 
 interface RebalanceEvent {
   date: string;
@@ -68,11 +67,28 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
     });
   }, [weightHistory, symbols]);
 
-  // 리밸런싱 마커 필터링 (성능 최적화)
+  // 리밸런싱 마커 필터링 (차트에 표시된 날짜 범위 내에서만)
   const filteredRebalanceEvents = useMemo(() => {
-    if (!rebalanceHistory) return [];
-    return filterRebalanceMarkers(rebalanceHistory, 20);
-  }, [rebalanceHistory]);
+    if (!rebalanceHistory || rebalanceHistory.length === 0) return [];
+    if (chartData.length === 0) return [];
+    
+    // 차트 데이터 범위 내의 리밸런싱 이벤트 필터링
+    const eventsInRange = rebalanceHistory.filter(event => {
+      // 이벤트 날짜가 차트 데이터 범위 내에 있는지 확인
+      const eventDate = new Date(event.date).getTime();
+      const minDate = new Date(chartData[0].date).getTime();
+      const maxDate = new Date(chartData[chartData.length - 1].date).getTime();
+      return eventDate >= minDate && eventDate <= maxDate;
+    });
+    
+    // 최대 20개로 제한 (너무 많으면 차트가 복잡해짐)
+    // 주간/월간 집계 시 많은 이벤트가 있을 수 있으므로 최신 20개만 표시
+    if (eventsInRange.length > 20) {
+      return eventsInRange.slice(-20);
+    }
+    
+    return eventsInRange;
+  }, [rebalanceHistory, chartData]);
 
   if (!weightHistory || weightHistory.length === 0) {
     return (

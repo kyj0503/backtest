@@ -26,84 +26,58 @@ function calculateYearDuration(startDate: string | Date, endDate: string | Date)
 }
 
 /**
- * 주간 데이터로 집계 (매주 마지막 거래일 기준)
+ * 주간 데이터로 집계 (7일 = 1주 단위)
  * 
  * @param data 원본 일간 데이터
- * @returns 주간으로 집계된 데이터
+ * @returns 주간으로 집계된 데이터 (매 7일째 데이터 포인트)
  */
 function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
 
   const weekly: T[] = [];
-  let weekStart = new Date(data[0].date);
-  weekStart.setHours(0, 0, 0, 0);
+  const DAYS_PER_WEEK = 7;
   
-  // 해당 주의 일요일로 설정
-  const dayOfWeek = weekStart.getDay();
-  weekStart.setDate(weekStart.getDate() - dayOfWeek);
-
-  let currentWeekData: T[] = [];
-
-  for (const item of data) {
-    const itemDate = new Date(item.date);
-    itemDate.setHours(0, 0, 0, 0);
-    
-    const itemWeekStart = new Date(itemDate);
-    const itemDayOfWeek = itemWeekStart.getDay();
-    itemWeekStart.setDate(itemWeekStart.getDate() - itemDayOfWeek);
-
-    // 새로운 주가 시작되면 이전 주의 마지막 데이터를 추가
-    if (itemWeekStart.getTime() > weekStart.getTime()) {
-      if (currentWeekData.length > 0) {
-        weekly.push(currentWeekData[currentWeekData.length - 1]); // 주의 마지막 거래일
-      }
-      weekStart = itemWeekStart;
-      currentWeekData = [];
-    }
-
-    currentWeekData.push(item);
+  // 첫 데이터는 항상 포함
+  weekly.push(data[0]);
+  
+  // 7일 간격으로 데이터 추출
+  for (let i = DAYS_PER_WEEK; i < data.length; i += DAYS_PER_WEEK) {
+    weekly.push(data[i]);
   }
-
-  // 마지막 주 처리
-  if (currentWeekData.length > 0) {
-    weekly.push(currentWeekData[currentWeekData.length - 1]);
+  
+  // 마지막 데이터가 7일 간격에 포함되지 않았다면 추가
+  const lastIndex = data.length - 1;
+  if (lastIndex > 0 && data[lastIndex] !== weekly[weekly.length - 1]) {
+    weekly.push(data[lastIndex]);
   }
 
   return weekly;
 }
 
 /**
- * 월간 데이터로 집계 (매월 마지막 거래일 기준)
+ * 월간 데이터로 집계 (28일 = 4주 단위)
  * 
  * @param data 원본 일간 데이터
- * @returns 월간으로 집계된 데이터
+ * @returns 월간으로 집계된 데이터 (매 28일째 데이터 포인트)
  */
 function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
 
   const monthly: T[] = [];
-  let currentMonth = '';
-  let currentMonthData: T[] = [];
-
-  for (const item of data) {
-    const itemDate = new Date(item.date);
-    const monthKey = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
-
-    // 새로운 달이 시작되면 이전 달의 마지막 데이터를 추가
-    if (monthKey !== currentMonth) {
-      if (currentMonthData.length > 0) {
-        monthly.push(currentMonthData[currentMonthData.length - 1]); // 월의 마지막 거래일
-      }
-      currentMonth = monthKey;
-      currentMonthData = [];
-    }
-
-    currentMonthData.push(item);
+  const DAYS_PER_MONTH = 28; // 4주 = 28일
+  
+  // 첫 데이터는 항상 포함
+  monthly.push(data[0]);
+  
+  // 28일 간격으로 데이터 추출
+  for (let i = DAYS_PER_MONTH; i < data.length; i += DAYS_PER_MONTH) {
+    monthly.push(data[i]);
   }
-
-  // 마지막 달 처리
-  if (currentMonthData.length > 0) {
-    monthly.push(currentMonthData[currentMonthData.length - 1]);
+  
+  // 마지막 데이터가 28일 간격에 포함되지 않았다면 추가
+  const lastIndex = data.length - 1;
+  if (lastIndex > 0 && data[lastIndex] !== monthly[monthly.length - 1]) {
+    monthly.push(data[lastIndex]);
   }
 
   return monthly;
@@ -312,7 +286,7 @@ export function aggregateReturns<T extends { date: string; return_pct: number; [
 }
 
 /**
- * 주간 수익률 계산 (복리 기반)
+ * 주간 수익률 계산 (7일 단위, 복리 기반)
  */
 function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
   dailyReturns: T[]
@@ -320,24 +294,14 @@ function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [k
   if (!dailyReturns || dailyReturns.length === 0) return [];
 
   const weekly: T[] = [];
-  let weekStart = new Date(dailyReturns[0].date);
-  weekStart.setHours(0, 0, 0, 0);
-  
-  const dayOfWeek = weekStart.getDay();
-  weekStart.setDate(weekStart.getDate() - dayOfWeek);
-
+  const DAYS_PER_WEEK = 7;
   let currentWeekData: T[] = [];
 
-  for (const item of dailyReturns) {
-    const itemDate = new Date(item.date);
-    itemDate.setHours(0, 0, 0, 0);
-    
-    const itemWeekStart = new Date(itemDate);
-    const itemDayOfWeek = itemWeekStart.getDay();
-    itemWeekStart.setDate(itemWeekStart.getDate() - itemDayOfWeek);
+  for (let i = 0; i < dailyReturns.length; i++) {
+    currentWeekData.push(dailyReturns[i]);
 
-    // 새로운 주가 시작되면 이전 주의 복리 수익률 계산
-    if (itemWeekStart.getTime() > weekStart.getTime()) {
+    // 7일마다 또는 마지막 데이터일 때 주간 수익률 계산
+    if ((i + 1) % DAYS_PER_WEEK === 0 || i === dailyReturns.length - 1) {
       if (currentWeekData.length > 0) {
         const weeklyReturn = calculateCompoundReturn(currentWeekData);
         const lastDay = currentWeekData[currentWeekData.length - 1];
@@ -345,29 +309,16 @@ function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [k
           ...lastDay,
           return_pct: weeklyReturn,
         });
+        currentWeekData = [];
       }
-      weekStart = itemWeekStart;
-      currentWeekData = [];
     }
-
-    currentWeekData.push(item);
-  }
-
-  // 마지막 주 처리
-  if (currentWeekData.length > 0) {
-    const weeklyReturn = calculateCompoundReturn(currentWeekData);
-    const lastDay = currentWeekData[currentWeekData.length - 1];
-    weekly.push({
-      ...lastDay,
-      return_pct: weeklyReturn,
-    });
   }
 
   return weekly;
 }
 
 /**
- * 월간 수익률 계산 (복리 기반)
+ * 월간 수익률 계산 (28일 = 4주 단위, 복리 기반)
  */
 function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
   dailyReturns: T[]
@@ -375,15 +326,14 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
   if (!dailyReturns || dailyReturns.length === 0) return [];
 
   const monthly: T[] = [];
-  let currentMonth = '';
+  const DAYS_PER_MONTH = 28; // 4주
   let currentMonthData: T[] = [];
 
-  for (const item of dailyReturns) {
-    const itemDate = new Date(item.date);
-    const monthKey = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+  for (let i = 0; i < dailyReturns.length; i++) {
+    currentMonthData.push(dailyReturns[i]);
 
-    // 새로운 달이 시작되면 이전 달의 복리 수익률 계산
-    if (monthKey !== currentMonth) {
+    // 28일마다 또는 마지막 데이터일 때 월간 수익률 계산
+    if ((i + 1) % DAYS_PER_MONTH === 0 || i === dailyReturns.length - 1) {
       if (currentMonthData.length > 0) {
         const monthlyReturn = calculateCompoundReturn(currentMonthData);
         const lastDay = currentMonthData[currentMonthData.length - 1];
@@ -391,22 +341,9 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
           ...lastDay,
           return_pct: monthlyReturn,
         });
+        currentMonthData = [];
       }
-      currentMonth = monthKey;
-      currentMonthData = [];
     }
-
-    currentMonthData.push(item);
-  }
-
-  // 마지막 달 처리
-  if (currentMonthData.length > 0) {
-    const monthlyReturn = calculateCompoundReturn(currentMonthData);
-    const lastDay = currentMonthData[currentMonthData.length - 1];
-    monthly.push({
-      ...lastDay,
-      return_pct: monthlyReturn,
-    });
   }
 
   return monthly;

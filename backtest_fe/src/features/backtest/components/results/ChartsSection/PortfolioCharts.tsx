@@ -30,6 +30,7 @@ interface PortfolioChartsProps {
   tickerInfo: Record<string, any>;
   tradeLogs: Record<string, any[]>;
   loadingStockData?: boolean;
+  aggregationType?: 'daily' | 'weekly' | 'monthly';
 }
 
 // 정적 gradient 정의를 컴포넌트 외부로 추출 (매 렌더링마다 재생성 방지)
@@ -47,9 +48,17 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
   tickerInfo,
   tradeLogs,
   loadingStockData = false,
+  aggregationType = 'daily',
 }) => {
   const { portfolio_composition, rebalance_history } = portfolioData;
   const isMultipleStocks = portfolio_composition.length > 1;
+
+  // 집계 타입에 따른 라벨
+  const periodLabel = {
+    daily: '일일',
+    weekly: '주간',
+    monthly: '월간',
+  }[aggregationType];
 
   // 일일 수익률 Y축 도메인 계산 (메모이제이션)
   const dailyReturnYAxisDomain = useMemo<[number, number]>(() => {
@@ -115,7 +124,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
       </ResultBlock>
 
       {/* 일일 수익률 */}
-      <ResultBlock title="일일 수익률" description="일별 수익률 변동을 살펴보며 변동성을 파악하세요">
+      <ResultBlock title={`${periodLabel} 수익률`} description={`${periodLabel} 수익률 변동을 살펴보며 변동성을 파악하세요`}>
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={portfolioEquityData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -125,7 +134,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
               tickFormatter={(value: number) => `${value.toFixed(1)}%`} 
             />
             <Tooltip
-              formatter={(value: number) => [`${value.toFixed(2)}%`, '일일 수익률']}
+              formatter={(value: number) => [`${value.toFixed(2)}%`, `${periodLabel} 수익률`]}
               labelFormatter={(label: string) => `날짜: ${label}`}
             />
             <Line 

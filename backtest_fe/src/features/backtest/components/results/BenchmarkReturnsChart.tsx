@@ -15,15 +15,24 @@ interface BenchmarkReturnsChartProps {
   sp500Data: any[];
   nasdaqData: any[];
   portfolioDailyReturns?: Record<string, number>;
+  aggregationType?: 'daily' | 'weekly' | 'monthly';
 }
 
 const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
   sp500Data,
   nasdaqData,
   portfolioDailyReturns,
+  aggregationType = 'daily',
 }) => {
   // 성능 모니터링
   useRenderPerformance('BenchmarkReturnsChart');
+
+  // 집계 타입에 따른 라벨
+  const periodLabel = {
+    daily: '일일',
+    weekly: '주간',
+    monthly: '월간',
+  }[aggregationType];
 
   // 각 라인의 표시 여부를 관리하는 상태
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
@@ -115,9 +124,9 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
   return (
     <div className={CARD_STYLES.base}>
       <div className={`${SPACING.itemCompact} ${SPACING.contentGap}`}>
-        <h3 className={HEADING_STYLES.h3}>일일 수익률 벤치마크 비교</h3>
+        <h3 className={HEADING_STYLES.h3}>{periodLabel} 수익률 벤치마크 비교</h3>
         <p className={TEXT_STYLES.caption}>
-          포트폴리오와 주요 지수의 일일 수익률을 비교하세요
+          포트폴리오와 주요 지수의 {periodLabel} 수익률을 비교하세요
         </p>
       </div>
 

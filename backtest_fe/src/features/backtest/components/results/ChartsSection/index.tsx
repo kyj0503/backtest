@@ -131,6 +131,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             stocksData={stocksData}
             tickerInfo={tickerInfo}
             tradeLogs={tradeLogs}
+            aggregationType={aggregationType}
           />
         ) : chartData ? (
           <SingleStockCharts
@@ -152,6 +153,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           nasdaqBenchmarkWithReturn={nasdaqBenchmarkWithReturn}
           equityDataForBenchmark={equityDataForBenchmark}
           portfolioDailyReturns={portfolioDailyReturns}
+          aggregationType={aggregationType}
         />
 
         {/* 3.3 부가 정보 차트 */}
