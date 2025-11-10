@@ -3,11 +3,176 @@
  * 
  * **역할**:
  * - 대량의 차트 데이터 포인트를 성능 최적화를 위해 샘플링
+ * - 백테스트 기간에 따라 적절한 시간 단위로 집계
  * - 시각적 품질을 유지하면서 렌더링 부하 감소
+ * 
+ * **전략**:
+ * - 1일: 오류 (최소 2일 이상 필요)
+ * - 2일 ~ 2년: 일간 데이터 (원본 그대로)
+ * - 2년 초과 ~ 5년: 주간 데이터
+ * - 5년 초과 ~ 10년: 월간 데이터
+ * - 10년 초과: 월간 데이터 + 경고
  */
 
 /**
+ * 백테스트 기간 계산 (년 단위)
+ */
+function calculateYearDuration(startDate: string | Date, endDate: string | Date): number {
+  const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+  const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+  const diffMs = end.getTime() - start.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  return diffDays / 365.25; // 윤년 고려
+}
+
+/**
+ * 주간 데이터로 집계 (매주 마지막 거래일 기준)
+ * 
+ * @param data 원본 일간 데이터
+ * @returns 주간으로 집계된 데이터
+ */
+function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
+  if (!data || data.length === 0) return [];
+
+  const weekly: T[] = [];
+  let weekStart = new Date(data[0].date);
+  weekStart.setHours(0, 0, 0, 0);
+  
+  // 해당 주의 일요일로 설정
+  const dayOfWeek = weekStart.getDay();
+  weekStart.setDate(weekStart.getDate() - dayOfWeek);
+
+  let currentWeekData: T[] = [];
+
+  for (const item of data) {
+    const itemDate = new Date(item.date);
+    itemDate.setHours(0, 0, 0, 0);
+    
+    const itemWeekStart = new Date(itemDate);
+    const itemDayOfWeek = itemWeekStart.getDay();
+    itemWeekStart.setDate(itemWeekStart.getDate() - itemDayOfWeek);
+
+    // 새로운 주가 시작되면 이전 주의 마지막 데이터를 추가
+    if (itemWeekStart.getTime() > weekStart.getTime()) {
+      if (currentWeekData.length > 0) {
+        weekly.push(currentWeekData[currentWeekData.length - 1]); // 주의 마지막 거래일
+      }
+      weekStart = itemWeekStart;
+      currentWeekData = [];
+    }
+
+    currentWeekData.push(item);
+  }
+
+  // 마지막 주 처리
+  if (currentWeekData.length > 0) {
+    weekly.push(currentWeekData[currentWeekData.length - 1]);
+  }
+
+  return weekly;
+}
+
+/**
+ * 월간 데이터로 집계 (매월 마지막 거래일 기준)
+ * 
+ * @param data 원본 일간 데이터
+ * @returns 월간으로 집계된 데이터
+ */
+function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
+  if (!data || data.length === 0) return [];
+
+  const monthly: T[] = [];
+  let currentMonth = '';
+  let currentMonthData: T[] = [];
+
+  for (const item of data) {
+    const itemDate = new Date(item.date);
+    const monthKey = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+
+    // 새로운 달이 시작되면 이전 달의 마지막 데이터를 추가
+    if (monthKey !== currentMonth) {
+      if (currentMonthData.length > 0) {
+        monthly.push(currentMonthData[currentMonthData.length - 1]); // 월의 마지막 거래일
+      }
+      currentMonth = monthKey;
+      currentMonthData = [];
+    }
+
+    currentMonthData.push(item);
+  }
+
+  // 마지막 달 처리
+  if (currentMonthData.length > 0) {
+    monthly.push(currentMonthData[currentMonthData.length - 1]);
+  }
+
+  return monthly;
+}
+
+/**
+ * 백테스트 기간에 따른 스마트 샘플링
+ * 
+ * @param data 원본 데이터 (date 필드 필수)
+ * @param startDate 백테스트 시작일
+ * @param endDate 백테스트 종료일
+ * @returns 집계된 데이터 및 메타 정보
+ */
+export function smartSampleByPeriod<T extends { date: string; [key: string]: any }>(
+  data: T[],
+  startDate?: string | Date,
+  endDate?: string | Date
+): {
+  data: T[];
+  aggregationType: 'daily' | 'weekly' | 'monthly';
+  warning?: string;
+} {
+  if (!data || data.length === 0) {
+    return { data: [], aggregationType: 'daily' };
+  }
+
+  // 날짜 정보가 없으면 원본 반환
+  if (!startDate || !endDate) {
+    return { data, aggregationType: 'daily' };
+  }
+
+  const yearDuration = calculateYearDuration(startDate, endDate);
+
+  // 1일 미만: 오류 (호출자가 처리해야 함)
+  if (yearDuration < (2 / 365.25)) {
+    return {
+      data: [],
+      aggregationType: 'daily',
+      warning: '백테스트 기간은 최소 2일 이상이어야 합니다.',
+    };
+  }
+
+  // 2일 ~ 2년: 일간 데이터 (원본 그대로)
+  if (yearDuration <= 2) {
+    return { data, aggregationType: 'daily' };
+  }
+
+  // 2년 초과 ~ 5년: 주간 데이터
+  if (yearDuration <= 5) {
+    return {
+      data: aggregateToWeekly(data),
+      aggregationType: 'weekly',
+    };
+  }
+
+  // 5년 초과: 월간 데이터
+  const warning = yearDuration > 10 ? '10년 초과 백테스트는 월간 데이터로 표시됩니다.' : undefined;
+  
+  return {
+    data: aggregateToMonthly(data),
+    aggregationType: 'monthly',
+    warning,
+  };
+}
+
+/**
  * 균등 샘플링 - 일정 간격으로 데이터 포인트 추출
+ * 
+ * @deprecated 대신 smartSampleByPeriod 사용 권장
  * 
  * @param data 원본 데이터 배열
  * @param maxPoints 최대 포인트 수 (기본: 500)
@@ -128,3 +293,141 @@ export function filterRebalanceMarkers<T extends { date?: string; timestamp?: st
   // 최신 마커를 우선적으로 유지
   return markers.slice(-maxMarkers);
 }
+
+/**
+ * 일간 수익률을 주간/월간 수익률로 변환
+ * 
+ * @param dailyReturns 일간 수익률 데이터 { date: string, return_pct: number }
+ * @param aggregationType 'weekly' | 'monthly'
+ * @returns 집계된 수익률 데이터
+ */
+export function aggregateReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+  dailyReturns: T[],
+  aggregationType: 'weekly' | 'monthly'
+): T[] {
+  if (!dailyReturns || dailyReturns.length === 0) return [];
+  if (aggregationType === 'weekly') return aggregateWeeklyReturns(dailyReturns);
+  if (aggregationType === 'monthly') return aggregateMonthlyReturns(dailyReturns);
+  return dailyReturns;
+}
+
+/**
+ * 주간 수익률 계산 (복리 기반)
+ */
+function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+  dailyReturns: T[]
+): T[] {
+  if (!dailyReturns || dailyReturns.length === 0) return [];
+
+  const weekly: T[] = [];
+  let weekStart = new Date(dailyReturns[0].date);
+  weekStart.setHours(0, 0, 0, 0);
+  
+  const dayOfWeek = weekStart.getDay();
+  weekStart.setDate(weekStart.getDate() - dayOfWeek);
+
+  let currentWeekData: T[] = [];
+
+  for (const item of dailyReturns) {
+    const itemDate = new Date(item.date);
+    itemDate.setHours(0, 0, 0, 0);
+    
+    const itemWeekStart = new Date(itemDate);
+    const itemDayOfWeek = itemWeekStart.getDay();
+    itemWeekStart.setDate(itemWeekStart.getDate() - itemDayOfWeek);
+
+    // 새로운 주가 시작되면 이전 주의 복리 수익률 계산
+    if (itemWeekStart.getTime() > weekStart.getTime()) {
+      if (currentWeekData.length > 0) {
+        const weeklyReturn = calculateCompoundReturn(currentWeekData);
+        const lastDay = currentWeekData[currentWeekData.length - 1];
+        weekly.push({
+          ...lastDay,
+          return_pct: weeklyReturn,
+        });
+      }
+      weekStart = itemWeekStart;
+      currentWeekData = [];
+    }
+
+    currentWeekData.push(item);
+  }
+
+  // 마지막 주 처리
+  if (currentWeekData.length > 0) {
+    const weeklyReturn = calculateCompoundReturn(currentWeekData);
+    const lastDay = currentWeekData[currentWeekData.length - 1];
+    weekly.push({
+      ...lastDay,
+      return_pct: weeklyReturn,
+    });
+  }
+
+  return weekly;
+}
+
+/**
+ * 월간 수익률 계산 (복리 기반)
+ */
+function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+  dailyReturns: T[]
+): T[] {
+  if (!dailyReturns || dailyReturns.length === 0) return [];
+
+  const monthly: T[] = [];
+  let currentMonth = '';
+  let currentMonthData: T[] = [];
+
+  for (const item of dailyReturns) {
+    const itemDate = new Date(item.date);
+    const monthKey = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+
+    // 새로운 달이 시작되면 이전 달의 복리 수익률 계산
+    if (monthKey !== currentMonth) {
+      if (currentMonthData.length > 0) {
+        const monthlyReturn = calculateCompoundReturn(currentMonthData);
+        const lastDay = currentMonthData[currentMonthData.length - 1];
+        monthly.push({
+          ...lastDay,
+          return_pct: monthlyReturn,
+        });
+      }
+      currentMonth = monthKey;
+      currentMonthData = [];
+    }
+
+    currentMonthData.push(item);
+  }
+
+  // 마지막 달 처리
+  if (currentMonthData.length > 0) {
+    const monthlyReturn = calculateCompoundReturn(currentMonthData);
+    const lastDay = currentMonthData[currentMonthData.length - 1];
+    monthly.push({
+      ...lastDay,
+      return_pct: monthlyReturn,
+    });
+  }
+
+  return monthly;
+}
+
+/**
+ * 복리 수익률 계산
+ * 
+ * @param returns 일간 수익률 배열
+ * @returns 누적 복리 수익률 (백분율)
+ */
+function calculateCompoundReturn<T extends { return_pct: number }>(returns: T[]): number {
+  if (returns.length === 0) return 0;
+
+  // 복리 공식: (1 + r1) * (1 + r2) * ... - 1
+  let compoundedValue = 1;
+  for (const item of returns) {
+    const dailyReturn = item.return_pct / 100; // 백분율 → 소수
+    compoundedValue *= (1 + dailyReturn);
+  }
+
+  return (compoundedValue - 1) * 100; // 소수 → 백분율
+}
+

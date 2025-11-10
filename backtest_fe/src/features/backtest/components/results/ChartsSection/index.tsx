@@ -56,6 +56,8 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     hasNews,
     rebalanceHistory,
     weightHistory,
+    aggregationType,
+    samplingWarning,
   } = chartDataState;
 
   // 벤치마크용 equity 데이터 선택
@@ -64,8 +66,22 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
   // 포트폴리오 일일 수익률 추출
   const portfolioDailyReturns = portfolioData?.daily_returns;
 
+  // 집계 타입에 따른 라벨
+  const aggregationLabel = {
+    daily: '일간',
+    weekly: '주간',
+    monthly: '월간',
+  }[aggregationType];
+
   return (
     <div className="space-y-6">
+      {/* 샘플링 경고 표시 */}
+      {samplingWarning && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-sm text-yellow-800">{samplingWarning}</p>
+        </div>
+      )}
+
       {/* 1. 성과 지표 */}
       <Suspense fallback={<ChartLoading height={260} />}>
         <LazyStatsSummary stats={statsPayload} />
@@ -74,8 +90,11 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
       {/* 2. 분석 차트 헤더 */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold text-foreground">분석 차트</h3>
-          <p className="text-sm text-muted-foreground">백테스트 결과를 다양한 차트로 분석하세요</p>
+          <h3 className="text-lg font-semibold text-foreground">분석 차트 ({aggregationLabel} 데이터)</h3>
+          <p className="text-sm text-muted-foreground">
+            백테스트 결과를 다양한 차트로 분석하세요
+            {aggregationType !== 'daily' && ` • ${aggregationLabel} 단위로 집계되었습니다`}
+          </p>
         </div>
         <Button
           variant="outline"

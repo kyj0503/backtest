@@ -10,7 +10,6 @@ import React, { useMemo, useState, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
-import { sampleData } from '@/shared/utils/dataSampling';
 
 interface BenchmarkReturnsChartProps {
   sp500Data: any[];
@@ -33,7 +32,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
     nasdaq: true,
   });
 
-  // 모든 데이터를 날짜 기준으로 병합
+  // 모든 데이터를 날짜 기준으로 병합 (샘플링은 useChartData에서 처리됨)
   const mergedData = useMemo(() => {
     const dataMap = new Map<string, any>();
 
@@ -62,12 +61,9 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
     });
 
     // 날짜순으로 정렬
-    const sorted = Array.from(dataMap.values()).sort((a, b) => 
+    return Array.from(dataMap.values()).sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-
-    // 성능 최적화: 데이터 샘플링
-    return sampleData(sorted, 500);
   }, [sp500Data, nasdaqData, portfolioDailyReturns]);
 
   // Y축 범위 계산 (표시된 라인만 고려) - 효율적인 계산

@@ -10,7 +10,6 @@ import React, { useState, useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
 import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
-import { sampleData } from '@/shared/utils/dataSampling';
 
 interface BenchmarkIndexChartProps {
   sp500Data: any[];
@@ -33,19 +32,16 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
     nasdaq: true,
   });
 
-  // 데이터를 시작점 100으로 normalize하는 함수
+  // 데이터를 시작점 100으로 normalize하는 함수 (샘플링은 useChartData에서 처리됨)
   const normalizeData = (data: any[], valueKey: string) => {
     if (!data || data.length === 0) return [];
     const startValue = data[0][valueKey];
     if (!startValue || startValue === 0) return [];
 
-    const normalized = data.map((point: any) => ({
+    return data.map((point: any) => ({
       date: point.date,
       normalized: (point[valueKey] / startValue) * 100,
     }));
-
-    // 성능 최적화: 데이터 샘플링
-    return sampleData(normalized, 500);
   };
 
   // S&P 500과 NASDAQ 데이터를 normalize
@@ -93,7 +89,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
 
     let cumulativeValue = 100; // 시작점 = 100
 
-    const accumulated = portfolioEquityData.map((point, index) => {
+    return portfolioEquityData.map((point, index) => {
       if (index === 0) {
         return { date: point.date, normalized: 100 };
       }
@@ -110,9 +106,6 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
         normalized: cumulativeValue,
       };
     });
-
-    // 성능 최적화: 데이터 샘플링
-    return sampleData(accumulated, 500);
   }, [portfolioEquityData]);
 
   // 세 데이터를 날짜별로 병합

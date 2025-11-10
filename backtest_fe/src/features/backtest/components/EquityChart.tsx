@@ -2,7 +2,6 @@ import React, { memo, useMemo } from 'react';
 import { ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Line, Area, ReferenceLine } from 'recharts';
 import { CustomTooltip } from './shared';
 import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
-import { sampleData } from '@/shared/utils/dataSampling';
 
 interface EquityChartData {
   date: string;
@@ -26,18 +25,15 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
   // 성능 모니터링
   useRenderPerformance('EquityChart');
 
-  // 데이터 안전성 검사 및 샘플링 (성능 최적화)
+  // 데이터 안전성 검사 (샘플링은 useChartData에서 처리됨)
   const processedData = useMemo(() => {
     if (!data || !Array.isArray(data)) return [];
 
-    const sanitizedData = data.map(item => ({
+    return data.map(item => ({
       ...item,
       return_pct: Number(item.return_pct) || 0,
       drawdown_pct: Number(item.drawdown_pct) || 0
     }));
-
-    // 데이터가 500개 이상이면 샘플링 (Recharts 성능 최적화)
-    return sampleData(sanitizedData, 500);
   }, [data]);
 
   return (

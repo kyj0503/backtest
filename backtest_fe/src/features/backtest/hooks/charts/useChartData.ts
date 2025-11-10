@@ -14,6 +14,7 @@ import {
   extractBenchmarkData,
   extractStatsPayload,
 } from '../../utils';
+import { smartSampleByPeriod } from '@/shared/utils/dataSampling';
 
 export interface UseChartDataReturn {
   // 데이터 타입 구분
@@ -54,6 +55,10 @@ export interface UseChartDataReturn {
   // 리밸런싱 데이터
   rebalanceHistory: any[];
   weightHistory: any[];
+
+  // 샘플링 메타 정보
+  aggregationType: 'daily' | 'weekly' | 'monthly';
+  samplingWarning?: string;
 }
 
 /**
@@ -74,27 +79,54 @@ export const useChartData = (
     [data, isPortfolio]
   );
 
+  // 백테스트 날짜 범위 추출
+  const { startDate, endDate } = useMemo(() => {
+    if (isPortfolio && portfolioData) {
+      return {
+        startDate: portfolioData.portfolio_statistics.Start,
+        endDate: portfolioData.portfolio_statistics.End,
+      };
+    }
+    if (!isPortfolio && chartData) {
+      return {
+        startDate: chartData.start_date,
+        endDate: chartData.end_date,
+      };
+    }
+    return { startDate: undefined, endDate: undefined };
+  }, [isPortfolio, portfolioData, chartData]);
+
   // 종목 메타데이터
   const tickerInfo = useMemo(() => {
     return portfolioData?.ticker_info || (data as any).ticker_info || {};
   }, [portfolioData, data]);
 
-  // 주가 데이터
+  // 주가 데이터 (스마트 샘플링 적용)
   const stocksData = useMemo(() => {
+    let rawStocksData: Array<{ symbol: string; data: any[] }> = [];
+    
     if (portfolioData?.stock_data) {
-      return Object.entries(portfolioData.stock_data).map(([symbol, data]) => ({
+      rawStocksData = Object.entries(portfolioData.stock_data).map(([symbol, data]) => ({
         symbol,
         data,
       }));
-    }
-    if (chartData?.ticker && (data as any).stock_data) {
+    } else if (chartData?.ticker && (data as any).stock_data) {
       const stockData = (data as any).stock_data[chartData.ticker];
       if (stockData) {
-        return [{ symbol: chartData.ticker, data: stockData }];
+        rawStocksData = [{ symbol: chartData.ticker, data: stockData }];
       }
     }
-    return [];
-  }, [portfolioData, chartData, data]);
+
+    // 주가 데이터에 스마트 샘플링 적용
+    if (startDate && endDate) {
+      return rawStocksData.map(({ symbol, data }) => {
+        const { data: sampledData } = smartSampleByPeriod(data, startDate, endDate);
+        return { symbol, data: sampledData };
+      });
+    }
+
+    return rawStocksData;
+  }, [portfolioData, chartData, data, startDate, endDate]);
 
   // 거래 로그
   const tradeLogs = useMemo(() => {
@@ -106,20 +138,34 @@ export const useChartData = (
     return extractStatsPayload(data, isPortfolio);
   }, [data, isPortfolio]);
 
-  // 포트폴리오 equity 데이터
+  // 포트폴리오 equity 데이터 (스마트 샘플링 적용)
   const portfolioEquityData = useMemo<EquityPoint[]>(() => {
     if (!portfolioData) return [];
-    return transformPortfolioEquityData(
+    const rawData = transformPortfolioEquityData(
       portfolioData.equity_curve,
       portfolioData.daily_returns
     );
-  }, [portfolioData]);
 
-  // 단일 종목 equity 데이터
+    if (startDate && endDate) {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
+    }
+
+    return rawData;
+  }, [portfolioData, startDate, endDate]);
+
+  // 단일 종목 equity 데이터 (스마트 샘플링 적용)
   const singleEquityData = useMemo<EquityPoint[]>(() => {
     if (!chartData?.equity_data) return [];
-    return transformSingleEquityData(chartData.equity_data);
-  }, [chartData?.equity_data]);
+    const rawData = transformSingleEquityData(chartData.equity_data);
+
+    if (startDate && endDate) {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
+    }
+
+    return rawData;
+  }, [chartData?.equity_data, startDate, endDate]);
 
   // 단일 종목 거래 마커
   const singleTrades = useMemo<TradeMarker[]>(() => {
@@ -127,29 +173,51 @@ export const useChartData = (
     return transformTradeMarkers(chartData.trade_markers);
   }, [chartData?.trade_markers]);
 
-  // 단일 종목 OHLC 데이터
+  // 단일 종목 OHLC 데이터 (스마트 샘플링 적용)
   const singleOhlcData = useMemo<OhlcPoint[]>(() => {
     if (!chartData?.ohlc_data) return [];
-    return transformOhlcData(chartData.ohlc_data);
-  }, [chartData?.ohlc_data]);
+    const rawData = transformOhlcData(chartData.ohlc_data);
 
-  // 벤치마크 데이터
+    if (startDate && endDate) {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
+    }
+
+    return rawData;
+  }, [chartData?.ohlc_data, startDate, endDate]);
+
+  // 벤치마크 데이터 (스마트 샘플링 적용)
   const sp500Benchmark = useMemo<any[]>(() => {
-    return extractBenchmarkData(data, 'sp500');
-  }, [data]);
+    const rawData = extractBenchmarkData(data, 'sp500');
+    if (startDate && endDate && rawData.length > 0) {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
+    }
+    return rawData;
+  }, [data, startDate, endDate]);
 
   const nasdaqBenchmark = useMemo<any[]>(() => {
-    return extractBenchmarkData(data, 'nasdaq');
-  }, [data]);
+    const rawData = extractBenchmarkData(data, 'nasdaq');
+    if (startDate && endDate && rawData.length > 0) {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
+    }
+    return rawData;
+  }, [data, startDate, endDate]);
 
-  // 백엔드에서 이미 return_pct를 계산해서 보내므로 그대로 사용 (unified_data_service.py 참고)
+  // 백엔드에서 이미 return_pct를 계산해서 보내므로 그대로 사용
   const sp500BenchmarkWithReturn = sp500Benchmark;
   const nasdaqBenchmarkWithReturn = nasdaqBenchmark;
 
-  // 환율 데이터
+  // 환율 데이터 (스마트 샘플링 적용)
   const exchangeRates = useMemo(() => {
-    return portfolioData?.exchange_rates || (data as any).exchange_rates || [];
-  }, [portfolioData, data]);
+    const rawData = portfolioData?.exchange_rates || (data as any).exchange_rates || [];
+    if (startDate && endDate && rawData.length > 0) {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
+    }
+    return rawData;
+  }, [portfolioData, data, startDate, endDate]);
 
   const exchangeStats = useMemo(() => {
     return (data as any).exchange_stats;
@@ -182,9 +250,31 @@ export const useChartData = (
     return portfolioData?.rebalance_history || [];
   }, [portfolioData]);
 
+  // 포트폴리오 비중 변화 (스마트 샘플링 적용)
   const weightHistory = useMemo(() => {
-    return portfolioData?.weight_history || [];
-  }, [portfolioData]);
+    const rawData = portfolioData?.weight_history || [];
+    if (startDate && endDate && rawData.length > 0) {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
+    }
+    return rawData;
+  }, [portfolioData, startDate, endDate]);
+
+  // 샘플링 메타 정보 계산
+  const { aggregationType, samplingWarning } = useMemo(() => {
+    if (!startDate || !endDate) {
+      return { aggregationType: 'daily' as const, samplingWarning: undefined };
+    }
+
+    // 임시 데이터로 샘플링 전략 확인
+    const { aggregationType: type, warning } = smartSampleByPeriod(
+      [{ date: startDate }],
+      startDate,
+      endDate
+    );
+
+    return { aggregationType: type, samplingWarning: warning };
+  }, [startDate, endDate]);
 
   return {
     portfolioData,
@@ -210,5 +300,7 @@ export const useChartData = (
     hasNews,
     rebalanceHistory,
     weightHistory,
+    aggregationType,
+    samplingWarning,
   };
 };

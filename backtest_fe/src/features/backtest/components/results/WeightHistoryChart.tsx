@@ -4,7 +4,7 @@ import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 import { useRenderPerformance } from '@/shared/components/PerformanceMonitor';
-import { sampleData, filterRebalanceMarkers } from '@/shared/utils/dataSampling';
+import { filterRebalanceMarkers } from '@/shared/utils/dataSampling';
 
 interface RebalanceEvent {
   date: string;
@@ -55,8 +55,9 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
     return mapping;
   }, [symbols]);
 
+  // 차트 데이터 (샘플링은 useChartData에서 처리됨)
   const chartData = useMemo(() => {
-    const rawData = weightHistory.map(point => {
+    return weightHistory.map(point => {
       const dataPoint: Record<string, any> = {
         date: point.date,
       };
@@ -65,9 +66,6 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
       });
       return dataPoint;
     });
-
-    // 성능 최적화: 데이터 샘플링
-    return sampleData(rawData, 500);
   }, [weightHistory, symbols]);
 
   // 리밸런싱 마커 필터링 (성능 최적화)
