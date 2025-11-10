@@ -120,6 +120,16 @@ function parseLocalDate(dateStr: string): Date {
     throw new Error(`유효하지 않은 날짜: ${dateStr}`);
   }
   
+  // 입력값과 실제 Date 객체의 값이 일치하는지 확인 (존재하지 않는 날짜 방지)
+  // 예: "2024-02-30"은 자동으로 3월로 롤오버되는데, 이를 방지
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    throw new Error(`유효하지 않은 날짜: ${dateStr} (존재하지 않는 날짜)`);
+  }
+  
   return date;
 }
 
@@ -181,8 +191,12 @@ function getNthWeekdayOfMonth(year: number, month: number, weekday: number, n: n
   // N번째 요일이 월을 벗어나면 마지막 해당 요일 반환
   if (targetDay > lastDay) {
     targetDay = lastDay;
-    while (new Date(year, month, targetDay).getDay() !== weekday) {
+    while (targetDay > 0 && new Date(year, month, targetDay).getDay() !== weekday) {
       targetDay--;
+    }
+    // 안전장치: 요일을 찾지 못한 경우 (수학적으로 불가능하지만 방어적 프로그래밍)
+    if (targetDay === 0) {
+      throw new Error(`Unable to find weekday ${weekday} in month ${month + 1}/${year}`);
     }
   }
 
@@ -259,7 +273,9 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
   // data.length는 일별 데이터이므로 너무 큼 (예: 10년 = 2500일)
   // 실제 필요한 반복: 백테스트 월 수 (예: 10년 = ~120회)
   const daysDiff = (lastDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-  const maxIterations = Math.ceil(daysDiff / 20) + 10; // ~20 거래일/월 + 여유분
+  // 더 견고한 반복 상한: 월 수 추정 (28일/월 기준 + 버퍼), 최소 12회 (1년)
+  const estimatedMonths = Math.ceil(daysDiff / 28) + 2;
+  const maxIterations = Math.max(estimatedMonths, 12);
   let iterations = 0;
 
   while (true) {
@@ -605,8 +621,15 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
       // 예: 상장폐지/거래정지로 3개월 갭 발생 시, 해당 3개월은 결과에 나타나지 않음
       // 백엔드도 동일하게 처리 (실제 거래 데이터가 있는 월만 집계)
       let itemAddedInWhile = false;
+      let safetyCounter = 0;
+      const MAX_MONTH_ITERATIONS = 60; // 5년치 월 수 (안전장치)
       
       while (itemDate >= currentMonthEndDate) {
+        if (++safetyCounter > MAX_MONTH_ITERATIONS) {
+          console.error('[dataSampling] Monthly aggregation exceeded safety limit');
+          break;
+        }
+        
         if (currentMonthData.length > 0) {
           // 현재 달 데이터 마감
           const monthlyReturn = calculateCompoundReturn(currentMonthData);
