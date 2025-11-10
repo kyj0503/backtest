@@ -89,10 +89,38 @@ function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data:
  *
  * @param dateStr ISO 형식 날짜 문자열 (예: "2024-01-15")
  * @returns 로컬 타임존의 Date 객체
+ * @throws Error 유효하지 않은 날짜 형식이나 값인 경우
  */
 function parseLocalDate(dateStr: string): Date {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day); // month는 0-indexed
+  // YYYY-MM-DD 형식 검증
+  const isoDateRegex = /^(\d{4})-(\d{2})-(\d{2})$/;
+  const match = isoDateRegex.exec(dateStr);
+  
+  if (!match) {
+    throw new Error(`유효하지 않은 날짜 형식: ${dateStr}. "YYYY-MM-DD" 형식이어야 합니다.`);
+  }
+  
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  
+  // 값 범위 검증
+  if (
+    isNaN(year) || isNaN(month) || isNaN(day) ||
+    month < 1 || month > 12 ||
+    day < 1 || day > 31
+  ) {
+    throw new Error(`유효하지 않은 날짜 값: ${dateStr}`);
+  }
+  
+  const date = new Date(year, month - 1, day); // month는 0-indexed
+  
+  // NaN timestamp 검증
+  if (isNaN(date.getTime())) {
+    throw new Error(`유효하지 않은 날짜: ${dateStr}`);
+  }
+  
+  return date;
 }
 
 /**
