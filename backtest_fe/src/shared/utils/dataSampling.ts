@@ -626,8 +626,9 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
         }
       }
       
-      // 마지막 아이템이 경계를 넘지 않았다면 추가
-      if (isLastItem && itemDate < currentMonthEndDate) {
+      // 마지막 아이템 처리 (while 루프를 거치지 않은 경우만)
+      // while 조건이 처음부터 false였다면 (itemDate < currentMonthEndDate)
+      if (isLastItem && itemDate < currentMonthEndDate && !currentMonthData.includes(item)) {
         currentMonthData.push(item);
       }
       
