@@ -107,15 +107,15 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
         </p>
       </div>
 
-      <ResponsiveContainer width="100%" height={320}>
-        <LineChart data={mergedData}>
+      <ResponsiveContainer width="100%" height={320} debounce={300}>
+        <LineChart data={mergedData} syncId="benchmarkReturnsChart">
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis 
-            dataKey="date" 
+          <XAxis
+            dataKey="date"
             tickFormatter={formatDateTick}
             tick={{ fontSize: 12 }}
           />
-          <YAxis 
+          <YAxis
             domain={yAxisDomain}
             tickFormatter={(value: number) => `${value.toFixed(1)}%`}
             tick={{ fontSize: 12 }}
@@ -161,45 +161,51 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = ({
               );
             }}
           />
-          
+
           {/* 포트폴리오 라인 */}
           {portfolioDailyReturns && (
-            <Line 
-              type="monotone" 
-              dataKey="portfolio" 
-              stroke="#6366f1" 
+            <Line
+              type="monotone"
+              dataKey="portfolio"
+              stroke="#6366f1"
               strokeWidth={2}
               dot={false}
               name="portfolio"
               hide={!visibleLines.portfolio}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
-          
+
           {/* S&P 500 라인 */}
           {sp500Data.length > 0 && (
-            <Line 
-              type="monotone" 
-              dataKey="sp500" 
-              stroke="#10b981" 
+            <Line
+              type="monotone"
+              dataKey="sp500"
+              stroke="#10b981"
               strokeWidth={1.5}
               dot={false}
               strokeDasharray="5 5"
               name="sp500"
               hide={!visibleLines.sp500}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
-          
+
           {/* NASDAQ 라인 */}
           {nasdaqData.length > 0 && (
-            <Line 
-              type="monotone" 
-              dataKey="nasdaq" 
-              stroke="#f97316" 
+            <Line
+              type="monotone"
+              dataKey="nasdaq"
+              stroke="#f97316"
               strokeWidth={1.5}
               dot={false}
               strokeDasharray="3 3"
               name="nasdaq"
               hide={!visibleLines.nasdaq}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
         </LineChart>

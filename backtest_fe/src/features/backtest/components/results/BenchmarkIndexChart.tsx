@@ -180,11 +180,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
         </p>
       </div>
 
-      <ResponsiveContainer width="100%" height={320}>
-        <LineChart data={mergedData}>
+      <ResponsiveContainer width="100%" height={320} debounce={300}>
+        <LineChart data={mergedData} syncId="benchmarkChart">
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis 
-            dataKey="date" 
+          <XAxis
+            dataKey="date"
             tickFormatter={formatDateTick}
             tick={{ fontSize: 12 }}
           />
@@ -234,7 +234,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               );
             }}
           />
-          
+
           {/* 포트폴리오 라인 */}
           {portfolioEquityData.length > 0 && (
             <Line
@@ -245,9 +245,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               dot={false}
               name="portfolio"
               hide={!visibleLines.portfolio}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
-          
+
           {/* S&P 500 라인 */}
           {sp500Data.length > 0 && (
             <Line
@@ -259,9 +261,11 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               strokeDasharray="5 5"
               name="sp500"
               hide={!visibleLines.sp500}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
-          
+
           {/* NASDAQ 라인 */}
           {nasdaqData.length > 0 && (
             <Line
@@ -273,6 +277,8 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = ({
               strokeDasharray="3 3"
               name="nasdaq"
               hide={!visibleLines.nasdaq}
+              isAnimationActive={false}
+              connectNulls={true}
             />
           )}
         </LineChart>
