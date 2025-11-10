@@ -68,13 +68,15 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
 
     // 기존 차트 데이터의 날짜 Set
     const existingDates = new Set(portfolioEquityData.map(d => d.date));
-    
+
     // 차트에 없는 리밸런싱 날짜만 추가
     const rebalanceDatesToAdd = rebalance_history
       .filter(event => !existingDates.has(event.date))
       .map(event => ({
         date: event.date,
-        value: null, // null로 설정하여 선이 끊기지 않도록
+        // null 값으로 설정: Recharts의 connectNulls={true} 속성으로 인해
+        // null 포인트를 건너뛰며 선이 연결됨 (ReferenceLine만 표시됨)
+        value: null,
         return_pct: null,
         drawdown_pct: null,
       }));
