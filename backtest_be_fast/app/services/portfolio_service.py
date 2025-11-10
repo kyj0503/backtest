@@ -495,7 +495,7 @@ class PortfolioService:
                     for unique_key in cash_holdings.keys():
                         weights_after[dca_info[unique_key]['symbol']] = cash_holdings[unique_key] / new_total_portfolio_value
 
-                    # 리밸런싱 히스토리에 추가 (실제 거래가 발생한 경우만)
+                    # 리밸런싱 히스토리에 추가
                     if rebalance_trades:
                         rebalance_history.append({
                             'date': current_date.strftime('%Y-%m-%d'),
