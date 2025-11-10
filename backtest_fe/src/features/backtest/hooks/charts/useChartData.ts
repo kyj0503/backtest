@@ -33,6 +33,38 @@ import {
 } from '../../utils';
 import { smartSampleByPeriod, aggregateReturns } from '@/shared/utils/dataSampling';
 
+/**
+ * 이진 탐색을 통해 특정 날짜에 해당하거나 그 이전의 데이터 포인트 찾기
+ * 
+ * @param sortedData 날짜 기준 오름차순 정렬된 데이터 배열
+ * @param targetDate 검색 대상 날짜
+ * @returns 해당 날짜 또는 그 이전 데이터 포인트, 없으면 null
+ * 
+ * @example
+ * const point = findDataPointOnOrBefore(sortedData, '2024-11-01');
+ */
+function findDataPointOnOrBefore<T extends { date: string }>(
+  sortedData: T[],
+  targetDate: string
+): T | null {
+  if (sortedData.length === 0) return null;
+  
+  let left = 0, right = sortedData.length - 1;
+  let result: T | null = null;
+  
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    if (sortedData[mid].date <= targetDate) {
+      result = sortedData[mid];
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+  
+  return result;
+}
+
 export interface UseChartDataReturn {
   // 데이터 타입 구분
   portfolioData: PortfolioData | null;
@@ -205,25 +237,9 @@ export const useChartData = (
     const sortedRawEquity = [...rawEquityData].sort((a, b) => 
       a.date < b.date ? -1 : a.date > b.date ? 1 : 0
     );
-    
-    // 이진 탐색으로 날짜보다 작거나 같은 가장 가까운 equity 찾기
-    const findEquityOnOrBefore = (date: string): typeof rawEquityData[0] | null => {
-      let left = 0, right = sortedRawEquity.length - 1;
-      let result: typeof rawEquityData[0] | null = null;
-      while (left <= right) {
-        const mid = Math.floor((left + right) / 2);
-        if (sortedRawEquity[mid].date <= date) {
-          result = sortedRawEquity[mid];
-          left = mid + 1;
-        } else {
-          right = mid - 1;
-        }
-      }
-      return result;
-    };
 
     return aggregatedReturns.map(r => {
-      const eq = equityByDate.get(r.date) ?? findEquityOnOrBefore(r.date);
+      const eq = equityByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawEquity, r.date);
       if (!eq) return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
       return {
         ...eq,
@@ -264,24 +280,9 @@ export const useChartData = (
     const sortedRawEquity = [...rawData].sort((a, b) => 
       a.date < b.date ? -1 : a.date > b.date ? 1 : 0
     );
-    
-    const findEquityOnOrBefore = (date: string): typeof rawData[0] | null => {
-      let left = 0, right = sortedRawEquity.length - 1;
-      let result: typeof rawData[0] | null = null;
-      while (left <= right) {
-        const mid = Math.floor((left + right) / 2);
-        if (sortedRawEquity[mid].date <= date) {
-          result = sortedRawEquity[mid];
-          left = mid + 1;
-        } else {
-          right = mid - 1;
-        }
-      }
-      return result;
-    };
 
     return aggregatedReturns.map(r => {
-      const eq = equityByDate.get(r.date) ?? findEquityOnOrBefore(r.date);
+      const eq = equityByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawEquity, r.date);
       if (!eq) return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
       return {
         ...eq,
@@ -335,24 +336,9 @@ export const useChartData = (
     const sortedRawData = [...rawData].sort((a, b) => 
       a.date < b.date ? -1 : a.date > b.date ? 1 : 0
     );
-    
-    const findDataOnOrBefore = (date: string) => {
-      let left = 0, right = sortedRawData.length - 1;
-      let result = null;
-      while (left <= right) {
-        const mid = Math.floor((left + right) / 2);
-        if (sortedRawData[mid].date <= date) {
-          result = sortedRawData[mid];
-          left = mid + 1;
-        } else {
-          right = mid - 1;
-        }
-      }
-      return result;
-    };
 
     return aggregatedReturns.map(r => {
-      const item = dataByDate.get(r.date) ?? findDataOnOrBefore(r.date);
+      const item = dataByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawData, r.date);
       if (!item) return { date: r.date, value: 0, return_pct: r.return_pct };
       return {
         ...item,
@@ -386,24 +372,9 @@ export const useChartData = (
     const sortedRawData = [...rawData].sort((a, b) => 
       a.date < b.date ? -1 : a.date > b.date ? 1 : 0
     );
-    
-    const findDataOnOrBefore = (date: string) => {
-      let left = 0, right = sortedRawData.length - 1;
-      let result = null;
-      while (left <= right) {
-        const mid = Math.floor((left + right) / 2);
-        if (sortedRawData[mid].date <= date) {
-          result = sortedRawData[mid];
-          left = mid + 1;
-        } else {
-          right = mid - 1;
-        }
-      }
-      return result;
-    };
 
     return aggregatedReturns.map(r => {
-      const item = dataByDate.get(r.date) ?? findDataOnOrBefore(r.date);
+      const item = dataByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawData, r.date);
       if (!item) return { date: r.date, value: 0, return_pct: r.return_pct };
       return {
         ...item,
