@@ -46,10 +46,16 @@ function calculateYearDuration(startDate: string | Date, endDate: string | Date)
 }
 
 /**
- * 주간 데이터로 집계 (7일 = 1주 단위)
+ * 가격/가치 데이터를 주간 간격으로 샘플링합니다 (단순 샘플링)
  * 
- * @param data 원본 일간 데이터
- * @returns 주간으로 집계된 데이터 (매 7일째 데이터 포인트)
+ * ⚠️ 주의:
+ * - 이 함수는 가격/가치/equity 데이터용으로, 매 7번째 항목을 선택합니다 (단순 샘플링)
+ * - 수익률 데이터는 이 함수를 사용하지 않습니다 (aggregateReturns() 사용)
+ * - 배열 인덱스 기반이므로 실제 달력 주(월~일)와 일치하지 않습니다
+ * - 예: 데이터가 수요일에 시작하면 첫 "주간" 포인트는 다음 수요일 데이터입니다
+ * 
+ * @param data 원본 일간 데이터 (가격, equity, value 등)
+ * @returns 매 7번째 데이터 포인트만 포함된 배열
  */
 function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
@@ -75,10 +81,17 @@ function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data:
 }
 
 /**
- * 월간 데이터로 집계 (28일 = 4주 단위)
+ * 가격/가치 데이터를 월간 간격으로 샘플링합니다 (단순 샘플링)
  * 
- * @param data 원본 일간 데이터
- * @returns 월간으로 집계된 데이터 (매 28일째 데이터 포인트)
+ * ⚠️ 주의:
+ * - 이 함수는 가격/가치/equity 데이터용으로, 매 28번째 항목을 선택합니다 (단순 샘플링)
+ * - 수익률 데이터는 이 함수를 사용하지 않습니다 (aggregateReturns() 사용)
+ * - 28일(4주) 단위이므로 실제 달력 월(30일, 31일)과 다릅니다
+ * - 배열 인덱스 기반이므로 실제 월말(1일~말일)과 일치하지 않습니다
+ * - 예: 데이터가 15일에 시작하면 첫 "월간" 포인트는 28일 후 데이터입니다
+ * 
+ * @param data 원본 일간 데이터 (가격, equity, value 등)
+ * @returns 매 28번째 데이터 포인트만 포함된 배열
  */
 function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
@@ -311,6 +324,14 @@ export function aggregateReturns<T extends { date: string; return_pct: number; [
 
 /**
  * 주간 수익률 계산 (7일 단위, 복리 기반)
+ * 
+ * ⚠️ 주의: 배열 인덱스 기반 집계로, 실제 달력 주 경계와 일치하지 않을 수 있습니다.
+ * - 데이터가 월요일이 아닌 날짜에 시작하면 첫 주는 7일 미만일 수 있습니다.
+ * - 금융 백테스트에서 주간 리밸런싱 등의 경우 실제 주 경계(월~일)와 다를 수 있습니다.
+ * - 매 7번째 항목마다 집계되므로 중간에 거래일이 없는 날이 있어도 카운트됩니다.
+ * 
+ * @param dailyReturns 일간 수익률 배열
+ * @returns 7일 단위로 집계된 복리 수익률
  */
 function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
   dailyReturns: T[]
@@ -343,6 +364,15 @@ function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [k
 
 /**
  * 월간 수익률 계산 (28일 = 4주 단위, 복리 기반)
+ * 
+ * ⚠️ 주의: 배열 인덱스 기반 집계로, 실제 달력 월 경계와 일치하지 않습니다.
+ * - 28일(4주) 단위로 집계되므로 실제 월말(30일, 31일)과 다릅니다.
+ * - 데이터 시작 시점에 따라 실제 월 경계(1일~말일)와 달라질 수 있습니다.
+ * - 월말 리밸런싱, 월간 리포팅 등에서 실제 월과 다를 수 있습니다.
+ * - 매 28번째 항목마다 집계되므로 중간에 거래일이 없는 날이 있어도 카운트됩니다.
+ * 
+ * @param dailyReturns 일간 수익률 배열
+ * @returns 28일 단위로 집계된 복리 수익률
  */
 function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
   dailyReturns: T[]

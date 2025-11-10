@@ -242,7 +242,12 @@ export const useChartData = (
       const eq = equityByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawEquity, r.date);
       if (!eq) {
         console.warn(`[포트폴리오 차트] ${r.date} 날짜의 equity 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
+        return { 
+          date: r.date, 
+          value: null as any, 
+          return_pct: r.return_pct, 
+          drawdown_pct: null as any 
+        };
       }
       return {
         ...eq,
@@ -288,7 +293,12 @@ export const useChartData = (
       const eq = equityByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawEquity, r.date);
       if (!eq) {
         console.warn(`[단일종목 차트] ${r.date} 날짜의 equity 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
+        return { 
+          date: r.date, 
+          value: null as any, 
+          return_pct: r.return_pct, 
+          drawdown_pct: null as any 
+        };
       }
       return {
         ...eq,
@@ -347,7 +357,7 @@ export const useChartData = (
       const item = dataByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawData, r.date);
       if (!item) {
         console.warn(`[S&P 500 벤치마크] ${r.date} 날짜의 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return { date: r.date, value: 0, return_pct: r.return_pct };
+        return { date: r.date, value: null as any, return_pct: r.return_pct };
       }
       return {
         ...item,
@@ -386,7 +396,7 @@ export const useChartData = (
       const item = dataByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawData, r.date);
       if (!item) {
         console.warn(`[NASDAQ 벤치마크] ${r.date} 날짜의 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return { date: r.date, value: 0, return_pct: r.return_pct };
+        return { date: r.date, value: null as any, return_pct: r.return_pct };
       }
       return {
         ...item,
