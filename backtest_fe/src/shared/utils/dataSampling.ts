@@ -267,8 +267,8 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
     // 더 이상 데이터가 없으면 종료
     if (!found) break;
 
-    // 마지막 데이터에 도달했으면 종료
-    if (currentDate >= lastDate) break;
+    // 다음 계산된 날짜가 데이터 범위를 벗어나면 종료
+    if (nextDate > lastDate) break;
   }
 
   // 마지막 데이터가 포함되지 않았다면 추가
