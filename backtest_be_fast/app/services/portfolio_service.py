@@ -210,6 +210,11 @@ class PortfolioService:
         last_rebalance_date = None  # 마지막 리밸런싱 날짜 추적
         original_rebalance_nth = None  # 리밸런싱 원본 "몇 번째 요일" 추적
 
+        # 상장폐지 종목 추적을 위한 변수
+        last_valid_prices = {}  # 각 종목의 마지막 유효 가격 (USD)
+        last_price_date = {}  # 마지막 가격 확인 날짜
+        delisted_stocks = set()  # 상장폐지로 판단된 종목들
+
         for current_date in date_range:
             daily_cash_inflow = 0.0  # 당일 추가 투자금 (DCA)
             if current_date.date() < start_date_obj.date():
@@ -269,6 +274,41 @@ class PortfolioService:
                             # 지원하지 않는 통화, USD로 가정
                             logger.warning(f"{symbol} 지원하지 않는 통화 {currency}, 변환 없이 사용")
                             current_prices[unique_key] = raw_price
+
+            # 상장폐지 감지: 가격 데이터가 30일 이상 없으면 상장폐지로 판단
+            DELISTING_THRESHOLD_DAYS = 30
+            for unique_key in stock_amounts.keys():
+                # 현재 가격이 있으면 마지막 유효 가격 갱신
+                if unique_key in current_prices:
+                    last_valid_prices[unique_key] = current_prices[unique_key]
+                    last_price_date[unique_key] = current_date.date()
+                    if unique_key in delisted_stocks:
+                        # 상장 복원? (재상장 케이스, 드물지만 처리)
+                        logger.info(f"{unique_key} 가격 데이터 재등장 (재상장?), 상장폐지 상태 해제")
+                        delisted_stocks.remove(unique_key)
+                else:
+                    # 현재 가격이 없을 때
+                    if unique_key in last_price_date:
+                        days_without_price = (current_date.date() - last_price_date[unique_key]).days
+                        if days_without_price >= DELISTING_THRESHOLD_DAYS and unique_key not in delisted_stocks:
+                            # 상장폐지로 판단
+                            symbol = dca_info[unique_key]['symbol']
+                            logger.warning(
+                                f"{symbol} ({unique_key}) 상장폐지 감지: "
+                                f"마지막 가격 날짜 {last_price_date[unique_key]}, "
+                                f"{days_without_price}일간 가격 데이터 없음. "
+                                f"마지막 유효 가격 ${last_valid_prices[unique_key]:.2f} 유지"
+                            )
+                            delisted_stocks.add(unique_key)
+                    # else: 첫날이거나 아직 가격 데이터가 없는 경우, 대기
+
+            # 상장폐지된 종목의 가격을 마지막 유효 가격으로 유지
+            for unique_key in delisted_stocks:
+                if unique_key in last_valid_prices and unique_key not in current_prices:
+                    current_prices[unique_key] = last_valid_prices[unique_key]
+                    logger.debug(
+                        f"{unique_key} 상장폐지 종목, 마지막 유효 가격 ${last_valid_prices[unique_key]:.2f} 사용"
+                    )
 
             # 첫 날: 초기 매수 (일시불) 또는 DCA 시작
             if is_first_day:
@@ -374,7 +414,52 @@ class PortfolioService:
             )
 
             if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
-                # 현재 포트폴리오 총 가치 계산 (주식 + 현금)
+                # 상장폐지 종목이 있는 경우 동적 비중 재계산
+                adjusted_target_weights = dict(target_weights)  # 복사본 생성
+                
+                if delisted_stocks:
+                    # 상장폐지 종목들의 원래 목표 비중 합계
+                    delisted_weight_sum = sum(
+                        target_weights[key] for key in delisted_stocks if key in target_weights
+                    )
+                    
+                    if delisted_weight_sum > 0:
+                        # 거래 가능한 종목들의 원래 비중 합계
+                        tradeable_weight_sum = 1.0 - delisted_weight_sum
+                        
+                        if tradeable_weight_sum > 0:
+                            # 거래 가능한 종목들의 비중을 비례적으로 증가
+                            scaling_factor = 1.0 / tradeable_weight_sum
+                            adjusted_target_weights = {}
+                            
+                            for unique_key, original_weight in target_weights.items():
+                                if unique_key in delisted_stocks:
+                                    # 상장폐지 종목은 목표 비중을 0으로 (거래 불가)
+                                    adjusted_target_weights[unique_key] = 0.0
+                                else:
+                                    # 거래 가능한 종목은 비중을 비례적으로 증가
+                                    adjusted_target_weights[unique_key] = original_weight * scaling_factor
+                            
+                            logger.info(
+                                f"리밸런싱 목표 비중 동적 조정: 상장폐지 종목 {len(delisted_stocks)}개 "
+                                f"(원래 비중 합계: {delisted_weight_sum:.2%}) -> "
+                                f"거래 가능 종목 비중 {scaling_factor:.2f}배 증가"
+                            )
+                            
+                            # 조정된 비중 로깅
+                            for unique_key in delisted_stocks:
+                                symbol = dca_info[unique_key]['symbol']
+                                logger.debug(
+                                    f"  {symbol}: {target_weights[unique_key]:.2%} -> 0.00% (상장폐지)"
+                                )
+                            for unique_key, adj_weight in adjusted_target_weights.items():
+                                if unique_key not in delisted_stocks and target_weights[unique_key] != adj_weight:
+                                    symbol = dca_info[unique_key]['symbol']
+                                    logger.debug(
+                                        f"  {symbol}: {target_weights[unique_key]:.2%} -> {adj_weight:.2%}"
+                                    )
+                
+                # 현재 포트폴리오 총 가치 계산 (주식 + 현금, 상장폐지 종목 포함)
                 total_stock_value = sum(
                     shares[key] * current_prices.get(key, 0)
                     for key in shares.keys()
@@ -393,14 +478,14 @@ class PortfolioService:
                     for unique_key in cash_holdings.keys():
                         weights_before[dca_info[unique_key]['symbol']] = cash_holdings[unique_key] / total_portfolio_value
 
-                    # 목표 비중대로 재조정
+                    # 목표 비중대로 재조정 (조정된 비중 사용)
                     new_shares = {}
                     new_cash_holdings = {}
                     total_commission_cost = 0
                     trades_in_rebalance = 0
                     rebalance_trades = []  # 이번 리밸런싱의 거래 내역
 
-                    for unique_key, target_weight in target_weights.items():
+                    for unique_key, target_weight in adjusted_target_weights.items():
                         target_value = total_portfolio_value * target_weight
 
                         # 현금 처리
@@ -430,6 +515,17 @@ class PortfolioService:
 
                         # 주식 처리
                         else:
+                            # 상장폐지 종목은 보유 주식 수 유지 (거래 불가)
+                            if unique_key in delisted_stocks:
+                                new_shares[unique_key] = shares[unique_key]
+                                current_value = shares[unique_key] * current_prices.get(unique_key, 0)
+                                symbol = dca_info[unique_key]['symbol']
+                                logger.debug(
+                                    f"  {symbol} 상장폐지 종목: 보유 주식 {shares[unique_key]:.4f}주 유지 "
+                                    f"(가치: ${current_value:,.2f}, 리밸런싱 불가)"
+                                )
+                                continue
+                            
                             if unique_key not in current_prices:
                                 new_shares[unique_key] = shares[unique_key]
                                 continue
