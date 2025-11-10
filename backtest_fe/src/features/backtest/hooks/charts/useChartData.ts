@@ -186,28 +186,51 @@ export const useChartData = (
       return rawEquityData;
     }
 
-    // equity curve는 샘플링만 (가격 데이터)
-    const { data: sampledEquityData } = smartSampleByPeriod(rawEquityData, startDate, endDate);
-
-    // 수익률은 복리 집계 (daily_returns를 기반으로)
-    if (aggregationType !== 'daily') {
-      const dailyReturnsArray = Object.entries(portfolioData.daily_returns).map(([date, return_pct]) => ({
-        date,
-        return_pct: return_pct as number,
-      }));
-
-      const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
-      
-      // 집계된 수익률을 sampledEquityData에 매핑
-      const returnMap = new Map(aggregatedReturns.map(r => [r.date, r.return_pct]));
-      
-      return sampledEquityData.map(eq => ({
-        ...eq,
-        return_pct: returnMap.get(eq.date) ?? eq.return_pct,
-      }));
+    // 일간 집계: 기존 샘플링 방식 사용
+    if (aggregationType === 'daily') {
+      const { data: sampledEquityData } = smartSampleByPeriod(rawEquityData, startDate, endDate);
+      return sampledEquityData;
     }
 
-    return sampledEquityData;
+    // 주간/월간 집계: 수익률의 날짜에 맞춰 equity 데이터 재구성
+    const dailyReturnsArray = Object.entries(portfolioData.daily_returns).map(([date, return_pct]) => ({
+      date,
+      return_pct: return_pct as number,
+    }));
+
+    const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
+    
+    // 집계된 수익률의 날짜에 맞춰 equity curve를 재구성
+    const equityByDate = new Map(rawEquityData.map(eq => [eq.date, eq]));
+    const sortedRawEquity = [...rawEquityData].sort((a, b) => 
+      a.date < b.date ? -1 : a.date > b.date ? 1 : 0
+    );
+    
+    // 이진 탐색으로 날짜보다 작거나 같은 가장 가까운 equity 찾기
+    const findEquityOnOrBefore = (date: string): typeof rawEquityData[0] | null => {
+      let left = 0, right = sortedRawEquity.length - 1;
+      let result: typeof rawEquityData[0] | null = null;
+      while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        if (sortedRawEquity[mid].date <= date) {
+          result = sortedRawEquity[mid];
+          left = mid + 1;
+        } else {
+          right = mid - 1;
+        }
+      }
+      return result;
+    };
+
+    return aggregatedReturns.map(r => {
+      const eq = equityByDate.get(r.date) ?? findEquityOnOrBefore(r.date);
+      if (!eq) return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
+      return {
+        ...eq,
+        date: r.date, // 집계 날짜로 덮어씀
+        return_pct: r.return_pct,
+      };
+    });
   }, [portfolioData, startDate, endDate, aggregationType]);
 
   // 단일 종목 equity 데이터 (스마트 샘플링 + 수익률 복리 집계)
@@ -222,28 +245,50 @@ export const useChartData = (
       return rawData;
     }
 
-    // equity curve는 샘플링만 (가격 데이터)
-    const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-
-    // 수익률은 복리 집계
-    if (aggregationType !== 'daily') {
-      const dailyReturnsArray = rawData.map(point => ({
-        date: point.date,
-        return_pct: point.return_pct,
-      }));
-
-      const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
-      
-      // 집계된 수익률을 sampledData에 매핑
-      const returnMap = new Map(aggregatedReturns.map(r => [r.date, r.return_pct]));
-      
-      return sampledData.map(eq => ({
-        ...eq,
-        return_pct: returnMap.get(eq.date) ?? eq.return_pct,
-      }));
+    // 일간 집계: 기존 샘플링 방식 사용
+    if (aggregationType === 'daily') {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
     }
 
-    return sampledData;
+    // 주간/월간 집계: 수익률의 날짜에 맞춰 equity 데이터 재구성
+    const dailyReturnsArray = rawData.map(point => ({
+      date: point.date,
+      return_pct: point.return_pct,
+    }));
+
+    const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
+    
+    // 집계된 수익률의 날짜에 맞춰 equity curve를 재구성
+    const equityByDate = new Map(rawData.map(eq => [eq.date, eq]));
+    const sortedRawEquity = [...rawData].sort((a, b) => 
+      a.date < b.date ? -1 : a.date > b.date ? 1 : 0
+    );
+    
+    const findEquityOnOrBefore = (date: string): typeof rawData[0] | null => {
+      let left = 0, right = sortedRawEquity.length - 1;
+      let result: typeof rawData[0] | null = null;
+      while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        if (sortedRawEquity[mid].date <= date) {
+          result = sortedRawEquity[mid];
+          left = mid + 1;
+        } else {
+          right = mid - 1;
+        }
+      }
+      return result;
+    };
+
+    return aggregatedReturns.map(r => {
+      const eq = equityByDate.get(r.date) ?? findEquityOnOrBefore(r.date);
+      if (!eq) return { date: r.date, value: 0, return_pct: r.return_pct, drawdown_pct: 0 };
+      return {
+        ...eq,
+        date: r.date,
+        return_pct: r.return_pct,
+      };
+    });
   }, [chartData?.equity_data, startDate, endDate, aggregationType]);
 
   // 단일 종목 거래 마커
@@ -272,26 +317,49 @@ export const useChartData = (
       return rawData;
     }
 
-    // 가격 데이터는 샘플링
-    const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-
-    // 수익률은 복리 집계
-    if (aggregationType !== 'daily') {
-      const dailyReturnsArray = rawData.map(point => ({
-        date: point.date,
-        return_pct: point.return_pct ?? 0,
-      }));
-
-      const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
-      const returnMap = new Map(aggregatedReturns.map(r => [r.date, r.return_pct]));
-
-      return sampledData.map(item => ({
-        ...item,
-        return_pct: returnMap.get(item.date) ?? item.return_pct,
-      }));
+    // 일간 집계: 기존 샘플링 방식
+    if (aggregationType === 'daily') {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
     }
 
-    return sampledData;
+    // 주간/월간 집계: 수익률의 날짜에 맞춰 데이터 재구성
+    const dailyReturnsArray = rawData.map(point => ({
+      date: point.date,
+      return_pct: point.return_pct ?? 0,
+    }));
+
+    const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
+    
+    const dataByDate = new Map(rawData.map(item => [item.date, item]));
+    const sortedRawData = [...rawData].sort((a, b) => 
+      a.date < b.date ? -1 : a.date > b.date ? 1 : 0
+    );
+    
+    const findDataOnOrBefore = (date: string) => {
+      let left = 0, right = sortedRawData.length - 1;
+      let result = null;
+      while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        if (sortedRawData[mid].date <= date) {
+          result = sortedRawData[mid];
+          left = mid + 1;
+        } else {
+          right = mid - 1;
+        }
+      }
+      return result;
+    };
+
+    return aggregatedReturns.map(r => {
+      const item = dataByDate.get(r.date) ?? findDataOnOrBefore(r.date);
+      if (!item) return { date: r.date, value: 0, return_pct: r.return_pct };
+      return {
+        ...item,
+        date: r.date,
+        return_pct: r.return_pct,
+      };
+    });
   }, [data, startDate, endDate, aggregationType]);
 
   const nasdaqBenchmark = useMemo<any[]>(() => {
@@ -300,26 +368,49 @@ export const useChartData = (
       return rawData;
     }
 
-    // 가격 데이터는 샘플링
-    const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-
-    // 수익률은 복리 집계
-    if (aggregationType !== 'daily') {
-      const dailyReturnsArray = rawData.map(point => ({
-        date: point.date,
-        return_pct: point.return_pct ?? 0,
-      }));
-
-      const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
-      const returnMap = new Map(aggregatedReturns.map(r => [r.date, r.return_pct]));
-
-      return sampledData.map(item => ({
-        ...item,
-        return_pct: returnMap.get(item.date) ?? item.return_pct,
-      }));
+    // 일간 집계: 기존 샘플링 방식
+    if (aggregationType === 'daily') {
+      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
+      return sampledData;
     }
 
-    return sampledData;
+    // 주간/월간 집계: 수익률의 날짜에 맞춰 데이터 재구성
+    const dailyReturnsArray = rawData.map(point => ({
+      date: point.date,
+      return_pct: point.return_pct ?? 0,
+    }));
+
+    const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
+    
+    const dataByDate = new Map(rawData.map(item => [item.date, item]));
+    const sortedRawData = [...rawData].sort((a, b) => 
+      a.date < b.date ? -1 : a.date > b.date ? 1 : 0
+    );
+    
+    const findDataOnOrBefore = (date: string) => {
+      let left = 0, right = sortedRawData.length - 1;
+      let result = null;
+      while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        if (sortedRawData[mid].date <= date) {
+          result = sortedRawData[mid];
+          left = mid + 1;
+        } else {
+          right = mid - 1;
+        }
+      }
+      return result;
+    };
+
+    return aggregatedReturns.map(r => {
+      const item = dataByDate.get(r.date) ?? findDataOnOrBefore(r.date);
+      if (!item) return { date: r.date, value: 0, return_pct: r.return_pct };
+      return {
+        ...item,
+        date: r.date,
+        return_pct: r.return_pct,
+      };
+    });
   }, [data, startDate, endDate, aggregationType]);
 
   // 백엔드에서 이미 return_pct를 계산해서 보내므로 그대로 사용
