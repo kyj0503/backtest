@@ -49,7 +49,6 @@ describe('backtestFormReducer', () => {
           amount: 6000,
           weight: 60,
           investmentType: 'lump_sum',
-          dcaPeriods: 12,
           assetType: ASSET_TYPES.STOCK,
         },
         {
@@ -57,7 +56,6 @@ describe('backtestFormReducer', () => {
           amount: 4000,
           weight: 40,
           investmentType: 'lump_sum',
-          dcaPeriods: 12,
           assetType: ASSET_TYPES.STOCK,
         },
       ],
@@ -82,7 +80,6 @@ describe('backtestFormReducer', () => {
           amount: 10000,
           weight: 25,
           investmentType: 'lump_sum',
-          dcaPeriods: 12,
           assetType: ASSET_TYPES.STOCK,
         },
       ],
