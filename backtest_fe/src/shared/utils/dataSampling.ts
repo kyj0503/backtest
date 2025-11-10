@@ -83,7 +83,7 @@ function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data:
 /**
  * ISO 날짜 문자열을 로컬 타임존의 Date 객체로 파싱
  *
- * ⚠️ 주의:
+ * 주의:
  * - new Date("2024-01-15")는 UTC 자정으로 파싱되어 타임존에 따라 요일이 달라질 수 있음
  * - 이 함수는 날짜를 로컬 타임존으로 파싱하여 한국 시간대 사용자에게 일관된 결과 제공
  *
@@ -103,14 +103,14 @@ function parseLocalDate(dateStr: string): Date {
  * @returns 1-5: 몇 번째 해당 요일인지
  */
 function getWeekdayOccurrence(date: Date): number {
-  const weekday = date.getDay(); // 0=일요일, 6=토요일
+  const jsWeekday = date.getDay(); // JavaScript: 0=일요일, 6=토요일
   const year = date.getFullYear();
   const month = date.getMonth();
 
   let occurrence = 0;
   for (let day = 1; day <= date.getDate(); day++) {
     const checkDate = new Date(year, month, day);
-    if (checkDate.getDay() === weekday) {
+    if (checkDate.getDay() === jsWeekday) {
       occurrence++;
     }
   }
@@ -227,7 +227,6 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
 
     // 다음 달의 Nth Weekday 계산
     const nextDate = getNextMonthNthWeekday(currentDate, originalNth);
-    const nextDateStr = nextDate.toISOString().split('T')[0];
 
     // Map을 사용한 O(1) 조회 (최대 7일 탐색)
     let found = false;
@@ -238,11 +237,12 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
       const foundItem = dataByDate.get(searchDateStr);
 
       if (foundItem) {
-        // 이미 추가된 데이터가 아니면 추가
-        if (monthly[monthly.length - 1] !== foundItem) {
+        // 마지막 항목과 날짜로 비교하여 중복 방지
+        const lastItem = monthly[monthly.length - 1];
+        if (lastItem?.date !== foundItem.date) {
           monthly.push(foundItem);
-          found = true;
         }
+        found = true;
         currentDate = parseLocalDate(foundItem.date);
         break;
       }
