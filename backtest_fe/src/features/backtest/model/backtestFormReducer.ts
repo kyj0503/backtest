@@ -35,7 +35,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
       const isLastWeightItem = pos === weightIndices.length - 1;
 
       if (s.investmentType === 'dca') {
-        const dcaPeriods = calculateDcaPeriods(startDate, endDate, s.dcaFrequency || 'weekly_4');
+        const dcaPeriods = calculateDcaPeriods(startDate, endDate, s.dcaFrequency || 'monthly_1');
         
         if (isLastWeightItem) {
           // 마지막 DCA 항목: 정확한 오차 보정
@@ -302,7 +302,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           symbol: '',
           amount: 10000,
           investmentType: 'lump_sum',
-          dcaFrequency: 'weekly_4'
+          dcaFrequency: 'monthly_1'
         }],
         dates: {
           startDate: '2023-01-01',
@@ -313,7 +313,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
           strategyParams: {}
         },
         settings: {
-          rebalanceFrequency: 'weekly_4',
+          rebalanceFrequency: 'monthly_1',
           commission: 0.2
         },
         ui: {
@@ -336,7 +336,7 @@ export const backtestFormHelpers = {
     amount: 10000,
     weight: undefined,
     investmentType: 'lump_sum',
-    dcaFrequency: 'weekly_4',
+    dcaFrequency: 'monthly_1',
     assetType: ASSET_TYPES.STOCK
   }),
 
@@ -345,7 +345,7 @@ export const backtestFormHelpers = {
     amount: 10000,
     weight: undefined,
     investmentType: 'lump_sum',
-    dcaFrequency: 'weekly_4',
+    dcaFrequency: 'monthly_1',
     assetType: ASSET_TYPES.CASH
   }),
 

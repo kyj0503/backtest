@@ -5,11 +5,11 @@ const getDcaWeeks = (frequency: string): number => {
   const freqMap: Record<string, number> = {
     'weekly_1': 1,
     'weekly_2': 2,
-    'weekly_4': 4,
-    'weekly_8': 8,
-    'weekly_12': 12,
-    'weekly_24': 24,
-    'weekly_48': 48,
+    'monthly_1': 4,    // 매월 (약 4주)
+    'monthly_2': 8,    // 2개월마다
+    'monthly_3': 12,   // 분기
+    'monthly_6': 24,   // 반년
+    'monthly_12': 48,  // 1년
   };
   return freqMap[frequency] || 4;
 };
@@ -53,7 +53,7 @@ const recalcAmountsByWeight = (portfolio: any[], totalInvestment: number, startD
       const correctedTotalAmount = totalInvestment - accumulatedTotal;
       
       if (s.investmentType === 'dca') {
-        const intervalWeeks = getDcaWeeks(s.dcaFrequency || 'weekly_4');
+        const intervalWeeks = getDcaWeeks(s.dcaFrequency || 'monthly_1');
         const dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
         const perPeriodAmount = Math.round(correctedTotalAmount / dcaPeriods);
         results.set(index, perPeriodAmount);
@@ -63,7 +63,7 @@ const recalcAmountsByWeight = (portfolio: any[], totalInvestment: number, startD
     } else {
       // 일반 weight 항목
       if (s.investmentType === 'dca') {
-        const intervalWeeks = getDcaWeeks(s.dcaFrequency || 'weekly_4');
+        const intervalWeeks = getDcaWeeks(s.dcaFrequency || 'monthly_1');
         const dcaPeriods = Math.max(1, Math.floor(weeks / intervalWeeks) + 1);
         const perPeriodAmount = Math.round(totalAmountForStock / dcaPeriods);
         results.set(index, perPeriodAmount);
@@ -93,7 +93,7 @@ describe('recalcAmountsByWeight', () => {
         amount: 0,
         weight: 50,
         investmentType: 'dca',
-        dcaFrequency: 'weekly_4',
+        dcaFrequency: 'monthly_1',
         assetType: 'stock',
       },
       {
@@ -101,7 +101,7 @@ describe('recalcAmountsByWeight', () => {
         amount: 0,
         weight: 50,
         investmentType: 'dca',
-        dcaFrequency: 'weekly_4',
+        dcaFrequency: 'monthly_1',
         assetType: 'stock',
       },
     ];
