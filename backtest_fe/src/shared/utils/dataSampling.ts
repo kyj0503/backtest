@@ -251,8 +251,12 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
         break;
       }
 
-      // 다음 날짜로 이동 (1일 증가)
-      searchDate = new Date(searchDate.getTime() + 24 * 60 * 60 * 1000);
+      // 다음 날짜로 이동 (1일 증가, DST 및 월/년 경계 자동 처리)
+      searchDate = new Date(
+        searchDate.getFullYear(),
+        searchDate.getMonth(),
+        searchDate.getDate() + 1
+      );
     }
 
     // 더 이상 데이터가 없으면 종료
