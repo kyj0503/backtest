@@ -23,7 +23,7 @@ RUN npm run build
 FROM nginx:1.25-alpine@sha256:721fa00bc549df26b3e67cc558ff176112d4ba69847537766f3c28e171d180e7
 
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
 
 # When the container starts, Nginx will serve the files from /usr/share/nginx/html
 EXPOSE 80
