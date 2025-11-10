@@ -4,8 +4,6 @@ DCA 및 리밸런싱 로직 통합 테스트
 실제 API를 호출하여 Nth Weekday 방식의 DCA와 리밸런싱이 제대로 작동하는지 검증합니다.
 """
 import requests
-import json
-from datetime import datetime
 import os
 
 BASE_URL = os.getenv("BACKTEST_API_URL", "http://localhost:8000")
