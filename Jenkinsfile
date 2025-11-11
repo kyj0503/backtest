@@ -89,7 +89,8 @@ pipeline {
                     docker.withRegistry("https://ghcr.io", 'github-token') {
                         sh """
                             cd ${env.DEPLOY_PATH}
-                            git pull origin main || true
+                            git reset --hard HEAD
+                            git pull origin main
                             chmod +x deploy.sh
                             bash deploy.sh ${beImageName} ${feImageName}
                         """
