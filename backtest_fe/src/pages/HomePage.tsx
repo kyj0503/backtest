@@ -96,11 +96,16 @@ const HomePage: React.FC = () => {
             </div>
 
             {/* Process Illustration Image */}
-            <div className="mt-8 sm:mt-12 px-2">
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mt-8 sm:mt-12 px-2">
               <img
-                src="/public/images/landing/backtest-result.png"
+                src="/public/images/landing/backtest-result 1.png"
                 alt="백테스트 프로세스"
-                className="w-full max-w-6xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+                className="w-full rounded-2xl shadow-xl border border-border/50"
+              />
+              <img
+                src="/public/images/landing/backtest-result 2.png"
+                alt="백테스트 프로세스"
+                className="w-full rounded-2xl shadow-xl border border-border/50"
               />
             </div>
           </div>
@@ -214,11 +219,16 @@ const HomePage: React.FC = () => {
             </div>
 
             {/* Feature Showcase Image */}
-            <div className="mt-8 sm:mt-12 px-2">
+            <div className="grid md:grid-cols-2 gap-6 sm:gap-8 mt-8 sm:mt-12 px-2">
               <img
-                src="/public/images/landing/backtest-rebalance.png"
+                src="/public/images/landing/backtest-rebalance 1.png"
                 alt="주요 기능 대시보드"
-                className="w-full max-w-6xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+                className="w-full rounded-2xl shadow-xl border border-border/50"
+              />
+              <img
+                src="/public/images/landing/backtest-rebalance 2.png"
+                alt="주요 기능 대시보드"
+                className="w-full rounded-2xl shadow-xl border border-border/50"
               />
             </div>
           </div>
