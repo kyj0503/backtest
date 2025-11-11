@@ -29,10 +29,70 @@ interface StockPriceChartProps {
   stocksData: StockData[];
   tickerInfo?: { [symbol: string]: TickerInfo };
   tradeLogs?: Record<string, TradeLog[]>;
+  aggregationType?: 'daily' | 'weekly' | 'monthly';
   className?: string;
 }
 
-const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tickerInfo = {}, tradeLogs = {}, className = "" }) => {
+// aggregation된 데이터에서 실제 거래 날짜에 가장 가까운 날짜를 찾는 함수
+const findClosestAggregationDate = (
+  tradeDate: string, 
+  aggregatedData: Array<{ date: string; price: number }>, 
+  aggregationType: 'daily' | 'weekly' | 'monthly'
+): string | null => {
+  const tradeDateTime = new Date(tradeDate).getTime();
+  
+  // daily aggregation이면 정확히 일치하는 날짜만 찾음
+  if (aggregationType === 'daily') {
+    const exactMatch = aggregatedData.find(d => d.date === tradeDate);
+    return exactMatch ? tradeDate : null;
+  }
+  
+  // weekly/monthly aggregation이면 기간 내에 포함되는 날짜 찾음
+  for (const dataPoint of aggregatedData) {
+    if (aggregationType === 'weekly') {
+      // 주간 데이터: 해당 주의 마지막 날짜를 사용
+      // 거래일이 해당 aggregation 기간 내에 있는지 확인
+      const dataDate = new Date(dataPoint.date);
+      const tradeDateObj = new Date(tradeDate);
+      
+      // 간단한 방법: 거래일이 aggregation 날짜와 같은 주에 있는지 확인
+      const dataWeek = Math.floor(dataDate.getTime() / (7 * 24 * 60 * 60 * 1000));
+      const tradeWeek = Math.floor(tradeDateObj.getTime() / (7 * 24 * 60 * 60 * 1000));
+      
+      if (dataWeek === tradeWeek) {
+        return dataPoint.date;
+      }
+    } else if (aggregationType === 'monthly') {
+      // 월간 데이터: 해당 월의 마지막 날짜를 사용
+      const tradeMonth = new Date(tradeDate).getMonth();
+      const tradeYear = new Date(tradeDate).getFullYear();
+      const dataMonth = new Date(dataPoint.date).getMonth();
+      const dataYear = new Date(dataPoint.date).getFullYear();
+      
+      if (tradeYear === dataYear && tradeMonth === dataMonth) {
+        return dataPoint.date;
+      }
+    }
+  }
+  
+  // 정확히 일치하지 않으면 가장 가까운 날짜 찾음 (fallback)
+  let closestDate: string | null = null;
+  let minDiff = Infinity;
+  
+  for (const dataPoint of aggregatedData) {
+    const dataDateTime = new Date(dataPoint.date).getTime();
+    const diff = Math.abs(dataDateTime - tradeDateTime);
+    
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestDate = dataPoint.date;
+    }
+  }
+  
+  return closestDate;
+};
+
+const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tickerInfo = {}, tradeLogs = {}, aggregationType = 'daily', className = "" }) => {
   // 성능 모니터링
   useRenderPerformance('StockPriceChart');
 
@@ -55,29 +115,38 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     const sellDates = new Set<string>();
 
     logs.forEach((trade) => {
-      // Type 필드가 있으면 타입으로 구분 (리밸런싱, DCA, 일시불)
+      // 실제 거래 날짜 추출
+      let tradeDates: string[] = [];
+      
       if (trade.Type) {
+        // Type 필드가 있으면 (리밸런싱, DCA 등)
         if (trade.EntryTime) {
           const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
-          if (trade.Type === 'BUY') {
-            buyDates.add(entryDate);
-          } else if (trade.Type === 'SELL') {
-            sellDates.add(entryDate);
-          }
+          tradeDates.push(entryDate);
         }
       } else {
-        // Type 필드가 없으면 기존 로직 (하위 호환성)
+        // 기존 로직 (하위 호환성)
         if (trade.EntryTime) {
-          // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
           const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
-          buyDates.add(entryDate);
+          tradeDates.push(entryDate);
         }
         if (trade.ExitTime) {
-          // ISO 8601 형식 처리: "2020-01-06T00:00:00" → "2020-01-06"
           const exitDate = trade.ExitTime.split('T')[0].split(' ')[0];
-          sellDates.add(exitDate);
+          tradeDates.push(exitDate);
         }
       }
+
+      // 각 거래 날짜를 aggregation된 데이터의 날짜에 매핑
+      tradeDates.forEach(tradeDate => {
+        const mappedDate = findClosestAggregationDate(tradeDate, selectedStockData.data, aggregationType);
+        if (mappedDate) {
+          if (trade.Type === 'BUY' || (!trade.Type && trade.EntryTime)) {
+            buyDates.add(mappedDate);
+          } else if (trade.Type === 'SELL' || (!trade.Type && trade.ExitTime)) {
+            sellDates.add(mappedDate);
+          }
+        }
+      });
     });
 
     // 주가 데이터에 매매 신호 merge (해당 날짜의 실제 주가를 사용)
@@ -88,7 +157,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     }));
 
     return mergedData;
-  }, [selectedSymbol, selectedStockData, tradeLogs]);
+  }, [selectedSymbol, selectedStockData, tradeLogs, aggregationType]);
 
   // Y축 도메인 계산 (메모이제이션)
   const yAxisDomain = useMemo<[number, number]>(() => {

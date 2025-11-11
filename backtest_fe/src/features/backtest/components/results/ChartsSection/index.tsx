@@ -139,6 +139,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
             stocksData={stocksData}
             tickerInfo={tickerInfo}
             tradeLogs={tradeLogs}
+            aggregationType={aggregationType}
           />
         ) : null}
 

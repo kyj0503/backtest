@@ -186,7 +186,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
           </div>
         ) : stocksData.length > 0 ? (
           <Suspense fallback={<ChartLoading height={360} />}>
-            <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} tradeLogs={tradeLogs} />
+            <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} tradeLogs={tradeLogs} aggregationType={aggregationType} />
           </Suspense>
         ) : (
           <p className="text-sm text-muted-foreground">표시할 자산 데이터가 없습니다.</p>
