@@ -9,7 +9,7 @@
  */
 import React, { useMemo, useState, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
+import { CARD_STYLES, HEADING_STYLES } from '@/shared/styles/design-tokens';
 import { useRenderPerformance } from '@/shared/components';
 import { EquityPoint } from '../../model/types';
 
@@ -126,16 +126,14 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
   if (!hasData) return null;
 
   return (
-    <div className={CARD_STYLES.base}>
-      <div className={`${SPACING.itemCompact} ${SPACING.contentGap}`}>
+    <div className={`${CARD_STYLES.base} h-[400px] min-w-[500px] w-full flex flex-col`}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between flex-shrink-0">
         <h3 className={HEADING_STYLES.h3}>{periodLabel} 수익률 벤치마크 비교</h3>
-        <p className={TEXT_STYLES.caption}>
-          포트폴리오와 주요 지수의 {periodLabel} 수익률을 비교하세요
-        </p>
       </div>
 
-      <ResponsiveContainer width="100%" height={320} debounce={300}>
-        <LineChart data={mergedData} syncId="benchmarkReturnsChart">
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%" debounce={300}>
+          <LineChart data={mergedData} syncId="benchmarkReturnsChart">
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis
             dataKey="date"
@@ -145,7 +143,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
           <YAxis
             domain={yAxisDomain}
             tickFormatter={(value: number) => `${value.toFixed(1)}%`}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 13 }}
           />
           <Tooltip
             formatter={(value: number, name: string) => {
@@ -164,7 +162,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
             }}
           />
           <Legend
-            wrapperStyle={{ paddingTop: '10px', cursor: 'pointer' }}
+            wrapperStyle={{ paddingTop: '0px', cursor: 'pointer' }}
             onClick={handleLegendClick}
             formatter={(value: string) => {
               const labels: Record<string, string> = {
@@ -229,6 +227,7 @@ const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
           )}
         </LineChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 });
