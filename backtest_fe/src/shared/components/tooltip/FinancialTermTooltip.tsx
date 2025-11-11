@@ -105,6 +105,13 @@ const FinancialTermTooltip: React.FC<FinancialTermTooltipProps> = ({
         <span 
           className={`cursor-help border-b border-dotted border-primary text-primary hover:text-primary/80 ${className}`}
           onClick={() => setIsOpen(!isOpen)}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            }
+          }}
         >
           {children}
         </span>

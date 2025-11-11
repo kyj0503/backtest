@@ -178,7 +178,7 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
             )}
           >
             <CardContent className="space-y-3 px-5 py-4">
-              <h5 className="text-sm font-semibold text-foreground">
+              <h5 className={TEXT_STYLES.label}>
                 <FinancialTermTooltip term={item.label}>{item.label}</FinancialTermTooltip>
               </h5>
               <div
