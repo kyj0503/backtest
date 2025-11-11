@@ -2,7 +2,7 @@
 Backtesting API Server Application
 """
 
-__version__ = "1.6.15"
+__version__ = "1.6.16"
 __description__ = "FastAPI server for backtesting.py library"
 
 # Expose api package for callers importing `app.api`
