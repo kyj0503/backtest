@@ -1,0 +1,43 @@
+name: backtest-prod
+
+services:
+  backtest-be-fast:
+    image: ghcr.io/kyj0503/backtest-be:latest
+    container_name: backtest-be-fast
+    networks:
+      - backtest-net
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - DEBUG=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  backtest-fe:
+    image: ghcr.io/kyj0503/backtest-fe:latest
+    container_name: backtest-fe
+    networks:
+      - backtest-net
+    depends_on:
+      backtest-be-fast:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  backtest-net:
+    name: backtest-network
