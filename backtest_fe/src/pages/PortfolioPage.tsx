@@ -18,7 +18,7 @@ const PortfolioPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background py-4 sm:py-8">
-      <div className="mx-auto px-3 sm:px-6 lg:px-8 w-full lg:max-w-screen-2xl">
+      <div className="mx-auto px-2 sm:px-4 md:px-6 lg:px-8 w-full lg:max-w-screen-2xl">
         {/* Page Header */}
         <div className="text-center mb-6 sm:mb-10">
           <div className="flex justify-center mb-3 sm:mb-5">
