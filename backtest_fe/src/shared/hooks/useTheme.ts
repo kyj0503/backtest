@@ -18,25 +18,19 @@ const THEME_STORAGE_KEY = 'selected-theme';
 const DARK_MODE_STORAGE_KEY = 'dark-mode';
 
 export const useTheme = () => {
-  const [currentTheme, setCurrentTheme] = useState<ThemeName>('claymorphism');
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-
-  // Initialize theme from localStorage
-  useEffect(() => {
+  const [currentTheme, setCurrentTheme] = useState<ThemeName>(() => {
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as ThemeName;
+    return (storedTheme && themes[storedTheme]) ? storedTheme : 'claymorphism';
+  });
+  
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     const storedDarkMode = localStorage.getItem(DARK_MODE_STORAGE_KEY);
-    
-    if (storedTheme && themes[storedTheme]) {
-      setCurrentTheme(storedTheme);
-    }
-    
     if (storedDarkMode !== null) {
-      setIsDarkMode(storedDarkMode === 'true');
-    } else {
-      // Check system preference
-      setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
+      return storedDarkMode === 'true';
     }
-  }, []);
+    // Check system preference
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
   // Apply theme variables to CSS
   const applyTheme = useCallback((themeName: ThemeName, darkMode: boolean) => {

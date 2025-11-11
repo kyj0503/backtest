@@ -9,12 +9,10 @@ interface ThemePreviewProps {
   themeName: ThemeName;
   isActive: boolean;
   onClick: () => void;
+  theme: any;
 }
 
-const ThemePreview: React.FC<ThemePreviewProps> = ({ themeName, isActive, onClick }) => {
-  const { themes } = useTheme();
-  const theme = themes[themeName];
-  
+const ThemePreview: React.FC<ThemePreviewProps> = ({ isActive, onClick, theme }) => {
   if (!theme) return null;
 
   const lightColors = theme.cssVars.light;
@@ -37,7 +35,7 @@ const ThemePreview: React.FC<ThemePreviewProps> = ({ themeName, isActive, onClic
     >
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between">
-          {theme.name.split('-').map(word => 
+          {theme.name.split('-').map((word: string) => 
             word.charAt(0).toUpperCase() + word.slice(1)
           ).join(' ')}
           {isActive && <Badge variant="default" className="ml-2">활성</Badge>}
@@ -90,15 +88,17 @@ const ThemePreview: React.FC<ThemePreviewProps> = ({ themeName, isActive, onClic
 
 interface ThemeSelectorProps {
   className?: string;
+  showDarkModeToggle?: boolean;
 }
 
-const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className = "" }) => {
+const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className = "", showDarkModeToggle = false }) => {
   const { 
     currentTheme, 
     isDarkMode, 
     changeTheme, 
     toggleDarkMode, 
-    getAvailableThemes 
+    getAvailableThemes,
+    themes
   } = useTheme();
 
   const availableThemes = getAvailableThemes();
@@ -109,22 +109,25 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ className = "" }) => {
         <div className="text-sm text-muted-foreground">
           테마는 자동으로 저장됩니다
         </div>
-        <Button
-          variant={isDarkMode ? "default" : "outline"}
-          size="sm"
-          onClick={toggleDarkMode}
-        >
-          {isDarkMode ? '🌙 다크' : '☀️ 라이트'}
-        </Button>
+        {showDarkModeToggle && (
+          <Button
+            variant={isDarkMode ? "default" : "outline"}
+            size="sm"
+            onClick={toggleDarkMode}
+          >
+            {isDarkMode ? '🌙 다크' : '☀️ 라이트'}
+          </Button>
+        )}
       </div>
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {availableThemes.map((theme) => (
+          {availableThemes.map((themeInfo) => (
             <ThemePreview
-              key={theme.id}
-              themeName={theme.id}
-              isActive={currentTheme === theme.id}
-              onClick={() => changeTheme(theme.id)}
+              key={themeInfo.id}
+              themeName={themeInfo.id}
+              isActive={currentTheme === themeInfo.id}
+              onClick={() => changeTheme(themeInfo.id)}
+              theme={themes[themeInfo.id]}
             />
           ))}
         </div>

@@ -52,12 +52,12 @@ const Header: React.FC = () => {
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>테마 설정</DialogTitle>
+                <DialogTitle>테마 선택</DialogTitle>
                 <DialogDescription>
-                  원하는 디자인 테마와 다크 모드를 선택하세요
+                  원하는 디자인 테마를 선택하세요
                 </DialogDescription>
               </DialogHeader>
-              <ThemeSelector />
+              <ThemeSelector showDarkModeToggle={false} />
             </DialogContent>
           </Dialog>
 
