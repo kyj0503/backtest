@@ -39,6 +39,15 @@ const HomePage: React.FC = () => {
                 </Link>
               </Button>
             </div>
+
+            {/* Hero Image - 메인 대표 이미지 */}
+            <div className="mt-8 sm:mt-12 px-4">
+              <img
+                src="https://github.com/kyj0503/image/blob/main/backtest/backtest-main.png?raw=true"
+                alt="백테스트 플랫폼 메인 화면"
+                className="w-full max-w-4xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -85,6 +94,15 @@ const HomePage: React.FC = () => {
                 </p>
               </div>
             </div>
+
+            {/* Process Illustration Image */}
+            <div className="mt-8 sm:mt-12 px-4">
+              <img
+                src="https://github.com/kyj0503/image/blob/main/backtest/backtest-short.png?raw=true"
+                alt="백테스트 프로세스"
+                className="w-full max-w-4xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -102,27 +120,47 @@ const HomePage: React.FC = () => {
             <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
               <div className="p-6 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
                 <h3 className="font-bold text-primary mb-2">Step 1. 포트폴리오 구성</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   원하는 주식, ETF, 암호화폐 등 여러 종목을 담아 나만의 포트폴리오를 만드세요. 각 종목의 비중을 조절하여 다양한 자산 배분 전략을 테스트할 수 있습니다.
                 </p>
+                <img
+                  src="https://github.com/kyj0503/image/blob/main/backtest/backtest-ticker.png?raw=true"
+                  alt="포트폴리오 구성 화면"
+                  className="w-full rounded-lg shadow-md border border-border/30"
+                />
               </div>
               <div className="p-6 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
                 <h3 className="font-bold text-primary mb-2">Step 2. 전략 선택 및 설정</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   매수 후 보유(Buy & Hold)부터 이동평균, RSI 등 다양한 내장 전략 중 하나를 선택하세요. 각 전략의 세부 파라미터를 조정하여 최적의 설정을 찾을 수 있습니다.
                 </p>
+                <img
+                  src="https://github.com/kyj0503/image/blob/main/backtest/backtest-strategy.png?raw=true"
+                  alt="전략 선택 화면"
+                  className="w-full rounded-lg shadow-md border border-border/30"
+                />
               </div>
               <div className="p-6 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
                 <h3 className="font-bold text-primary mb-2">Step 3. 기간 및 조건 설정</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   백테스트를 실행할 기간과 초기 투자금, 수수료 등 상세한 조건을 설정하여 현실적인 시뮬레이션 환경을 구성합니다.
                 </p>
+                <img
+                  src="https://github.com/kyj0503/image/blob/main/backtest/backtest-date.png?raw=true"
+                  alt="기간 및 조건 설정 화면"
+                  className="w-full rounded-lg shadow-md border border-border/30"
+                />
               </div>
               <div className="p-6 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
                 <h3 className="font-bold text-primary mb-2">Step 4. 결과 분석 및 개선</h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   그래프와 통계 데이터를 통해 전략의 성과를 다각도로 분석하세요. 수익률, MDD, 승률 등 지표를 확인하고 전략을 수정하며 더 나은 투자 방법을 찾아보세요.
                 </p>
+                <img
+                  src="https://github.com/kyj0503/image/blob/main/backtest/backtest-compare.png?raw=true"
+                  alt="결과 분석 화면"
+                  className="w-full rounded-lg shadow-md border border-border/30"
+                />
               </div>
             </div>
           </div>
@@ -173,6 +211,15 @@ const HomePage: React.FC = () => {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Feature Showcase Image */}
+            <div className="mt-8 sm:mt-12 px-4">
+              <img
+                src="https://github.com/kyj0503/image/blob/main/backtest/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7%202025-11-11%2014-04-12.png?raw=true"
+                alt="주요 기능 대시보드"
+                className="w-full max-w-4xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+              />
             </div>
           </div>
         </div>
