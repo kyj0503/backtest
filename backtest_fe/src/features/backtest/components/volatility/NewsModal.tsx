@@ -26,7 +26,7 @@ const NewsModal: React.FC<NewsModalProps> = ({
 
   return (
     <Dialog open={isVisible} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>
             {modalTitle}

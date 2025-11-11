@@ -115,10 +115,10 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
   const stockCount = state.portfolio.length;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
+    <div className="mx-auto flex w-full lg:max-w-[1600px] flex-col gap-4 sm:gap-6">
       {/* 에러 모달 */}
       <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[95vw] sm:max-w-lg mx-3">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-destructive text-2xl">
               <div className="p-2 rounded-xl bg-destructive/10">

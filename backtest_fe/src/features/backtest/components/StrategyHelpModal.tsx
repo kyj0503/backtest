@@ -52,7 +52,7 @@ const StrategyHelpModal: React.FC<StrategyHelpModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] p-0">
         <ScrollArea className="max-h-[90vh] p-6">
           <DialogHeader className="space-y-3 mb-6">
             <div className="flex items-start justify-between gap-4">
