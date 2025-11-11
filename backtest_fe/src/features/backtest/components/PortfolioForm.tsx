@@ -274,42 +274,23 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
       description={`투자할 자산과 비중을 설정하세요. 최대 ${VALIDATION_RULES.MAX_PORTFOLIO_SIZE}개의 자산을 추가할 수 있습니다.`}
       contentClassName="md:overflow-x-auto"
       actions={
-        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-          <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background p-1 shadow-sm">
-            <Button
-              type="button"
-              onClick={() => setPortfolioInputMode('amount')}
-              variant={portfolioInputMode === 'amount' ? 'secondary' : 'ghost'}
-              className="rounded-full px-4 py-1 text-sm"
-            >
-              금액 기준
-            </Button>
-            <Button
-              type="button"
-              onClick={() => setPortfolioInputMode('weight')}
-              variant={portfolioInputMode === 'weight' ? 'secondary' : 'ghost'}
-              className="rounded-full px-4 py-1 text-sm"
-            >
-              비중 기준
-            </Button>
-          </div>
-          {portfolioInputMode === 'weight' && (
-            <div className="flex items-center gap-2 rounded-full bg-muted/40 px-3 py-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">
-                <FinancialTermTooltip term="투자 금액">
-                  전체 투자금액($)
-                </FinancialTermTooltip>
-              </Label>
-              <Input
-                type="number"
-                min={1}
-                step={0.01}
-                value={totalInvestment}
-                onChange={e => setTotalInvestment(Number(e.target.value))}
-                className="h-8 w-28 rounded-full border-0 bg-background text-right text-sm shadow-none focus-visible:ring-1"
-              />
-            </div>
-          )}
+        <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background p-1 shadow-sm">
+          <Button
+            type="button"
+            onClick={() => setPortfolioInputMode('amount')}
+            variant={portfolioInputMode === 'amount' ? 'secondary' : 'ghost'}
+            className="rounded-full px-4 py-1 text-sm"
+          >
+            금액 기준
+          </Button>
+          <Button
+            type="button"
+            onClick={() => setPortfolioInputMode('weight')}
+            variant={portfolioInputMode === 'weight' ? 'secondary' : 'ghost'}
+            className="rounded-full px-4 py-1 text-sm"
+          >
+            비중 기준
+          </Button>
         </div>
       }
       footer={
@@ -351,21 +332,29 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
       <div className="md:hidden space-y-3">
         {portfolio.map((stock, index) => renderMobileCard(stock, index))}
         
-        {/* 모바일 합계 카드 */}
-        <Card className="bg-muted/30">
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold">합계</span>
-                <span className="text-lg font-bold">${(() => {
-                  const dcaAdjustedTotal = getDcaAdjustedTotal(portfolio, startDate, endDate);
-                  return dcaAdjustedTotal.toLocaleString();
-                })()}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">총 비중</span>
-                {(() => {
-                  if (portfolioInputMode === 'weight') {
+        {/* 합계 또는 전체 투자금액 카드 */}
+        {portfolioInputMode === 'weight' ? (
+          <Card className="bg-muted/30">
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
+                    <FinancialTermTooltip term="투자 금액">
+                      전체 투자금액($)
+                    </FinancialTermTooltip>
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    step={0.01}
+                    value={totalInvestment}
+                    onChange={e => setTotalInvestment(Number(e.target.value))}
+                    className="h-8 w-24 rounded-full border-0 bg-background text-right text-sm shadow-none focus-visible:ring-1"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">총 비중</span>
+                  {(() => {
                     const totalWeight = portfolio.reduce((sum, stock) => {
                       return sum + (typeof stock.weight === 'number' ? stock.weight : 0);
                     }, 0);
@@ -376,14 +365,30 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                         {displayWeight}%
                       </Badge>
                     );
-                  } else {
-                    return <Badge variant="secondary" className="font-bold">100.0%</Badge>;
-                  }
-                })()}
+                  })()}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-muted/30">
+            <CardContent className="p-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">합계</span>
+                  <span className="text-lg font-bold">${(() => {
+                    const dcaAdjustedTotal = getDcaAdjustedTotal(portfolio, startDate, endDate);
+                    return dcaAdjustedTotal.toLocaleString();
+                  })()}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">총 비중</span>
+                  <Badge variant="secondary" className="font-bold">100.0%</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* 데스크톱 테이블 레이아웃 (md 이상) */}
