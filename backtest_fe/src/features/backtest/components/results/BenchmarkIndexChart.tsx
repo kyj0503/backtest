@@ -8,7 +8,6 @@
  */
 import React, { useState, useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { CARD_STYLES, HEADING_STYLES } from '@/shared/styles/design-tokens';
 import { useRenderPerformance } from '@/shared/components';
 
 interface BenchmarkIndexChartProps {
@@ -182,18 +181,12 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   if (!hasData) return null;
 
   return (
-    <div className={`${CARD_STYLES.base} h-[400px] min-w-[500px] w-full flex flex-col`}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between flex-shrink-0">
-        <h3 className={HEADING_STYLES.h3}>벤치마크 비교</h3>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%" debounce={300}>
-          <LineChart 
-            data={mergedData} 
-            syncId="benchmarkChart"
-            margin={{ top: 5, right: 20, left: 10, bottom: window.innerWidth < 640 ? 60 : 5 }}
-          >
+    <ResponsiveContainer width="100%" height={400} debounce={300}>
+      <LineChart 
+        data={mergedData} 
+        syncId="benchmarkChart"
+        margin={{ top: 5, right: 20, left: 10, bottom: window.innerWidth < 640 ? 60 : 5 }}
+      >
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis
             dataKey="date"
@@ -290,8 +283,6 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
           )}
         </LineChart>
       </ResponsiveContainer>
-      </div>
-    </div>
   );
 });
 

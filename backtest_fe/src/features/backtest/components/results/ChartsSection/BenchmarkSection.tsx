@@ -6,6 +6,7 @@
 import React, { memo } from 'react';
 import BenchmarkIndexChart from '../BenchmarkIndexChart';
 import BenchmarkReturnsChart from '../BenchmarkReturnsChart';
+import { ResultBlock } from '../../shared';
 import { EquityPoint } from '../../../model/types';
 
 interface BenchmarkSectionProps {
@@ -34,19 +35,22 @@ export const BenchmarkSection: React.FC<BenchmarkSectionProps> = memo(({
   return (
     <>
       {/* 지수 벤치마크 차트 */}
-      <BenchmarkIndexChart
-        sp500Data={sp500Benchmark}
-        nasdaqData={nasdaqBenchmark}
-        portfolioEquityData={equityDataForBenchmark}
-      />
+      <ResultBlock title="벤치마크 비교" description="S&P 500, NASDAQ 지수와 포트폴리오 성과 비교">
+        <BenchmarkIndexChart
+          sp500Data={sp500Benchmark}
+          nasdaqData={nasdaqBenchmark}
+          portfolioEquityData={equityDataForBenchmark}
+        />
+      </ResultBlock>
 
       {/* 수익률 벤치마크 비교 차트 */}
-      <BenchmarkReturnsChart 
-        sp500Data={sp500BenchmarkWithReturn} 
-        nasdaqData={nasdaqBenchmarkWithReturn}
-        portfolioEquityData={equityDataForBenchmark}
-        aggregationType={aggregationType}
-      />
+      <ResultBlock title={`${aggregationType === 'daily' ? '일일' : aggregationType === 'weekly' ? '주간' : '월간'} 수익률 벤치마크 비교`} description="포트폴리오와 벤치마크 지수의 수익률 비교">
+        <BenchmarkReturnsChart 
+          sp500Data={sp500BenchmarkWithReturn} 
+          nasdaqData={nasdaqBenchmarkWithReturn}
+          portfolioEquityData={equityDataForBenchmark}
+        />
+      </ResultBlock>
     </>
   );
 });
