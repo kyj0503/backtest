@@ -30,7 +30,7 @@ export const FormSection = ({
     >
       <header className="flex flex-col gap-3 sm:gap-4 border-b-2 border-border/60 px-3 sm:px-6 py-3 sm:py-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1 sm:space-y-1.5">
-          <h3 className={`${HEADING_STYLES.h2} leading-tight text-lg sm:text-xl`}>{title}</h3>
+          <h3 className="text-lg sm:text-xl font-semibold text-foreground leading-tight">{title}</h3>
           {description ? (
             <p className={`${TEXT_STYLES.caption} leading-relaxed text-xs sm:text-sm`}>{description}</p>
           ) : null}
