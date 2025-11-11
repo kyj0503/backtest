@@ -93,7 +93,7 @@ export const FormField: React.FC<FormFieldProps> = ({
             min={min}
             max={max}
             step={step}
-            className={`${error ? 'border-destructive' : ''} ${type === 'date' ? 'w-full' : ''}`}
+            className={`${error ? 'border-destructive' : ''} ${type === 'date' ? 'w-full text-left [&::-webkit-date-and-time-value]:text-left' : ''}`}
           />
         );
     }
