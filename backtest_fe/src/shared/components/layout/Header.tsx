@@ -23,8 +23,8 @@ const Header: React.FC = () => {
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
-          <span className="text-lg font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-            라고할때살걸
+          <span className="text-sm sm:text-base md:text-lg font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent whitespace-nowrap">
+            라고할때<wbr />살걸
           </span>
         </Link>
 
