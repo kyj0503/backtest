@@ -25,6 +25,7 @@ interface SingleStockChartsProps {
   tickerInfo: Record<string, any>;
   tradeLogs: Record<string, any[]>;
   loadingStockData?: boolean;
+  aggregationType?: 'daily' | 'weekly' | 'monthly';
 }
 
 export const SingleStockCharts: React.FC<SingleStockChartsProps> = memo(({
@@ -36,6 +37,7 @@ export const SingleStockCharts: React.FC<SingleStockChartsProps> = memo(({
   tickerInfo,
   tradeLogs,
   loadingStockData = false,
+  aggregationType = 'daily',
 }) => {
   const showTradeCharts = singleTrades.length > 0 && chartData.strategy !== 'buy_hold_strategy';
 
@@ -68,7 +70,7 @@ export const SingleStockCharts: React.FC<SingleStockChartsProps> = memo(({
           </div>
         ) : stocksData.length > 0 ? (
           <Suspense fallback={<ChartLoading height={360} />}>
-            <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} tradeLogs={tradeLogs} />
+            <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} tradeLogs={tradeLogs} aggregationType={aggregationType} />
           </Suspense>
         ) : (
           <p className="text-sm text-muted-foreground">표시할 주가 데이터가 없습니다.</p>

@@ -71,7 +71,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
       {hasExchangeRates && (
         <ResultBlock title="환율 추이" description="동일 기간의 원/달러 환율 변동">
           <div className="space-y-4">
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={360}>
               <LineChart data={exchangeRates}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                 <XAxis dataKey="date" tick={{ fontSize: 12 }} tickFormatter={formatDateShort} />

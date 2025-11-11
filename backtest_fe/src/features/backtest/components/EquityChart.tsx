@@ -58,7 +58,7 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
   }, [processedData.length]);
 
   return (
-    <ResponsiveContainer width="100%" height={320} debounce={300}>
+    <ResponsiveContainer width="100%" height={400} debounce={300}>
       <ComposedChart data={processedData} margin={{ ...CHART_CONFIG.margin, bottom: xAxisProps.height }} syncId="equityChart">
         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
         <XAxis 

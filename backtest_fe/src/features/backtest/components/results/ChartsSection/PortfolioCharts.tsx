@@ -108,7 +108,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
         title="누적 자산 가치"
         description="기간 동안 누적 자산 가치 변화를 확인하세요 (리밸런싱 시점 표시)"
       >
-        <ResponsiveContainer width="100%" height={360}>
+        <ResponsiveContainer width="100%" height={400}>
           <AreaChart data={equityDataWithRebalancePoints}>
             <defs>
               {PORTFOLIO_VALUE_GRADIENT}
@@ -153,7 +153,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
 
       {/* 일일 수익률 */}
       <ResultBlock title={`${periodLabel} 수익률`} description={`${periodLabel} 수익률 변동을 살펴보며 변동성을 파악하세요`}>
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" height={400}>
           <LineChart data={portfolioEquityData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" tickFormatter={formatDateShort} />
@@ -186,7 +186,7 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
           </div>
         ) : stocksData.length > 0 ? (
           <Suspense fallback={<ChartLoading height={360} />}>
-            <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} tradeLogs={tradeLogs} />
+            <LazyStockPriceChart stocksData={stocksData} tickerInfo={tickerInfo} tradeLogs={tradeLogs} aggregationType={aggregationType} />
           </Suspense>
         ) : (
           <p className="text-sm text-muted-foreground">표시할 자산 데이터가 없습니다.</p>

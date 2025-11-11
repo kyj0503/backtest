@@ -79,7 +79,7 @@ const TradesChart: React.FC<TradesChartProps> = memo(({ trades, showCard = true 
   }
 
   const chartContent = (
-    <ResponsiveContainer width="100%" height={250} debounce={300}>
+    <ResponsiveContainer width="100%" height={400} debounce={300}>
       <ScatterChart data={exitTrades} margin={chartConfig.margin} syncId="tradesChart">
         <CartesianGrid
           strokeDasharray="3 3"
