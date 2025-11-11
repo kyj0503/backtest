@@ -9,37 +9,37 @@
 백테스트 실행의 전체적인 흐름은 다음과 같습니다.
 
 ```
-API 요청 (Request)
+API 요청
     |
     v
-Service Layer (`backtest_service`, `portfolio_service`)
+서비스 계층 (`backtest_service`, `portfolio_service`)
     |  1. 입력값 검증
     |  2. 데이터 로드 요청
     |
     v
-Data Repository (`data_repository`)
+데이터 저장소 (`data_repository`)
     |  1. 인메모리 캐시 확인
     |  2. DB 캐시 확인 (MySQL)
     |  3. yfinance API 호출 (캐시 없음)
     |
     v
-Backtest Engine (`backtest_engine.py`)
+백테스트 엔진 (`backtest_engine.py`)
     |  1. **통화 변환 (모든 자산을 USD로)**
-    |  2. 전략 클래스 동적 생성 (파라미터 적용)
+    |  2. 전략 클래스 동적 생성 (매개변수 적용)
     |  3. `backtesting.py` 라이브러리 호출
-    |  4. 백테스트 실행 (`bt.run()`)
+    |  4. 백테스트 실행
     |
     v
-결과 직렬화 및 반환 (Response)
+결과 직렬화 및 반환
 ```
 
 ## `backtesting.py`의 역할
 
 `backtesting.py`는 순수 백테스팅 실행 엔진으로서 다음과 같은 핵심 기능을 담당합니다.
 
-- **이벤트 기반 시뮬레이션**: 과거 가격 데이터를 순회하며 각 시점(봉)마다 `strategy.next()` 메서드를 호출합니다.
+- **이벤트 기반 시뮬레이션**: 과거 가격 데이터를 순회하며 각 시점마다 `strategy.next()` 메서드를 호출합니다.
 - **전략 실행**: `Strategy` 클래스의 `init()`과 `next()` 메서드를 실행하여 매매 로직을 처리합니다.
-- **계좌 관리**: 현금, 포지션, 자산 가치(equity)를 내부적으로 관리하고 업데이트합니다.
+- **계좌 관리**: 현금, 포지션, 자산 가치를 내부적으로 관리하고 업데이트합니다.
 - **기본 통계 계산**: 거래 내역, 수익률, 승률 등 기본적인 통계 지표를 계산하여 반환합니다.
 
 본 프로젝트는 `backtesting.py`를 직접 수정하지 않고, 래퍼 클래스(`BacktestEngine`)를 통해 기능을 확장하고 제어합니다.
@@ -50,7 +50,7 @@ Backtest Engine (`backtest_engine.py`)
 
 ### 1. `BacktestEngine`: 핵심 래퍼 클래스
 
-`app/services/backtest_engine.py`에 위치한 `BacktestEngine`은 백테스트의 전 과정을 오케스트레이션합니다.
+`app/services/backtest_engine.py`에 위치한 `BacktestEngine`은 백테스트의 전 과정을 총괄합니다.
 
 - **통화 변환**:
   - **가장 중요한 커스텀 로직 중 하나입니다.**
@@ -59,16 +59,16 @@ Backtest Engine (`backtest_engine.py`)
   - 환율 데이터는 주가 데이터와 마찬가지로 캐시 우선 정책으로 조회됩니다.
 
 - **동적 전략 생성**:
-  - 사용자가 API를 통해 전달한 전략 파라미터(예: `sma_short=15`)를 `_build_strategy` 메서드에서 동적으로 적용합니다.
-  - 원본 전략 클래스를 상속받아 파라미터가 오버라이드된 새로운 클래스를 즉석에서 생성하여 백테스트에 사용합니다.
+  - 사용자가 API를 통해 전달한 전략 매개변수(예: `sma_short=15`)를 `_build_strategy` 메서드에서 동적으로 적용합니다.
+  - 원본 전략 클래스를 상속받아 매개변수가 재정의된 새로운 클래스를 즉석에서 생성하여 백테스트에 사용합니다.
 
 - **데이터 관리**:
   - `_get_price_data` 메서드를 통해 `DataRepository`에 데이터 조회를 위임하여 캐싱 정책을 활용합니다.
-  - `asyncio.to_thread()`를 사용하여 동기적인 데이터 조회 라이브러리(yfinance, SQLAlchemy) 호출 시 발생할 수 있는 레이스 컨디션을 방지합니다.
+  - `asyncio.to_thread()`를 사용하여 동기적인 데이터 조회 라이브러리(yfinance, SQLAlchemy) 호출 시 발생할 수 있는 경쟁 상태를 방지합니다.
 
 - **결과 표준화**:
-  - `backtesting.py`가 반환하는 `pd.Series` 형태의 결과를 `BacktestResult` Pydantic 스키마에 맞춰 표준화된 JSON 객체로 변환합니다.
-  - 거래 로그, 일별 자산 가치(equity curve) 등을 추출하고 가공합니다.
+  - `backtesting.py`가 반환하는 결과를 `BacktestResult` 스키마에 맞춰 표준화된 JSON 객체로 변환합니다.
+  - 거래 로그, 일별 자산 가치 등을 추출하고 가공합니다.
 
 ### 2. `PortfolioService`: 포트폴리오 로직
 
@@ -79,7 +79,7 @@ Backtest Engine (`backtest_engine.py`)
   - `calculate_dca_portfolio_returns` 메서드가 이 역할을 수행하며, 다음과 같은 복잡한 로직을 처리합니다.
     - **DCA (분할 매수)**: 정해진 주기(매주, 매월 등)와 횟수에 따라 자동으로 추가 매수를 시뮬레이션합니다.
     - **리밸런싱**: 정해진 주기마다 각 자산의 비중이 목표 비중을 유지하도록 매매를 시뮬레이션합니다.
-    - **상장폐지 감지**: 특정 기간 이상 가격 데이터가 없으면 해당 종목을 상장폐지로 간주하고, 리밸런싱 시 비중을 동적으로 재계산합니다.
+    - **상장 폐지 감지**: 특정 기간 이상 가격 데이터가 없으면 해당 종목을 상장 폐지로 간주하고, 리밸런싱 시 비중을 동적으로 재계산합니다.
 
 - **전략 기반 포트폴리오**:
   - 포트폴리오에 특정 기술적 분석 전략(예: SMA 교차)을 적용할 경우, 각 자산에 대해 `BacktestEngine`을 개별적으로 실행합니다.
