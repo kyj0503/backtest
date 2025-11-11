@@ -3,6 +3,7 @@
 // Layout Components
 export { default as ErrorBoundary } from './layout/ErrorBoundary';
 export { default as Header } from './layout/Header';
+export { default as Footer } from './layout/Footer';
 export { default as ThemeSelector } from './layout/ThemeSelector';
 
 // Form Components

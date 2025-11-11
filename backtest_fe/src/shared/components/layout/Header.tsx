@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { TrendingUp, Moon, Sun, Palette, Github } from 'lucide-react';
+import { TrendingUp, Moon, Sun, Palette } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { useTheme } from '@/shared/hooks/useTheme';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog';
@@ -23,8 +23,8 @@ const Header: React.FC = () => {
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
-          <span className="text-lg font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-            라고할때살걸
+          <span className="text-sm sm:text-base md:text-lg font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent whitespace-nowrap">
+            라고할때<wbr />살걸
           </span>
         </Link>
 
@@ -44,18 +44,6 @@ const Header: React.FC = () => {
         </nav>
 
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-            asChild
-            aria-label="GitHub 저장소"
-          >
-            <a href="https://github.com/kyj0503/backtest" target="_blank" rel="noopener noreferrer">
-              <Github className="h-4 w-4" />
-            </a>
-          </Button>
-
           <Dialog open={themeDialogOpen} onOpenChange={setThemeDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full" aria-label="테마 설정 열기">

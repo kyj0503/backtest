@@ -219,7 +219,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
         </div>
 
         {/* 제출 버튼 */}
-        <div className="flex justify-end pt-4 sm:pt-6">
+        <div className="flex justify-end pt-2 sm:pt-4 pb-6 sm:pb-8">
           <Button
             type="submit"
             disabled={loading || state.ui.isLoading}

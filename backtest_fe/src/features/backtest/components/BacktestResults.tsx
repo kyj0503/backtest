@@ -218,14 +218,14 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
   }
 
   return (
-    <div ref={resultsRef} className="mx-auto w-full lg:max-w-screen-2xl space-y-4 sm:space-y-6">
+    <div ref={resultsRef} className="mx-auto w-full lg:max-w-screen-2xl space-y-4 sm:space-y-6 mt-6 sm:mt-8">
       {/* 경고 메시지 배너 */}
       {isPortfolio && 'warnings' in data && data.warnings && data.warnings.length > 0 && (
         <WarningBanner warnings={data.warnings} />
       )}
 
       {/* 리포트 다운로드 버튼 */}
-      <div className="flex justify-end px-1 sm:px-3 lg:px-0">
+      <div className="flex justify-end px-1 sm:px-3 lg:px-0 mb-4 sm:mb-6">
         <Button variant="outline" size="default" onClick={downloadAsTextReport} className="shadow-sm text-xs sm:text-sm">
           <FileDown className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
           리포트 다운로드

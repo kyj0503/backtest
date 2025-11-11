@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useTheme } from '@/shared/hooks/useTheme';
-import { Header, ErrorBoundary } from '@/shared/components';
+import { Header, Footer, ErrorBoundary } from '@/shared/components';
 import HomePage from './pages/HomePage';
 import PortfolioPage from './pages/PortfolioPage';
 import { Toaster } from '@/shared/ui/sonner';
@@ -38,6 +38,7 @@ function App() {
                 <Route path="/portfolio" element={<Navigate to="/backtest" replace />} />
               </Routes>
             </main>
+            <Footer />
             <Toaster richColors position="top-right" closeButton />
           </div>
         </Router>
