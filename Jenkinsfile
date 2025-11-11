@@ -85,13 +85,15 @@ pipeline {
                     def feImageName = "ghcr.io/${env.GHCR_OWNER}/${env.FE_IMAGE_NAME}:${env.BUILD_NUMBER}"
                     echo "Deploying to local on-premise server"
                     
-                    // 배포 디렉토리의 최신 스크립트 사용
-                    sh """
-                        cd ${env.DEPLOY_PATH}
-                        git pull origin main || true
-                        chmod +x deploy.sh
-                        bash deploy.sh ${beImageName} ${feImageName}
-                    """
+                    // Docker Registry 인증된 상태에서 배포 실행
+                    docker.withRegistry("https://ghcr.io", 'github-token') {
+                        sh """
+                            cd ${env.DEPLOY_PATH}
+                            git pull origin main || true
+                            chmod +x deploy.sh
+                            bash deploy.sh ${beImageName} ${feImageName}
+                        """
+                    }
                 }
             }
         }

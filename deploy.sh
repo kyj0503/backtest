@@ -22,10 +22,6 @@ echo "=========================================="
 # 배포 디렉토리로 이동
 cd "$DEPLOY_DIR"
 
-# GitHub Container Registry 로그인 (필요한 경우)
-echo "Logging in to GitHub Container Registry..."
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u kyj0503 --password-stdin
-
 # 새 이미지 pull
 echo "Pulling new images..."
 docker pull "$BE_IMAGE"
