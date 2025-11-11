@@ -17,7 +17,12 @@ pipeline {
 
         // --- Main 브랜치 전용 스테이지 ---
         stage('Build and Push Backend Image') {
-            when { branch 'main' }
+            when {
+                anyOf {
+                    branch 'main'
+                    expression { env.GIT_BRANCH == 'origin/main' }
+                }
+            }
             steps {
                 script {
                     def beImageName = "ghcr.io/${env.GHCR_OWNER}/${env.BE_IMAGE_NAME}:${env.BUILD_NUMBER}"
@@ -35,7 +40,12 @@ pipeline {
         }
 
         stage('Build and Push Frontend Image') {
-            when { branch 'main' }
+            when {
+                anyOf {
+                    branch 'main'
+                    expression { env.GIT_BRANCH == 'origin/main' }
+                }
+            }
             steps {
                 script {
                     def feImageName = "ghcr.io/${env.GHCR_OWNER}/${env.FE_IMAGE_NAME}:${env.BUILD_NUMBER}"
@@ -53,7 +63,12 @@ pipeline {
         }
 
         stage('Deploy to Production (Local)') {
-            when { branch 'main' }
+            when {
+                anyOf {
+                    branch 'main'
+                    expression { env.GIT_BRANCH == 'origin/main' }
+                }
+            }
             steps {
                 script {
                     def beImageName = "ghcr.io/${env.GHCR_OWNER}/${env.BE_IMAGE_NAME}:${env.BUILD_NUMBER}"
