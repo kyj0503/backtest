@@ -19,7 +19,7 @@
 | :--------- | :---------------------------------------------------------------- |
 | **백엔드**   | Python, FastAPI, backtesting.py, SQLAlchemy, pandas, numpy        |
 | **프론트엔드** | TypeScript, React, Vite, Zustand, Recharts, shadcn/ui, Tailwind CSS |
-| **데이터베이스** | PostgreSQL (개발/프로덕션), SQLite (테스트)                     |
+| **데이터베이스** | MySQL (개발/프로덕션), SQLite (테스트)                     |
 | **인프라/배포** | Docker, Docker Compose, Nginx                                     |
 | **테스트**     | Pytest (백엔드), Vitest, React Testing Library, Playwright (프론트엔드) |
 
