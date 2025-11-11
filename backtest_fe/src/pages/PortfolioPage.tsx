@@ -3,7 +3,7 @@ import { AlertTriangle, TrendingUp, X, Loader2, Briefcase } from 'lucide-react';
 import PortfolioBacktestForm from '@/features/backtest/components/PortfolioBacktestForm';
 import BacktestResults from '@/features/backtest/components/BacktestResults';
 import { useBacktest } from '@/features/backtest/hooks/usePortfolioBacktest';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Card, CardContent, CardDescription, CardTitle } from '@/shared/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
@@ -36,17 +36,7 @@ const PortfolioPage: React.FC = () => {
         </div>
 
         {/* Backtest Form */}
-        <Card className="mb-6 sm:mb-10">
-          <CardHeader>
-            <CardTitle>백테스트 설정</CardTitle>
-            <CardDescription className="text-sm sm:text-base">
-              포트폴리오 구성, 투자 전략, 시뮬레이션 기간 등 상세 조건을 설정하여 현실적인 백테스트를 진행하세요.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PortfolioBacktestForm onSubmit={runBacktest} loading={loading} />
-          </CardContent>
-        </Card>
+        <PortfolioBacktestForm onSubmit={runBacktest} loading={loading} />
 
         {/* Loading State */}
         {loading && (
@@ -90,23 +80,10 @@ const PortfolioPage: React.FC = () => {
 
         {/* Results Display */}
         {results && !loading && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-2xl sm:text-3xl">
-                <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3" />
-                백테스트 결과
-              </CardTitle>
-              <CardDescription className="text-sm sm:text-base mt-2">
-                설정한 포트폴리오와 투자 전략에 대한 상세 분석 결과입니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BacktestResults
-                data={results.data}
-                isPortfolio={true}
-              />
-            </CardContent>
-          </Card>
+          <BacktestResults
+            data={results.data}
+            isPortfolio={true}
+          />
         )}
 
         {/* Initial State Guide */}
