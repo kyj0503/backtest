@@ -174,7 +174,7 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
           <Card
             key={item.label}
             className={cn(
-              'overflow-hidden border border-border/70 bg-card/70 shadow-sm transition-shadow hover:shadow-md',
+              'overflow-hidden border border-border/40 bg-card shadow-sm transition-shadow hover:shadow-md',
             )}
           >
             <CardContent className="space-y-3 px-5 py-4">
