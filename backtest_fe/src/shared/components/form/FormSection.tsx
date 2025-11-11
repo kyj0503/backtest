@@ -24,7 +24,7 @@ export const FormSection = ({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-2xl border-2 border-border/70 bg-card/60 shadow-md hover:shadow-lg transition-shadow duration-200 backdrop-blur-sm',
+        'rounded-xl border border-border/40 bg-card p-2 sm:p-6 shadow-sm',
         className,
       )}
     >
