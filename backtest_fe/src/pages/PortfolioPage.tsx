@@ -1,12 +1,11 @@
 import React from 'react';
-import { AlertTriangle, TrendingUp, X, Loader2, Briefcase } from 'lucide-react';
+import { AlertTriangle, X, Loader2, Briefcase } from 'lucide-react';
 import PortfolioBacktestForm from '@/features/backtest/components/PortfolioBacktestForm';
 import BacktestResults from '@/features/backtest/components/BacktestResults';
 import { useBacktest } from '@/features/backtest/hooks/usePortfolioBacktest';
 import { Card, CardContent, CardDescription, CardTitle } from '@/shared/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
-import { Badge } from '@/shared/ui/badge';
 
 const PortfolioPage: React.FC = () => {
   const { result: results, isLoading: loading, error, runBacktest, reset: clearError } = useBacktest();
@@ -19,22 +18,6 @@ const PortfolioPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background py-4 sm:py-8">
       <div className="mx-auto px-2 sm:px-4 md:px-6 lg:px-8 w-full lg:max-w-screen-2xl">
-        {/* Page Header */}
-        <div className="text-center mb-6 sm:mb-10">
-          <div className="flex justify-center mb-3 sm:mb-5">
-            <Badge variant="outline" className="mb-2">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              투자 전략 백테스팅
-            </Badge>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-primary mb-3 sm:mb-5 tracking-tight">
-            백테스트
-          </h2>
-          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-2">
-            단일 종목부터 여러 자산을 조합한 포트폴리오까지, 다양한 투자 전략을 과거 데이터로 검증하고 최적화할 수 있습니다.
-          </p>
-        </div>
-
         {/* Backtest Form */}
         <PortfolioBacktestForm onSubmit={runBacktest} loading={loading} />
 
