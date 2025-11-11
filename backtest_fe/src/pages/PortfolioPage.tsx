@@ -31,7 +31,7 @@ const PortfolioPage: React.FC = () => {
             백테스트
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-2">
-            단일 종목 또는 여러 종목으로 구성된 포트폴리오의 투자 전략을 테스트합니다
+            단일 종목부터 여러 자산을 조합한 포트폴리오까지, 다양한 투자 전략을 과거 데이터로 검증하고 최적화할 수 있습니다.
           </p>
         </div>
 
@@ -40,7 +40,7 @@ const PortfolioPage: React.FC = () => {
           <CardHeader>
             <CardTitle>백테스트 설정</CardTitle>
             <CardDescription className="text-sm sm:text-base">
-              종목 구성, 투자 전략, 백테스트 기간을 설정하세요
+              포트폴리오 구성, 투자 전략, 시뮬레이션 기간 등 상세 조건을 설정하여 현실적인 백테스트를 진행하세요.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -58,7 +58,7 @@ const PortfolioPage: React.FC = () => {
               </div>
               <CardTitle className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">백테스트 실행 중...</CardTitle>
               <CardDescription className="text-sm sm:text-base px-4">
-                포트폴리오 데이터를 분석하고 있습니다. 잠시만 기다려 주세요.
+                과거 데이터를 기반으로 전략을 시뮬레이션하고 있습니다. 잠시만 기다려 주세요.
               </CardDescription>
             </CardContent>
           </Card>
@@ -97,7 +97,7 @@ const PortfolioPage: React.FC = () => {
                 백테스트 결과
               </CardTitle>
               <CardDescription className="text-sm sm:text-base mt-2">
-                설정하신 구성과 전략에 따른 백테스트 분석 결과입니다
+                설정한 포트폴리오와 투자 전략에 대한 상세 분석 결과입니다.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -117,12 +117,12 @@ const PortfolioPage: React.FC = () => {
                 <Briefcase className="text-primary h-8 w-8 sm:h-10 sm:w-10" />
               </div>
               <CardTitle className="text-xl sm:text-2xl font-bold mb-3 sm:mb-5">
-                백테스트 설정을 완료하고 실행하세요
+                나만의 투자 전략을 검증해보세요
               </CardTitle>
               <CardDescription className="text-sm sm:text-base leading-relaxed">
-                종목 구성과 투자 전략, 백테스트 기간을 설정한 후<br />
+                포트폴리오를 구성하고 투자 전략을 선택한 후, <br />
                 <span className="inline-flex items-center rounded-full border-2 px-3 py-1 text-xs font-bold mx-2 mt-2 bg-background">백테스트 실행</span>
-                버튼을 클릭하면 결과를 확인할 수 있습니다.
+                버튼을 클릭하여 시뮬레이션 결과를 확인하세요.
               </CardDescription>
             </CardContent>
           </Card>
