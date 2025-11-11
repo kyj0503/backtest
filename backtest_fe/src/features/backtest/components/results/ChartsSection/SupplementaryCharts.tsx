@@ -97,7 +97,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
 
             {/* 환율 주요 지점 정보 */}
             {exchangeStats && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
                 <div className="text-center">
                   <div className="text-xs text-muted-foreground mb-1">시작점</div>
                   <div className="text-sm font-semibold text-foreground">

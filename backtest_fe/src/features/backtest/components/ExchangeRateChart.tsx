@@ -125,7 +125,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
       </ResponsiveContainer>
 
       {/* 환율 요약 정보 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
         <div className="text-center">
           <div className="text-xs text-muted-foreground mb-1">시작 환율</div>
           <div className="text-sm font-semibold text-foreground">{formatRate(exchangeData[0]?.rate)}</div>
