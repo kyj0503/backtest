@@ -21,6 +21,16 @@ const CHART_CONFIG = {
   fillOpacity: 0.3,
 } as const;
 
+// 화면 크기에 따른 X축 틱 간격 계산
+const getXAxisInterval = (dataLength: number, width: number) => {
+  if (width < 640) { // 모바일
+    return Math.ceil(dataLength / 4); // 최대 4개 라벨
+  } else if (width < 1024) { // 태블릿
+    return Math.ceil(dataLength / 6); // 최대 6개 라벨
+  }
+  return Math.ceil(dataLength / 8); // 데스크톱, 최대 8개 라벨
+};
+
 const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
   // 성능 모니터링
   useRenderPerformance('EquityChart');
@@ -36,11 +46,28 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
     }));
   }, [data]);
 
+  // 반응형 X축 설정
+  const xAxisProps = useMemo(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    return {
+      interval: getXAxisInterval(processedData.length, typeof window !== 'undefined' ? window.innerWidth : 1024),
+      angle: isMobile ? -45 : 0,
+      textAnchor: isMobile ? 'end' : 'middle',
+      height: isMobile ? 60 : 30,
+    };
+  }, [processedData.length]);
+
   return (
     <ResponsiveContainer width="100%" height={320} debounce={300}>
-      <ComposedChart data={processedData} margin={CHART_CONFIG.margin} syncId="equityChart">
+      <ComposedChart data={processedData} margin={{ ...CHART_CONFIG.margin, bottom: xAxisProps.height }} syncId="equityChart">
         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+        <XAxis 
+          dataKey="date" 
+          tick={{ fontSize: 11 }}
+          interval={xAxisProps.interval}
+          angle={xAxisProps.angle}
+          textAnchor={xAxisProps.textAnchor as any}
+        />
         <YAxis yAxisId="return" orientation="left" />
         <YAxis yAxisId="drawdown" orientation="right" />
         <RechartsTooltip content={<CustomTooltip />} />

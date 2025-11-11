@@ -163,13 +163,19 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
         <>
           <div style={{ width: '100%', height: '400px' }}>
             <ResponsiveContainer debounce={300}>
-              <ComposedChart data={chartDataWithSignals} syncId="stockPriceChart">
+              <ComposedChart 
+                data={chartDataWithSignals} 
+                syncId="stockPriceChart"
+                margin={{ top: 5, right: 20, left: 10, bottom: typeof window !== 'undefined' && window.innerWidth < 640 ? 60 : 30 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatDate}
-                  tick={{ fontSize: 12 }}
-                  interval={Math.max(1, Math.floor(chartDataWithSignals.length / 8))}
+                  tick={{ fontSize: 11 }}
+                  interval={Math.max(1, Math.floor(chartDataWithSignals.length / (typeof window !== 'undefined' && window.innerWidth < 640 ? 4 : 8)))}
+                  angle={typeof window !== 'undefined' && window.innerWidth < 640 ? -45 : 0}
+                  textAnchor={typeof window !== 'undefined' && window.innerWidth < 640 ? 'end' : 'middle'}
                 />
                 <YAxis
                   tickFormatter={formatPrice}

@@ -176,7 +176,7 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
           />
         </FormSection>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
           <FormSection
             title="전략 선택"
             description="적용할 투자 전략과 파라미터를 설정하세요."
@@ -204,12 +204,12 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
         </div>
 
         {/* 제출 버튼 */}
-        <div className="flex justify-end pt-6">
+        <div className="flex justify-end pt-4 sm:pt-6">
           <Button
             type="submit"
             disabled={loading || state.ui.isLoading}
             size="lg"
-            className="min-w-[240px] shadow-md hover:shadow-xl"
+            className="w-full sm:w-auto sm:min-w-[240px] shadow-md hover:shadow-xl"
           >
             {(loading || state.ui.isLoading) ? (
               <>

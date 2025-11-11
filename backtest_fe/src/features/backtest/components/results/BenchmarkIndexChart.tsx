@@ -191,12 +191,19 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
       </div>
 
       <ResponsiveContainer width="100%" height={320} debounce={300}>
-        <LineChart data={mergedData} syncId="benchmarkChart">
+        <LineChart 
+          data={mergedData} 
+          syncId="benchmarkChart"
+          margin={{ top: 5, right: 20, left: 10, bottom: window.innerWidth < 640 ? 60 : 30 }}
+        >
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis
             dataKey="date"
             tickFormatter={formatDateTick}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 11 }}
+            interval={Math.ceil(mergedData.length / (window.innerWidth < 640 ? 4 : window.innerWidth < 1024 ? 6 : 8))}
+            angle={window.innerWidth < 640 ? -45 : 0}
+            textAnchor={window.innerWidth < 640 ? 'end' : 'middle'}
           />
           <YAxis
             domain={yAxisDomain}

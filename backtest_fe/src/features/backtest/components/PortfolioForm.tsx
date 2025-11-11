@@ -114,13 +114,14 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
         </div>
       }
       footer={
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:items-center">
           <Button
             type="button"
             onClick={addStock}
             disabled={portfolio.length >= 10}
             variant="outline"
-            className="rounded-full"
+            className="rounded-full w-full sm:w-auto"
+            size="sm"
           >
             + 종목 추가
           </Button>
@@ -131,7 +132,8 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                 onClick={addCash}
                 disabled={portfolio.length >= 10}
                 variant="outline"
-                className="rounded-full border-green-300 text-green-700 hover:bg-green-50"
+                className="rounded-full border-green-300 text-green-700 hover:bg-green-50 w-full sm:w-auto"
+                size="sm"
               >
                 현금 추가
               </Button>
@@ -140,7 +142,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               <p>현금을 포트폴리오에 추가 (무위험 자산)</p>
             </TooltipContent>
           </Tooltip>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-muted-foreground sm:ml-auto">
             {portfolio.length}/{VALIDATION_RULES.MAX_PORTFOLIO_SIZE} 자산
           </span>
         </div>

@@ -15,7 +15,7 @@ const DateRangeForm: React.FC<DateRangeFormProps> = ({
   setEndDate
 }) => {
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
       <FormField
         label={
           <FinancialTermTooltip term="백테스트 기간">
