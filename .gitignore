@@ -1,6 +1,9 @@
 # Environment files
 .env
 
+# Nginx config (실제 설정 파일, 예제는 커밋)
+nginx-backtest.conf
+
 # Python
 __pycache__/
 *.pyc

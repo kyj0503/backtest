@@ -77,6 +77,29 @@ docker compose -f compose.dev.yaml exec backtest-fe npm test
 docker compose -f compose.dev.yaml exec backtest-fe npm run test:ui
 ```
 
+## 프로덕션 배포
+
+### Nginx 리버스 프록시 설정
+
+프론트엔드 컨테이너는 3000번 포트로 실행되므로, 80번 포트로 서비스하려면 Nginx를 통해 프록시해야 합니다.
+
+```bash
+# 1. Nginx 설정 파일 생성
+sudo cp nginx-backtest.conf.example /etc/nginx/sites-available/backtest
+
+# 2. server_name 수정 (실제 도메인 또는 IP로)
+sudo nano /etc/nginx/sites-available/backtest
+
+# 3. 심볼릭 링크 생성
+sudo ln -s /etc/nginx/sites-available/backtest /etc/nginx/sites-enabled/
+
+# 4. Nginx 설정 테스트
+sudo nginx -t
+
+# 5. Nginx 재시작
+sudo systemctl reload nginx
+```
+
 ## 문서
 
 프로젝트의 아키텍처, 설계 결정, 테스트 전략 등에 대한 상세 문서는 각 서비스의 `docs` 디렉토리에서 확인할 수 있습니다.

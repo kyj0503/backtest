@@ -34,7 +34,11 @@ docker tag "$FE_IMAGE" "ghcr.io/kyj0503/backtest-fe:latest"
 
 # 기존 컨테이너 중지 및 제거
 echo "Stopping and removing old containers..."
-docker compose -f "$COMPOSE_FILE" down || true
+docker compose -f "$COMPOSE_FILE" down || {
+    echo "Docker compose down failed, attempting manual cleanup..."
+    docker stop backtest-fe backtest-be-fast 2>/dev/null || true
+    docker rm -f backtest-fe backtest-be-fast 2>/dev/null || true
+}
 
 # 새 컨테이너 시작
 echo "Starting new containers..."
