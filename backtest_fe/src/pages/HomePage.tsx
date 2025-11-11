@@ -41,11 +41,11 @@ const HomePage: React.FC = () => {
             </div>
 
             {/* Hero Image - 메인 대표 이미지 */}
-            <div className="mt-8 sm:mt-12 px-4">
+            <div className="mt-8 sm:mt-12 px-2">
               <img
                 src="https://github.com/kyj0503/image/blob/main/backtest/backtest-main.png?raw=true"
                 alt="백테스트 플랫폼 메인 화면"
-                className="w-full max-w-4xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+                className="w-full max-w-6xl mx-auto rounded-2xl shadow-2xl border border-border/50"
               />
             </div>
           </div>
@@ -54,7 +54,7 @@ const HomePage: React.FC = () => {
 
       {/* What is Backtesting */}
       <section className="py-16 sm:py-24 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:max-w-4xl">
+        <div className="container mx-auto px-4 sm:px-6 lg:max-w-6xl">
           <div className="space-y-8 sm:space-y-12">
             <div className="text-center space-y-3 sm:space-y-4 px-4">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">백테스트란?</h2>
@@ -96,11 +96,11 @@ const HomePage: React.FC = () => {
             </div>
 
             {/* Process Illustration Image */}
-            <div className="mt-8 sm:mt-12 px-4">
+            <div className="mt-8 sm:mt-12 px-2">
               <img
-                src="https://github.com/kyj0503/image/blob/main/backtest/backtest-short.png?raw=true"
+                src="https://github.com/kyj0503/image/blob/main/backtest/backtest-result.png?raw=true"
                 alt="백테스트 프로세스"
-                className="w-full max-w-4xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+                className="w-full max-w-6xl mx-auto rounded-2xl shadow-2xl border border-border/50"
               />
             </div>
           </div>
@@ -109,7 +109,7 @@ const HomePage: React.FC = () => {
 
       {/* How to use */}
       <section className="py-16 sm:py-24 bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:max-w-4xl">
+        <div className="container mx-auto px-4 sm:px-6 lg:max-w-6xl">
           <div className="space-y-10 sm:space-y-16">
             <div className="text-center space-y-3 sm:space-y-4 px-4">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">어떻게 사용하나요?</h2>
@@ -169,7 +169,7 @@ const HomePage: React.FC = () => {
 
       {/* Key Features */}
       <section className="py-16 sm:py-24 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:max-w-4xl">
+        <div className="container mx-auto px-4 sm:px-6 lg:max-w-6xl">
           <div className="space-y-10 sm:space-y-16">
             <div className="text-center space-y-3 sm:space-y-4 px-4">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">주요 기능</h2>
@@ -214,11 +214,11 @@ const HomePage: React.FC = () => {
             </div>
 
             {/* Feature Showcase Image */}
-            <div className="mt-8 sm:mt-12 px-4">
+            <div className="mt-8 sm:mt-12 px-2">
               <img
                 src="https://github.com/kyj0503/image/blob/main/backtest/%EC%8A%A4%ED%81%AC%EB%A6%B0%EC%83%B7%202025-11-11%2014-04-12.png?raw=true"
                 alt="주요 기능 대시보드"
-                className="w-full max-w-4xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+                className="w-full max-w-6xl mx-auto rounded-2xl shadow-2xl border border-border/50"
               />
             </div>
           </div>
