@@ -225,7 +225,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
       )}
 
       {/* 리포트 다운로드 버튼 */}
-      <div className="flex justify-end px-3 sm:px-0">
+      <div className="flex justify-end px-1 sm:px-3 lg:px-0">
         <Button variant="outline" size="default" onClick={downloadAsTextReport} className="shadow-sm text-xs sm:text-sm">
           <FileDown className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
           리포트 다운로드

@@ -48,9 +48,4 @@ export const config: AppConfig = {
   BUILD_TIME: import.meta.env.VITE_BUILD_TIME || new Date().toISOString(),
 };
 
-// 개발 모드에서만 설정 정보 출력
-if (config.IS_DEVELOPMENT) {
-  console.log('App Config:', config);
-}
-
 export default config;

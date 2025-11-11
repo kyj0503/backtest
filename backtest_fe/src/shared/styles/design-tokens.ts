@@ -11,9 +11,9 @@
 
 /** 표준 카드 (주요 섹션) */
 export const CARD_STYLES = {
-  base: 'rounded-xl border border-border/40 bg-card p-6 shadow-sm',
-  compact: 'rounded-lg border border-border/40 bg-card p-4 shadow-sm',
-  nested: 'rounded-lg border border-border/30 bg-card/50 p-4',
+  base: 'rounded-xl border border-border/40 bg-card p-2 sm:p-6 shadow-sm',
+  compact: 'rounded-lg border border-border/40 bg-card p-2 sm:p-4 shadow-sm',
+  nested: 'rounded-lg border border-border/30 bg-card/50 p-2 sm:p-4',
 } as const;
 
 /** 섹션 컨테이너 */
@@ -51,16 +51,16 @@ export const TEXT_STYLES = {
 
 /** 섹션 간 간격 */
 export const SPACING = {
-  section: 'space-y-6',
-  sectionCompact: 'space-y-4',
-  item: 'space-y-3',
-  itemCompact: 'space-y-2',
-  gap: 'gap-6',
-  gapCompact: 'gap-4',
-  gapSmall: 'gap-2',
+  section: 'space-y-3 sm:space-y-6',
+  sectionCompact: 'space-y-2 sm:space-y-4',
+  item: 'space-y-2 sm:space-y-3',
+  itemCompact: 'space-y-1 sm:space-y-2',
+  gap: 'gap-3 sm:gap-6',
+  gapCompact: 'gap-2 sm:gap-4',
+  gapSmall: 'gap-1 sm:gap-2',
   /** 버튼/제목과 컨텐츠 사이 간격 */
-  contentGap: 'mb-6',
-  contentGapCompact: 'mb-4',
+  contentGap: 'mb-3 sm:mb-6',
+  contentGapCompact: 'mb-2 sm:mb-4',
 } as const;
 
 // ============================================
