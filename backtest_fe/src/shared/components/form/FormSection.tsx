@@ -32,7 +32,7 @@ export const FormSection = ({
         <div className="space-y-1 sm:space-y-1.5">
           <h3 className="text-2xl font-bold leading-none tracking-tight">{title}</h3>
           {description ? (
-            <p className={`${TEXT_STYLES.caption} leading-relaxed text-xs sm:text-sm`}>{description}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           ) : null}
         </div>
         {actions ? <div className="flex items-center gap-3 sm:min-w-[200px] sm:justify-end">{actions}</div> : null}
