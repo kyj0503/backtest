@@ -20,3 +20,7 @@
 -   [**데이터 샘플링 전략**](./optimization/data_sampling.md)
     -   장기 백테스트 데이터 시각화 시, 성능과 품질의 균형을 맞추기 위한 스마트 샘플링 전략을 설명합니다.
     -   일간, 주간, 월간 데이터 집계 방식을 기술합니다.
+
+## 테스트
+
+-   [**테스트 (`testing/`)**](./testing/README.md): Vitest와 React Testing Library를 사용한 테스트 전략 및 방법에 대해 설명합니다.
