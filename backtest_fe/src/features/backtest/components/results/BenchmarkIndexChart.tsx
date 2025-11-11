@@ -218,7 +218,9 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
             }}
           />
           <Legend
-            wrapperStyle={{ paddingTop: '0px', cursor: 'pointer' }}
+            verticalAlign="bottom"
+            height={36}
+            wrapperStyle={{ paddingTop: '20px', cursor: 'pointer' }}
             onClick={handleLegendClick}
             formatter={(value: string) => {
               const labels: Record<string, string> = {
