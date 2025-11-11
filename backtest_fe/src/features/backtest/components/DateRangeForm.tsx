@@ -26,7 +26,6 @@ const DateRangeForm: React.FC<DateRangeFormProps> = ({
           type="date"
           value={startDate}
           onChange={(value) => setStartDate(value.toString())}
-          helpText="백테스트를 시작할 날짜"
           className="[&>input]:max-w-full [&>input]:box-border"
         />
       </div>
@@ -40,7 +39,6 @@ const DateRangeForm: React.FC<DateRangeFormProps> = ({
           type="date"
           value={endDate}
           onChange={(value) => setEndDate(value.toString())}
-          helpText="백테스트를 종료할 날짜"
           className="[&>input]:max-w-full [&>input]:box-border"
         />
       </div>
