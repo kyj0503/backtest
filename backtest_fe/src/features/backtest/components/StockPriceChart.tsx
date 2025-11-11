@@ -294,27 +294,26 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
           </div>
 
           {/* 차트 하단 정보 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-            <div>
+          <div className="flex flex-col gap-2">
+            {/* 윗줄: 시작/종료/데이터 포인트 */}
+            <div className="text-center">
               <small className="text-muted-foreground">
-                시작: {selectedStockData.data[0]?.date} |
-                종료: {selectedStockData.data[selectedStockData.data.length - 1]?.date}
-              </small>
-            </div>
-            <div className="text-left md:text-center">
-              <small className="text-muted-foreground">
+                시작: {selectedStockData.data[0]?.date} | 
+                종료: {selectedStockData.data[selectedStockData.data.length - 1]?.date} | 
                 데이터 포인트: {selectedStockData.data.length}개
               </small>
             </div>
-            {tradeCount.buys > 0 || tradeCount.sells > 0 ? (
-              <div className="text-left md:text-right">
+            
+            {/* 아랫줄: 매수/매도 횟수 (거래가 있는 경우에만) */}
+            {(tradeCount.buys > 0 || tradeCount.sells > 0) && (
+              <div className="text-center">
                 <small className="text-muted-foreground">
                   <span className="text-red-500">● 매수: {tradeCount.buys}회</span>
                   {' | '}
                   <span className="text-blue-500">● 매도: {tradeCount.sells}회</span>
                 </small>
               </div>
-            ) : null}
+            )}
           </div>
         </>
       )}
