@@ -169,12 +169,12 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
           주요 지표를 통해 포트폴리오의 성과와 리스크를 빠르게 파악하세요.
         </p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {statItems.map(item => (
           <Card
             key={item.label}
             className={cn(
-              'overflow-hidden border border-border/70 bg-card/70 shadow-sm transition-shadow hover:shadow-md',
+              'overflow-hidden border border-border/40 bg-card shadow-sm transition-shadow hover:shadow-md',
             )}
           >
             <CardContent className="space-y-3 px-5 py-4">
@@ -183,13 +183,13 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
               </h5>
               <div
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-base font-semibold',
+                  'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-lg font-semibold',
                   toneClassMap[item.tone],
                 )}
               >
                 {item.value}
               </div>
-              <p className={TEXT_STYLES.captionSmall}>{item.description}</p>
+              <p className="text-xs text-muted-foreground">{item.description}</p>
             </CardContent>
           </Card>
         ))}

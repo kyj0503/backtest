@@ -92,7 +92,7 @@ const VolatilityEventsSection: React.FC<VolatilityEventsSectionProps> = ({
           {getStockDisplayName(selectedSymbol)}의 급등락 이벤트가 없습니다.
         </div>
       ) : (
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
           {currentVolatilityEvents.slice(0, 10).map((event, idx) => (
             <div
               key={idx}

@@ -69,7 +69,7 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
           {getStockDisplayName(selectedSymbol)}의 최신 뉴스가 없습니다.
         </div>
       ) : (
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
           {currentNews.map((newsItem, idx) => (
             <a
               key={idx}

@@ -10,7 +10,7 @@ import PortfolioForm from './PortfolioForm';
 import { useBacktestForm } from '../hooks/useBacktestForm';
 import { useFormValidation } from '@/shared/hooks/useFormValidation';
 import { Button } from '@/shared/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { FormSection } from '@/shared/components';
 import {
   Dialog,
   DialogContent,
@@ -164,58 +164,43 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
           endDate={state.dates.endDate}
         />
 
-        <Card className="mb-6 sm:mb-10">
-          <CardHeader>
-            <CardTitle>백테스트 기간</CardTitle>
-            <CardDescription className="text-sm sm:text-base">
-              실행할 기간을 지정하세요.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DateRangeForm
-              startDate={state.dates.startDate}
-              setStartDate={actions.setStartDate}
-              endDate={state.dates.endDate}
-              setEndDate={actions.setEndDate}
-            />
-          </CardContent>
-        </Card>
+        <FormSection
+          title="백테스트 기간"
+          description="실행할 기간을 지정하세요."
+        >
+          <DateRangeForm
+            startDate={state.dates.startDate}
+            setStartDate={actions.setStartDate}
+            endDate={state.dates.endDate}
+            setEndDate={actions.setEndDate}
+          />
+        </FormSection>
 
         <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
-          <Card className="mb-6 sm:mb-10">
-            <CardHeader>
-              <CardTitle>전략 선택</CardTitle>
-              <CardDescription className="text-sm sm:text-base">
-                적용할 투자 전략과 파라미터를 설정하세요.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <StrategyForm
-                selectedStrategy={state.strategy.selectedStrategy}
-                setSelectedStrategy={actions.setSelectedStrategy}
-                strategyParams={state.strategy.strategyParams}
-                updateStrategyParam={actions.updateStrategyParam}
-              />
-            </CardContent>
-          </Card>
-          <Card className="mb-6 sm:mb-10">
-            <CardHeader>
-              <CardTitle>리밸런싱 & 수수료</CardTitle>
-              <CardDescription className="text-sm sm:text-base">
-                리밸런싱 주기와 거래 수수료 비율을 입력하세요.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CommissionForm
-                rebalanceFrequency={state.settings.rebalanceFrequency}
-                setRebalanceFrequency={actions.setRebalanceFrequency}
-                commission={state.settings.commission}
-                setCommission={actions.setCommission}
-                stockCount={stockCount}
-                selectedStrategy={state.strategy.selectedStrategy}
-              />
-            </CardContent>
-          </Card>
+          <FormSection
+            title="전략 선택"
+            description="적용할 투자 전략과 파라미터를 설정하세요."
+          >
+            <StrategyForm
+              selectedStrategy={state.strategy.selectedStrategy}
+              setSelectedStrategy={actions.setSelectedStrategy}
+              strategyParams={state.strategy.strategyParams}
+              updateStrategyParam={actions.updateStrategyParam}
+            />
+          </FormSection>
+          <FormSection
+            title="리밸런싱 & 수수료"
+            description="리밸런싱 주기와 거래 수수료 비율을 입력하세요."
+          >
+            <CommissionForm
+              rebalanceFrequency={state.settings.rebalanceFrequency}
+              setRebalanceFrequency={actions.setRebalanceFrequency}
+              commission={state.settings.commission}
+              setCommission={actions.setCommission}
+              stockCount={stockCount}
+              selectedStrategy={state.strategy.selectedStrategy}
+            />
+          </FormSection>
         </div>
 
         {/* 제출 버튼 */}
