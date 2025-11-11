@@ -3,7 +3,6 @@ import { FormSection, FinancialTermTooltip } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/shared/ui/tooltip';
 import { Card, CardContent } from '@/shared/ui/card';
@@ -273,6 +272,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
     <FormSection
       title="포트폴리오 구성"
       description={`투자할 자산과 비중을 설정하세요. 최대 ${VALIDATION_RULES.MAX_PORTFOLIO_SIZE}개의 자산을 추가할 수 있습니다.`}
+      contentClassName="md:overflow-x-auto"
       actions={
         <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
           <div className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background p-1 shadow-sm">
@@ -388,9 +388,9 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
 
       {/* 데스크톱 테이블 레이아웃 (md 이상) */}
       <div className="hidden md:block">
-      <ScrollArea className="w-full">
-        <div className="min-w-[820px]">
-          <Table className="text-sm">
+        <div className="md:overflow-x-auto lg:overflow-x-visible">
+          <div className="md:min-w-[900px] lg:min-w-0">
+            <Table className="text-sm">
             <TableHeader>
             <TableRow>
               <TableHead className="w-64">
@@ -628,8 +628,8 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               </TableRow>
             </TableFooter>
           </Table>
+            </div>
         </div>
-      </ScrollArea>
       </div>
     </FormSection>
   );
