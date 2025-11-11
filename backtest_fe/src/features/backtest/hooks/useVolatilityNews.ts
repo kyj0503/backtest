@@ -105,22 +105,16 @@ export const useVolatilityNews = ({
     setNewsLoading(true);
 
     try {
-      console.log(`뉴스 검색 시작: ${selectedStock}, 날짜: ${event.date}`);
-
       // 1. 먼저 특정 날짜의 뉴스 조회 시도 (DB 캐싱 사용)
       const dateResponse = await getNaverNews(selectedStock, event.date, 50);
 
       if (dateResponse.status === 'success' && dateResponse.data && dateResponse.data.news_list && dateResponse.data.news_list.length > 0) {
-        console.log(`${selectedStock}의 ${event.date} 뉴스 ${dateResponse.data.news_list.length}개를 찾았습니다. (캐시 사용: ${dateResponse.data.from_cache || false})`);
         setNewsData(dateResponse.data.news_list);
       } else {
         // 2. 특정 날짜에 뉴스가 없으면 최신 뉴스로 fallback
-        console.log(`${selectedStock}의 ${event.date} 뉴스가 없습니다. 최신 뉴스를 가져옵니다.`);
-
         const latestResponse = await getLatestTickerNews(selectedStock, 15);
 
         if (latestResponse.status === 'success' && latestResponse.data && latestResponse.data.news_list) {
-          console.log(`${selectedStock}의 최신 뉴스 ${latestResponse.data.news_list.length}개를 찾았습니다.`);
           setNewsData(latestResponse.data.news_list);
         } else {
           console.warn('최신 뉴스 검색 실패:', latestResponse);
