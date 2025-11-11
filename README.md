@@ -81,8 +81,8 @@ docker compose -f compose.dev.yaml exec backtest-fe npm run test:ui
 
 프로젝트의 아키텍처, 설계 결정, 테스트 전략 등에 대한 상세 문서는 각 서비스의 `docs` 디렉토리에서 확인할 수 있습니다.
 
--   [**백엔드 문서 바로가기](./backtest_be_fast/docs/README.md)**
--   [**프론트엔드 문서 바로가기](./backtest_fe/docs/README.md)**
+-   [백엔드 문서 바로가기](./backtest_be_fast/docs/README.md)
+-   [프론트엔드 문서 바로가기](./backtest_fe/docs/README.md)
 
 ## 중요: 개발자 필독 사항 (Async/Sync 처리)
 
@@ -108,6 +108,4 @@ async def my_async_function():
     return data
 ```
 
-
 상세 내용은 `.github/copilot-instructions.md` 또는 백엔드 `docs`를 참고하세요.
-
