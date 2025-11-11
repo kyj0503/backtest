@@ -12,15 +12,23 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                script {
+                    echo "=== Git Information ==="
+                    echo "GIT_BRANCH: ${env.GIT_BRANCH}"
+                    echo "BRANCH_NAME: ${env.BRANCH_NAME}"
+                    sh 'git branch -a'
+                    sh 'git status'
+                }
             }
         }
 
         // --- Main 브랜치 전용 스테이지 ---
         stage('Build and Push Backend Image') {
             when {
-                anyOf {
-                    branch 'main'
-                    expression { env.GIT_BRANCH == 'origin/main' }
+                expression { 
+                    return env.GIT_BRANCH == 'origin/main' || 
+                           env.BRANCH_NAME == 'main' ||
+                           env.GIT_BRANCH?.contains('main')
                 }
             }
             steps {
@@ -41,9 +49,10 @@ pipeline {
 
         stage('Build and Push Frontend Image') {
             when {
-                anyOf {
-                    branch 'main'
-                    expression { env.GIT_BRANCH == 'origin/main' }
+                expression { 
+                    return env.GIT_BRANCH == 'origin/main' || 
+                           env.BRANCH_NAME == 'main' ||
+                           env.GIT_BRANCH?.contains('main')
                 }
             }
             steps {
@@ -64,9 +73,10 @@ pipeline {
 
         stage('Deploy to Production (Local)') {
             when {
-                anyOf {
-                    branch 'main'
-                    expression { env.GIT_BRANCH == 'origin/main' }
+                expression { 
+                    return env.GIT_BRANCH == 'origin/main' || 
+                           env.BRANCH_NAME == 'main' ||
+                           env.GIT_BRANCH?.contains('main')
                 }
             }
             steps {
