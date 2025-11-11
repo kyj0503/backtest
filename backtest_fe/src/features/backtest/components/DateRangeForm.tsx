@@ -16,32 +16,26 @@ const DateRangeForm: React.FC<DateRangeFormProps> = ({
 }) => {
   return (
     <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
-      <div className="w-full overflow-hidden">
-        <FormField
-          label={
-            <FinancialTermTooltip term="백테스트 기간">
-              시작 날짜
-            </FinancialTermTooltip>
-          }
-          type="date"
-          value={startDate}
-          onChange={(value) => setStartDate(value.toString())}
-          className="[&>input]:max-w-full [&>input]:box-border"
-        />
-      </div>
-      <div className="w-full overflow-hidden">
-        <FormField
-          label={
-            <FinancialTermTooltip term="백테스트 기간">
-              종료 날짜
-            </FinancialTermTooltip>
-          }
-          type="date"
-          value={endDate}
-          onChange={(value) => setEndDate(value.toString())}
-          className="[&>input]:max-w-full [&>input]:box-border"
-        />
-      </div>
+      <FormField
+        label={
+          <FinancialTermTooltip term="백테스트 기간">
+            시작 날짜
+          </FinancialTermTooltip>
+        }
+        type="date"
+        value={startDate}
+        onChange={(value) => setStartDate(value.toString())}
+      />
+      <FormField
+        label={
+          <FinancialTermTooltip term="백테스트 기간">
+            종료 날짜
+          </FinancialTermTooltip>
+        }
+        type="date"
+        value={endDate}
+        onChange={(value) => setEndDate(value.toString())}
+      />
     </div>
   );
 };
