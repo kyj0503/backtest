@@ -97,7 +97,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           variant="outline"
           size="sm"
           onClick={() => setIsCompactView(!isCompactView)}
-          className="flex items-center gap-2"
+          className="hidden md:flex items-center gap-2"
         >
           {isCompactView ? (
             <>
