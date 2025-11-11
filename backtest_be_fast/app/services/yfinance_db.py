@@ -41,6 +41,7 @@ import os
 import json
 import logging
 import time
+import email.utils
 from typing import Optional
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -717,7 +718,6 @@ def save_news_to_db(ticker: str, news_list: list) -> int:
         for news in news_list:
             try:
                 # pubDate 파싱 (RFC 2822 형식)
-                import email.utils
                 pub_date_str = news.get('pubDate', '')
                 pub_timestamp = email.utils.parsedate_tz(pub_date_str)
                 if pub_timestamp:

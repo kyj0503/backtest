@@ -57,7 +57,7 @@ export const BacktestProvider: React.FC<BacktestProviderProps> = ({
         symbol: '',
         amount: 10000,
         investmentType: 'lump_sum',
-        dcaFrequency: 'weekly_4'
+        dcaFrequency: 'monthly_1'
       };
       dispatch({ type: 'ADD_STOCK', payload: newStock });
     },
@@ -67,7 +67,7 @@ export const BacktestProvider: React.FC<BacktestProviderProps> = ({
         symbol: 'CASH',
         amount: 10000,
         investmentType: 'lump_sum',
-        dcaFrequency: 'weekly_4'
+        dcaFrequency: 'monthly_1'
       };
       dispatch({ type: 'ADD_STOCK', payload: newCash });
     },

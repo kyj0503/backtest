@@ -37,6 +37,7 @@ import json
 import re
 import time
 import socket
+import email.utils
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 
@@ -222,7 +223,6 @@ class NaverNewsService:
                         # pubDate 형식: "Mon, 01 Sep 2025 21:01:00 +0900"
                         pub_date_str = item['pubDate']
                         # RFC 2822 형식 파싱
-                        import email.utils
                         pub_timestamp = email.utils.parsedate_tz(pub_date_str)
                         if pub_timestamp:
                             pub_dt = datetime.fromtimestamp(email.utils.mktime_tz(pub_timestamp))

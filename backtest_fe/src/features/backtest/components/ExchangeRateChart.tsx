@@ -86,38 +86,40 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
 
   const chartContent = (
     <>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={exchangeData}>
+      <ResponsiveContainer width="100%" height={300} debounce={300}>
+        <LineChart data={exchangeData} syncId="exchangeRateChart">
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="date" 
+          <XAxis
+            dataKey="date"
             tick={{ fontSize: 12 }}
             tickFormatter={(value: any) => {
               const date = new Date(value);
               return `${date.getMonth() + 1}/${date.getDate()}`;
             }}
           />
-          <YAxis 
+          <YAxis
             domain={[minRate - 50, maxRate + 50]}
             tick={{ fontSize: 12 }}
             tickFormatter={(value: number) => `₩${value.toFixed(0)}`}
           />
-          <Tooltip 
+          <Tooltip
             formatter={(value: number) => [`₩${value.toFixed(2)}`, '환율']}
             labelFormatter={(label: any) => `날짜: ${label}`}
           />
-          <Line 
-            type="monotone" 
-            dataKey="rate" 
-            stroke="#fd7e14" 
+          <Line
+            type="monotone"
+            dataKey="rate"
+            stroke="#fd7e14"
             strokeWidth={3}
             dot={false}
-            activeDot={{ 
-              r: 5, 
-              stroke: '#fd7e14', 
-              strokeWidth: 2, 
-              fill: '#fff' 
+            activeDot={{
+              r: 5,
+              stroke: '#fd7e14',
+              strokeWidth: 2,
+              fill: '#fff'
             }}
+            isAnimationActive={false}
+            connectNulls={true}
           />
         </LineChart>
       </ResponsiveContainer>

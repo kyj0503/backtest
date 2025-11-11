@@ -36,6 +36,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from .data_service import data_service
+from .yfinance_db import get_ticker_info_batch_from_db, load_news_from_db, save_news_to_db
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -64,8 +65,6 @@ class UnifiedDataService:
         Returns:
             종목별 메타데이터 딕셔너리 (currency, company_name, exchange)
         """
-        from .yfinance_db import get_ticker_info_batch_from_db
-
         # 배치 조회로 N+1 쿼리 문제 해결
         try:
             ticker_info = get_ticker_info_batch_from_db(symbols)
@@ -268,8 +267,6 @@ class UnifiedDataService:
         Returns:
             종목별 뉴스 딕셔너리
         """
-        from .yfinance_db import load_news_from_db, save_news_to_db
-
         if not self.news_service:
             logger.warning("뉴스 서비스가 초기화되지 않았습니다.")
             return {symbol: [] for symbol in symbols}

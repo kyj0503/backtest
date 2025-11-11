@@ -32,7 +32,7 @@ const DcaPreview: React.FC<{ stock: Stock; startDate?: string; endDate?: string 
 
   if (startDate && endDate) {
     // calculateDcaPeriods를 사용하여 중복 제거
-    dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
+    dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'monthly_1');
     totalAmount = periodAmount * dcaPeriods;
   }
 
@@ -262,7 +262,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                     </Select>
                     {stock.investmentType === 'dca' && (
                       <Select
-                        value={stock.dcaFrequency || 'weekly_4'}
+                        value={stock.dcaFrequency || 'monthly_1'}
                         onValueChange={(value) => updateStock(index, 'dcaFrequency', value)}
                       >
                         <SelectTrigger className="w-full">
@@ -325,7 +325,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                         let stockTotalAmount = stock.amount;
                         if (stock.investmentType === 'dca') {
                           // DCA: 회당 금액 × 투자 횟수
-                          const dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'weekly_4');
+                          const dcaPeriods = calculateDcaPeriods(startDate, endDate, stock.dcaFrequency || 'monthly_1');
                           stockTotalAmount = stock.amount * dcaPeriods;
                         }
                         // 일시불: 입력한 금액 그대로

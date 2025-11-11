@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useTheme } from '@/shared/hooks/useTheme';
-import Header from '@/components/Header';
+import { Header, ErrorBoundary } from '@/shared/components';
 import HomePage from './pages/HomePage';
 import PortfolioPage from './pages/PortfolioPage';
-import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from '@/shared/ui/sonner';
 import { TooltipProvider } from '@/shared/ui/tooltip';
 

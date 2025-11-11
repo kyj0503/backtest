@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
+import { useRenderPerformance } from '@/shared/components';
 
 interface RebalanceEvent {
   date: string;
@@ -31,11 +32,14 @@ const COLORS = [
   '#14b8a6', // teal
 ];
 
-const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
+const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
   weightHistory,
   portfolioComposition,
   rebalanceHistory
 }) => {
+  // 성능 모니터링
+  useRenderPerformance('WeightHistoryChart');
+
   const symbols = useMemo(() => {
     // portfolioComposition에서 symbol 추출 (중복 제거)
     return Array.from(new Set(portfolioComposition.map(stock => stock.symbol)));
@@ -50,6 +54,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
     return mapping;
   }, [symbols]);
 
+  // 차트 데이터 (샘플링은 useChartData에서 처리됨)
   const chartData = useMemo(() => {
     return weightHistory.map(point => {
       const dataPoint: Record<string, any> = {
@@ -62,6 +67,35 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
     });
   }, [weightHistory, symbols]);
 
+  // 리밸런싱 날짜를 차트 데이터에 병합 (Recharts categorical X-axis 제약 대응)
+  const chartDataWithRebalancePoints = useMemo(() => {
+    if (!rebalanceHistory || rebalanceHistory.length === 0) {
+      return chartData;
+    }
+
+    // 기존 차트 데이터에 있는 날짜들
+    const existingDates = new Set(chartData.map(d => d.date));
+
+    // 차트 데이터에 없는 리밸런싱 날짜들을 null 값 포인트로 추가
+    const rebalanceDatesToAdd = rebalanceHistory
+      .filter(event => !existingDates.has(event.date))
+      .map(event => {
+        const nullPoint: Record<string, any> = {
+          date: event.date,
+        };
+        // 모든 심볼에 대해 null 값 설정
+        symbols.forEach(symbol => {
+          nullPoint[symbol] = null;
+        });
+        return nullPoint;
+      });
+
+    // 병합 후 날짜순 정렬
+    return [...chartData, ...rebalanceDatesToAdd].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  }, [chartData, rebalanceHistory, symbols]);
+
   if (!weightHistory || weightHistory.length === 0) {
     return (
       <div className={`text-center py-12 ${TEXT_STYLES.caption}`}>
@@ -71,8 +105,8 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <AreaChart data={chartData}>
+    <ResponsiveContainer width="100%" height={400} debounce={300}>
+      <AreaChart data={chartDataWithRebalancePoints} syncId="weightHistoryChart">
         <defs>
           {symbols.map((symbol, index) => (
             <linearGradient key={symbol} id={`color${index}`} x1="0" y1="0" x2="0" y2="1">
@@ -109,7 +143,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
           iconType="square"
           formatter={(value: string) => symbolDisplayNames[value] || value}
         />
-        {/* 리밸런싱 마커 */}
+        {/* 리밸런싱 마커 - 차트 데이터에 포함된 날짜 기준 */}
         {rebalanceHistory && rebalanceHistory.length > 0 && rebalanceHistory.map((event, idx) => (
           <ReferenceLine
             key={idx}
@@ -133,11 +167,15 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = ({
             stroke={COLORS[index % COLORS.length]}
             fill={`url(#color${index})`}
             strokeWidth={2}
+            isAnimationActive={false}
+            connectNulls={true}
           />
         ))}
       </AreaChart>
     </ResponsiveContainer>
   );
-};
+});
+
+WeightHistoryChart.displayName = 'WeightHistoryChart';
 
 export default WeightHistoryChart;

@@ -284,7 +284,6 @@ class DataFetcher:
             티커 정보 딕셔너리 (상장일 포함)
         """
         try:
-            from datetime import datetime
             ticker = ticker.upper()
             stock = yf.Ticker(ticker)
             info = stock.info

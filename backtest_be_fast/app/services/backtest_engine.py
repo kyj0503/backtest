@@ -37,7 +37,7 @@
 """
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from typing import Dict, Any, Optional, List
 from uuid import uuid4
 import pandas as pd
@@ -48,10 +48,12 @@ from fastapi import HTTPException
 
 from app.schemas.requests import BacktestRequest
 from app.schemas.responses import BacktestResult
-from app.utils.data_fetcher import data_fetcher
+from app.utils.data_fetcher import data_fetcher, InvalidSymbolError as DataFetcherInvalidSymbolError
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
 from app.services.validation_service import validation_service
+from app.services.yfinance_db import get_ticker_info_from_db, load_ticker_data
+from app.core.exceptions import ValidationError
 from app.constants.currencies import SUPPORTED_CURRENCIES
 
 
@@ -147,7 +149,6 @@ class BacktestEngine:
 
             # custom ValidationError는 그대로 재발생시키도록 허용
             try:
-                from app.core.exceptions import ValidationError
                 if isinstance(e, ValidationError):
                     raise e
             except Exception:
@@ -156,7 +157,6 @@ class BacktestEngine:
 
             # data_fetcher에서 발생시키는 InvalidSymbolError는 422로 매핑
             try:
-                from app.utils.data_fetcher import InvalidSymbolError as DataFetcherInvalidSymbolError
                 if isinstance(e, DataFetcherInvalidSymbolError):
                     raise HTTPException(status_code=422, detail=str(e))
             except Exception:
@@ -207,9 +207,6 @@ class BacktestEngine:
         pd.DataFrame
             USD로 변환된 가격 데이터
         """
-        from datetime import datetime, timedelta
-        from app.services.yfinance_db import get_ticker_info_from_db, load_ticker_data
-
         # 통화 정보 가져오기
         try:
             ticker_info = get_ticker_info_from_db(ticker)
@@ -234,7 +231,6 @@ class BacktestEngine:
         # 환율 데이터 로드 (60일 버퍼 추가)
         try:
             # start_date가 문자열 또는 date/datetime 객체일 수 있음
-            from datetime import date
             if isinstance(start_date, str):
                 start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
             elif isinstance(start_date, date):

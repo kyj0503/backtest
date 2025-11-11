@@ -1,18 +1,30 @@
 // 공통 컴포넌트 통합 내보내기
-export { FormField } from './FormField';
-export type { FormFieldProps } from './FormField';
 
-export { FormSection } from './FormSection';
-export type { FormSectionProps } from './FormSection';
+// Layout Components
+export { default as ErrorBoundary } from './layout/ErrorBoundary';
+export { default as Header } from './layout/Header';
+export { default as ThemeSelector } from './layout/ThemeSelector';
 
-export { FormLegend } from './FormLegend';
+// Form Components
+export { FormField } from './form/FormField';
+export type { FormFieldProps } from './form/FormField';
 
-export { LoadingSpinner, InlineSpinner, ButtonSpinner } from './LoadingSpinner';
-export type { LoadingSpinnerProps } from './LoadingSpinner';
+export { FormSection } from './form/FormSection';
+export type { FormSectionProps } from './form/FormSection';
 
-export { ErrorMessage, FieldError, ToastMessage } from './ErrorMessage';
-export type { ErrorMessageProps } from './ErrorMessage';
+export { FormLegend } from './form/FormLegend';
 
-export { default as ChartLoading } from './ChartLoading';
-export { default as PerformanceMonitor } from './PerformanceMonitor';
-export { default as FinancialTermTooltip } from './FinancialTermTooltip';
+// Loading Components
+export { LoadingSpinner, InlineSpinner, ButtonSpinner } from './loading/LoadingSpinner';
+export type { LoadingSpinnerProps } from './loading/LoadingSpinner';
+export { default as ChartLoading } from './loading/ChartLoading';
+
+// Feedback Components
+export { ErrorMessage, FieldError, ToastMessage } from './feedback/ErrorMessage';
+export type { ErrorMessageProps } from './feedback/ErrorMessage';
+
+// Tooltip Components
+export { default as FinancialTermTooltip } from './tooltip/FinancialTermTooltip';
+
+// Debug Components
+export { default as PerformanceMonitor, useRenderPerformance } from './debug/PerformanceMonitor';

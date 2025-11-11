@@ -41,15 +41,16 @@ import re
 
 from ..core.config import settings
 
-# DCA 주기 프리셋 (주 단위)
-DCA_FREQUENCY_MAP = {
-    'weekly_1': 1,      # 1주
-    'weekly_2': 2,      # 2주
-    'weekly_4': 4,      # 4주 (약 1달)
-    'weekly_8': 8,      # 8주 (약 2달)
-    'weekly_12': 12,    # 12주 (약 1분기)
-    'weekly_24': 24,    # 24주 (약 반년)
-    'weekly_48': 48     # 48주 (약 1년)
+# DCA/리밸런싱 주기 프리셋 (Nth Weekday 방식)
+# 값: (주기 타입, 간격) - 예: ('weekly', 1) = 매주, ('monthly', 1) = 매월
+FREQUENCY_MAP = {
+    'weekly_1': ('weekly', 1),      # 1주마다
+    'weekly_2': ('weekly', 2),      # 2주마다
+    'monthly_1': ('monthly', 1),    # 1개월마다 (Nth Weekday)
+    'monthly_2': ('monthly', 2),    # 2개월마다
+    'monthly_3': ('monthly', 3),    # 3개월마다 (분기)
+    'monthly_6': ('monthly', 6),    # 6개월마다 (반년)
+    'monthly_12': ('monthly', 12),  # 12개월마다 (1년)
 }
 
 class PortfolioStock(BaseModel):
@@ -58,7 +59,7 @@ class PortfolioStock(BaseModel):
     amount: Optional[float] = Field(None, gt=0, description="투자 금액 (> 0, weight와 동시 입력 불가)")
     weight: Optional[float] = Field(None, ge=0, le=100, description="비중(%) (0~100, amount와 동시 입력 불가, 소수점 허용)")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
-    dca_frequency: Optional[str] = Field("weekly_4", description="DCA 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48)")
+    dca_frequency: Optional[str] = Field("monthly_1", description="DCA 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12)")
     asset_type: Optional[str] = Field("stock", description="자산 타입 (stock, cash)")
     custom_name: Optional[str] = Field(None, description="현금 자산의 커스텀 이름")
     @field_validator('amount', 'weight')
@@ -108,8 +109,8 @@ class PortfolioStock(BaseModel):
     @field_validator('dca_frequency')
     @classmethod
     def validate_dca_frequency(cls, v):
-        if v not in DCA_FREQUENCY_MAP:
-            raise ValueError(f'DCA 주기는 {", ".join(DCA_FREQUENCY_MAP.keys())} 중 하나여야 합니다.')
+        if v not in FREQUENCY_MAP:
+            raise ValueError(f'DCA 주기는 {", ".join(FREQUENCY_MAP.keys())} 중 하나여야 합니다.')
         return v
 
 class PortfolioBacktestRequest(BaseModel):
@@ -118,7 +119,7 @@ class PortfolioBacktestRequest(BaseModel):
     start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
     end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
     commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
-    rebalance_frequency: str = Field("weekly_4", description="리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)")
+    rebalance_frequency: str = Field("monthly_1", description="리밸런싱 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12, none)")
     strategy: str = Field("buy_and_hold", description="전략명")
     strategy_params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="전략 파라미터")
     
@@ -185,28 +186,41 @@ class PortfolioBacktestRequest(BaseModel):
         start = datetime.strptime(self.start_date, '%Y-%m-%d')
         end = datetime.strptime(self.end_date, '%Y-%m-%d')
         backtest_days = (end - start).days
-        backtest_weeks = backtest_days / 7  # 주 단위로 변환
 
         for idx, item in enumerate(self.portfolio):
             if item.investment_type == 'dca' and item.dca_frequency:
-                # DCA 주기 (주 단위)
-                dca_weeks = DCA_FREQUENCY_MAP.get(item.dca_frequency, 1)
-
+                # 주기 정보 가져오기
+                period_info = FREQUENCY_MAP.get(item.dca_frequency)
+                if not period_info:
+                    continue
+                
+                period_type, interval = period_info
+                
+                # 최소 필요 일수 계산
+                if period_type == 'weekly':
+                    required_days = interval * 7
+                    period_label = f"{interval}주마다"
+                elif period_type == 'monthly':
+                    required_days = interval * 30  # 근사값 (실제는 Nth Weekday로 계산)
+                    period_label = f"{interval}개월마다"
+                else:
+                    continue
+                
                 # DCA 주기가 백테스트 기간보다 길면 에러
-                if dca_weeks > backtest_weeks:
+                if required_days > backtest_days:
                     frequency_labels = {
                         'weekly_1': '매주',
                         'weekly_2': '2주마다',
-                        'weekly_4': '4주마다',
-                        'weekly_8': '8주마다',
-                        'weekly_12': '12주마다',
-                        'weekly_24': '24주마다',
-                        'weekly_48': '48주마다'
+                        'monthly_1': '매월',
+                        'monthly_2': '2개월마다',
+                        'monthly_3': '3개월마다 (분기)',
+                        'monthly_6': '6개월마다 (반년)',
+                        'monthly_12': '12개월마다 (1년)',
                     }
-                    frequency_label = frequency_labels.get(item.dca_frequency, item.dca_frequency)
+                    frequency_label = frequency_labels.get(item.dca_frequency, period_label)
                     raise ValueError(
-                        f'{idx + 1}번째 종목({item.symbol}): DCA 주기가 "{frequency_label} 투자"({dca_weeks}주)인데, '
-                        f'백테스트 기간이 {backtest_days}일(약 {backtest_weeks:.1f}주)밖에 안됩니다. '
+                        f'{idx + 1}번째 종목({item.symbol}): DCA 주기가 "{frequency_label} 투자"({required_days}일 기준)인데, '
+                        f'백테스트 기간이 {backtest_days}일밖에 안됩니다. '
                         f'DCA 주기는 백테스트 기간보다 짧아야 합니다.'
                     )
         return self

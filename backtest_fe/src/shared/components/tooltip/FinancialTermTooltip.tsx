@@ -3,7 +3,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '../ui/tooltip';
+} from '../../ui/tooltip';
 
 interface FinancialTermTooltipProps {
   term: string;
