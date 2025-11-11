@@ -106,7 +106,7 @@ export const FormField: React.FC<FormFieldProps> = ({
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
 
-      <div className={type === 'date' ? 'min-w-0' : ''}>
+      <div className="w-full min-w-0">
         {renderInput()}
       </div>
 
