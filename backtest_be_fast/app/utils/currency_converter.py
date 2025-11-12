@@ -248,10 +248,25 @@ class CurrencyConverter:
                 buffer_days=TradingThresholds.EXCHANGE_RATE_BUFFER_DAYS
             )
 
+            # 환율 데이터 요약 로깅
+            if not exchange_data.empty:
+                rate_min = exchange_data['Close'].min()
+                rate_max = exchange_data['Close'].max()
+                rate_mean = exchange_data['Close'].mean()
+                logger.info(
+                    f"{ticker} 환율 데이터 로드 완료: {len(exchange_data)} 포인트, "
+                    f"환율 범위 {rate_min:.4f} ~ {rate_max:.4f} (평균 {rate_mean:.4f})"
+                )
+
             # 가격 데이터 복사
             converted_data = data.copy()
 
+            # 변환 전 가격 범위
+            original_close_min = data['Close'].min()
+            original_close_max = data['Close'].max()
+
             # 각 행에 대해 환율 적용
+            converted_count = 0
             for idx in converted_data.index:
                 # 타임존 제거 (환율 데이터 인덱스와 매칭)
                 idx_no_tz = self._remove_timezone(pd.DatetimeIndex([idx]))[0]
@@ -268,7 +283,18 @@ class CurrencyConverter:
                         if col in converted_data.columns:
                             converted_data.loc[idx, col] *= multiplier
 
-            logger.info(f"{ticker} 가격을 {currency}에서 USD로 변환 완료")
+                    converted_count += 1
+
+            # 변환 후 가격 범위
+            converted_close_min = converted_data['Close'].min()
+            converted_close_max = converted_data['Close'].max()
+
+            logger.info(
+                f"{ticker} 가격을 {currency}에서 USD로 변환 완료: "
+                f"{converted_count}/{len(data)} 포인트 변환됨, "
+                f"Close 범위 {original_close_min:.2f}~{original_close_max:.2f} {currency} → "
+                f"{converted_close_min:.2f}~{converted_close_max:.2f} USD"
+            )
             return converted_data
 
         except Exception as e:

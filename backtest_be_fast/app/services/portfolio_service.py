@@ -158,6 +158,10 @@ class PortfolioService:
         # 필요한 통화 파악 및 환율 데이터 로드
         # Phase 2.3 리팩토링: 환율 로딩 로직을 currency_converter로 통합
         required_currencies = list(set(ticker_currencies.values()) - {'USD'})
+
+        if required_currencies:
+            logger.info(f"포트폴리오 환율 로딩 시작: {len(required_currencies)}개 통화 [{', '.join(required_currencies)}]")
+
         exchange_rates_by_currency = await currency_converter.load_multiple_exchange_rates(
             currencies=required_currencies,
             start_date=start_date,
@@ -165,6 +169,22 @@ class PortfolioService:
             date_range=date_range,
             buffer_multiplier=2  # EXCHANGE_RATE_LOOKBACK_DAYS * 2
         )
+
+        # 환율 로드 결과 요약 로깅
+        if required_currencies:
+            for currency, rates in exchange_rates_by_currency.items():
+                if rates:
+                    rate_values = list(rates.values())
+                    rate_min = min(rate_values)
+                    rate_max = max(rate_values)
+                    rate_mean = sum(rate_values) / len(rate_values)
+                    logger.info(
+                        f"환율 로드 완료 ({currency}): {len(rates)} 포인트, "
+                        f"범위 {rate_min:.4f} ~ {rate_max:.4f} (평균 {rate_mean:.4f})"
+                    )
+                else:
+                    logger.warning(f"환율 데이터 없음 ({currency}): 변환 불가")
+            logger.info(f"총 {len(exchange_rates_by_currency)}/{len(required_currencies)}개 통화 환율 로드 완료")
 
         # 목표 비중 계산 (리밸런싱용)
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
@@ -277,9 +297,14 @@ class PortfolioService:
             for unique_key in delisted_stocks:
                 if unique_key in last_valid_prices and unique_key not in current_prices:
                     current_prices[unique_key] = last_valid_prices[unique_key]
-                    logger.debug(
-                        f"{unique_key} 상장폐지 종목, 마지막 유효 가격 ${last_valid_prices[unique_key]:.2f} 사용"
-                    )
+
+            # 상장폐지 종목 요약 (리밸런싱 날짜 또는 매주 월요일에 로깅)
+            if delisted_stocks and (should_rebalance or current_date.weekday() == 0):
+                delisted_symbols = [dca_info[key]['symbol'] for key in delisted_stocks if key in dca_info]
+                logger.info(
+                    f"{current_date.date()}: 상장폐지 종목 {len(delisted_stocks)}개 추적 중 "
+                    f"[{', '.join(delisted_symbols)}]"
+                )
 
             # 첫 날: 초기 매수 (일시불) 또는 DCA 시작
             if is_first_day:
@@ -381,10 +406,23 @@ class PortfolioService:
             if original_rebalance_nth is None and rebalance_frequency != 'none':
                 original_rebalance_nth = get_weekday_occurrence(start_date_obj)
                 logger.debug(f"리밸런싱 원본 Nth 값 설정 = {original_rebalance_nth}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
-            
+
             should_rebalance = RebalanceHelper.is_rebalance_date(
                 current_date, prev_date, rebalance_frequency, start_date_obj, last_rebalance_date, original_rebalance_nth
             )
+
+            # 리밸런싱 트리거 결정 로깅
+            if rebalance_frequency != 'none':
+                if should_rebalance and len(target_weights) > 1:
+                    logger.info(
+                        f"{current_date.date()}: 리밸런싱 트리거됨 "
+                        f"(주기: {rebalance_frequency}, 자산 수: {len(target_weights)}, "
+                        f"마지막 리밸런싱: {last_rebalance_date.date() if last_rebalance_date else '없음'})"
+                    )
+                elif should_rebalance and len(target_weights) <= 1:
+                    logger.debug(
+                        f"{current_date.date()}: 리밸런싱 조건 충족하지만 자산 수 부족 (자산 수: {len(target_weights)})"
+                    )
 
             if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
                 # 상장폐지 종목이 있는 경우 동적 비중 재계산
@@ -584,7 +622,23 @@ class PortfolioService:
                             'weights_after': weights_after,
                             'commission_cost': total_commission_cost
                         })
-                        logger.info(f"{current_date.date()}: 리밸런싱 완료 (거래 {trades_in_rebalance}건)")
+
+                        # 리밸런싱 거래 상세 로깅
+                        logger.info(
+                            f"{current_date.date()}: 리밸런싱 완료 "
+                            f"(거래 {trades_in_rebalance}건, 수수료 ${total_commission_cost:.2f})"
+                        )
+                        for trade in rebalance_trades:
+                            if 'shares' in trade:  # 주식 거래
+                                logger.debug(
+                                    f"  - {trade['action'].upper()} {trade['symbol']}: "
+                                    f"{trade['shares']:.4f} 주 @ ${trade['price']:.2f}"
+                                )
+                            else:  # 현금 조정
+                                logger.debug(
+                                    f"  - {trade['action'].upper()} {trade['symbol']}: "
+                                    f"${trade['amount']:.2f}"
+                                )
                     else:
                         logger.debug(f"{current_date.date()}: 리밸런싱 날짜이지만 거래 불필요 (이미 균형 잡힘)")
 

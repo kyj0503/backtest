@@ -259,6 +259,12 @@ class BacktestEngine:
         if not overrides:
             return base_strategy
 
+        # 전략 파라미터 오버라이드 로깅
+        override_details = ", ".join([f"{k}={v}" for k, v in overrides.items()])
+        self.logger.info(
+            f"전략 파라미터 오버라이드 ({strategy_name}): {override_details}"
+        )
+
         configured_name = f"{base_strategy.__name__}Configured_{uuid4().hex[:8]}"
         return type(configured_name, (base_strategy,), overrides)
 
@@ -401,6 +407,7 @@ class BacktestEngine:
 
             if getattr(request, 'benchmark_ticker', None):
                 try:
+                    self.logger.info(f"벤치마크 데이터 로딩 중: {request.benchmark_ticker}")
                     benchmark = self.data_fetcher.get_stock_data(
                         ticker=request.benchmark_ticker,
                         start_date=start_date,
@@ -410,6 +417,10 @@ class BacktestEngine:
                         benchmark is not None and not benchmark.empty
                         and isinstance(equity_curve_df, pd.DataFrame) and not equity_curve_df.empty
                     ):
+                        self.logger.debug(
+                            f"벤치마크 데이터 로드 완료: {len(benchmark)} 포인트, "
+                            f"전략 equity curve: {len(equity_curve_df)} 포인트"
+                        )
                         strat_returns = equity_curve_df['Equity'].pct_change().dropna()
                         bench_returns = benchmark['Close'].pct_change().dropna()
                         strat_returns, bench_returns = strat_returns.align(bench_returns, join='inner')
@@ -424,8 +435,16 @@ class BacktestEngine:
                                 alpha_pct = (mean_strat - beta_value * mean_bench) * 100
                                 beta_value = float(beta_value)
                                 alpha_pct = float(alpha_pct)
-                except Exception:
-                    pass
+                                self.logger.info(
+                                    f"Alpha/Beta 계산 완료: Alpha={alpha_pct:.2f}%, Beta={beta_value:.3f} "
+                                    f"(전략 평균 수익률={mean_strat*100:.3f}%, 벤치마크 평균 수익률={mean_bench*100:.3f}%)"
+                                )
+                        else:
+                            self.logger.warning("Alpha/Beta 계산 불가: 데이터 포인트 부족 또는 벤치마크 분산 0")
+                    else:
+                        self.logger.warning(f"벤치마크 데이터 없음 또는 equity curve 없음")
+                except Exception as e:
+                    self.logger.warning(f"Alpha/Beta 계산 실패: {e}")
 
             return BacktestResult(
                 ticker=request.ticker,
