@@ -207,9 +207,9 @@ class BacktestEngine:
         pd.DataFrame
             USD로 변환된 가격 데이터
         """
-        # 통화 정보 가져오기
+        # 통화 정보 가져오기 (asyncio.to_thread로 래핑하여 async/sync 경계 준수)
         try:
-            ticker_info = get_ticker_info_from_db(ticker)
+            ticker_info = await asyncio.to_thread(get_ticker_info_from_db, ticker)
             currency = ticker_info.get('currency', 'USD')
             self.logger.info(f"{ticker} 통화: {currency}")
         except Exception as e:
