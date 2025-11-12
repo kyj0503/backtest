@@ -488,146 +488,325 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
         conn.close()
 
 
-def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> pd.DataFrame:
-    """실제 데이터 로드 로직 (내부용)"""
-    engine = _get_engine()
-    conn = engine.connect()
-    try:
-        # normalize start/end to date objects
-        def _to_date(d):
-            if d is None:
-                return None
-            if isinstance(d, str):
-                return datetime.strptime(d, "%Y-%m-%d").date()
-            if isinstance(d, (pd.Timestamp, datetime)):
-                return pd.to_datetime(d).date()
-            if isinstance(d, date):
-                return d
+def _normalize_date_params(start_date, end_date) -> tuple[date, date]:
+    """
+    날짜 매개변수를 정규화하고 기본값을 설정합니다.
+
+    Args:
+        start_date: 시작 날짜 (date, str, datetime, pd.Timestamp, or None)
+        end_date: 종료 날짜 (date, str, datetime, pd.Timestamp, or None)
+
+    Returns:
+        tuple[date, date]: (정규화된_시작날짜, 정규화된_종료날짜)
+
+    Note:
+        - 둘 다 None인 경우: 최근 1년 (today - 365일 ~ today)
+        - start만 None인 경우: end - 365일 ~ end
+        - end만 None인 경우: start ~ today
+    """
+    def _to_date(d):
+        """다양한 날짜 형식을 date 객체로 변환"""
+        if d is None:
+            return None
+        if isinstance(d, str):
+            return datetime.strptime(d, "%Y-%m-%d").date()
+        if isinstance(d, (pd.Timestamp, datetime)):
             return pd.to_datetime(d).date()
+        if isinstance(d, date):
+            return d
+        return pd.to_datetime(d).date()
 
-        start_date = _to_date(start_date)
-        end_date = _to_date(end_date)
+    start_date = _to_date(start_date)
+    end_date = _to_date(end_date)
 
-        # defaults: last 1 year if not provided
-        if end_date is None and start_date is None:
-            end_date = date.today()
-            start_date = end_date - timedelta(days=365)
-        elif start_date is None:
-            end_date = end_date or date.today()
-            start_date = end_date - timedelta(days=365)
-        elif end_date is None:
-            end_date = date.today()
+    # 기본값 설정: 최근 1년
+    if end_date is None and start_date is None:
+        end_date = date.today()
+        start_date = end_date - timedelta(days=365)
+    elif start_date is None:
+        end_date = end_date or date.today()
+        start_date = end_date - timedelta(days=365)
+    elif end_date is None:
+        end_date = date.today()
 
-        # find stock_id; if missing, fetch from yfinance and save
+    return start_date, end_date
+
+
+def _ensure_stock_exists(conn, engine: Engine, ticker: str, start_date: date, end_date: date) -> tuple[int, any]:
+    """
+    stock_id를 조회하고, DB에 없으면 yfinance에서 데이터를 가져와 저장합니다.
+
+    Args:
+        conn: DB 연결 객체
+        engine: SQLAlchemy 엔진
+        ticker: 티커 심볼
+        start_date: 시작 날짜
+        end_date: 종료 날짜
+
+    Returns:
+        tuple[int, Connection]: (stock_id, 갱신된_connection)
+
+    Raises:
+        ValueError: 티커를 찾을 수 없거나 생성할 수 없는 경우
+
+    Note:
+        - DB에 없으면 yfinance에서 수집하여 저장
+        - 데이터 저장 후 트랜잭션 격리 문제 방지를 위해 connection 갱신
+    """
+    row = conn.execute(text("SELECT id FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
+
+    if not row:
+        logger.info(f"티커 '{ticker}'이 DB에 없음 — yfinance에서 수집 시도")
+        try:
+            df_new = data_fetcher.get_stock_data(ticker, start_date, end_date, use_cache=True)
+            if df_new is None or df_new.empty:
+                raise ValueError("yfinance에서 유효한 데이터가 반환되지 않았습니다.")
+            save_ticker_data(ticker, df_new)
+
+            # 데이터 저장 후 커넥션을 닫고 새로 연결 - 트랜잭션 격리 문제 방지
+            conn.close()
+            time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
+            conn = engine.connect()
+        except Exception as e:
+            logger.exception("티커가 DB에 없고 yfinance 수집 실패")
+            raise ValueError(f"티커 '{ticker}'이(가) DB에 없고 yfinance 수집 실패: {e}")
+
         row = conn.execute(text("SELECT id FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
         if not row:
-            logger.info(f"티커 '{ticker}'이 DB에 없음 — yfinance에서 수집 시도")
-            try:
-                df_new = data_fetcher.get_stock_data(ticker, start_date, end_date, use_cache=True)
-                if df_new is None or df_new.empty:
-                    raise ValueError("yfinance에서 유효한 데이터가 반환되지 않았습니다.")
+            raise ValueError(f"티커 '{ticker}'을(를) DB에 추가할 수 없습니다.")
+
+    stock_id = row[0]
+    return stock_id, conn
+
+
+def _get_date_coverage(conn, stock_id: int) -> tuple[Optional[date], Optional[date]]:
+    """
+    DB에 저장된 주가 데이터의 날짜 범위를 조회합니다.
+
+    Args:
+        conn: DB 연결 객체
+        stock_id: 주식 ID
+
+    Returns:
+        tuple[Optional[date], Optional[date]]: (최소_날짜, 최대_날짜)
+        데이터가 없으면 (None, None) 반환
+    """
+    date_row = conn.execute(
+        text("SELECT MIN(date), MAX(date) FROM daily_prices WHERE stock_id = :sid"),
+        {"sid": stock_id}
+    ).fetchone()
+
+    db_min, db_max = None, None
+    if date_row and date_row[0] is not None:
+        db_min = pd.to_datetime(date_row[0]).date()
+        db_max = pd.to_datetime(date_row[1]).date()
+
+    return db_min, db_max
+
+
+def _fetch_and_save_missing_data(
+    conn,
+    engine: Engine,
+    ticker: str,
+    start_date: date,
+    end_date: date,
+    db_min: Optional[date],
+    db_max: Optional[date]
+) -> any:
+    """
+    요청 범위와 DB 범위를 비교하여 누락된 데이터를 yfinance에서 가져와 저장합니다.
+
+    Args:
+        conn: DB 연결 객체
+        engine: SQLAlchemy 엔진
+        ticker: 티커 심볼
+        start_date: 요청 시작 날짜
+        end_date: 요청 종료 날짜
+        db_min: DB에 저장된 최소 날짜 (None이면 DB에 데이터 없음)
+        db_max: DB에 저장된 최대 날짜 (None이면 DB에 데이터 없음)
+
+    Returns:
+        Connection: 갱신된 DB 연결 객체
+
+    Note:
+        - 통합 fetch 시도 (여러 구간을 하나로 합쳐서 패딩 추가)
+        - 실패 시 개별 구간별 fetch로 fallback
+        - 데이터 저장 후 트랜잭션 격리 문제 방지를 위해 connection 갱신
+    """
+    # 누락된 구간 계산
+    missing_ranges = []
+    if db_min is None:
+        # DB에 데이터가 전혀 없음 -> 요청 범위 전체를 가져와야 함
+        missing_ranges.append((start_date, end_date))
+    else:
+        # 시작 날짜가 DB 범위보다 이전인 경우
+        if start_date < db_min:
+            missing_ranges.append((start_date, db_min - timedelta(days=1)))
+        # 종료 날짜가 DB 범위보다 이후인 경우
+        if end_date > db_max:
+            missing_ranges.append((db_max + timedelta(days=1), end_date))
+
+    # 누락된 구간이 없으면 그대로 반환
+    if not missing_ranges:
+        return conn
+
+    # 전략 1: 통합 fetch (여러 구간을 하나로 합쳐서 패딩 추가)
+    if data_fetcher is not None:
+        min_start = min(s for s, _ in missing_ranges if s is not None)
+        max_end = max(e for _, e in missing_ranges if e is not None)
+        PAD_DAYS = 3
+        co_start = max(min_start - timedelta(days=PAD_DAYS), date(1970, 1, 1))
+        co_end = min(max_end + timedelta(days=PAD_DAYS), date.today())
+
+        try:
+            logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다(통합+패드): {ticker} {co_start} -> {co_end}")
+            df_new = data_fetcher.get_stock_data(ticker, co_start, co_end, use_cache=True)
+            if df_new is not None and not df_new.empty:
                 save_ticker_data(ticker, df_new)
-                
-                # 데이터 저장 후 커넥션을 닫고 새로 연결 - 트랜잭션 격리 문제 방지
+                # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
                 conn.close()
                 time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
                 conn = engine.connect()
-            except Exception as e:
-                logger.exception("티커가 DB에 없고 yfinance 수집 실패")
-                raise ValueError(f"티커 '{ticker}'이(가) DB에 없고 yfinance 수집 실패: {e}")
+                return conn
+            else:
+                logger.warning("통합 fetch가 빈 결과를 반환했습니다; 개별 구간으로 폴백합니다.")
+                raise ValueError("empty result from consolidated fetch")
+        except Exception:
+            logger.exception("통합 누락 기간 수집 실패, 개별 구간 시도 중")
 
-            row = conn.execute(text("SELECT id FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
-            if not row:
-                raise ValueError(f"티커 '{ticker}'을(를) DB에 추가할 수 없습니다.")
+    # 전략 2 (fallback): 개별 구간별 fetch
+    for s, e in missing_ranges:
+        if s is None or e is None:
+            continue
+        if s > e:
+            continue
+        try:
+            logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다: {ticker} {s} -> {e}")
+            df_new = data_fetcher.get_stock_data(ticker, s, e, use_cache=True)
+            if df_new is not None and not df_new.empty:
+                save_ticker_data(ticker, df_new)
+                # 데이터 저장 후 커넥션 갱신
+                conn.close()
+                time.sleep(0.1)
+                conn = engine.connect()
+        except Exception:
+            logger.exception("누락 기간 수집 실패")
 
-        stock_id = row[0]
+    return conn
 
-        # check existing coverage
-        date_row = conn.execute(text("SELECT MIN(date), MAX(date) FROM daily_prices WHERE stock_id = :sid"), {"sid": stock_id}).fetchone()
-        db_min, db_max = None, None
-        if date_row and date_row[0] is not None:
-            db_min = pd.to_datetime(date_row[0]).date()
-            db_max = pd.to_datetime(date_row[1]).date()
 
-        # fetch missing ranges if any
-        missing_ranges = []
-        if db_min is None:
-            # no data at all in DB for this ticker -> fetch full requested range
-            missing_ranges.append((start_date, end_date))
-        else:
-            if start_date < db_min:
-                missing_ranges.append((start_date, db_min - timedelta(days=1)))
-            if end_date > db_max:
-                missing_ranges.append((db_max + timedelta(days=1), end_date))
+def _query_and_format_dataframe(
+    conn,
+    stock_id: int,
+    ticker: str,
+    start_date: date,
+    end_date: date
+) -> pd.DataFrame:
+    """
+    DB에서 요청 범위의 주가 데이터를 조회하고 DataFrame으로 포맷합니다.
 
-        # If there are multiple small missing ranges, try to coalesce into one padded fetch
-        if missing_ranges and data_fetcher is not None:
-            min_start = min(s for s, _ in missing_ranges if s is not None)
-            max_end = max(e for _, e in missing_ranges if e is not None)
-            PAD_DAYS = 3
-            co_start = max(min_start - timedelta(days=PAD_DAYS), date(1970, 1, 1))
-            co_end = min(max_end + timedelta(days=PAD_DAYS), date.today())
-            try:
-                logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다(통합+패드): {ticker} {co_start} -> {co_end}")
-                df_new = data_fetcher.get_stock_data(ticker, co_start, co_end, use_cache=True)
-                if df_new is not None and not df_new.empty:
-                    save_ticker_data(ticker, df_new)
-                    # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
-                    conn.close()
-                    time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
-                    conn = engine.connect()
-                else:
-                    logger.warning("통합 fetch가 빈 결과를 반환했습니다; 개별 구간으로 폴백합니다.")
-                    raise ValueError("empty result from consolidated fetch")
-            except Exception:
-                logger.exception("통합 누락 기간 수집 실패, 개별 구간 시도 중")
-                # fallback: try per-range fetch as before
-                for s, e in missing_ranges:
-                    if s is None or e is None:
-                        continue
-                    if s > e:
-                        continue
-                    try:
-                        logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다: {ticker} {s} -> {e}")
-                        df_new = data_fetcher.get_stock_data(ticker, s, e, use_cache=True)
-                        if df_new is not None and not df_new.empty:
-                            save_ticker_data(ticker, df_new)
-                            # 데이터 저장 후 커넥션 갱신
-                            conn.close()
-                            time.sleep(0.1)
-                            conn = engine.connect()
-                    except Exception:
-                        logger.exception("누락 기간 수집 실패")
+    Args:
+        conn: DB 연결 객체
+        stock_id: 주식 ID
+        ticker: 티커 심볼 (에러 메시지용)
+        start_date: 시작 날짜
+        end_date: 종료 날짜
 
-        # build query to return requested interval
-        q = "SELECT date, open, high, low, close, adj_close, volume FROM daily_prices WHERE stock_id = :sid"
-        params = {"sid": stock_id}
-        if start_date:
-            q += " AND date >= :start"
-            params["start"] = str(start_date)
-        if end_date:
-            q += " AND date <= :end"
-            params["end"] = str(end_date)
-        q += " ORDER BY date ASC"
+    Returns:
+        pd.DataFrame: 주가 데이터 (날짜 인덱스, OHLCV 컬럼)
 
-        res = conn.execute(text(q), params)
-        rows = res.fetchall()
-        if not rows:
-            raise ValueError(f"티커 '{ticker}'에 대한 데이터가 없습니다. (요청 범위: {start_date} - {end_date})")
+    Raises:
+        ValueError: 데이터가 없는 경우
 
-        df = pd.DataFrame(rows, columns=["date", "open", "high", "low", "close", "adj_close", "volume"])
-        df['date'] = pd.to_datetime(df['date'])
-        df = df.set_index('date')
-        # normalize column names to expected ones
-        df = df.rename(columns={
-            'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'adj_close': 'Adj Close', 'volume': 'Volume'
-        })
-        # ensure types
-        for col in ['Open','High','Low','Close','Adj Close']:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-        if 'Volume' in df.columns:
-            df['Volume'] = pd.to_numeric(df['Volume'], errors='coerce').fillna(0).astype('int64')
+    Note:
+        - 컬럼명을 표준 포맷으로 정규화 (Open, High, Low, Close, Adj Close, Volume)
+        - 숫자형 타입 보장
+    """
+    # SQL 쿼리 작성
+    q = "SELECT date, open, high, low, close, adj_close, volume FROM daily_prices WHERE stock_id = :sid"
+    params = {"sid": stock_id}
+    if start_date:
+        q += " AND date >= :start"
+        params["start"] = str(start_date)
+    if end_date:
+        q += " AND date <= :end"
+        params["end"] = str(end_date)
+    q += " ORDER BY date ASC"
+
+    # 쿼리 실행
+    res = conn.execute(text(q), params)
+    rows = res.fetchall()
+    if not rows:
+        raise ValueError(f"티커 '{ticker}'에 대한 데이터가 없습니다. (요청 범위: {start_date} - {end_date})")
+
+    # DataFrame 생성
+    df = pd.DataFrame(rows, columns=["date", "open", "high", "low", "close", "adj_close", "volume"])
+    df['date'] = pd.to_datetime(df['date'])
+    df = df.set_index('date')
+
+    # 컬럼명 정규화
+    df = df.rename(columns={
+        'open': 'Open',
+        'high': 'High',
+        'low': 'Low',
+        'close': 'Close',
+        'adj_close': 'Adj Close',
+        'volume': 'Volume'
+    })
+
+    # 타입 보장
+    for col in ['Open', 'High', 'Low', 'Close', 'Adj Close']:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+    if 'Volume' in df.columns:
+        df['Volume'] = pd.to_numeric(df['Volume'], errors='coerce').fillna(0).astype('int64')
+
+    return df
+
+
+def _load_ticker_data_internal(ticker: str, start_date=None, end_date=None) -> pd.DataFrame:
+    """
+    실제 데이터 로드 로직 (내부용)
+
+    DB 우선 조회 전략:
+    1. 날짜 매개변수 정규화
+    2. stock_id 확보 (없으면 yfinance에서 가져와 저장)
+    3. DB 데이터 범위 조회
+    4. 누락 구간 수집 (통합 fetch → fallback: 개별 fetch)
+    5. 최종 데이터 조회 및 DataFrame 반환
+
+    Args:
+        ticker: 티커 심볼
+        start_date: 시작 날짜 (date, str, datetime, or None)
+        end_date: 종료 날짜 (date, str, datetime, or None)
+
+    Returns:
+        pd.DataFrame: 주가 데이터 (날짜 인덱스, OHLCV 컬럼)
+
+    Raises:
+        ValueError: 데이터를 찾을 수 없거나 생성할 수 없는 경우
+
+    Note:
+        - 144줄 함수를 5개 헬퍼로 분할하여 가독성 향상
+        - 각 헬퍼는 단일 책임 원칙 준수
+    """
+    engine = _get_engine()
+    conn = engine.connect()
+    try:
+        # 1. 날짜 정규화 및 기본값 설정
+        start_date, end_date = _normalize_date_params(start_date, end_date)
+
+        # 2. stock_id 확보 (DB에 없으면 yfinance에서 수집)
+        stock_id, conn = _ensure_stock_exists(conn, engine, ticker, start_date, end_date)
+
+        # 3. DB에 저장된 데이터 범위 조회
+        db_min, db_max = _get_date_coverage(conn, stock_id)
+
+        # 4. 누락된 구간 수집 (통합 fetch 시도 → fallback: 개별 fetch)
+        conn = _fetch_and_save_missing_data(conn, engine, ticker, start_date, end_date, db_min, db_max)
+
+        # 5. 최종 데이터 조회 및 DataFrame 반환
+        df = _query_and_format_dataframe(conn, stock_id, ticker, start_date, end_date)
 
         return df
     finally:
