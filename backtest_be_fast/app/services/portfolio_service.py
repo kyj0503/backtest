@@ -128,7 +128,6 @@ class PortfolioService:
         current_prices: Dict[str, float],
         available_cash: float,
         cash_holdings: Dict[str, float],
-        cash_amounts: Dict[str, float],
         commission: float,
         total_stock_value: float,
         dca_info: Dict[str, Dict],
@@ -150,7 +149,6 @@ class PortfolioService:
         - current_prices: 종목별 현재 가격
         - available_cash: 사용 가능한 현금 (MODIFIED)
         - cash_holdings: 현금 자산별 보유액 (MODIFIED)
-        - cash_amounts: 현금 자산별 초기 금액 (참조용)
         - commission: 거래 수수료
         - total_stock_value: 주식 자산 총 가치
         - dca_info: 종목 정보 (심볼, asset_type 조회용)
@@ -1030,7 +1028,6 @@ class PortfolioService:
                     current_prices=current_prices,
                     available_cash=available_cash,
                     cash_holdings=cash_holdings,
-                    cash_amounts=cash_amounts,
                     commission=commission,
                     total_stock_value=total_stock_value,
                     dca_info=dca_info,
