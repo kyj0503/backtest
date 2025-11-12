@@ -1,151 +1,151 @@
-# Comprehensive Analysis: calculate_dca_portfolio_returns() Function
+# 종합 분석: calculate_dca_portfolio_returns() 함수
 
-## Overview
+## 개요
 
-This directory contains a detailed structural analysis of the `calculate_dca_portfolio_returns()` function located in:
+이 디렉토리에는 다음 위치의 `calculate_dca_portfolio_returns()` 함수에 대한 상세한 구조 분석이 포함되어 있습니다:
 
-**File**: `backtest_be_fast/app/services/portfolio_service.py`  
-**Lines**: 86-709 (625 lines)  
-**Function Type**: Async method for portfolio backtesting with DCA and rebalancing
+파일: `backtest_be_fast/app/services/portfolio_service.py`
+라인: 86-709 (625줄)
+함수 타입: DCA 및 리밸런싱을 포함한 포트폴리오 백테스팅용 비동기 메서드
 
-## Analysis Documents
+## 분석 문서
 
-### 1. **REFACTORING_ANALYSIS.md** (370 lines)
-Comprehensive structural analysis covering:
-- **7 Main Logical Phases**: Setup, initialization, main loop, result creation
-- **Loop Structures**: 5 nested loops within main date loop
-- **Nested Logic Blocks**: Identification of complex nested conditions
-- **8 Extraction Candidates**: Function specifications, inputs, outputs, line ranges
-- **Time Complexity**: O(n × m) where n = trading days, m = stocks
+### 1. REFACTORING_ANALYSIS.md (370줄)
+다음을 다루는 종합 구조 분석:
+- 7개 주요 논리 단계: Setup, initialization, main loop, result creation
+- 루프 구조: 메인 날짜 루프 내 5개 중첩 루프
+- 중첩 논리 블록: 복잡한 중첩 조건 식별
+- 8개 추출 후보: 함수 명세, 입력, 출력, 라인 범위
+- 시간 복잡도: O(n × m) (n = 거래일 수, m = 종목 수)
 
-**Best For**: Understanding the overall structure and decomposition strategy
-
----
-
-### 2. **EXTRACTION_CANDIDATES.md** (379 lines)
-Detailed specifications for 8 helper functions with:
-- **Extraction Table**: Quick overview of all 8 functions
-- **Detailed Specifications**: For each of 8 helpers:
-  - Purpose and responsibility
-  - Input parameters with types
-  - Return types and outputs
-  - Key implementation logic
-  - Complexity analysis
-  - Dependencies and side-effects
-- **Key Architectural Patterns**: Mutable state, date scheduling, fallback logic
-- **Recommended Extraction Order**: 8-step prioritized plan
-
-**Best For**: Deep dive into each helper function's specifications
+최적: 전체 구조 및 분해 전략 이해
 
 ---
 
-### 3. **FUNCTION_STRUCTURE_DIAGRAM.md** (470 lines)
-Visual ASCII representations including:
-- **Overall Function Flow**: 4-phase overview with tree structure
-- **Main Date Loop Breakdown**: Detailed 7-step processing per day
-- **Rebalancing Logic**: 6-step detailed breakdown of most complex block
-- **Loop Nesting Structure**: Complete nesting analysis with line numbers
-- **Dependency Graph**: Which helpers depend on which outputs
-- **Complexity Comparison**: Before/after refactoring metrics
-- **Key Decision Points**: Execution order constraints and dependencies
+### 2. EXTRACTION_CANDIDATES.md (379줄)
+다음을 포함하는 8개 헬퍼 함수의 상세 명세:
+- 추출 테이블: 8개 함수의 빠른 개요
+- 상세 명세: 8개 헬퍼 각각에 대해:
+  - 목적 및 책임
+  - 타입이 포함된 입력 파라미터
+  - 반환 타입 및 출력
+  - 주요 구현 로직
+  - 복잡도 분석
+  - 의존성 및 부작용
+- 주요 아키텍처 패턴: 가변 상태, 날짜 스케줄링, 폴백 로직
+- 권장 추출 순서: 8단계 우선순위 계획
 
-**Best For**: Visual learners and architecture understanding
-
----
-
-### 4. **EXTRACTION_QUICK_REFERENCE.txt** (269 lines)
-Quick lookup guide with:
-- **8 Helpers in Priority Order**: One-line summary of each
-- **7 Logical Phases**: High-level phase overview
-- **Complexity Points**: Where the hard parts are
-- **Before/After Comparison**: Quality metrics
-- **Execution Order**: Critical dependencies
-- **Next Steps Checklist**: 4-phase implementation plan
-
-**Best For**: Quick reference during refactoring
+최적: 각 헬퍼 함수의 명세에 대한 심층 분석
 
 ---
 
-## Quick Summary
+### 3. FUNCTION_STRUCTURE_DIAGRAM.md (470줄)
+다음을 포함하는 시각적 ASCII 표현:
+- 전체 함수 플로우: 트리 구조를 가진 4단계 개요
+- 메인 날짜 루프 분해: 일별 상세 7단계 처리
+- 리밸런싱 로직: 가장 복잡한 블록의 6단계 상세 분해
+- 루프 중첩 구조: 라인 번호가 포함된 완전한 중첩 분석
+- 의존성 그래프: 어떤 헬퍼가 어떤 출력에 의존하는지
+- 복잡도 비교: 리팩터링 전후 지표
+- 주요 결정 지점: 실행 순서 제약 및 의존성
 
-### Current State
+최적: 시각적 학습자 및 아키텍처 이해
+
+---
+
+### 4. EXTRACTION_QUICK_REFERENCE.txt (269줄)
+다음을 포함하는 빠른 조회 가이드:
+- 우선순위 순서의 8개 헬퍼: 각각의 한 줄 요약
+- 7개 논리 단계: 상위 레벨 단계 개요
+- 복잡도 지점: 어려운 부분의 위치
+- 전후 비교: 품질 지표
+- 실행 순서: 중요 의존성
+- 다음 단계 체크리스트: 4단계 구현 계획
+
+최적: 리팩터링 중 빠른 참조
+
+---
+
+## 빠른 요약
+
+### 현재 상태
 ```
-Function Size:       625 lines
-Cyclomatic Complexity: Very High (10+)
-Max Nesting Depth:   4 levels
-Nested Loops:        5 loops (O(n×m) complexity)
-Testing:             Integration test only
-Reusability:         None
+함수 크기:              625줄
+순환 복잡도:            매우 높음 (10+)
+최대 중첩 깊이:         4레벨
+중첩 루프:              5개 루프 (O(n×m) 복잡도)
+테스팅:                 통합 테스트만
+재사용성:               없음
 ```
 
-### Proposed Refactoring
+### 제안된 리팩터링
 ```
-Main Function:       ~150 lines (orchestration only)
-Helper Functions:    8 focused functions (avg 53 lines each)
-Avg Complexity:      3-4 (per function)
-Max Nesting Depth:   2 levels
-Testing:             8 unit tests + 1 integration test
-Reusability:         Each helper independently testable
+메인 함수:              약 150줄 (오케스트레이션만)
+헬퍼 함수:              8개의 집중된 함수 (평균 53줄)
+평균 복잡도:            3-4 (함수당)
+최대 중첩 깊이:         2레벨
+테스팅:                 8개 단위 테스트 + 1개 통합 테스트
+재사용성:               각 헬퍼 독립적으로 테스트 가능
 ```
 
-## The 8 Helper Functions
+## 8개 헬퍼 함수
 
-| # | Name | Lines | Complexity | Extract Order |
-|---|------|-------|------------|---------------|
-| 1 | `initialize_portfolio_state()` | 23 | Low ✓ | 1st |
-| 2 | `fetch_and_convert_prices()` | 47 | Medium | 3rd |
-| 3 | `detect_and_update_delisting()` | 38 | Medium | 6th |
-| 4 | `calculate_adjusted_rebalance_weights()` | 31 | Low-Med ✓ | 2nd |
-| 5 | `execute_initial_purchases()` | 28 | Low-Med ✓ | 4th |
-| 6 | `execute_periodic_dca_purchases()` | 62 | High | 7th |
-| 7 | `execute_rebalancing_trades()` | 154 | Very High ⚠️ | 8th |
-| 8 | `calculate_daily_metrics_and_history()` | 35 | Low-Med ✓ | 5th |
+| # | 이름 | 줄 수 | 복잡도 | 추출 순서 |
+|---|------|-------|--------|-----------|
+| 1 | `initialize_portfolio_state()` | 23 | Low ✓ | 1번째 |
+| 2 | `fetch_and_convert_prices()` | 47 | Medium | 3번째 |
+| 3 | `detect_and_update_delisting()` | 38 | Medium | 6번째 |
+| 4 | `calculate_adjusted_rebalance_weights()` | 31 | Low-Med ✓ | 2번째 |
+| 5 | `execute_initial_purchases()` | 28 | Low-Med ✓ | 4번째 |
+| 6 | `execute_periodic_dca_purchases()` | 62 | High | 7번째 |
+| 7 | `execute_rebalancing_trades()` | 154 | Very High ⚠️ | 8번째 |
+| 8 | `calculate_daily_metrics_and_history()` | 35 | Low-Med ✓ | 5번째 |
 
-## Key Findings
+## 주요 발견 사항
 
-### Main Logical Phases
-1. **Setup & Initialization** (76 lines): Load data, prepare currencies
-2. **Variable Initialization** (23 lines): Initialize tracking structures
-3. **Main Date Loop** (470 lines): Core simulation for each trading day
-4. **Result Creation** (24 lines): Build output DataFrame
+### 주요 논리 단계
+1. Setup & Initialization (76줄): 데이터 로드, 통화 준비
+2. Variable Initialization (23줄): 추적 구조 초기화
+3. Main Date Loop (470줄): 각 거래일에 대한 핵심 시뮬레이션
+4. Result Creation (24줄): 출력 DataFrame 구축
 
-### Most Complex Blocks
-1. **Rebalancing** (154 lines): Execute trades, apply commission, record history
-2. **Periodic DCA** (62 lines): Schedule-based purchases with Nth Weekday logic
-3. **Price Conversion** (47 lines): Multi-currency conversion with fallbacks
+### 가장 복잡한 블록
+1. Rebalancing (154줄): 거래 실행, 수수료 적용, 이력 기록
+2. Periodic DCA (62줄): Nth Weekday 로직을 사용한 스케줄 기반 매수
+3. Price Conversion (47줄): 폴백을 포함한 다중 통화 변환
 
-### Critical Dependencies
-- Price fetching must execute before all other daily operations
-- Delisting detection depends on price fetching
-- Rebalancing depends on initial & periodic purchases
-- Daily metrics depend on all previous operations
+### 중요 의존성
+- 가격 페칭은 모든 다른 일일 작업보다 먼저 실행되어야 함
+- 상장폐지 감지는 가격 페칭에 의존
+- 리밸런싱은 초기 및 정기 매수에 의존
+- 일일 지표는 모든 이전 작업에 의존
 
-## How to Use These Documents
+## 이 문서 사용 방법
 
-### For Refactoring
-1. Start with **FUNCTION_STRUCTURE_DIAGRAM.md** to understand the big picture
-2. Read **REFACTORING_ANALYSIS.md** for detailed section-by-section breakdown
-3. Use **EXTRACTION_CANDIDATES.md** as the implementation specification
-4. Keep **EXTRACTION_QUICK_REFERENCE.txt** handy during coding
+### 리팩터링용
+1. FUNCTION_STRUCTURE_DIAGRAM.md로 시작하여 큰 그림 이해
+2. REFACTORING_ANALYSIS.md를 읽고 섹션별 상세 분해 파악
+3. EXTRACTION_CANDIDATES.md를 구현 명세로 사용
+4. 코딩 중 EXTRACTION_QUICK_REFERENCE.txt를 가까이 두기
 
-### For Code Review
-1. Check **EXTRACTION_QUICK_REFERENCE.txt** for phased approach
-2. Reference **EXTRACTION_CANDIDATES.md** for function contracts
-3. Validate against **FUNCTION_STRUCTURE_DIAGRAM.md** for correctness
+### 코드 리뷰용
+1. EXTRACTION_QUICK_REFERENCE.txt에서 단계별 접근 확인
+2. EXTRACTION_CANDIDATES.md에서 함수 계약 참조
+3. FUNCTION_STRUCTURE_DIAGRAM.md로 정확성 검증
 
-### For Testing
-1. Use **EXTRACTION_CANDIDATES.md** for test specifications
-2. Reference dependencies in **FUNCTION_STRUCTURE_DIAGRAM.md** for mock setup
-3. Check execution order in **EXTRACTION_QUICK_REFERENCE.txt**
+### 테스팅용
+1. EXTRACTION_CANDIDATES.md를 테스트 명세로 사용
+2. FUNCTION_STRUCTURE_DIAGRAM.md에서 모킹 설정을 위한 의존성 참조
+3. EXTRACTION_QUICK_REFERENCE.txt에서 실행 순서 확인
 
-## Implementation Phases
+## 구현 단계
 
-### Phase 1: Preparatory
-- [ ] Review all analysis documents
-- [ ] Identify potential integration points
-- [ ] Set up test scaffolding
+### 1단계: 준비
+- [ ] 모든 분석 문서 검토
+- [ ] 잠재적 통합 지점 식별
+- [ ] 테스트 스캐폴딩 설정
 
-### Phase 2: Extraction (in recommended order)
+### 2단계: 추출 (권장 순서대로)
 - [ ] Helper 1: `initialize_portfolio_state()`
 - [ ] Helper 4: `calculate_adjusted_rebalance_weights()`
 - [ ] Helper 2: `fetch_and_convert_prices()`
@@ -155,82 +155,82 @@ Reusability:         Each helper independently testable
 - [ ] Helper 6: `execute_periodic_dca_purchases()`
 - [ ] Helper 7: `execute_rebalancing_trades()`
 
-### Phase 3: Testing & Verification
-- [ ] Unit test each extracted helper
-- [ ] Integration test refactored main function
-- [ ] Verify output DataFrame matches original
-- [ ] Performance comparison (should be same O(n×m))
-- [ ] Code review and approval
+### 3단계: 테스팅 및 검증
+- [ ] 추출된 각 헬퍼 단위 테스트
+- [ ] 리팩터링된 메인 함수 통합 테스트
+- [ ] 출력 DataFrame이 원본과 일치하는지 검증
+- [ ] 성능 비교 (동일한 O(n×m)이어야 함)
+- [ ] 코드 리뷰 및 승인
 
-### Phase 4: Deployment
-- [ ] Remove obsolete code
-- [ ] Update documentation
-- [ ] Run full test suite
-- [ ] Deploy to staging/production
+### 4단계: 배포
+- [ ] 사용하지 않는 코드 제거
+- [ ] 문서 업데이트
+- [ ] 전체 테스트 스위트 실행
+- [ ] 스테이징/프로덕션에 배포
 
-## Key Metrics
+## 주요 지표
 
-### Complexity Reduction
-- **Cyclomatic Complexity**: 10+ → 3-4 per function
-- **Function Size**: 625 → avg 53 lines (12x reduction)
-- **Max Nesting**: 4 → 2 levels
-- **Code Duplication**: None introduced
+### 복잡도 감소
+- 순환 복잡도: 10+ → 함수당 3-4
+- 함수 크기: 625줄 → 평균 53줄 (12배 감소)
+- 최대 중첩: 4레벨 → 2레벨
+- 코드 중복: 도입되지 않음
 
-### Testability Improvement
-- **Unit Test Coverage**: New (0% → 100%)
-- **Integration Test**: Maintained
-- **Test Isolation**: High (each helper independently testable)
+### 테스트 가능성 개선
+- 단위 테스트 커버리지: 새로 추가 (0% → 100%)
+- 통합 테스트: 유지
+- 테스트 격리: 높음 (각 헬퍼 독립적으로 테스트 가능)
 
-### Maintainability Improvement
-- **Readability**: 7 clear phases → 8 named functions
-- **Debugging**: Full function → Isolated helpers
-- **Changes**: Any point → Isolated function
-- **Reusability**: None → Each helper reusable
+### 유지보수성 개선
+- 가독성: 7개 명확한 단계 → 8개 명명된 함수
+- 디버깅: 전체 함수 → 격리된 헬퍼
+- 변경: 어느 지점이든 → 격리된 함수
+- 재사용성: 없음 → 각 헬퍼 재사용 가능
 
-## File Structure
+## 파일 구조
 
 ```
 /home/user/backtest/
-├── README_ANALYSIS.md (this file)
-├── REFACTORING_ANALYSIS.md (main analysis)
-├── EXTRACTION_CANDIDATES.md (specifications)
-├── FUNCTION_STRUCTURE_DIAGRAM.md (visual guide)
-├── EXTRACTION_QUICK_REFERENCE.txt (quick reference)
+├── README_ANALYSIS.md (이 파일)
+├── REFACTORING_ANALYSIS.md (메인 분석)
+├── EXTRACTION_CANDIDATES.md (명세)
+├── FUNCTION_STRUCTURE_DIAGRAM.md (시각적 가이드)
+├── EXTRACTION_QUICK_REFERENCE.txt (빠른 참조)
 └── backtest_be_fast/
     └── app/services/
-        └── portfolio_service.py (the function to refactor)
+        └── portfolio_service.py (리팩터링할 함수)
 ```
 
-## Related Files in Codebase
+## 코드베이스의 관련 파일
 
-- **Strategy Implementation**: `backtest_be_fast/app/strategies/strategies.py`
-- **Backtest Engine**: `backtest_be_fast/app/services/backtest_engine.py`
-- **Currency Converter**: `backtest_be_fast/app/utils/currency_converter.py`
-- **Rebalance Helper**: `backtest_be_fast/app/services/rebalance_helper.py`
-- **DCA Calculator**: `backtest_be_fast/app/services/dca_calculator.py`
+- Strategy Implementation: `backtest_be_fast/app/strategies/strategies.py`
+- Backtest Engine: `backtest_be_fast/app/services/backtest_engine.py`
+- Currency Converter: `backtest_be_fast/app/utils/currency_converter.py`
+- Rebalance Helper: `backtest_be_fast/app/services/rebalance_helper.py`
+- DCA Calculator: `backtest_be_fast/app/services/dca_calculator.py`
 
-## Notes & Warnings
+## 참고 사항 및 경고
 
-⚠️ **Critical Dependencies**:
-- Helpers 2, 3, 5 must execute in strict order (prices → delisting → purchases)
-- Helper 7 (rebalancing) has complex side-effects on multiple state dicts
-- Helper 6 (periodic DCA) depends on date scheduling logic
+⚠️ 중요 의존성:
+- Helper 2, 3, 5는 엄격한 순서로 실행되어야 함 (prices → delisting → purchases)
+- Helper 7 (rebalancing)은 여러 상태 딕셔너리에 복잡한 부작용을 가짐
+- Helper 6 (periodic DCA)는 날짜 스케줄링 로직에 의존
 
-✓ **Recommendations**:
-1. Extract helpers in the recommended order (see EXTRACTION_QUICK_REFERENCE.txt)
-2. Write unit tests for each helper immediately after extraction
-3. Use immutable data structures where possible to reduce side-effects
-4. Consider memoizing currency conversion multipliers for performance
+✓ 권장 사항:
+1. 권장 순서대로 헬퍼 추출 (EXTRACTION_QUICK_REFERENCE.txt 참조)
+2. 추출 직후 각 헬퍼에 대한 단위 테스트 작성
+3. 부작용을 줄이기 위해 가능한 곳에서 불변 데이터 구조 사용
+4. 성능을 위해 통화 변환 승수 메모이제이션 고려
 
-📝 **Maintenance**:
-- Update line numbers in analysis documents if code layout changes
-- Keep phase descriptions in sync with implementation
-- Document any new helpers or consolidated phases
+📝 유지보수:
+- 코드 레이아웃이 변경되면 분석 문서의 라인 번호 업데이트
+- 단계 설명을 구현과 동기화 유지
+- 새 헬퍼나 통합된 단계 문서화
 
 ---
 
-**Analysis Generated**: 2025-11-12  
-**Function Location**: backtest_be_fast/app/services/portfolio_service.py:86-709  
-**Total Pages**: ~1500 lines of analysis documentation
+분석 생성: 2025-11-12
+함수 위치: backtest_be_fast/app/services/portfolio_service.py:86-709
+총 페이지: 약 1500줄의 분석 문서
 
-For questions or clarifications, refer to the detailed documents or the source code comments in the function itself.
+질문이나 설명이 필요한 경우 상세 문서 또는 함수 자체의 소스 코드 주석을 참조하십시오.
