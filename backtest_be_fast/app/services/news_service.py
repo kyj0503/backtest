@@ -37,9 +37,8 @@ import json
 import re
 import time
 import socket
-import email.utils
 from typing import List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from ..core.config import settings
 from ..constants import TICKER_TO_COMPANY_NAME

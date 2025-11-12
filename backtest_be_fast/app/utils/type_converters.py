@@ -23,7 +23,7 @@ count = safe_int(stats.get('trades'), default=0)
 - Backend: app/services/chart_data_service.py (차트 데이터 변환)
 """
 import pandas as pd
-from typing import Any, Union
+from typing import Any
 
 
 def safe_float(value: Any, default: float = 0.0) -> float:
