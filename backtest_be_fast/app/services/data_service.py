@@ -49,12 +49,12 @@ logger = logging.getLogger(__name__)
 
 class DataService:
     """중앙화된 데이터 로딩 서비스"""
-    
+
     def __init__(self):
         self.data_repository = data_repository
         self.data_fetcher = data_fetcher
-    
-    async def get_ticker_data(
+
+    def _get_ticker_data_internal(
         self,
         ticker: str,
         start_date: Union[date, str],
@@ -62,7 +62,9 @@ class DataService:
         use_db_first: bool = True
     ) -> pd.DataFrame:
         """
-        주식 데이터 조회 (DB 우선, fallback to yfinance)
+        주식 데이터 조회 내부 구현 (동기)
+
+        Phase 2.2 리팩토링: async/sync 중복 로직을 하나로 통합
 
         Args:
             ticker: 티커 심볼
@@ -75,18 +77,22 @@ class DataService:
 
         Raises:
             DataNotFoundError: 데이터를 찾을 수 없을 때
+
+        Note:
+            이 메서드는 동기 I/O를 사용합니다. async 컨텍스트에서는
+            asyncio.to_thread()로 래핑하여 호출해야 합니다.
         """
         try:
             if use_db_first:
-                # 1. DB 캐시에서 조회 시도 (asyncio.to_thread로 async/sync 경계 준수)
-                df = await asyncio.to_thread(load_ticker_data, ticker, start_date, end_date)
+                # 1. DB 캐시에서 조회 시도
+                df = load_ticker_data(ticker, start_date, end_date)
                 if df is not None and not df.empty:
                     logger.debug(f"DB 캐시에서 데이터 반환: {ticker}")
                     return df
 
-            # 2. yfinance에서 실시간 조회 (asyncio.to_thread로 async/sync 경계 준수)
+            # 2. yfinance에서 실시간 조회
             logger.info(f"yfinance에서 데이터 조회: {ticker}")
-            df = await asyncio.to_thread(self.data_fetcher.get_stock_data, ticker, start_date, end_date)
+            df = self.data_fetcher.get_stock_data(ticker, start_date, end_date)
 
             if df is None or df.empty:
                 raise DataNotFoundError(ticker, str(start_date), str(end_date))
@@ -98,7 +104,37 @@ class DataService:
         except Exception as e:
             logger.error(f"데이터 조회 실패: {ticker}, {e}")
             raise DataNotFoundError(ticker, str(start_date), str(end_date))
-    
+
+    async def get_ticker_data(
+        self,
+        ticker: str,
+        start_date: Union[date, str],
+        end_date: Union[date, str],
+        use_db_first: bool = True
+    ) -> pd.DataFrame:
+        """
+        주식 데이터 조회 (비동기 버전)
+
+        Args:
+            ticker: 티커 심볼
+            start_date: 시작 날짜
+            end_date: 종료 날짜
+            use_db_first: DB를 우선 사용할지 여부
+
+        Returns:
+            DataFrame: 주식 데이터
+
+        Raises:
+            DataNotFoundError: 데이터를 찾을 수 없을 때
+
+        Note:
+            Phase 2.2 리팩토링: 내부 구현을 asyncio.to_thread()로 래핑
+        """
+        return await asyncio.to_thread(
+            self._get_ticker_data_internal,
+            ticker, start_date, end_date, use_db_first
+        )
+
     def get_ticker_data_sync(
         self,
         ticker: str,
@@ -108,31 +144,24 @@ class DataService:
     ) -> pd.DataFrame:
         """
         주식 데이터 조회 (동기 버전)
-        
-        기존 코드와의 호환성을 위한 동기 버전입니다.
+
+        Args:
+            ticker: 티커 심볼
+            start_date: 시작 날짜
+            end_date: 종료 날짜
+            use_db_first: DB를 우선 사용할지 여부
+
+        Returns:
+            DataFrame: 주식 데이터
+
+        Raises:
+            DataNotFoundError: 데이터를 찾을 수 없을 때
+
+        Note:
+            Phase 2.2 리팩토링: 내부 구현을 직접 호출 (sync context)
+            기존 코드와의 호환성을 위한 동기 버전입니다.
         """
-        try:
-            if use_db_first:
-                # 1. DB 캐시에서 조회 시도
-                df = load_ticker_data(ticker, start_date, end_date)
-                if df is not None and not df.empty:
-                    logger.debug(f"DB 캐시에서 데이터 반환: {ticker}")
-                    return df
-            
-            # 2. yfinance에서 실시간 조회
-            logger.info(f"yfinance에서 데이터 조회: {ticker}")
-            df = self.data_fetcher.get_stock_data(ticker, start_date, end_date)
-            
-            if df is None or df.empty:
-                raise DataNotFoundError(ticker, str(start_date), str(end_date))
-            
-            return df
-            
-        except DataNotFoundError:
-            raise
-        except Exception as e:
-            logger.error(f"데이터 조회 실패: {ticker}, {e}")
-            raise DataNotFoundError(ticker, str(start_date), str(end_date))
+        return self._get_ticker_data_internal(ticker, start_date, end_date, use_db_first)
 
 
 # 전역 인스턴스
