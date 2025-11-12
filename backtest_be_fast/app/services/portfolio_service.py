@@ -55,9 +55,7 @@ import pandas as pd
 import numpy as np
 from typing import List, Dict, Any, Tuple
 from datetime import datetime, timedelta, date
-from dateutil.relativedelta import relativedelta
 import logging
-from decimal import Decimal
 
 from app.schemas.schemas import PortfolioBacktestRequest, FREQUENCY_MAP
 from app.schemas.requests import BacktestRequest
