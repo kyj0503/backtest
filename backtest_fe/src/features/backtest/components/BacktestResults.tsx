@@ -247,11 +247,54 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
           csvRows.push('');
         }
 
-        // 포트폴리오 자산 가치 추이
+        // 리밸런싱 히스토리
+        if ('rebalance_history' in data && Array.isArray(data.rebalance_history) && data.rebalance_history.length > 0) {
+          csvRows.push('리밸런싱 히스토리');
+          csvRows.push('날짜,종목,거래타입,거래금액($),거래수량,거래가격($),수수료($)');
+          data.rebalance_history.forEach((event: any) => {
+            const trades = event.trades || [];
+            trades.forEach((trade: any) => {
+              csvRows.push(`${event.date},${trade.symbol},${trade.action === 'buy' ? '매수' : '매도'},${Math.abs(trade.value).toFixed(2)},${trade.shares.toFixed(4)},${trade.price.toFixed(2)},${(trade.commission || 0).toFixed(2)}`);
+            });
+          });
+          csvRows.push('');
+        }
+
+        // 비중 히스토리 (샘플링)
+        if ('weight_history' in data && Array.isArray(data.weight_history) && data.weight_history.length > 0) {
+          csvRows.push('포트폴리오 비중 변화 (매월 1일 기준)');
+          
+          // 헤더 생성
+          const symbols = Object.keys(data.weight_history[0].weights || {});
+          csvRows.push(`날짜,${symbols.join(',')}`);
+          
+          // 월별 샘플링 (너무 많은 데이터 방지)
+          const weightHistory = data.weight_history;
+          const sampledHistory = weightHistory.filter((_: any, idx: number) => {
+            return idx === 0 || idx === weightHistory.length - 1 || idx % 30 === 0;
+          });
+          
+          sampledHistory.forEach((point: any) => {
+            const weights = symbols.map(symbol => 
+              (point.weights[symbol] * 100).toFixed(2) + '%'
+            );
+            csvRows.push(`${point.date},${weights.join(',')}`);
+          });
+          csvRows.push('');
+        }
+
+        // 포트폴리오 자산 가치 추이 (일별 샘플링)
         if ('equity_data' in data && Array.isArray(data.equity_data) && data.equity_data.length > 0) {
-          csvRows.push('포트폴리오 자산 가치 추이');
+          csvRows.push('포트폴리오 자산 가치 추이 (주간 샘플링)');
           csvRows.push('날짜,자산가치($)');
-          data.equity_data.forEach((point: any) => {
+          
+          // 데이터가 많으면 주간 샘플링
+          const equityData = data.equity_data;
+          const sampledEquity = equityData.length > 100 
+            ? equityData.filter((_: any, idx: number) => idx % 7 === 0 || idx === equityData.length - 1)
+            : equityData;
+          
+          sampledEquity.forEach((point: any) => {
             csvRows.push(`${point.date},${point.equity.toFixed(2)}`);
           });
           csvRows.push('');
@@ -306,27 +349,43 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
           csvRows.push('');
         }
 
-        // 자산 가치 추이
+        // 자산 가치 추이 (샘플링)
         if ('equity_data' in data && Array.isArray(data.equity_data) && data.equity_data.length > 0) {
-          csvRows.push('자산 가치 추이');
+          csvRows.push('자산 가치 추이 (주간 샘플링)');
           csvRows.push('날짜,자산가치($)');
-          data.equity_data.forEach((point: any) => {
+          
+          // 데이터가 많으면 주간 샘플링
+          const equityData = data.equity_data;
+          const sampledEquity = equityData.length > 100 
+            ? equityData.filter((_: any, idx: number) => idx % 7 === 0 || idx === equityData.length - 1)
+            : equityData;
+          
+          sampledEquity.forEach((point: any) => {
             csvRows.push(`${point.date},${point.equity.toFixed(2)}`);
           });
           csvRows.push('');
         }
       }
 
-      // 환율 정보 (공통)
+      // 환율 정보 요약 (공통) - 전체 데이터 대신 요약만
       if ('exchange_rates' in data && data.exchange_rates && data.exchange_rates.length > 0) {
         const rates = data.exchange_rates.filter((r): r is ExchangeRatePoint => r !== null && typeof r.rate === 'number');
 
         if (rates.length > 0) {
-          csvRows.push('환율 정보 (KRW/USD)');
-          csvRows.push('날짜,환율(₩)');
-          rates.forEach((point) => {
-            csvRows.push(`${point.date},${point.rate.toFixed(2)}`);
-          });
+          const firstRate = rates[0];
+          const lastRate = rates[rates.length - 1];
+          const maxRate = Math.max(...rates.map((r) => r.rate));
+          const minRate = Math.min(...rates.map((r) => r.rate));
+          const avgRate = rates.reduce((sum, r) => sum + r.rate, 0) / rates.length;
+
+          csvRows.push('환율 정보 요약 (KRW/USD)');
+          csvRows.push('항목,값');
+          csvRows.push(`시작 환율,₩${firstRate.rate.toFixed(2)}`);
+          csvRows.push(`종료 환율,₩${lastRate.rate.toFixed(2)}`);
+          csvRows.push(`최고 환율,₩${maxRate.toFixed(2)}`);
+          csvRows.push(`최저 환율,₩${minRate.toFixed(2)}`);
+          csvRows.push(`평균 환율,₩${avgRate.toFixed(2)}`);
+          csvRows.push(`환율 변동,${((lastRate.rate - firstRate.rate) / firstRate.rate * 100).toFixed(2)}%`);
           csvRows.push('');
         }
       }
