@@ -1,12 +1,15 @@
-name: backtest-dev
+name: backtest-dev-prod
+
+# 개발 환경에서 프로덕션 설정 테스트용
+# reload 없이 워커 모드로 실행
 
 services:
   backtest-be-fast:
     build:
       context: ./backtest_be_fast
       dockerfile: Dockerfile
-    image: backtest-be-fast:dev
-    container_name: backtest-be-fast-dev
+    image: backtest-be-fast:dev-prod
+    container_name: backtest-be-fast-dev-prod
     networks:
       - backtest-net
     extra_hosts:
@@ -16,12 +19,14 @@ services:
     env_file:
       - .env
     environment:
-      - DEBUG=true
+      - DEBUG=false
     volumes:
       - ./backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
-    # 개발 환경: 8 논리 코어 → (8 × 2) + 1 = 17 workers (reload 모드에서는 1개만 사용)
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--limit-concurrency", "100", "--backlog", "200"]
+    # 개발 환경 프로덕션 모드: 8 논리 코어 → 17 workers
+    # reload 비활성화 (성능 테스트용)
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "17", "--limit-concurrency", "100", "--backlog", "200", "--timeout-keep-alive", "30"]
+    
   backtest-fe:
     build:
       context: ./backtest_fe

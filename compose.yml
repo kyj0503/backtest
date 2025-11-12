@@ -13,6 +13,8 @@ services:
     environment:
       - DEBUG=false
     restart: unless-stopped
+    # 프로덕션 환경: 4 논리 코어 → (4 × 2) + 1 = 9 workers
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "9", "--limit-concurrency", "200", "--backlog", "500", "--timeout-keep-alive", "30"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
