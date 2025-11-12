@@ -30,7 +30,6 @@ from typing import Dict, Any, Optional, List
 import pandas as pd
 import numpy as np
 import logging
-from fastapi import HTTPException
 
 # Repository 패턴 import
 from app.repositories import data_repository
@@ -108,8 +107,6 @@ _patch_backtesting_stats()
 
 from app.schemas.requests import BacktestRequest
 from app.schemas.responses import BacktestResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
-from app.utils.data_fetcher import data_fetcher
-from app.services.strategy_service import strategy_service
 from app.core.config import settings
 from app.core.exceptions import ValidationError
 

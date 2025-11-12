@@ -36,7 +36,7 @@
 import logging
 import pandas as pd
 from datetime import datetime, date
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from app.schemas.requests import BacktestRequest
 from app.utils.data_fetcher import data_fetcher
