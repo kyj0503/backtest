@@ -229,8 +229,7 @@
 
 ---
 
-분석 생성: 2025-11-12
-함수 위치: backtest_be_fast/app/services/portfolio_service.py:86-709
+함수 위치: backtest_be_fast/app/services/portfolio_service.py
 총 페이지: 약 1500줄의 분석 문서
 
 질문이나 설명이 필요한 경우 상세 문서 또는 함수 자체의 소스 코드 주석을 참조하십시오.

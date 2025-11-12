@@ -156,8 +156,3 @@
 - CLAUDE.md: 치명적 async/sync 경계 관리 규칙
 - backtest_be_fast/docs/troubleshooting/race_condition.md: 레이스 컨디션 분석
 - Phase 2.x 커밋 메시지: 과거 리팩터링 컨텍스트
-
----
-
-생성: 2025-11-12 (Phase 2.2 Analysis)
-총 문서: 분석 문서 전체

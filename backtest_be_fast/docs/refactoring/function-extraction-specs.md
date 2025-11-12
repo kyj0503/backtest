@@ -1,6 +1,8 @@
 # 추출 요약 테이블: 8개 헬퍼 함수
 
-| # | 함수명 | 줄 수 | 책임 | 입력 | 반환 타입 | 복잡도 |
+주의: 이 문서는 리팩터링 전 분석 문서이며, 라인 번호는 과거의 625줄 함수 상태를 기준으로 합니다. 현재 코드는 이미 리팩터링되어 8개 헬퍼 함수로 분리되었습니다.
+
+| # | 함수명 | 줄 수 (리팩터링 전) | 책임 | 입력 | 반환 타입 | 복잡도 |
 |---|---|---|---|---|---|---|
 | 1 | `initialize_portfolio_state()` | 191-213 (23) | 모든 추적 변수 및 상태 컨테이너 초기화 | `stock_amounts: Dict`, `cash_amount: float`, `amounts: Dict` | `Dict[str, Any]` | Low ✓ |
 | 2 | `fetch_and_convert_prices()` | 222-268 (47) | 데이터에서 가격 추출 및 환율을 사용하여 USD로 변환 | `current_date`, `stock_amounts`, `portfolio_data`, `dca_info`, `ticker_currencies`, `exchange_rates_by_currency` | `Tuple[Dict[str, float], Dict[str, float]]` | Medium |
