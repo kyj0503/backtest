@@ -764,36 +764,3 @@ def save_news_to_db(ticker: str, news_list: list) -> int:
     finally:
         conn.close()
 
-
-def delete_old_news(days: int = 30) -> int:
-    """
-    오래된 뉴스 데이터 삭제
-
-    Args:
-        days: 삭제 기준 (일) - 이보다 오래된 데이터 삭제
-
-    Returns:
-        삭제된 행 수
-    """
-    engine = _get_engine()
-    conn = engine.connect()
-    try:
-        cutoff_time = datetime.now() - timedelta(days=days)
-
-        query = text("""
-            DELETE FROM stock_news
-            WHERE created_at < :cutoff_time
-        """)
-
-        result = conn.execute(query, {"cutoff_time": cutoff_time})
-        deleted_count = result.rowcount
-
-        logger.info(f"DB에서 오래된 뉴스 {deleted_count}개 삭제 (created_at < {cutoff_time})")
-        return deleted_count
-
-    except Exception as e:
-        logger.error(f"DB 뉴스 삭제 실패: {str(e)}")
-        return 0
-    finally:
-        conn.close()
-

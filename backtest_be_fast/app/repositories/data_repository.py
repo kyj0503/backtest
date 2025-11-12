@@ -235,11 +235,6 @@ class YFinanceDataRepository(DataRepositoryInterface):
         ttl = self._get_cache_ttl(end_date)
 
         return elapsed < ttl
-    
-    def _calculate_hit_rate(self) -> float:
-        """캐시 히트율 계산 (간단한 구현)"""
-        # TODO: 실제 히트율 계산 로직 구현
-        return 0.0
 
 
 # 전역 인스턴스
