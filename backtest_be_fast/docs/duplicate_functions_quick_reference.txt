@@ -1,0 +1,213 @@
+╔════════════════════════════════════════════════════════════════════════════════════════════╗
+║                    DUPLICATE DATA LOADING FUNCTIONS - QUICK REFERENCE                      ║
+╚════════════════════════════════════════════════════════════════════════════════════════════╝
+
+FUNCTION COMPARISON MATRIX
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+#  Function Name                              File                    Lines  Type   Cache
+─────────────────────────────────────────────────────────────────────────────────────────────
+1  DataService.get_ticker_data()              data_service.py         57-100 Async  DB+yf
+2  DataService.get_ticker_data_sync()         data_service.py        102-135 Sync   DB+yf  ⚠️ DUPLICATE
+3  BacktestEngine._get_price_data()           backtest_engine.py     169-187 Async  Repo
+4  ChartDataService._get_price_data()         chart_data_service.py  200-214 Async  Repo   🔴 BUG: Missing asyncio.to_thread()
+5  YFinanceDataRepository.get_stock_data()    data_repository.py     106-151 Async  3-Layer
+6  yfinance_db._load_ticker_data_internal()   yfinance_db.py         767-813 Sync   DB
+
+
+DETAILED COMPARISON
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+┌─ FUNCTION 1 & 2: DataService (ASYNC vs SYNC) ─────────────────────────────────────────────┐
+│ Similarity: 95% identical logic                                                            │
+│ Difference: Async #1 uses asyncio.to_thread(), Sync #2 doesn't                            │
+│ Issue: Why maintain 2 separate implementations?                                           │
+│ LOC: 43 + 33 = 76 lines (Could be 30-40 with proper refactoring)                         │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─ FUNCTION 3 & 4: BacktestEngine vs ChartDataService ────────────────────────────────────────┐
+│ Both fetch data for backtest/chart generation                                              │
+│ Both use repository pattern (with fallback)                                               │
+│ Difference #1: BacktestEngine wraps fallback with asyncio.to_thread() ✓                   │
+│ Difference #2: ChartDataService MISSING asyncio.to_thread() ✗ CRITICAL BUG                 │
+│ LOC: 19 + 14 = 33 lines (identical logic)                                                 │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─ FUNCTION 5: YFinanceDataRepository (3-LAYER CACHE) ────────────────────────────────────────┐
+│ Most sophisticated implementation                                                           │
+│ 3-layer caching: Memory → MySQL → yfinance API                                            │
+│ Dynamic TTL: 24h historical, 1h recent data                                               │
+│ LOC: 45 lines (but most feature-rich)                                                     │
+│ Issue: Overlaps with #1 but provides better caching strategy                              │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌─ FUNCTION 6: yfinance_db._load_ticker_data_internal() (CORE LOGIC) ──────────────────────┐
+│ Internal implementation called by load_ticker_data() wrapper                              │
+│ Complex 5-step pipeline with intelligent gap filling                                      │
+│ LOC: 46 in main + ~250 in 5 helper functions                                              │
+│ Role: Core DB logic (used by all other functions)                                         │
+└────────────────────────────────────────────────────────────────────────────────────────────┘
+
+
+CALL HIERARCHY
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+DataService.get_ticker_data()
+├─ Calls: load_ticker_data() [wrapper #7]
+│   └─ Calls: _load_ticker_data_internal() [#6]
+│       └─ Complex 5-step pipeline with gap filling
+└─ Fallback: data_fetcher.get_stock_data() [yfinance]
+
+BacktestEngine._get_price_data()
+├─ Path A: data_repository.get_stock_data() [#5]
+│   ├─ Memory cache check
+│   └─ MySQL cache (calls #7) OR fresh yfinance fetch
+└─ Path B: data_fetcher.get_stock_data() [yfinance] ✓ Wrapped with asyncio.to_thread()
+
+ChartDataService._get_price_data()
+├─ Path A: data_repository.get_stock_data() [#5]
+│   └─ 3-layer caching (memory + MySQL + yfinance)
+└─ Path B: data_fetcher.get_stock_data() [yfinance] ✗ MISSING asyncio.to_thread() BUG
+
+
+CODE DUPLICATION BREAKDOWN
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+Duplication Type                                    Lines  Occurrences  Total
+─────────────────────────────────────────────────────────────────────────────
+DB-first strategy (try DB, fallback to yfinance)   ~25     4x          100 lines
+yfinance fallback pattern                          ~15     3x          45 lines
+Error handling & logging                           ~8      3x          24 lines
+Date normalization                                 ~10     2x          20 lines
+─────────────────────────────────────────────────────────────────────────────
+TOTAL DUPLICATED CODE                                                  ~189 lines
+
+Unique Code (not duplicated):
+- 3-layer caching logic: ~40 lines (only in Repository)
+- Retry logic: ~50 lines (only in yfinance_db)
+- Connection management: ~30 lines (only in yfinance_db)
+─────────────────────────────────────────────────────────────────────────────
+TOTAL UNIQUE CODE                                                     ~120 lines
+
+GRAND TOTAL                                                           ~360 lines
+
+
+CRITICAL BUG REPORT
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+🔴 SEVERITY: CRITICAL - Can cause race conditions and data corruption
+
+Location: app/services/chart_data_service.py, Line 205
+
+Problem:
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ async def _get_price_data(self, ticker, start_date, end_date):                │
+│     if self.data_repository:                                                  │
+│         data = await self.data_repository.get_stock_data(...)  # ✓ Correct   │
+│     else:                                                                      │
+│         # ✗ WRONG: Calling sync function directly in async context!           │
+│         data = self.data_fetcher.get_stock_data(...)            # BUG!       │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+Expected (CORRECT):
+┌────────────────────────────────────────────────────────────────────────────────┐
+│         data = await asyncio.to_thread(                                        │
+│             self.data_fetcher.get_stock_data,                                 │
+│             ticker=ticker,                                                     │
+│             start_date=start_date,                                            │
+│             end_date=end_date                                                 │
+│         )                                                                      │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+Impact: Race condition on first chart generation with synchronous I/O blocking the event loop
+Fix: Add await asyncio.to_thread() wrapper (1 line change)
+Priority: FIX IMMEDIATELY before next release
+
+
+CONSOLIDATION RECOMMENDATIONS
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+Option 1: AGGRESSIVE - Create single unified service
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ ✓ Maximum code reduction (~180 lines, 50%)                                     │
+│ ✓ Single source of truth for data loading logic                               │
+│ ✓ Consistent error handling across all callers                                │
+│ ✗ Requires refactoring multiple services                                      │
+│ Time: 3-5 days | Risk: Medium                                                 │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+Option 2: MODERATE - Consolidate DataService, keep Repository separate
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ ✓ Merge functions #1 & #2 (DataService async/sync)                            │
+│ ✓ Fix bug in ChartDataService (add asyncio.to_thread)                         │
+│ ✓ Keep Repository as sophisticated cache layer                                │
+│ ✓ Reduce duplication by 25-30% (~90 lines)                                   │
+│ Time: 1-2 days | Risk: Low                                                    │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+Option 3: MINIMAL - Quick bug fix only
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ ✓ Fix ChartDataService bug immediately (5 minutes)                            │
+│ ✗ Leaves duplication in place                                                 │
+│ ✗ Technical debt increases                                                    │
+│ Time: < 1 day | Risk: Minimal                                                 │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+RECOMMENDED: Option 2 (Moderate consolidation)
+
+
+PRIORITY ACTIONS
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+1️⃣  CRITICAL (Fix Immediately)
+    - Fix ChartDataService._get_price_data() missing asyncio.to_thread() wrapper
+    - File: app/services/chart_data_service.py, Line 205
+    - Change: 1 line
+    - Time: 5 minutes
+    - Test: Run chart generation tests
+
+2️⃣  HIGH (Phase 2.8 Refactoring)
+    - Merge DataService.get_ticker_data() and get_ticker_data_sync() into single service
+    - Create unified async/sync wrapper pattern
+    - Time: 1 day
+    - Affected: data_service.py, unified_data_service.py
+
+3️⃣  MEDIUM (Phase 2.9 Consolidation)
+    - Refactor BacktestEngine and ChartDataService to use unified service
+    - Consider integrating with YFinanceDataRepository for 3-layer caching
+    - Time: 2-3 days
+    - Affected: backtest_engine.py, chart_data_service.py
+
+4️⃣  LOW (Long-term cleanup)
+    - Deprecate old duplicate functions
+    - Update documentation and migration guide
+    - Remove after 1-2 release cycles
+
+
+FILES TO MODIFY
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+Priority  File                                      Action
+─────────────────────────────────────────────────────────────────────────────────
+🔴 P0     chart_data_service.py:205               ADD asyncio.to_thread()
+🔴 P1     data_service.py:57-135                  CONSOLIDATE async/sync versions
+🟠 P2     backtest_engine.py:169-187              REFACTOR to use unified service
+🟠 P2     data_repository.py:106-151              INTEGRATE as cache layer
+🟡 P3     yfinance_db.py:252-813                  KEEP but simplify to core logic
+🟡 P3     unified_data_service.py:85-195          UPDATE caller references
+
+
+TESTING RECOMMENDATIONS
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+After consolidation, test:
+1. Backtest execution with various tickers and date ranges
+2. Chart generation (OHLC, equity curve, indicators)
+3. Portfolio backtests with multiple stocks
+4. Cache hits/misses (memory, MySQL, yfinance)
+5. Retry behavior with network failures
+6. Error handling (invalid tickers, date ranges, API failures)
+7. Async/sync boundary compliance (no blocking event loop)
+8. Database connection pooling under concurrent load
+
+
