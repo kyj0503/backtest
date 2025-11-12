@@ -9,5 +9,3 @@ Backtest Backend Tests Package
 - e2e/: End-to-End 테스트 (전체 워크플로우 테스트)
 - fixtures/: 테스트 데이터 팩토리 및 공통 fixtures
 """
-
-__version__ = "1.7.4"
