@@ -42,7 +42,7 @@ import json
 import logging
 import time
 import email.utils
-from typing import Optional
+from typing import Optional, Union, List, Dict, Any, Tuple
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 import pandas as pd
@@ -249,7 +249,7 @@ def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
         conn.close()
 
 
-def load_ticker_data(ticker: str, start_date=None, end_date=None, max_retries: int = 3, retry_delay: float = 2.0) -> pd.DataFrame:
+def load_ticker_data(ticker: str, start_date: Optional[Union[str, date]] = None, end_date: Optional[Union[str, date]] = None, max_retries: int = 3, retry_delay: float = 2.0) -> pd.DataFrame:
     """DB에서 ticker의 daily_prices를 조회해 pandas DataFrame으로 반환합니다.
 
     start_date/end_date는 date 또는 문자열(YYYY-MM-DD)을 받을 수 있습니다.
@@ -302,7 +302,7 @@ def load_ticker_data(ticker: str, start_date=None, end_date=None, max_retries: i
     raise ValueError(error_msg)
 
 
-def get_ticker_info_from_db(ticker: str) -> dict:
+def get_ticker_info_from_db(ticker: str) -> Dict[str, Any]:
     """
     DB에서 티커의 메타데이터 조회
 
@@ -378,7 +378,7 @@ def get_ticker_info_from_db(ticker: str) -> dict:
         conn.close()
 
 
-def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
+def get_ticker_info_batch_from_db(tickers: List[str]) -> Dict[str, Dict[str, Any]]:
     """
     DB에서 여러 티커의 메타데이터를 배치로 조회 (N+1 쿼리 최적화)
 
@@ -488,7 +488,7 @@ def get_ticker_info_batch_from_db(tickers: list[str]) -> dict[str, dict]:
         conn.close()
 
 
-def _normalize_date_params(start_date, end_date) -> tuple[date, date]:
+def _normalize_date_params(start_date: Optional[Union[str, date, datetime, pd.Timestamp]], end_date: Optional[Union[str, date, datetime, pd.Timestamp]]) -> Tuple[date, date]:
     """
     날짜 매개변수를 정규화하고 기본값을 설정합니다.
 

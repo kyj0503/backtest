@@ -38,12 +38,12 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta, date
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Type
 from uuid import uuid4
 import pandas as pd
 import numpy as np
 
-from backtesting import Backtest
+from backtesting import Backtest, Strategy
 from fastapi import HTTPException
 
 from app.schemas.requests import BacktestRequest
@@ -169,7 +169,7 @@ class BacktestEngine:
             raise HTTPException(status_code=500, detail=f"백테스트 실행 실패: {str(e)}")
     
     async def _get_price_data(
-        self, ticker: str, start_date, end_date
+        self, ticker: str, start_date: str, end_date: str
     ) -> pd.DataFrame:
         """캐시-우선 가격 데이터 조회"""
         if self.data_repository:
@@ -225,7 +225,7 @@ class BacktestEngine:
 
     def _build_strategy(
         self, strategy_name: str, params: Optional[Dict[str, Any]]
-    ):
+    ) -> Type[Strategy]:
         """요청 파라미터를 적용한 전략 클래스를 생성"""
         base_strategy = self.strategy_service.get_strategy_class(strategy_name)
         if not params:
@@ -275,7 +275,7 @@ class BacktestEngine:
             run_kwargs["spread"] = request.spread
         return run_kwargs
 
-    def _execute_backtest(self, bt: Backtest, run_kwargs: Dict[str, Any]):
+    def _execute_backtest(self, bt: Backtest, run_kwargs: Dict[str, Any]) -> pd.Series:
         """Backtest 실행 래퍼 (옵션 인자 호환성 처리)"""
         try:
             if run_kwargs:
