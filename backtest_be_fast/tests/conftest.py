@@ -73,7 +73,7 @@ async def db_engine(test_settings):
 
 
 @pytest.fixture
-async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(db_engine) -> AsyncGenerator:
     """데이터베이스 세션 (각 테스트마다 새로운 세션) - Integration tests only"""
     if not HAS_SQLALCHEMY:
         pytest.skip("SQLAlchemy not installed")

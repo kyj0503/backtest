@@ -25,12 +25,9 @@
 - Repository Pattern: 데이터 접근은 repository를 통해서만 수행
 - Factory Pattern: 전략 객체 생성은 strategy_factory를 통해 수행
 """
-from datetime import datetime, date
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 import pandas as pd
-import numpy as np
 import logging
-from fastapi import HTTPException
 
 # Repository 패턴 import
 from app.repositories import data_repository
@@ -41,7 +38,7 @@ from app.utils.data_fetcher import data_fetcher
 def _patch_backtesting_stats():
     """백테스팅 라이브러리의 통계 계산 오류를 수정하는 패치"""
     try:
-        from backtesting._stats import compute_stats, _round_timedelta
+        from backtesting._stats import compute_stats
         import pandas as pd
         
         # 원본 함수 백업
@@ -107,11 +104,7 @@ def _patch_backtesting_stats():
 _patch_backtesting_stats()
 
 from app.schemas.requests import BacktestRequest
-from app.schemas.responses import BacktestResult, ChartDataResponse, ChartDataPoint, EquityPoint, TradeMarker, IndicatorData
-from app.utils.data_fetcher import data_fetcher
-from app.services.strategy_service import strategy_service
-from app.core.config import settings
-from app.core.exceptions import ValidationError
+from app.schemas.responses import BacktestResult, ChartDataResponse
 
 # 분리된 서비스들 import
 from app.services.backtest_engine import backtest_engine

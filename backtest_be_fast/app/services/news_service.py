@@ -37,9 +37,8 @@ import json
 import re
 import time
 import socket
-import email.utils
 from typing import List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from ..core.config import settings
 from ..constants import TICKER_TO_COMPANY_NAME
@@ -165,95 +164,6 @@ class NaverNewsService:
                     raise Exception(f"네트워크 연결 실패 (최대 재시도 초과): {str(e)}")
             except Exception as e:
                 logger.error(f"네이버 뉴스 검색 오류: {str(e)}")
-                raise
-
-    def search_news_by_date(self, query: str, start_date: str, end_date: str = None, display: int = 100, sort: str = "date") -> List[Dict[str, Any]]:
-        """
-        날짜별 네이버 뉴스 검색 (검색 후 날짜 필터링)
-        
-        Args:
-            query: 검색어
-            start_date: 검색 시작일 (YYYY-MM-DD)
-            end_date: 검색 종료일 (YYYY-MM-DD, 없으면 start_date와 동일)
-            display: 검색 결과 수 (필터링 전)
-            sort: 정렬 방식 (date, sim)
-        """
-        max_retries = 3
-        retry_delay = 1
-        
-        # 날짜 범위 설정
-        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
-        end_dt = datetime.strptime(end_date, '%Y-%m-%d') if end_date else start_dt
-        
-        # 종료일을 하루 뒤로 설정 (해당 날짜 전체 포함)
-        end_dt = end_dt + timedelta(days=1)
-        
-        for attempt in range(max_retries):
-            try:
-                if not self.client_id or not self.client_secret:
-                    raise Exception("네이버 API 키가 설정되지 않았습니다.")
-                
-                # URL 인코딩 (날짜 파라미터 제거)
-                encText = urllib.parse.quote(query)
-                url = f"https://openapi.naver.com/v1/search/news?query={encText}&display={display}&sort={sort}"
-                
-                # API 요청 (타임아웃 10초)
-                request = urllib.request.Request(url)
-                request.add_header("X-Naver-Client-Id", self.client_id)
-                request.add_header("X-Naver-Client-Secret", self.client_secret)
-                
-                response = urllib.request.urlopen(request, timeout=10)
-                response_body = response.read()
-                
-                # JSON 파싱
-                result = json.loads(response_body.decode('utf-8'))
-                
-                # HTML 태그 제거 및 날짜 필터링
-                news_list = []
-                for item in result.get('items', []):
-                    title = self.remove_html_tags(item['title'])
-                    description = self.remove_html_tags(item['description'])
-                    
-                    # 관련성 필터링
-                    if not self.is_relevant_news(title, description):
-                        continue
-                    
-                    # 날짜 필터링
-                    try:
-                        # pubDate 형식: "Mon, 01 Sep 2025 21:01:00 +0900"
-                        pub_date_str = item['pubDate']
-                        # RFC 2822 형식 파싱
-                        pub_timestamp = email.utils.parsedate_tz(pub_date_str)
-                        if pub_timestamp:
-                            pub_dt = datetime.fromtimestamp(email.utils.mktime_tz(pub_timestamp))
-                            
-                            # 날짜 범위 확인
-                            if start_dt <= pub_dt < end_dt:
-                                news_item = {
-                                    'title': title,
-                                    'link': item['link'],
-                                    'description': description,
-                                    'pubDate': item['pubDate']
-                                }
-                                news_list.append(news_item)
-                    except Exception as date_error:
-                        # 날짜 파싱 오류 시 해당 아이템은 스킵하지만 로그는 남김
-                        logger.warning(f"날짜 파싱 오류: {date_error} - {item.get('pubDate', 'N/A')}")
-                        continue
-                    
-                return news_list
-                
-            except (urllib.error.URLError, socket.gaierror, socket.timeout) as e:
-                if attempt < max_retries - 1:
-                    logger.warning(f"날짜별 뉴스 검색 네트워크 오류 (시도 {attempt + 1}/{max_retries}): {e}")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                else:
-                    logger.error(f"날짜별 뉴스 검색 네트워크 연결 실패: {str(e)}")
-                    raise Exception(f"네트워크 연결 실패 (최대 재시도 초과): {str(e)}")
-            except Exception as e:
-                logger.error(f"날짜별 네이버 뉴스 검색 오류: {str(e)}")
                 raise
 
     def get_ticker_query(self, ticker: str) -> str:

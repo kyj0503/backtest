@@ -27,10 +27,11 @@ JSON 직렬화 유틸리티
 - Backend: app/api/v1/endpoints/backtest.py (응답 변환)
 """
 
+from typing import Any
 import pandas as pd
 import numpy as np
 
-def recursive_serialize(obj):
+def recursive_serialize(obj: Any) -> Any:
     """객체를 JSON 직렬화 가능한 형태로 변환"""
     # 기본 JSON 직렬화 가능한 타입이면 그대로 반환
     if isinstance(obj, (str, int, bool)) or obj is None:

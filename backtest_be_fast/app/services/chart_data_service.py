@@ -39,13 +39,15 @@
 - 날짜는 ISO 8601 문자열 형식
 - NaN/Infinity는 None으로 변환
 """
+import asyncio
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime, date
+from typing import List, Dict, Any
+from datetime import date
 import pandas as pd
 import numpy as np
 
 from app.schemas.requests import BacktestRequest
+from app.utils.type_converters import safe_float, safe_int
 from app.schemas.responses import (
     BacktestResult, ChartDataResponse, ChartDataPoint,
     EquityPoint, TradeMarker, IndicatorData, BenchmarkPoint
@@ -198,11 +200,18 @@ class ChartDataService:
             raise
 
     async def _get_price_data(self, ticker, start_date, end_date) -> pd.DataFrame:
-        """캐시 우선 가격 데이터 조회"""
+        """
+        캐시 우선 가격 데이터 조회
+
+        FIXED: Race condition bug - data_fetcher.get_stock_data() is synchronous
+        and must be wrapped with asyncio.to_thread() to prevent blocking the event loop.
+        """
         if self.data_repository:
             data = await self.data_repository.get_stock_data(ticker, start_date, end_date)
         else:
-            data = self.data_fetcher.get_stock_data(
+            # FIXED: Wrap synchronous call with asyncio.to_thread() (async/sync boundary)
+            data = await asyncio.to_thread(
+                self.data_fetcher.get_stock_data,
                 ticker=ticker,
                 start_date=start_date,
                 end_date=end_date,
@@ -222,7 +231,7 @@ class ChartDataService:
             for idx, row in data.iterrows():
                 benchmark_data.append(BenchmarkPoint(
                     date=idx.strftime('%Y-%m-%d'),
-                    close=self.safe_float(row['Close'])
+                    close=safe_float(row['Close'])
                 ))
 
             self.logger.info(f"{ticker} 벤치마크 데이터 생성 완료: {len(benchmark_data)} 포인트")
@@ -239,11 +248,11 @@ class ChartDataService:
             ohlc_data.append(ChartDataPoint(
                 timestamp=idx.isoformat(),
                 date=idx.strftime('%Y-%m-%d'),
-                open=self.safe_float(row['Open']),
-                high=self.safe_float(row['High']),
-                low=self.safe_float(row['Low']),
-                close=self.safe_float(row['Close']),
-                volume=self.safe_int(row.get('Volume', 0))
+                open=safe_float(row['Open']),
+                high=safe_float(row['High']),
+                low=safe_float(row['Low']),
+                close=safe_float(row['Close']),
+                volume=safe_int(row.get('Volume', 0))
             ))
         return ohlc_data
     
@@ -380,7 +389,7 @@ class ChartDataService:
                 short_data.append({
                     "timestamp": idx.isoformat(),
                     "date": idx.strftime('%Y-%m-%d'),
-                    "value": self.safe_float(sma_value)
+                    "value": safe_float(sma_value)
                 })
         
         if short_data:
@@ -399,7 +408,7 @@ class ChartDataService:
                 long_data.append({
                     "timestamp": idx.isoformat(),
                     "date": idx.strftime('%Y-%m-%d'),
-                    "value": self.safe_float(sma_value)
+                    "value": safe_float(sma_value)
                 })
         
         if long_data:
@@ -611,24 +620,6 @@ class ChartDataService:
             "final_equity": final_equity,
             "volatility": float(data['Close'].pct_change().std() * 100) if len(data) > 1 else 0.0
         }
-    
-    def safe_float(self, value, default: float = 0.0) -> float:
-        """안전한 float 변환"""
-        try:
-            if pd.isna(value) or value is None:
-                return default
-            return float(value)
-        except (ValueError, TypeError):
-            return default
-    
-    def safe_int(self, value, default: int = 0) -> int:
-        """안전한 int 변환"""
-        try:
-            if pd.isna(value) or value is None:
-                return default
-            return int(value)
-        except (ValueError, TypeError):
-            return default
 
 
 # 글로벌 인스턴스

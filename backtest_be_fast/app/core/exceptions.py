@@ -86,22 +86,3 @@ class ValidationError(HTTPException):
             detail=message
         )
         logger.warning(f"검증 실패: {message}")
-
-
-# 유틸리티 함수
-def handle_yfinance_error(error: Exception, symbol: str, start_date: str, end_date: str) -> HTTPException:
-    """yfinance 에러를 적절한 HTTP 예외로 변환"""
-    error_str = str(error).lower()
-    
-    if "no data" in error_str or "empty" in error_str:
-        return DataNotFoundError(symbol, start_date, end_date)
-    elif "delisted" in error_str or "invalid" in error_str:
-        return InvalidSymbolError(symbol)
-    elif "rate limit" in error_str or "429" in error_str:
-        return YFinanceRateLimitError()
-    else:
-        logger.error(f"알 수 없는 yfinance 에러: {error}")
-        return HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"데이터 수집 중 예상치 못한 오류가 발생했습니다: {error}"
-        )

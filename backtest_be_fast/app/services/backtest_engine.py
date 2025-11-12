@@ -38,12 +38,12 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta, date
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Type
 from uuid import uuid4
 import pandas as pd
 import numpy as np
 
-from backtesting import Backtest
+from backtesting import Backtest, Strategy
 from fastapi import HTTPException
 
 from app.schemas.requests import BacktestRequest
@@ -55,6 +55,8 @@ from app.services.validation_service import validation_service
 from app.services.yfinance_db import get_ticker_info_from_db, load_ticker_data
 from app.core.exceptions import ValidationError
 from app.constants.currencies import SUPPORTED_CURRENCIES
+from app.utils.currency_converter import currency_converter
+from app.utils.type_converters import safe_float, safe_int
 
 
 class BacktestEngine:
@@ -114,7 +116,8 @@ class BacktestEngine:
             
             try:
                 run_kwargs = self._build_run_kwargs(request)
-                result = self._execute_backtest(bt, run_kwargs)
+                # FIXED: Wrap synchronous bt.run() with asyncio.to_thread() (async/sync boundary)
+                result = await asyncio.to_thread(self._execute_backtest, bt, run_kwargs)
                 self.logger.info("백테스트 실행 완료")
                 self.logger.info(f"거래 수: {result['# Trades']}")
                 self.logger.info(f"수익률: {result.get('Return [%]', 0):.2f}%")
@@ -130,8 +133,8 @@ class BacktestEngine:
                 if result is not None and '# Trades' in result:
                     return self._convert_result_to_response(result, request)
                 else:
-                    self.logger.warning("백테스트 결과가 유효하지 않음, fallback 사용")
-                    raise Exception("Invalid backtest result")
+                    self.logger.warning(f"백테스트 결과가 유효하지 않음 ({request.ticker}), fallback 사용")
+                    raise Exception(f"백테스트 결과가 유효하지 않습니다: {request.ticker}")
                     
             except Exception as e:
                 self.logger.error(f"백테스트 실행 중 오류: {e}")
@@ -166,7 +169,7 @@ class BacktestEngine:
             raise HTTPException(status_code=500, detail=f"백테스트 실행 실패: {str(e)}")
     
     async def _get_price_data(
-        self, ticker: str, start_date, end_date
+        self, ticker: str, start_date: str, end_date: str
     ) -> pd.DataFrame:
         """캐시-우선 가격 데이터 조회"""
         if self.data_repository:
@@ -181,7 +184,7 @@ class BacktestEngine:
             )
 
         if data is None or data.empty:
-            raise HTTPException(status_code=404, detail="가격 데이터를 찾을 수 없습니다.")
+            raise HTTPException(status_code=404, detail=f"가격 데이터를 찾을 수 없습니다: {ticker}")
 
         return data
 
@@ -190,6 +193,9 @@ class BacktestEngine:
     ) -> pd.DataFrame:
         """
         비USD 통화의 가격 데이터를 USD로 변환
+
+        이 메서드는 currency_converter 유틸리티로 리팩토링되었습니다.
+        기존 로직: 111줄 → 새 로직: 6줄 (wrapper)
 
         Parameters:
         -----------
@@ -206,100 +212,20 @@ class BacktestEngine:
         --------
         pd.DataFrame
             USD로 변환된 가격 데이터
+
+        Note:
+            Phase 2.3 리팩토링: 중복 코드를 currency_converter.py로 추출
         """
-        # 통화 정보 가져오기 (asyncio.to_thread로 래핑하여 async/sync 경계 준수)
-        try:
-            ticker_info = await asyncio.to_thread(get_ticker_info_from_db, ticker)
-            currency = ticker_info.get('currency', 'USD')
-            self.logger.info(f"{ticker} 통화: {currency}")
-        except Exception as e:
-            self.logger.warning(f"{ticker} 통화 정보 조회 실패: {e}, USD로 가정")
-            currency = 'USD'
-
-        # USD면 변환 불필요
-        if currency == 'USD':
-            return data
-
-        if currency not in SUPPORTED_CURRENCIES:
-            self.logger.warning(f"지원하지 않는 통화: {currency}, 변환 없이 진행")
-            return data
-
-        exchange_ticker = SUPPORTED_CURRENCIES[currency]
-        if not exchange_ticker:
-            return data
-
-        # 환율 데이터 로드 (60일 버퍼 추가)
-        try:
-            # start_date가 문자열 또는 date/datetime 객체일 수 있음
-            if isinstance(start_date, str):
-                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
-            elif isinstance(start_date, date):
-                start_date_obj = datetime.combine(start_date, datetime.min.time())
-            else:
-                # 이미 datetime 객체인 경우
-                start_date_obj = start_date
-
-            exchange_start_date_obj = start_date_obj - timedelta(days=60)
-            exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
-
-            self.logger.info(f"{currency} 환율 데이터 로드 중: {exchange_ticker}")
-            exchange_data = await asyncio.to_thread(
-                load_ticker_data, exchange_ticker, exchange_start_date, end_date
-            )
-
-            if exchange_data is None or exchange_data.empty:
-                self.logger.warning(f"{currency} 환율 데이터 없음, 변환 없이 진행")
-                return data
-
-            # 타임존 불일치 해결: 타임존 제거 후 reindex
-            # 한국 주식: datetime64[ns, Asia/Seoul], 환율: datetime64[ns]
-            data_index_no_tz = data.index.tz_localize(None) if data.index.tz is not None else data.index
-            exchange_index_no_tz = exchange_data.index.tz_localize(None) if exchange_data.index.tz is not None else exchange_data.index
-
-            # 환율 데이터 인덱스를 타임존 제거한 것으로 교체
-            exchange_data.index = exchange_index_no_tz
-
-            # 데이터 날짜 범위로 reindex하고 forward-fill
-            exchange_data = exchange_data.reindex(data_index_no_tz, method='ffill')
-            exchange_data = exchange_data.bfill()
-
-            self.logger.info(f"환율 데이터 전처리 완료: {len(exchange_data)}일치")
-
-            # 가격 데이터 복사
-            converted_data = data.copy()
-
-            # 각 행에 대해 환율 적용
-            for i, idx in enumerate(converted_data.index):
-                # 타임존 제거한 인덱스로 환율 데이터 접근
-                idx_no_tz = idx.tz_localize(None) if hasattr(idx, 'tz_localize') and idx.tz is not None else idx
-
-                if idx_no_tz in exchange_data.index and pd.notna(exchange_data.loc[idx_no_tz, 'Close']):
-                    exchange_rate = exchange_data.loc[idx_no_tz, 'Close']
-
-                    # EUR, GBP, AUD 등: XXXUSD=X 형태 (곱하기)
-                    # KRW, JPY 등: XXX=X 형태 (나누기)
-                    if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
-                        # 1 통화 = X USD
-                        multiplier = exchange_rate
-                    else:
-                        # 1 USD = X 통화
-                        multiplier = 1.0 / exchange_rate if exchange_rate > 0 else 1.0
-
-                    # OHLC 컬럼 변환
-                    for col in ['Open', 'High', 'Low', 'Close']:
-                        if col in converted_data.columns:
-                            converted_data.loc[idx, col] *= multiplier
-
-            self.logger.info(f"{ticker} 가격을 {currency}에서 USD로 변환 완료")
-            return converted_data
-
-        except Exception as e:
-            self.logger.error(f"통화 변환 중 오류: {e}, 원본 데이터 사용")
-            return data
+        return await currency_converter.convert_dataframe_to_usd(
+            ticker=ticker,
+            data=data,
+            start_date=start_date,
+            end_date=end_date
+        )
 
     def _build_strategy(
         self, strategy_name: str, params: Optional[Dict[str, Any]]
-    ):
+    ) -> Type[Strategy]:
         """요청 파라미터를 적용한 전략 클래스를 생성"""
         base_strategy = self.strategy_service.get_strategy_class(strategy_name)
         if not params:
@@ -333,6 +259,12 @@ class BacktestEngine:
         if not overrides:
             return base_strategy
 
+        # 전략 파라미터 오버라이드 로깅
+        override_details = ", ".join([f"{k}={v}" for k, v in overrides.items()])
+        self.logger.info(
+            f"전략 파라미터 오버라이드 ({strategy_name}): {override_details}"
+        )
+
         configured_name = f"{base_strategy.__name__}Configured_{uuid4().hex[:8]}"
         return type(configured_name, (base_strategy,), overrides)
 
@@ -343,7 +275,7 @@ class BacktestEngine:
             run_kwargs["spread"] = request.spread
         return run_kwargs
 
-    def _execute_backtest(self, bt: Backtest, run_kwargs: Dict[str, Any]):
+    def _execute_backtest(self, bt: Backtest, run_kwargs: Dict[str, Any]) -> pd.Series:
         """Backtest 실행 래퍼 (옵션 인자 호환성 처리)"""
         try:
             if run_kwargs:
@@ -441,24 +373,6 @@ class BacktestEngine:
 
     def _convert_result_to_response(self, stats: pd.Series, request: BacktestRequest) -> BacktestResult:
         """백테스트 결과를 API 응답 형식으로 변환"""
-        def safe_float(key: str, default: float = 0.0) -> float:
-            try:
-                value = stats.get(key, default)
-                if pd.isna(value) or value is None:
-                    return default
-                return float(value)
-            except (ValueError, TypeError):
-                return default
-        
-        def safe_int(key: str, default: int = 0) -> int:
-            try:
-                value = stats.get(key, default)
-                if pd.isna(value) or value is None:
-                    return default
-                return int(value)
-            except (ValueError, TypeError):
-                return default
-        
         try:
             # duration_days 계산
             start_date = pd.to_datetime(request.start_date)
@@ -493,6 +407,7 @@ class BacktestEngine:
 
             if getattr(request, 'benchmark_ticker', None):
                 try:
+                    self.logger.info(f"벤치마크 데이터 로딩 중: {request.benchmark_ticker}")
                     benchmark = self.data_fetcher.get_stock_data(
                         ticker=request.benchmark_ticker,
                         start_date=start_date,
@@ -502,6 +417,10 @@ class BacktestEngine:
                         benchmark is not None and not benchmark.empty
                         and isinstance(equity_curve_df, pd.DataFrame) and not equity_curve_df.empty
                     ):
+                        self.logger.debug(
+                            f"벤치마크 데이터 로드 완료: {len(benchmark)} 포인트, "
+                            f"전략 equity curve: {len(equity_curve_df)} 포인트"
+                        )
                         strat_returns = equity_curve_df['Equity'].pct_change().dropna()
                         bench_returns = benchmark['Close'].pct_change().dropna()
                         strat_returns, bench_returns = strat_returns.align(bench_returns, join='inner')
@@ -516,8 +435,16 @@ class BacktestEngine:
                                 alpha_pct = (mean_strat - beta_value * mean_bench) * 100
                                 beta_value = float(beta_value)
                                 alpha_pct = float(alpha_pct)
-                except Exception:
-                    pass
+                                self.logger.info(
+                                    f"Alpha/Beta 계산 완료: Alpha={alpha_pct:.2f}%, Beta={beta_value:.3f} "
+                                    f"(전략 평균 수익률={mean_strat*100:.3f}%, 벤치마크 평균 수익률={mean_bench*100:.3f}%)"
+                                )
+                        else:
+                            self.logger.warning("Alpha/Beta 계산 불가: 데이터 포인트 부족 또는 벤치마크 분산 0")
+                    else:
+                        self.logger.warning(f"벤치마크 데이터 없음 또는 equity curve 없음")
+                except Exception as e:
+                    self.logger.warning(f"Alpha/Beta 계산 실패: {e}")
 
             return BacktestResult(
                 ticker=request.ticker,
@@ -526,27 +453,27 @@ class BacktestEngine:
                 end_date=end_date_str,
                 duration_days=duration_days,
                 initial_cash=request.initial_cash,
-                final_equity=safe_float('Equity Final [$]', request.initial_cash),
-                total_return_pct=safe_float('Return [%]'),
-                annualized_return_pct=safe_float('Return (Ann.) [%]'),
-                buy_and_hold_return_pct=safe_float('Buy & Hold Return [%]'),
-                cagr_pct=safe_float('Return (Ann.) [%]'),  # CAGR은 연간 수익률과 동일
-                volatility_pct=safe_float('Volatility [%]'),
-                sharpe_ratio=safe_float('Sharpe Ratio'),
-                sortino_ratio=safe_float('Sortino Ratio'),
-                calmar_ratio=safe_float('Calmar Ratio'),
-                max_drawdown_pct=safe_float('Max. Drawdown [%]'),
-                avg_drawdown_pct=safe_float('Avg. Drawdown [%]'),
-                total_trades=safe_int('# Trades'),
-                win_rate_pct=safe_float('Win Rate [%]'),
-                profit_factor=safe_float('Profit Factor'),
-                avg_trade_pct=safe_float('Avg. Trade [%]'),
-                best_trade_pct=safe_float('Best Trade [%]'),
-                worst_trade_pct=safe_float('Worst Trade [%]'),
+                final_equity=safe_float(stats.get('Equity Final [$]', request.initial_cash)),
+                total_return_pct=safe_float(stats.get('Return [%]', 0.0)),
+                annualized_return_pct=safe_float(stats.get('Return (Ann.) [%]', 0.0)),
+                buy_and_hold_return_pct=safe_float(stats.get('Buy & Hold Return [%]', 0.0)),
+                cagr_pct=safe_float(stats.get('Return (Ann.) [%]', 0.0)),  # CAGR은 연간 수익률과 동일
+                volatility_pct=safe_float(stats.get('Volatility [%]', 0.0)),
+                sharpe_ratio=safe_float(stats.get('Sharpe Ratio', 0.0)),
+                sortino_ratio=safe_float(stats.get('Sortino Ratio', 0.0)),
+                calmar_ratio=safe_float(stats.get('Calmar Ratio', 0.0)),
+                max_drawdown_pct=safe_float(stats.get('Max. Drawdown [%]', 0.0)),
+                avg_drawdown_pct=safe_float(stats.get('Avg. Drawdown [%]', 0.0)),
+                total_trades=safe_int(stats.get('# Trades', 0)),
+                win_rate_pct=safe_float(stats.get('Win Rate [%]', 0.0)),
+                profit_factor=safe_float(stats.get('Profit Factor', 0.0)),
+                avg_trade_pct=safe_float(stats.get('Avg. Trade [%]', 0.0)),
+                best_trade_pct=safe_float(stats.get('Best Trade [%]', 0.0)),
+                worst_trade_pct=safe_float(stats.get('Worst Trade [%]', 0.0)),
                 alpha_pct=alpha_pct,
                 beta=beta_value,
                 kelly_criterion=None,  # 추후 계산 추가
-                sqn=safe_float('SQN') if 'SQN' in stats else None,
+                sqn=safe_float(stats.get('SQN', 0.0)) if 'SQN' in stats else None,
                 trade_log=trade_log,
                 equity_curve=equity_curve_dict,  # 일일 자산 가치
                 execution_time_seconds=0.5,  # 추후 실제 시간 측정 추가

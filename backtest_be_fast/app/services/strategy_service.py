@@ -196,13 +196,13 @@ class StrategyService:
     def get_strategy_class(self, strategy_name: str) -> Type[Strategy]:
         """전략 클래스 반환"""
         if strategy_name not in STRATEGIES:
-            raise ValueError(f"지원하지 않는 전략: {strategy_name}")
+            raise ValueError(f"지원하지 않는 전략입니다: {strategy_name}.")
         return STRATEGIES[strategy_name]['class']
     
     def get_strategy_info(self, strategy_name: str) -> Dict[str, Any]:
         """전략 정보 반환"""
         if strategy_name not in STRATEGIES:
-            raise ValueError(f"지원하지 않는 전략: {strategy_name}")
+            raise ValueError(f"지원하지 않는 전략입니다: {strategy_name}.")
         
         strategy_data = STRATEGIES[strategy_name].copy()
         strategy_data.pop('class')
@@ -238,7 +238,7 @@ class StrategyService:
     ) -> Dict[str, Any]:
         """전략 파라미터 유효성 검증 및 기본값 적용"""
         if strategy_name not in STRATEGIES:
-            raise ValueError(f"지원하지 않는 전략: {strategy_name}")
+            raise ValueError(f"지원하지 않는 전략입니다: {strategy_name}.")
         
         strategy_info = STRATEGIES[strategy_name]
         validated_params = {}
