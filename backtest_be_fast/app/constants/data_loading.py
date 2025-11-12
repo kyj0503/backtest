@@ -69,6 +69,10 @@ class TradingThresholds:
 
     # 환율 데이터
     EXCHANGE_RATE_LOOKBACK_DAYS = 30  # 환율 데이터 조회 여유 기간
+    EXCHANGE_RATE_BUFFER_DAYS = 60  # 환율 데이터 로딩 버퍼 (기본 60일)
+
+    # 리밸런싱 임계값
+    REBALANCING_THRESHOLD_PCT = 0.0001  # 0.01% (리밸런싱 판단 기준)
 
     # 백테스트 데이터 검증
     MIN_DATA_POINTS = 5  # 최소 데이터 포인트 수

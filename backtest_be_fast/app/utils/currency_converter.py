@@ -52,6 +52,7 @@ from typing import Dict, Optional, Tuple
 import pandas as pd
 
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
+from app.constants.data_loading import TradingThresholds
 from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db
 
 logger = logging.getLogger(__name__)
@@ -128,7 +129,7 @@ class CurrencyConverter:
         start_date,
         end_date,
         target_date_range: Optional[pd.DatetimeIndex] = None,
-        buffer_days: int = 60
+        buffer_days: int = TradingThresholds.EXCHANGE_RATE_BUFFER_DAYS
     ) -> pd.DataFrame:
         """
         환율 데이터를 로딩하고 전처리합니다.
@@ -244,7 +245,7 @@ class CurrencyConverter:
                 start_date=start_date,
                 end_date=end_date,
                 target_date_range=data.index,
-                buffer_days=60
+                buffer_days=TradingThresholds.EXCHANGE_RATE_BUFFER_DAYS
             )
 
             # 가격 데이터 복사

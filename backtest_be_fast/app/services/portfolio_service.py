@@ -71,17 +71,10 @@ from app.core.exceptions import (
     ValidationError
 )
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
+from app.constants.data_loading import TradingThresholds
 from app.utils.currency_converter import currency_converter
 
 logger = logging.getLogger(__name__)
-
-# 상장폐지 감지 임계값 (일 단위)
-# 30일로 설정한 이유:
-# - 실제 상장폐지를 조기에 감지 (대부분의 거래소는 20-30일 내 절차 진행)
-# - 거래 정지(regulatory review, 인수합병 등) 오탐 최소화
-# - 거래량이 적은 종목의 단기 데이터 공백과 구분
-# 시장별 규칙 차이가 있으나, 30일은 균형잡힌 기본값
-DELISTING_THRESHOLD_DAYS = 30
 
 class PortfolioService:
     """포트폴리오 백테스트 서비스"""
@@ -268,7 +261,7 @@ class PortfolioService:
                     # 현재 가격이 없을 때
                     if unique_key in last_price_date:
                         days_without_price = (current_date.date() - last_price_date[unique_key]).days
-                        if days_without_price >= DELISTING_THRESHOLD_DAYS and unique_key not in delisted_stocks:
+                        if days_without_price >= TradingThresholds.DELISTING_THRESHOLD_DAYS and unique_key not in delisted_stocks:
                             # 상장폐지로 판단
                             symbol = dca_info[unique_key]['symbol']
                             logger.warning(
@@ -478,7 +471,7 @@ class PortfolioService:
                             new_cash_holdings[unique_key] = target_value
 
                             # 현금 조정 내역 기록 (차이가 있을 때만)
-                            if abs(target_value - current_value) / total_portfolio_value > 0.0001:
+                            if abs(target_value - current_value) / total_portfolio_value > TradingThresholds.REBALANCING_THRESHOLD_PCT:
                                 trades_in_rebalance += 1
                                 symbol = dca_info[unique_key]['symbol']
                                 if target_value > current_value:
@@ -526,7 +519,7 @@ class PortfolioService:
                             symbol = dca_info[unique_key]['symbol']
 
                             # 매도/매수가 발생했는지 확인 (0.01% 이상 차이나면 거래로 간주)
-                            if abs(target_value - current_value) / total_portfolio_value > 0.0001:
+                            if abs(target_value - current_value) / total_portfolio_value > TradingThresholds.REBALANCING_THRESHOLD_PCT:
                                 trades_in_rebalance += 1
 
                                 # 거래 내역 기록
