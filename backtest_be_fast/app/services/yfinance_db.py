@@ -136,7 +136,15 @@ def _get_engine() -> Engine:
         pass
     logger.error(f"[yfinance_db] SQLAlchemy URL (masked): {masked_db_url}")
 
-    _ENGINE_CACHE = create_engine(db_url, pool_pre_ping=True, future=True)
+    _ENGINE_CACHE = create_engine(
+        db_url,
+        pool_pre_ping=True,
+        pool_size=20,           # 기본 5 → 20 (동시 연결 수 증가)
+        max_overflow=40,        # 기본 10 → 40 (추가 연결 허용)
+        pool_timeout=30,        # 연결 대기 시간 30초
+        pool_recycle=3600,      # 1시간마다 연결 재생성 (커넥션 풀 관리)
+        future=True
+    )
     return _ENGINE_CACHE
 
 
