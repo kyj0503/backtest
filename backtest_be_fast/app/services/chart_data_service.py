@@ -40,8 +40,8 @@
 - NaN/Infinity는 None으로 변환
 """
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime, date
+from typing import List, Dict, Any
+from datetime import date
 import pandas as pd
 import numpy as np
 

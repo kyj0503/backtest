@@ -35,7 +35,6 @@
 """
 import logging
 import pandas as pd
-from datetime import datetime, date
 from typing import Dict, Any
 
 from app.schemas.requests import BacktestRequest

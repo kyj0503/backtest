@@ -53,13 +53,13 @@
 import asyncio
 import pandas as pd
 import numpy as np
-from typing import List, Dict, Any, Tuple
+from typing import Dict, Any
 from datetime import datetime, timedelta, date
 import logging
 
 from app.schemas.schemas import PortfolioBacktestRequest, FREQUENCY_MAP
 from app.schemas.requests import BacktestRequest
-from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db, get_ticker_info_batch_from_db
+from app.services.yfinance_db import load_ticker_data, get_ticker_info_batch_from_db
 from app.services.backtest_service import backtest_service
 from app.services.dca_calculator import DCACalculator
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
@@ -70,7 +70,6 @@ from app.core.exceptions import (
     InvalidSymbolError,
     ValidationError
 )
-from app.core.config import settings
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
 
 logger = logging.getLogger(__name__)

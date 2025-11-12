@@ -41,7 +41,7 @@ total_shares, avg_price, return_pct, log = DCACalculator.calculate_dca_shares_an
 - Backend: app/schemas/schemas.py (DCA 설정 데이터)
 """
 from typing import Dict, List, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
 import logging
 from app.schemas.schemas import FREQUENCY_MAP
