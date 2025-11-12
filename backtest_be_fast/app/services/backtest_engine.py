@@ -115,7 +115,8 @@ class BacktestEngine:
             
             try:
                 run_kwargs = self._build_run_kwargs(request)
-                result = self._execute_backtest(bt, run_kwargs)
+                # FIXED: Wrap synchronous bt.run() with asyncio.to_thread() (async/sync boundary)
+                result = await asyncio.to_thread(self._execute_backtest, bt, run_kwargs)
                 self.logger.info("백테스트 실행 완료")
                 self.logger.info(f"거래 수: {result['# Trades']}")
                 self.logger.info(f"수익률: {result.get('Return [%]', 0):.2f}%")

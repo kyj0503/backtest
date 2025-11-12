@@ -321,7 +321,7 @@ class PortfolioService:
 
             # DCA 추가 매수 (주기적 투자 - Nth Weekday 방식)
             if prev_date is not None:
-                for symbol, amount in stock_amounts.items():  # symbol로 변수명 통일
+                for symbol, _ in stock_amounts.items():  # FIXED: amount 변수 미사용, _ 로 변경
                     if symbol not in dca_info:
                         logger.error(f"DCA 정보 없음: {symbol}")
                         continue
