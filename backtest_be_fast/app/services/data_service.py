@@ -37,6 +37,7 @@ from typing import Union
 from datetime import date
 import pandas as pd
 import logging
+import asyncio
 
 from app.repositories.data_repository import data_repository
 from app.services.yfinance_db import load_ticker_data
@@ -62,36 +63,36 @@ class DataService:
     ) -> pd.DataFrame:
         """
         주식 데이터 조회 (DB 우선, fallback to yfinance)
-        
+
         Args:
             ticker: 티커 심볼
             start_date: 시작 날짜
             end_date: 종료 날짜
             use_db_first: DB를 우선 사용할지 여부
-        
+
         Returns:
             DataFrame: 주식 데이터
-        
+
         Raises:
             DataNotFoundError: 데이터를 찾을 수 없을 때
         """
         try:
             if use_db_first:
-                # 1. DB 캐시에서 조회 시도
-                df = load_ticker_data(ticker, start_date, end_date)
+                # 1. DB 캐시에서 조회 시도 (asyncio.to_thread로 async/sync 경계 준수)
+                df = await asyncio.to_thread(load_ticker_data, ticker, start_date, end_date)
                 if df is not None and not df.empty:
                     logger.debug(f"DB 캐시에서 데이터 반환: {ticker}")
                     return df
-            
-            # 2. yfinance에서 실시간 조회
+
+            # 2. yfinance에서 실시간 조회 (asyncio.to_thread로 async/sync 경계 준수)
             logger.info(f"yfinance에서 데이터 조회: {ticker}")
-            df = self.data_fetcher.get_stock_data(ticker, start_date, end_date)
-            
+            df = await asyncio.to_thread(self.data_fetcher.get_stock_data, ticker, start_date, end_date)
+
             if df is None or df.empty:
                 raise DataNotFoundError(ticker, str(start_date), str(end_date))
-            
+
             return df
-            
+
         except DataNotFoundError:
             raise
         except Exception as e:

@@ -61,7 +61,7 @@ from decimal import Decimal
 
 from app.schemas.schemas import PortfolioBacktestRequest, FREQUENCY_MAP
 from app.schemas.requests import BacktestRequest
-from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db
+from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db, get_ticker_info_batch_from_db
 from app.services.backtest_service import backtest_service
 from app.services.dca_calculator import DCACalculator
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
@@ -148,19 +148,21 @@ class PortfolioService:
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
 
-        # 각 종목의 currency 정보 먼저 가져오기
-        ticker_currencies = {}
-        for unique_key in stock_amounts.keys():
-            symbol = dca_info[unique_key]['symbol']
-            try:
-                ticker_info = await asyncio.to_thread(
-                    get_ticker_info_from_db, symbol
-                )
+        # 각 종목의 currency 정보 먼저 가져오기 (배치 조회로 최적화)
+        symbols = [dca_info[unique_key]['symbol'] for unique_key in stock_amounts.keys()]
+        try:
+            ticker_info_dict = await asyncio.to_thread(
+                get_ticker_info_batch_from_db, symbols
+            )
+            ticker_currencies = {}
+            for unique_key in stock_amounts.keys():
+                symbol = dca_info[unique_key]['symbol']
+                ticker_info = ticker_info_dict.get(symbol, {})
                 ticker_currencies[unique_key] = ticker_info.get('currency', 'USD')
                 logger.debug(f"{symbol} currency: {ticker_currencies[unique_key]}")
-            except Exception as e:
-                logger.warning(f"{symbol} currency 정보 조회 실패: {e}, USD로 가정")
-                ticker_currencies[unique_key] = 'USD'
+        except Exception as e:
+            logger.warning(f"티커 정보 배치 조회 실패: {e}, 모두 USD로 가정")
+            ticker_currencies = {unique_key: 'USD' for unique_key in stock_amounts.keys()}
 
         # 필요한 통화 파악 및 환율 데이터 로드
         required_currencies = set(ticker_currencies.values()) - {'USD'}
