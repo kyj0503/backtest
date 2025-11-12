@@ -137,7 +137,7 @@ const HomePage: React.FC = () => {
               <div className="p-6 rounded-2xl border border-border/50 hover:bg-muted/30 transition-colors">
                 <h3 className="font-bold text-primary mb-2">Step 2. 전략 선택 및 설정</h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  매수 후 보유(Buy & Hold)부터 이동평균, RSI 등 다양한 내장 전략 중 하나를 선택하세요. 각 전략의 세부 파라미터를 조정하여 최적의 설정을 찾을 수 있습니다.
+                  매수 후 보유 전략부터 이동평균교차 전략, RSI 전략 등 다양한 내장 전략 중 하나를 선택하세요. 각 전략의 세부 파라미터를 조정하여 최적의 설정을 찾을 수 있습니다.
                 </p>
                 <img
                   src="/images/landing/backtest-strategy.png"
