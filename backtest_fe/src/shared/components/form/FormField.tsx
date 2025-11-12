@@ -93,7 +93,7 @@ export const FormField: React.FC<FormFieldProps> = ({
             min={min}
             max={max}
             step={step}
-            className={error ? 'border-destructive' : ''}
+            className={`${error ? 'border-destructive' : ''} ${type === 'date' ? 'w-full text-left [&::-webkit-date-and-time-value]:text-left' : ''}`}
           />
         );
     }
@@ -106,7 +106,9 @@ export const FormField: React.FC<FormFieldProps> = ({
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
 
-      {renderInput()}
+      <div className="w-full min-w-0">
+        {renderInput()}
+      </div>
 
       {helpText && (
         <p className={TEXT_STYLES.caption}>{helpText}</p>

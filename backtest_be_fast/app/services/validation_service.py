@@ -90,42 +90,7 @@ class ValidationService:
         except Exception as e:
             self.logger.error(f"백테스트 요청 검증 중 오류: {str(e)}")
             raise ValidationError(f"요청 검증 실패: {str(e)}")
-    
-    def check_listing_date_warnings(self, ticker_info: Dict[str, Any], start_date: str) -> Optional[str]:
-        """
-        상장일 체크 및 경고 메시지 생성
-        
-        Args:
-            ticker_info: 티커 정보 (first_trade_date 포함)
-            start_date: 백테스트 시작일 (YYYY-MM-DD)
-            
-        Returns:
-            경고 메시지 (문제 없으면 None)
-        """
-        first_trade_date = ticker_info.get('first_trade_date')
-        if not first_trade_date:
-            return None
-        
-        try:
-            listing_date = datetime.strptime(first_trade_date, '%Y-%m-%d').date()
-            backtest_start = datetime.strptime(start_date, '%Y-%m-%d').date()
-            
-            if backtest_start < listing_date:
-                symbol = ticker_info.get('symbol', 'Unknown')
-                company_name = ticker_info.get('company_name', symbol)
-                return (
-                    f"{company_name}({symbol})는 {first_trade_date}에 상장했습니다. "
-                    f"백테스트 시작일이 상장일보다 빠릅니다. "
-                    f"초기 기간({start_date} ~ {first_trade_date})의 데이터가 없습니다."
-                )
-        except Exception as e:
-            self.logger.warning(f"상장일 체크 실패: {e}")
-        
-        return None
-    def safe_timedelta_to_days(self, timedelta):
-        """Timedelta를 일수로 변환"""
-        return timedelta.days if isinstance(timedelta, pd.Timedelta) else 0
-    
+
     def create_fallback_stats(self, data: pd.DataFrame, initial_cash: float) -> Dict[str, Any]:
         """마지막 수단: 수동으로 기본 통계 생성"""
         try:

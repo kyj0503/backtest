@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
+import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 
 export interface FormSectionProps {
   title: string;

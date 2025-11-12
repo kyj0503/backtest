@@ -93,15 +93,26 @@ const FinancialTermTooltip: React.FC<FinancialTermTooltipProps> = ({
   className = "" 
 }) => {
   const explanation = financialTerms[term];
+  const [isOpen, setIsOpen] = React.useState(false);
   
   if (!explanation) {
     return <>{children}</>;
   }
 
   return (
-    <Tooltip>
+    <Tooltip open={isOpen} onOpenChange={setIsOpen}>
       <TooltipTrigger asChild>
-        <span className={`cursor-help border-b border-dotted border-primary text-primary hover:text-primary/80 ${className}`}>
+        <span 
+          className={`cursor-help border-b border-dotted border-primary text-primary hover:text-primary/80 ${className}`}
+          onClick={() => setIsOpen(!isOpen)}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsOpen(!isOpen);
+            }
+          }}
+        >
           {children}
         </span>
       </TooltipTrigger>

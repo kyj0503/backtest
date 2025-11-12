@@ -97,7 +97,7 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
           variant="outline"
           size="sm"
           onClick={() => setIsCompactView(!isCompactView)}
-          className="hidden md:flex items-center gap-2"
+          className="hidden lg:flex items-center gap-2"
         >
           {isCompactView ? (
             <>
@@ -115,7 +115,11 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
 
       {/* 3. 모든 분석 차트 */}
       <div
-        className={`grid gap-3 sm:gap-6 ${isCompactView ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}
+        className={
+          isCompactView
+            ? 'grid gap-3 sm:gap-6 md:grid-cols-1 lg:grid-cols-2'
+            : 'grid gap-3 sm:gap-6 md:grid-cols-1 lg:grid-cols-1'
+        }
         style={{
           contain: 'layout style'
         }}
