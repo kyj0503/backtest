@@ -1,38 +1,39 @@
-# Error Message Inconsistency Analysis Report
+# 에러 메시지 불일치 분석 보고서
 
-## Summary
-Found **multiple categories of inconsistent error message formats** across backend service files. Issues include:
-- Mixed error message styles (Korean only, English only, mixed)
-- Inconsistent capitalization and punctuation patterns
-- Different error message structures for similar errors
-- Inconsistent logging patterns across services
-- Variable context inclusion in error messages
+## 요약
+
+백엔드 서비스 파일 전반에 걸쳐 일관되지 않은 에러 메시지 형식의 여러 카테고리를 발견했습니다. 문제점:
+- 혼합된 에러 메시지 스타일 (한국어만, 영어만, 혼합)
+- 일관되지 않은 대문자 사용 및 구두점 패턴
+- 유사한 에러에 대한 다른 에러 메시지 구조
+- 서비스 전반에 걸쳐 일관되지 않은 로깅 패턴
+- 에러 메시지의 가변적인 컨텍스트 포함
 
 ---
 
-## DETAILED FINDINGS BY CATEGORY
+## 카테고리별 상세 발견사항
 
-### 1. VALIDATION ERRORS (Error Code: 422/400)
+### 1. 유효성 검증 에러 (Error Code: 422/400)
 
-#### A. Strategy Parameter Validation
-**File**: `app/services/strategy_service.py`
+#### A. 전략 파라미터 유효성 검증
+파일: `app/services/strategy_service.py`
 
-| Line | Current Format | Error Type | Issue |
+| 라인 | 현재 형식 | 에러 타입 | 문제점 |
 |------|---|---|---|
-| 199 | `"지원하지 않는 전략: {strategy_name}"` | ValueError | Korean, no period |
-| 205 | `"지원하지 않는 전략: {strategy_name}"` | ValueError | Korean, duplicated (same as 199) |
-| 241 | `"지원하지 않는 전략: {strategy_name}"` | ValueError | Korean, duplicated |
-| 257-259 | `"파라미터 {param_name}을(를) {param_type.__name__} 타입으로 변환할 수 없습니다"` | ValueError | Korean, detailed |
-| 262-264 | `"{param_name}의 값 {value}는 최소값 {param_info['min']}보다 작습니다"` | ValueError | Korean, structured |
-| 266-268 | `"{param_name}의 값 {value}는 최대값 {param_info['max']}보다 큽니다"` | ValueError | Korean, structured |
-| 291-294 | `"{strategy_name} 전략에서 {left_param}({params[left_param]})는 {right_param}({params[right_param]})보다 작아야 합니다"` | ValueError | Korean, very long |
+| 199 | `"지원하지 않는 전략: {strategy_name}"` | ValueError | 한국어, 마침표 없음 |
+| 205 | `"지원하지 않는 전략: {strategy_name}"` | ValueError | 한국어, 중복 (199와 동일) |
+| 241 | `"지원하지 않는 전략: {strategy_name}"` | ValueError | 한국어, 중복 |
+| 257-259 | `"파라미터 {param_name}을(를) {param_type.__name__} 타입으로 변환할 수 없습니다"` | ValueError | 한국어, 상세함 |
+| 262-264 | `"{param_name}의 값 {value}는 최소값 {param_info['min']}보다 작습니다"` | ValueError | 한국어, 구조화됨 |
+| 266-268 | `"{param_name}의 값 {value}는 최대값 {param_info['max']}보다 큽니다"` | ValueError | 한국어, 구조화됨 |
+| 291-294 | `"{strategy_name} 전략에서 {left_param}({params[left_param]})는 {right_param}({params[right_param]})보다 작아야 합니다"` | ValueError | 한국어, 매우 긺 |
 
-**Issues**:
-- Line 199, 205, 241: Identical message but raised in different contexts (duplication)
-- Message structure varies: some include parameter details, others don't
-- Length inconsistency: simple vs. very detailed
+문제점:
+- 라인 199, 205, 241: 동일한 메시지가 다른 컨텍스트에서 발생 (중복)
+- 메시지 구조가 다양함: 일부는 파라미터 세부사항 포함, 일부는 미포함
+- 길이 불일치: 단순 vs. 매우 상세
 
-**Suggested Standardized Format**:
+권장 표준 형식:
 ```python
 # Pattern 1 (Unsupported Strategy)
 "지원하지 않는 전략입니다: {strategy_name}"
@@ -49,32 +50,32 @@ Found **multiple categories of inconsistent error message formats** across backe
 
 ---
 
-#### B. Portfolio Validation
-**File**: `app/schemas/schemas.py`
+#### B. 포트폴리오 유효성 검증
+파일: `app/schemas/schemas.py`
 
-| Line | Current Format | Error Type | Issue |
+| 라인 | 현재 형식 | 에러 타입 | 문제점 |
 |------|---|---|---|
-| 73 | `'amount와 weight는 동시에 입력할 수 없습니다. 하나만 입력하세요.'` | ValueError | Korean, instruction tone |
-| 92 | `'주식 심볼은 영문자, 숫자, 점(.), 하이픈(-)만 포함해야 합니다.'` | ValueError | Korean, detailed rules |
-| 99 | `'투자 방식은 lump_sum 또는 dca만 가능합니다.'` | ValueError | Korean, enum values |
-| 106 | `'자산 타입은 stock 또는 cash만 가능합니다.'` | ValueError | Korean, enum values |
-| 113 | `'DCA 주기는 {", ".join(FREQUENCY_MAP.keys())} 중 하나여야 합니다.'` | ValueError | Korean, dynamic values |
-| 130 | `'포트폴리오는 최소 1개 종목을 포함해야 합니다.'` | ValueError | Korean, constraint |
-| 142 | `'중복된 종목이 있습니다: {", ".join(sorted(duplicates))}. 같은 종목은 한 번만 추가할 수 있습니다.'` | ValueError | Korean, long message |
-| 148 | `'포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다. 혼합 입력 불가.'` | ValueError | Korean, duplicated concept |
-| 155 | `'종목 비중 합계가 95-105% 범위를 벗어났습니다. 현재: {total_weight:.1f}%'` | ValueError | Korean, specific context |
-| 159 | `'총 투자 금액은 0보다 커야 합니다.'` | ValueError | Korean, constraint |
-| 168 | `'날짜는 YYYY-MM-DD 형식이어야 합니다.'` | ValueError | Korean, format requirement |
-| 178 | `'종료 날짜는 시작 날짜보다 이후여야 합니다.'` | ValueError | Korean, date logic |
-| 180 | `'백테스트 기간은 최대 {settings.max_backtest_duration_years}년으로 제한됩니다.'` | ValueError | Korean, dynamic limit |
+| 73 | `'amount와 weight는 동시에 입력할 수 없습니다. 하나만 입력하세요.'` | ValueError | 한국어, 지시 톤 |
+| 92 | `'주식 심볼은 영문자, 숫자, 점(.), 하이픈(-)만 포함해야 합니다.'` | ValueError | 한국어, 상세 규칙 |
+| 99 | `'투자 방식은 lump_sum 또는 dca만 가능합니다.'` | ValueError | 한국어, enum 값 |
+| 106 | `'자산 타입은 stock 또는 cash만 가능합니다.'` | ValueError | 한국어, enum 값 |
+| 113 | `'DCA 주기는 {", ".join(FREQUENCY_MAP.keys())} 중 하나여야 합니다.'` | ValueError | 한국어, 동적 값 |
+| 130 | `'포트폴리오는 최소 1개 종목을 포함해야 합니다.'` | ValueError | 한국어, 제약조건 |
+| 142 | `'중복된 종목이 있습니다: {", ".join(sorted(duplicates))}. 같은 종목은 한 번만 추가할 수 있습니다.'` | ValueError | 한국어, 긴 메시지 |
+| 148 | `'포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다. 혼합 입력 불가.'` | ValueError | 한국어, 중복 개념 |
+| 155 | `'종목 비중 합계가 95-105% 범위를 벗어났습니다. 현재: {total_weight:.1f}%'` | ValueError | 한국어, 구체적 컨텍스트 |
+| 159 | `'총 투자 금액은 0보다 커야 합니다.'` | ValueError | 한국어, 제약조건 |
+| 168 | `'날짜는 YYYY-MM-DD 형식이어야 합니다.'` | ValueError | 한국어, 형식 요구사항 |
+| 178 | `'종료 날짜는 시작 날짜보다 이후여야 합니다.'` | ValueError | 한국어, 날짜 로직 |
+| 180 | `'백테스트 기간은 최대 {settings.max_backtest_duration_years}년으로 제한됩니다.'` | ValueError | 한국어, 동적 제한 |
 
-**Issues**:
-- Inconsistent punctuation (some end with period, some with instruction tone)
-- Mix of imperative ("해야 합니다") vs. declarative ("합니다") forms
-- Line 142 and 148 contain overlapping concepts about constraint mixing
-- No consistent error codes or identifiers
+문제점:
+- 일관되지 않은 구두점 (일부는 마침표로 끝나고, 일부는 지시 톤)
+- 명령형 ("해야 합니다") vs. 서술형 ("합니다") 혼합
+- 라인 142와 148은 제약조건 혼합에 대한 중복 개념 포함
+- 일관된 에러 코드나 식별자 없음
 
-**Suggested Standardized Format**:
+권장 표준 형식:
 ```python
 # Pattern 1 (Mutually Exclusive)
 "'{field1}' 및 '{field2}'를 동시에 입력할 수 없습니다."
@@ -97,27 +98,27 @@ Found **multiple categories of inconsistent error message formats** across backe
 
 ---
 
-### 2. DATA NOT FOUND ERRORS (Error Code: 404)
+### 2. 데이터 미발견 에러 (Error Code: 404)
 
-**Files**: `app/utils/data_fetcher.py`, `app/core/exceptions.py`, `app/services/chart_data_service.py`
+파일: `app/utils/data_fetcher.py`, `app/core/exceptions.py`, `app/services/chart_data_service.py`
 
-| Line | File | Current Format | Issue |
+| 라인 | 파일 | 현재 형식 | 문제점 |
 |---|---|---|---|
-| 198 | data_fetcher.py | `f"'{ticker}' 종목에 대한 {start_str}부터 {end_str}까지의 데이터를 찾을 수 없습니다. 오류: {'; '.join(error_messages)}"` | Very long, includes error details |
-| 230 | data_fetcher.py | `f"'{ticker}'는 유효하지 않은 종목 심볼입니다."` | Different message for invalid symbol |
-| 234 | data_fetcher.py | `f"'{ticker}' 종목의 데이터가 부족합니다. ({len(data)}개 레코드)"` | Includes record count |
-| 261 | data_fetcher.py | `f"'{ticker}' 종목의 필수 데이터 'Close'가 없습니다."` | Missing required column |
-| 279 | data_fetcher.py | `f"'{ticker}' 종목의 유효한 데이터가 없습니다."` | Generic empty data message |
-| 50-54 | exceptions.py | `f"'{symbol}' 종목의 데이터를 찾을 수 없습니다. (기간: {start_date} ~ {end_date})"` | Different format with date range |
-| 221 | chart_data_service.py | `f"'{ticker}' 종목의 가격 데이터를 찾을 수 없습니다."` | Generic, no date context |
+| 198 | data_fetcher.py | `f"'{ticker}' 종목에 대한 {start_str}부터 {end_str}까지의 데이터를 찾을 수 없습니다. 오류: {'; '.join(error_messages)}"` | 매우 김, 에러 세부사항 포함 |
+| 230 | data_fetcher.py | `f"'{ticker}'는 유효하지 않은 종목 심볼입니다."` | 유효하지 않은 심볼에 대한 다른 메시지 |
+| 234 | data_fetcher.py | `f"'{ticker}' 종목의 데이터가 부족합니다. ({len(data)}개 레코드)"` | 레코드 수 포함 |
+| 261 | data_fetcher.py | `f"'{ticker}' 종목의 필수 데이터 'Close'가 없습니다."` | 필수 컬럼 누락 |
+| 279 | data_fetcher.py | `f"'{ticker}' 종목의 유효한 데이터가 없습니다."` | 일반적인 빈 데이터 메시지 |
+| 50-54 | exceptions.py | `f"'{symbol}' 종목의 데이터를 찾을 수 없습니다. (기간: {start_date} ~ {end_date})"` | 날짜 범위가 포함된 다른 형식 |
+| 221 | chart_data_service.py | `f"'{ticker}' 종목의 가격 데이터를 찾을 수 없습니다."` | 일반적, 날짜 컨텍스트 없음 |
 
-**Issues**:
-- Inconsistent message structure (some with dates, some without)
-- Different wording for similar situations ("찾을 수 없습니다" vs "없습니다")
-- Variable level of detail in error context
-- Some include error sub-reasons, others are generic
+문제점:
+- 일관되지 않은 메시지 구조 (일부는 날짜 포함, 일부는 미포함)
+- 유사한 상황에 대한 다른 표현 ("찾을 수 없습니다" vs "없습니다")
+- 에러 컨텍스트의 가변적인 세부 수준
+- 일부는 에러 하위 이유 포함, 일부는 일반적
 
-**Suggested Standardized Format**:
+권장 표준 형식:
 ```python
 # Pattern 1 (Data Not Found - Basic)
 "'{ticker}' 데이터를 찾을 수 없습니다."
@@ -137,31 +138,31 @@ Found **multiple categories of inconsistent error message formats** across backe
 
 ---
 
-### 3. CURRENCY CONVERSION ERRORS
+### 3. 통화 변환 에러
 
-**File**: `app/utils/currency_converter.py`
+파일: `app/utils/currency_converter.py`
 
-| Line | Current Format | Error Type | Issue |
+| 라인 | 현재 형식 | 에러 타입 | 문제점 |
 |---|---|---|---|
-| 157 | `"USD는 환율 변환이 필요하지 않습니다"` | ValueError | No period, specific case |
-| 161 | `"지원하지 않는 통화: {currency}"` | ValueError | Short, no period |
-| 165 | `"{currency} 환율 티커가 정의되지 않았습니다"` | ValueError | Specific to ticker lookup |
-| 182 | `"{currency} 환율 데이터를 로드할 수 없습니다"` | ValueError | Load failure, no period |
-| 229 | `f"{ticker} 통화 정보 조회 실패: {e}, USD로 가정"` | logger.warning | Has context but as warning |
-| 238 | `f"지원하지 않는 통화: {currency}, 변환 없이 진행"` | logger.warning | Duplicate of line 161 |
-| 301 | `f"통화 변환 중 오류: {e}, 원본 데이터 사용"` | logger.error | Generic error with fallback |
-| 348 | `f"지원하지 않는 통화 건너뛰기: {currency}"` | logger.warning | Action-oriented message |
-| 364 | `f"{currency} 환율 데이터 없음, 건너뛰기"` | logger.warning | Shortened format |
-| 387 | `f"{currency} 환율 로드 실패: {e}, 건너뛰기"` | logger.warning | Includes exception details |
+| 157 | `"USD는 환율 변환이 필요하지 않습니다"` | ValueError | 마침표 없음, 특정 케이스 |
+| 161 | `"지원하지 않는 통화: {currency}"` | ValueError | 짧음, 마침표 없음 |
+| 165 | `"{currency} 환율 티커가 정의되지 않았습니다"` | ValueError | 티커 조회 관련 |
+| 182 | `"{currency} 환율 데이터를 로드할 수 없습니다"` | ValueError | 로드 실패, 마침표 없음 |
+| 229 | `f"{ticker} 통화 정보 조회 실패: {e}, USD로 가정"` | logger.warning | 컨텍스트 포함하지만 경고로 |
+| 238 | `f"지원하지 않는 통화: {currency}, 변환 없이 진행"` | logger.warning | 라인 161 중복 |
+| 301 | `f"통화 변환 중 오류: {e}, 원본 데이터 사용"` | logger.error | 폴백이 있는 일반 에러 |
+| 348 | `f"지원하지 않는 통화 건너뛰기: {currency}"` | logger.warning | 액션 지향 메시지 |
+| 364 | `f"{currency} 환율 데이터 없음, 건너뛰기"` | logger.warning | 단축 형식 |
+| 387 | `f"{currency} 환율 로드 실패: {e}, 건너뛰기"` | logger.warning | 예외 세부사항 포함 |
 
-**Issues**:
-- Lines 161 and 238: Same message raised as both ValueError and logger.warning
-- Line 348 and 364: Different wording for similar situations
-- Missing periods inconsistently
-- Some include exception details ({e}), others don't
-- Mix of error (raise) and warning (logger) for similar conditions
+문제점:
+- 라인 161과 238: ValueError와 logger.warning 모두로 발생하는 동일한 메시지
+- 라인 348과 364: 유사한 상황에 대한 다른 표현
+- 일관되지 않게 마침표 누락
+- 일부는 예외 세부사항 ({e}) 포함, 일부는 미포함
+- 유사한 조건에 대한 에러 (raise)와 경고 (logger) 혼합
 
-**Suggested Standardized Format**:
+권장 표준 형식:
 ```python
 # Pattern 1 (Unsupported Currency)
 "지원하지 않는 통화: {currency}"
@@ -184,29 +185,29 @@ Found **multiple categories of inconsistent error message formats** across backe
 
 ---
 
-### 4. NETWORK & API ERRORS (Error Code: 429/503)
+### 4. 네트워크 및 API 에러 (Error Code: 429/503)
 
-**Files**: `app/services/news_service.py`, `app/utils/data_fetcher.py`
+파일: `app/services/news_service.py`, `app/utils/data_fetcher.py`
 
-| Line | File | Current Format | Issue |
+| 라인 | 파일 | 현재 형식 | 문제점 |
 |---|---|---|---|
-| 115 | data_fetcher.py | `f"야후 파이낸스 연결 오류: {str(e)}"` | Specific provider mention |
-| 118 | data_fetcher.py | `f"'{ticker}' 종목 데이터 수집 실패: {str(e)}"` | Includes original exception |
-| 158 | news_service.py | `f"네트워크 오류 발생 (시도 {attempt + 1}/{max_retries}): {e}"` | Includes retry context |
-| 163 | news_service.py | `f"네트워크 연결 실패 (최대 재시도 초과): {str(e)}"` | Final attempt message |
-| 164 | news_service.py | `f"네트워크 연결 실패 (최대 재시도 초과): {str(e)}"` | Duplicate of line 163 |
-| 166 | news_service.py | `f"네이버 뉴스 검색 오류: {str(e)}"` | Generic search error |
-| 119 | news_service.py | `"네이버 API 키가 설정되지 않았습니다."` | Configuration issue |
-| 60 | news_service.py | `"네이버 API 키가 설정되지 않았습니다."` | Duplicated message (warning) |
+| 115 | data_fetcher.py | `f"야후 파이낸스 연결 오류: {str(e)}"` | 특정 제공자 언급 |
+| 118 | data_fetcher.py | `f"'{ticker}' 종목 데이터 수집 실패: {str(e)}"` | 원본 예외 포함 |
+| 158 | news_service.py | `f"네트워크 오류 발생 (시도 {attempt + 1}/{max_retries}): {e}"` | 재시도 컨텍스트 포함 |
+| 163 | news_service.py | `f"네트워크 연결 실패 (최대 재시도 초과): {str(e)}"` | 최종 시도 메시지 |
+| 164 | news_service.py | `f"네트워크 연결 실패 (최대 재시도 초과): {str(e)}"` | 라인 163 중복 |
+| 166 | news_service.py | `f"네이버 뉴스 검색 오류: {str(e)}"` | 일반 검색 에러 |
+| 119 | news_service.py | `"네이버 API 키가 설정되지 않았습니다."` | 설정 문제 |
+| 60 | news_service.py | `"네이버 API 키가 설정되지 않았습니다."` | 중복 메시지 (경고) |
 
-**Issues**:
-- Lines 163-164: Identical error messages in exception handler
-- Lines 60 and 119: Same message in logger.warning and raise Exception
-- Inconsistent exception detail inclusion ({e} vs {str(e)})
-- Lines 158 and 163: Both handle retries but different message format
-- No consistent error codes or retry strategy indication
+문제점:
+- 라인 163-164: 예외 핸들러에서 동일한 에러 메시지
+- 라인 60과 119: logger.warning과 raise Exception에서 동일한 메시지
+- 일관되지 않은 예외 세부사항 포함 ({e} vs {str(e)})
+- 라인 158과 163: 둘 다 재시도를 처리하지만 다른 메시지 형식
+- 일관된 에러 코드나 재시도 전략 표시 없음
 
-**Suggested Standardized Format**:
+권장 표준 형식:
 ```python
 # Pattern 1 (API Configuration Missing)
 "API 설정이 필요합니다: {api_name} (환경 변수: {var_name})"
@@ -226,22 +227,22 @@ Found **multiple categories of inconsistent error message formats** across backe
 
 ---
 
-### 5. CONFIGURATION ERRORS
+### 5. 설정 에러
 
-**File**: `app/services/news_service.py`, `app/api/v1/endpoints/backtest.py`
+파일: `app/services/news_service.py`, `app/api/v1/endpoints/backtest.py`
 
-| Line | File | Current Format | Error Type | Issue |
+| 라인 | 파일 | 현재 형식 | 에러 타입 | 문제점 |
 |---|---|---|---|---|
-| 60 | news_service.py | `"네이버 API 키가 설정되지 않았습니다."` | logger.warning | Initialization warning |
-| 119 | news_service.py | `"네이버 API 키가 설정되지 않았습니다."` | Exception | Execution error |
-| 137 | backtest.py | `"상장일 검증 실패: {validation_errors}"` | ValidationError | Validation failure |
+| 60 | news_service.py | `"네이버 API 키가 설정되지 않았습니다."` | logger.warning | 초기화 경고 |
+| 119 | news_service.py | `"네이버 API 키가 설정되지 않았습니다."` | Exception | 실행 에러 |
+| 137 | backtest.py | `"상장일 검증 실패: {validation_errors}"` | ValidationError | 유효성 검증 실패 |
 
-**Issues**:
-- Same message used for both warning and exception (lines 60, 119)
-- Line 137: Error code included in message but inconsistently formatted
-- No error codes for easy identification/localization
+문제점:
+- 경고와 예외 모두에 사용되는 동일한 메시지 (라인 60, 119)
+- 라인 137: 메시지에 포함된 에러 코드이지만 일관되지 않게 형식화됨
+- 쉬운 식별/지역화를 위한 에러 코드 없음
 
-**Suggested Standardized Format**:
+권장 표준 형식:
 ```python
 # Pattern 1 (Missing Configuration - Initialization)
 "API 설정이 누락되었습니다: {api_name}. 환경 변수를 설정하세요: {var_name}"
@@ -252,33 +253,33 @@ Found **multiple categories of inconsistent error message formats** across backe
 
 ---
 
-### 6. BUSINESS LOGIC ERRORS
+### 6. 비즈니스 로직 에러
 
-**Files**: `app/services/portfolio_service.py`, `app/services/backtest_engine.py`
+파일: `app/services/portfolio_service.py`, `app/services/backtest_engine.py`
 
-| Line | File | Current Format | Error Type | Issue |
+| 라인 | 파일 | 현재 형식 | 에러 타입 | 문제점 |
 |---|---|---|---|---|
-| 130 | portfolio_service.py | `"유효한 데이터가 없습니다."` | ValueError | Too generic |
-| 694 | portfolio_service.py | `f"계산된 포트폴리오 값 개수({len(portfolio_values)})가 날짜 개수({len(valid_dates)})와 일치하지 않습니다."` | ValueError | Very specific, internal |
-| 759 | portfolio_service.py | `'포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.'` | ValidationError | Duplicate validation |
-| 860 | portfolio_service.py | `"모든 종목의 백테스트가 실패했습니다."` | ValueError | Critical failure |
-| 1177 | portfolio_service.py | `"포트폴리오의 어떤 종목도 데이터를 가져올 수 없습니다."` | ValueError | Data loading failure |
-| 137 | backtest_engine.py | `"Invalid backtest result"` | Exception | English, generic |
-| 140 | backtest_engine.py | `f"백테스트 실행 중 오류: {e}"` | logger.error | Generic error |
-| 146 | backtest_engine.py | `f"백테스트 전체 프로세스 오류: {e}"` | logger.error | Umbrella error |
-| 164 | backtest_engine.py | `detail=str(e)` | HTTPException | No meaningful message |
-| 169 | backtest_engine.py | `f"백테스트 실행 실패: {str(e)}"` | HTTPException | Generic failure |
-| 187 | backtest_engine.py | `"가격 데이터를 찾을 수 없습니다."` | HTTPException | No ticker context |
+| 130 | portfolio_service.py | `"유효한 데이터가 없습니다."` | ValueError | 너무 일반적 |
+| 694 | portfolio_service.py | `f"계산된 포트폴리오 값 개수({len(portfolio_values)})가 날짜 개수({len(valid_dates)})와 일치하지 않습니다."` | ValueError | 매우 구체적, 내부용 |
+| 759 | portfolio_service.py | `'포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.'` | ValidationError | 중복 유효성 검증 |
+| 860 | portfolio_service.py | `"모든 종목의 백테스트가 실패했습니다."` | ValueError | 치명적 실패 |
+| 1177 | portfolio_service.py | `"포트폴리오의 어떤 종목도 데이터를 가져올 수 없습니다."` | ValueError | 데이터 로딩 실패 |
+| 137 | backtest_engine.py | `"Invalid backtest result"` | Exception | 영어, 일반적 |
+| 140 | backtest_engine.py | `f"백테스트 실행 중 오류: {e}"` | logger.error | 일반 에러 |
+| 146 | backtest_engine.py | `f"백테스트 전체 프로세스 오류: {e}"` | logger.error | 포괄 에러 |
+| 164 | backtest_engine.py | `detail=str(e)` | HTTPException | 의미 있는 메시지 없음 |
+| 169 | backtest_engine.py | `f"백테스트 실행 실패: {str(e)}"` | HTTPException | 일반 실패 |
+| 187 | backtest_engine.py | `"가격 데이터를 찾을 수 없습니다."` | HTTPException | 티커 컨텍스트 없음 |
 
-**Issues**:
-- Line 137 (backtest_engine.py): English message among Korean messages
-- Line 694: Very internal error message (should not be user-facing)
-- Line 759 and validation_service.py line 91: Duplicate concept validation
-- Line 1177: Unclear what "어떤 종목도" means (none vs. any)
-- Lines 140, 146, 169: Generic error messages with exception details
-- Line 187: Missing ticker context
+문제점:
+- 라인 137 (backtest_engine.py): 한국어 메시지 중 영어 메시지
+- 라인 694: 매우 내부적인 에러 메시지 (사용자 대면용이 아님)
+- 라인 759와 validation_service.py 라인 91: 중복 개념 유효성 검증
+- 라인 1177: "어떤 종목도"의 의미가 불명확 (none vs. any)
+- 라인 140, 146, 169: 예외 세부사항이 포함된 일반 에러 메시지
+- 라인 187: 티커 컨텍스트 누락
 
-**Suggested Standardized Format**:
+권장 표준 형식:
 ```python
 # Pattern 1 (Generic Data Invalid)
 "입력 데이터가 유효하지 않습니다: {reason}"
@@ -298,18 +299,18 @@ Found **multiple categories of inconsistent error message formats** across backe
 
 ---
 
-### 7. LOGGER PATTERN INCONSISTENCIES
+### 7. 로거 패턴 불일치
 
-**Analysis**: Logging levels and messages lack consistency
+분석: 로깅 레벨 및 메시지에 일관성 부족
 
-| Pattern | Count | Issue |
+| 패턴 | 수 | 문제점 |
 |---|---|---|
-| `logger.info()` for successful completion | 30+ | Verbose, not consistent in detail level |
-| `logger.warning()` for recoverable errors | 20+ | Some use logger.warning, others raise exception for same condition |
-| `logger.error()` for critical errors | 10+ | Sometimes includes {e}, sometimes {str(e)}, sometimes nothing |
-| Missing logger context | Various | No error IDs or error codes for tracking |
+| `logger.info()` 성공 완료용 | 30개 이상 | 장황함, 세부 수준 일관되지 않음 |
+| `logger.warning()` 복구 가능한 에러용 | 20개 이상 | 일부는 logger.warning 사용, 일부는 동일 조건에 예외 발생 |
+| `logger.error()` 치명적 에러용 | 10개 이상 | 때로는 {e} 포함, 때로는 {str(e)}, 때로는 없음 |
+| 로거 컨텍스트 누락 | 다양 | 추적용 에러 ID나 에러 코드 없음 |
 
-**Example Inconsistencies**:
+불일치 예시:
 ```python
 # unified_data_service.py line 71 (logger.warning)
 logger.warning(f"티커 정보 일괄 조회 실패: {str(e)}")
@@ -326,32 +327,32 @@ logger.error(f"네트워크 연결 실패 (최대 재시도 초과): {str(e)}")
 
 ---
 
-## SUMMARY OF ISSUES
+## 문제점 요약
 
-### Critical Issues
-1. **Duplicate Messages**: Same error raised in multiple locations (strategy_service.py lines 199, 205, 241)
-2. **Mixed Languages**: Mostly Korean with occasional English (backtest_engine.py line 137: "Invalid backtest result")
-3. **Inconsistent Error Types**: Same error condition handled as both exception and warning
-4. **Missing Context**: Some errors lack necessary context (backtest_engine.py line 187: no ticker)
+### 치명적 문제
+1. 중복 메시지: 여러 위치에서 발생하는 동일한 에러 (strategy_service.py 라인 199, 205, 241)
+2. 언어 혼합: 대부분 한국어에 가끔 영어 (backtest_engine.py 라인 137: "Invalid backtest result")
+3. 일관되지 않은 에러 타입: 동일한 에러 조건이 예외와 경고 모두로 처리됨
+4. 컨텍스트 누락: 일부 에러에 필요한 컨텍스트 부족 (backtest_engine.py 라인 187: 티커 없음)
 
-### Major Issues
-1. **No Error Codes**: No standardized error IDs for easy lookup and localization
-2. **Variable Message Structure**: Different formats for related error types
-3. **Inconsistent Punctuation**: Missing periods, inconsistent Korean grammar
-4. **Exception Detail Handling**: Some include {e}, others {str(e)}, others nothing
-5. **Logging Level Inconsistency**: Similar errors logged at different levels
+### 주요 문제
+1. 에러 코드 없음: 쉬운 조회 및 지역화를 위한 표준화된 에러 ID 없음
+2. 가변적 메시지 구조: 관련 에러 타입에 대한 다른 형식
+3. 일관되지 않은 구두점: 마침표 누락, 일관되지 않은 한국어 문법
+4. 예외 세부사항 처리: 일부는 {e} 포함, 일부는 {str(e)}, 일부는 없음
+5. 로깅 레벨 불일치: 유사한 에러가 다른 레벨에서 로깅됨
 
-### Minor Issues
-1. **Verbose Messages**: Some messages are too long (e.g., portfolio_service.py line 142)
-2. **Internal Details Exposed**: Error messages contain implementation details (line 694)
-3. **Unclear Wording**: Ambiguous Korean phrasing in some messages
-4. **Inconsistent Formatting**: Parameter placeholders use different styles
+### 사소한 문제
+1. 장황한 메시지: 일부 메시지가 너무 김 (예: portfolio_service.py 라인 142)
+2. 내부 세부사항 노출: 에러 메시지에 구현 세부사항 포함 (라인 694)
+3. 불명확한 표현: 일부 메시지의 모호한 한국어 표현
+4. 일관되지 않은 형식: 파라미터 플레이스홀더가 다른 스타일 사용
 
 ---
 
-## RECOMMENDATIONS
+## 권장사항
 
-### 1. Create Error Code System
+### 1. 에러 코드 시스템 생성
 ```python
 # app/core/error_codes.py
 ERROR_CODES = {
@@ -364,7 +365,7 @@ ERROR_CODES = {
 }
 ```
 
-### 2. Create Exception Base Class with Error Codes
+### 2. 에러 코드가 있는 예외 기본 클래스 생성
 ```python
 class AppException(Exception):
     def __init__(self, error_code: str, **kwargs):
@@ -373,13 +374,13 @@ class AppException(Exception):
         super().__init__(self.message)
 ```
 
-### 3. Standardize Message Format
-- Always use Korean for user-facing messages
-- Always include context (ticker, date range, etc.) when relevant
-- Use consistent punctuation (period at end, no mixed grammar)
-- Include error codes in logs but not in HTTP responses
+### 3. 메시지 형식 표준화
+- 사용자 대면 메시지는 항상 한국어 사용
+- 관련성이 있을 때 항상 컨텍스트 포함 (티커, 날짜 범위 등)
+- 일관된 구두점 사용 (끝에 마침표, 혼합 문법 없음)
+- 로그에는 에러 코드 포함하되 HTTP 응답에는 포함하지 않음
 
-### 4. Create Message Templates File
+### 4. 메시지 템플릿 파일 생성
 ```python
 # app/core/message_templates.py
 MESSAGES = {
@@ -395,40 +396,39 @@ MESSAGES = {
 }
 ```
 
-### 5. Logging Best Practices
+### 5. 로깅 모범 사례
 ```python
-# Use consistent format
+# 일관된 형식 사용
 logger.error(f"[{error_code}] {message}", extra={"ticker": ticker})
 
-# Include context always
+# 항상 컨텍스트 포함
 logger.warning(f"데이터 수집 실패: {symbol} - {error_reason}")
 
-# Never log raw exceptions in message (use structured logging)
-logger.error(f"Error: {str(e)}")  # BAD
-logger.error(f"Processing failed", exc_info=e)  # GOOD
+# 메시지에 원시 예외를 로깅하지 않음 (구조화된 로깅 사용)
+logger.error(f"Error: {str(e)}")  # 나쁨
+logger.error(f"Processing failed", exc_info=e)  # 좋음
 ```
 
 ---
 
-## PRIORITY FIXES
+## 우선순위 수정사항
 
-### P0 (Critical - Fix Immediately)
-1. Fix duplicate strategy validation messages (strategy_service.py)
-2. Standardize error handling: remove mixed exception/warning for same condition
-3. Add error codes to all custom exceptions
+### P0 (치명적 - 즉시 수정)
+1. 중복 전략 유효성 검증 메시지 수정 (strategy_service.py)
+2. 에러 처리 표준화: 동일 조건에 대한 혼합 예외/경고 제거
+3. 모든 커스텀 예외에 에러 코드 추가
 
-### P1 (High - Fix This Sprint)
-1. Create message templates for all error categories
-2. Standardize currency converter error messages
-3. Add missing context to generic error messages
+### P1 (높음 - 이번 스프린트에 수정)
+1. 모든 에러 카테고리에 대한 메시지 템플릿 생성
+2. 통화 변환기 에러 메시지 표준화
+3. 일반 에러 메시지에 누락된 컨텍스트 추가
 
-### P2 (Medium - Fix Next Sprint)
-1. Refactor portfolio validation error messages
-2. Standardize all logger.error calls with consistent format
-3. Add error ID tracking to logs
+### P2 (중간 - 다음 스프린트에 수정)
+1. 포트폴리오 유효성 검증 에러 메시지 리팩터링
+2. 일관된 형식으로 모든 logger.error 호출 표준화
+3. 로그에 에러 ID 추적 추가
 
-### P3 (Low - Polish)
-1. Improve message readability in long errors
-2. Add localization support for future translations
-3. Add error code documentation for developers
-
+### P3 (낮음 - 개선)
+1. 긴 에러의 메시지 가독성 개선
+2. 향후 번역을 위한 지역화 지원 추가
+3. 개발자용 에러 코드 문서 추가
