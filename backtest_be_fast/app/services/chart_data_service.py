@@ -39,6 +39,7 @@
 - 날짜는 ISO 8601 문자열 형식
 - NaN/Infinity는 None으로 변환
 """
+import asyncio
 import logging
 from typing import List, Dict, Any
 from datetime import date
@@ -198,11 +199,18 @@ class ChartDataService:
             raise
 
     async def _get_price_data(self, ticker, start_date, end_date) -> pd.DataFrame:
-        """캐시 우선 가격 데이터 조회"""
+        """
+        캐시 우선 가격 데이터 조회
+
+        FIXED: Race condition bug - data_fetcher.get_stock_data() is synchronous
+        and must be wrapped with asyncio.to_thread() to prevent blocking the event loop.
+        """
         if self.data_repository:
             data = await self.data_repository.get_stock_data(ticker, start_date, end_date)
         else:
-            data = self.data_fetcher.get_stock_data(
+            # FIXED: Wrap synchronous call with asyncio.to_thread() (async/sync boundary)
+            data = await asyncio.to_thread(
+                self.data_fetcher.get_stock_data,
                 ticker=ticker,
                 start_date=start_date,
                 end_date=end_date,
