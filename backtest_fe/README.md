@@ -2,7 +2,7 @@
 
 **라고할때살걸** - 트레이딩 전략 백테스팅 플랫폼 프론트엔드
 
-## 🚀 기술 스택
+## 기술 스택
 
 - **React 18** + **TypeScript**
 - **Vite** (빌드 도구)
@@ -12,7 +12,7 @@
 - **React Router** (라우팅)
 - **MSW** (API 모킹)
 
-## 📦 설치 및 실행
+## 설치 및 실행
 
 ```bash
 # 의존성 설치
@@ -31,7 +31,7 @@ npm run test:coverage # 커버리지
 npm run test:ui       # UI 모드
 ```
 
-## 📁 디렉토리 구조 규칙
+## 디렉토리 구조 규칙
 
 ### 컴포넌트 배치
 
@@ -116,7 +116,7 @@ import { Button } from '../../../shared/ui/button';  // ❌
 
 ---
 
-## 🏗️ 아키텍처 원칙
+## 아키텍처 원칙
 
 ### 1. Feature-First Architecture
 각 feature는 독립적인 모듈로 관리:
@@ -142,7 +142,7 @@ API → Service → Hooks → Components
 
 ---
 
-## 🧪 테스트
+## 테스트
 
 ### 테스트 작성 위치
 ```
@@ -166,7 +166,7 @@ npm run test:ui           # UI 모드
 
 ---
 
-## 📊 주요 컴포넌트
+## 주요 컴포넌트
 
 ### Pages (라우트 진입점)
 - `HomePage.tsx` - 단일 종목 백테스트
@@ -183,7 +183,7 @@ npm run test:ui           # UI 모드
 
 ---
 
-## 🎨 스타일링
+## 스타일링
 
 - **Tailwind CSS** - 유틸리티 퍼스트
 - **CSS Variables** - 테마 시스템 (4개 테마)
@@ -191,7 +191,7 @@ npm run test:ui           # UI 모드
 
 ---
 
-## 🔧 개발 도구
+## 개발 도구
 
 ### 린트 및 타입 체크
 ```bash
@@ -207,40 +207,9 @@ npm run build:analyze  # 번들 크기 분석
 
 ---
 
-## 📚 추가 문서
+## 추가 문서
 
 - [TEST.md](./TEST.md) - 테스트 가이드
 - [CODEBASE_STRUCTURE_ANALYSIS.md](./CODEBASE_STRUCTURE_ANALYSIS.md) - 구조 상세 분석
 - [TEST_IMPROVEMENT_REPORT.md](./TEST_IMPROVEMENT_REPORT.md) - 테스트 개선 내역
 - [TEST_EXECUTION_SUMMARY.md](./TEST_EXECUTION_SUMMARY.md) - 테스트 실행 결과
-
----
-
-## 🤝 기여 가이드
-
-### 새 컴포넌트 추가 시
-1. 적절한 위치 선택 (위 규칙 참조)
-2. 테스트 파일 함께 작성
-3. `index.ts`에 export 추가 (shared의 경우)
-
-### 새 Feature 추가 시
-```bash
-mkdir -p src/features/new-feature/{api,components,hooks,model,services,utils}
-```
-
-### shadcn/ui 컴포넌트 추가
-```bash
-npx shadcn@latest add <component-name>
-# 자동으로 src/shared/ui/에 생성됨
-```
-
----
-
-## 📄 라이선스
-
-MIT
-
----
-
-**버전**: 1.6.10  
-**최종 업데이트**: 2025-11-10
