@@ -47,6 +47,7 @@ import pandas as pd
 import numpy as np
 
 from app.schemas.requests import BacktestRequest
+from app.utils.type_converters import safe_float, safe_int
 from app.schemas.responses import (
     BacktestResult, ChartDataResponse, ChartDataPoint,
     EquityPoint, TradeMarker, IndicatorData, BenchmarkPoint
@@ -230,7 +231,7 @@ class ChartDataService:
             for idx, row in data.iterrows():
                 benchmark_data.append(BenchmarkPoint(
                     date=idx.strftime('%Y-%m-%d'),
-                    close=self.safe_float(row['Close'])
+                    close=safe_float(row['Close'])
                 ))
 
             self.logger.info(f"{ticker} 벤치마크 데이터 생성 완료: {len(benchmark_data)} 포인트")
@@ -247,11 +248,11 @@ class ChartDataService:
             ohlc_data.append(ChartDataPoint(
                 timestamp=idx.isoformat(),
                 date=idx.strftime('%Y-%m-%d'),
-                open=self.safe_float(row['Open']),
-                high=self.safe_float(row['High']),
-                low=self.safe_float(row['Low']),
-                close=self.safe_float(row['Close']),
-                volume=self.safe_int(row.get('Volume', 0))
+                open=safe_float(row['Open']),
+                high=safe_float(row['High']),
+                low=safe_float(row['Low']),
+                close=safe_float(row['Close']),
+                volume=safe_int(row.get('Volume', 0))
             ))
         return ohlc_data
     
@@ -388,7 +389,7 @@ class ChartDataService:
                 short_data.append({
                     "timestamp": idx.isoformat(),
                     "date": idx.strftime('%Y-%m-%d'),
-                    "value": self.safe_float(sma_value)
+                    "value": safe_float(sma_value)
                 })
         
         if short_data:
@@ -407,7 +408,7 @@ class ChartDataService:
                 long_data.append({
                     "timestamp": idx.isoformat(),
                     "date": idx.strftime('%Y-%m-%d'),
-                    "value": self.safe_float(sma_value)
+                    "value": safe_float(sma_value)
                 })
         
         if long_data:
@@ -619,24 +620,6 @@ class ChartDataService:
             "final_equity": final_equity,
             "volatility": float(data['Close'].pct_change().std() * 100) if len(data) > 1 else 0.0
         }
-    
-    def safe_float(self, value, default: float = 0.0) -> float:
-        """안전한 float 변환"""
-        try:
-            if pd.isna(value) or value is None:
-                return default
-            return float(value)
-        except (ValueError, TypeError):
-            return default
-    
-    def safe_int(self, value, default: int = 0) -> int:
-        """안전한 int 변환"""
-        try:
-            if pd.isna(value) or value is None:
-                return default
-            return int(value)
-        except (ValueError, TypeError):
-            return default
 
 
 # 글로벌 인스턴스

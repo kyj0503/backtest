@@ -56,6 +56,7 @@ from app.services.yfinance_db import get_ticker_info_from_db, load_ticker_data
 from app.core.exceptions import ValidationError
 from app.constants.currencies import SUPPORTED_CURRENCIES
 from app.utils.currency_converter import currency_converter
+from app.utils.type_converters import safe_float, safe_int
 
 
 class BacktestEngine:
@@ -366,24 +367,6 @@ class BacktestEngine:
 
     def _convert_result_to_response(self, stats: pd.Series, request: BacktestRequest) -> BacktestResult:
         """백테스트 결과를 API 응답 형식으로 변환"""
-        def safe_float(key: str, default: float = 0.0) -> float:
-            try:
-                value = stats.get(key, default)
-                if pd.isna(value) or value is None:
-                    return default
-                return float(value)
-            except (ValueError, TypeError):
-                return default
-        
-        def safe_int(key: str, default: int = 0) -> int:
-            try:
-                value = stats.get(key, default)
-                if pd.isna(value) or value is None:
-                    return default
-                return int(value)
-            except (ValueError, TypeError):
-                return default
-        
         try:
             # duration_days 계산
             start_date = pd.to_datetime(request.start_date)
@@ -451,27 +434,27 @@ class BacktestEngine:
                 end_date=end_date_str,
                 duration_days=duration_days,
                 initial_cash=request.initial_cash,
-                final_equity=safe_float('Equity Final [$]', request.initial_cash),
-                total_return_pct=safe_float('Return [%]'),
-                annualized_return_pct=safe_float('Return (Ann.) [%]'),
-                buy_and_hold_return_pct=safe_float('Buy & Hold Return [%]'),
-                cagr_pct=safe_float('Return (Ann.) [%]'),  # CAGR은 연간 수익률과 동일
-                volatility_pct=safe_float('Volatility [%]'),
-                sharpe_ratio=safe_float('Sharpe Ratio'),
-                sortino_ratio=safe_float('Sortino Ratio'),
-                calmar_ratio=safe_float('Calmar Ratio'),
-                max_drawdown_pct=safe_float('Max. Drawdown [%]'),
-                avg_drawdown_pct=safe_float('Avg. Drawdown [%]'),
-                total_trades=safe_int('# Trades'),
-                win_rate_pct=safe_float('Win Rate [%]'),
-                profit_factor=safe_float('Profit Factor'),
-                avg_trade_pct=safe_float('Avg. Trade [%]'),
-                best_trade_pct=safe_float('Best Trade [%]'),
-                worst_trade_pct=safe_float('Worst Trade [%]'),
+                final_equity=safe_float(stats.get('Equity Final [$]', request.initial_cash)),
+                total_return_pct=safe_float(stats.get('Return [%]', 0.0)),
+                annualized_return_pct=safe_float(stats.get('Return (Ann.) [%]', 0.0)),
+                buy_and_hold_return_pct=safe_float(stats.get('Buy & Hold Return [%]', 0.0)),
+                cagr_pct=safe_float(stats.get('Return (Ann.) [%]', 0.0)),  # CAGR은 연간 수익률과 동일
+                volatility_pct=safe_float(stats.get('Volatility [%]', 0.0)),
+                sharpe_ratio=safe_float(stats.get('Sharpe Ratio', 0.0)),
+                sortino_ratio=safe_float(stats.get('Sortino Ratio', 0.0)),
+                calmar_ratio=safe_float(stats.get('Calmar Ratio', 0.0)),
+                max_drawdown_pct=safe_float(stats.get('Max. Drawdown [%]', 0.0)),
+                avg_drawdown_pct=safe_float(stats.get('Avg. Drawdown [%]', 0.0)),
+                total_trades=safe_int(stats.get('# Trades', 0)),
+                win_rate_pct=safe_float(stats.get('Win Rate [%]', 0.0)),
+                profit_factor=safe_float(stats.get('Profit Factor', 0.0)),
+                avg_trade_pct=safe_float(stats.get('Avg. Trade [%]', 0.0)),
+                best_trade_pct=safe_float(stats.get('Best Trade [%]', 0.0)),
+                worst_trade_pct=safe_float(stats.get('Worst Trade [%]', 0.0)),
                 alpha_pct=alpha_pct,
                 beta=beta_value,
                 kelly_criterion=None,  # 추후 계산 추가
-                sqn=safe_float('SQN') if 'SQN' in stats else None,
+                sqn=safe_float(stats.get('SQN', 0.0)) if 'SQN' in stats else None,
                 trade_log=trade_log,
                 equity_curve=equity_curve_dict,  # 일일 자산 가치
                 execution_time_seconds=0.5,  # 추후 실제 시간 측정 추가
