@@ -158,7 +158,7 @@ class CurrencyConverter:
 
         # 지원 통화 확인
         if currency not in SUPPORTED_CURRENCIES:
-            raise ValueError(f"지원하지 않는 통화: {currency}")
+            raise ValueError(f"지원하지 않는 통화입니다: {currency}.")
 
         exchange_ticker = SUPPORTED_CURRENCIES[currency]
         if not exchange_ticker:
@@ -235,7 +235,7 @@ class CurrencyConverter:
 
         # 지원하지 않는 통화는 경고 후 원본 반환
         if currency not in SUPPORTED_CURRENCIES:
-            logger.warning(f"지원하지 않는 통화: {currency}, 변환 없이 진행")
+            logger.warning(f"지원하지 않는 통화입니다: {currency}., 변환 없이 진행")
             return data
 
         try:

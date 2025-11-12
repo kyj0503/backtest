@@ -133,8 +133,8 @@ class BacktestEngine:
                 if result is not None and '# Trades' in result:
                     return self._convert_result_to_response(result, request)
                 else:
-                    self.logger.warning("백테스트 결과가 유효하지 않음, fallback 사용")
-                    raise Exception("Invalid backtest result")
+                    self.logger.warning(f"백테스트 결과가 유효하지 않음 ({request.ticker}), fallback 사용")
+                    raise Exception(f"백테스트 결과가 유효하지 않습니다: {request.ticker}")
                     
             except Exception as e:
                 self.logger.error(f"백테스트 실행 중 오류: {e}")
@@ -184,7 +184,7 @@ class BacktestEngine:
             )
 
         if data is None or data.empty:
-            raise HTTPException(status_code=404, detail="가격 데이터를 찾을 수 없습니다.")
+            raise HTTPException(status_code=404, detail=f"가격 데이터를 찾을 수 없습니다: {ticker}")
 
         return data
 
