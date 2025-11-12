@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import ChartsSection from './results/ChartsSection';
 import WarningBanner from './results/WarningBanner';
 import { BacktestResultsProps, TradeMarker, ExchangeRatePoint } from '../model/types/backtest-result-types';
-import { AlertCircle, FileDown } from 'lucide-react';
+import { AlertCircle, FileDown, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { HEADING_STYLES, TEXT_STYLES } from '@/shared/styles/design-tokens';
 
@@ -191,6 +191,162 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
     }
   };
 
+  const downloadAsCSV = () => {
+    try {
+      const csvRows: string[] = [];
+      const timestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
+
+      if (isPortfolio && 'portfolio_statistics' in data && data.portfolio_statistics) {
+        // 포트폴리오 백테스트 CSV
+        csvRows.push('백테스트 결과 리포트 (CSV)');
+        csvRows.push(`생성 일시,${timestamp}`);
+        csvRows.push('');
+        
+        // 포트폴리오 구성
+        if ('portfolio_composition' in data && data.portfolio_composition) {
+          csvRows.push('포트폴리오 구성');
+          csvRows.push('종목,비중(%)');
+          data.portfolio_composition.forEach((stock) => {
+            csvRows.push(`${stock.symbol},${(stock.weight * 100).toFixed(2)}`);
+          });
+          csvRows.push('');
+        }
+
+        // 주요 성과 지표
+        const stats = data.portfolio_statistics;
+        csvRows.push('주요 성과 지표');
+        csvRows.push('항목,값');
+        csvRows.push(`백테스트 시작일,${stats.Start}`);
+        csvRows.push(`백테스트 종료일,${stats.End}`);
+        csvRows.push(`운용 기간,${stats.Duration}`);
+        csvRows.push(`초기 자본금,$${stats.Initial_Value.toLocaleString()}`);
+        csvRows.push(`최종 자산가치,$${stats.Final_Value.toLocaleString()}`);
+        csvRows.push(`최고 자산가치,$${stats.Peak_Value.toLocaleString()}`);
+        csvRows.push(`총 수익률,${stats.Total_Return.toFixed(2)}%`);
+        csvRows.push(`연간 수익률,${stats.Annual_Return.toFixed(2)}%`);
+        csvRows.push(`연간 변동성,${stats.Annual_Volatility.toFixed(2)}%`);
+        csvRows.push(`샤프 비율,${stats.Sharpe_Ratio.toFixed(2)}`);
+        csvRows.push(`최대 낙폭(MDD),${stats.Max_Drawdown.toFixed(2)}%`);
+        csvRows.push(`평균 낙폭,${stats.Avg_Drawdown.toFixed(2)}%`);
+        csvRows.push(`총 거래일수,${stats.Total_Trading_Days}`);
+        csvRows.push(`상승일수,${stats.Positive_Days}`);
+        csvRows.push(`하락일수,${stats.Negative_Days}`);
+        csvRows.push(`승률,${stats.Win_Rate.toFixed(2)}%`);
+        csvRows.push(`프로핏 팩터,${stats.Profit_Factor.toFixed(2)}`);
+        csvRows.push(`연속 상승 최대,${stats.Max_Consecutive_Gains}`);
+        csvRows.push(`연속 하락 최대,${stats.Max_Consecutive_Losses}`);
+        csvRows.push('');
+
+        // 개별 종목 수익률
+        if ('individual_returns' in data && data.individual_returns) {
+          csvRows.push('개별 종목 수익률');
+          csvRows.push('종목,수익률(%),비중(%),시작가($),종료가($)');
+          Object.entries(data.individual_returns).forEach(([symbol, info]) => {
+            csvRows.push(`${symbol},${(info.return * 100).toFixed(2)},${(info.weight * 100).toFixed(2)},${info.start_price.toFixed(2)},${info.end_price.toFixed(2)}`);
+          });
+          csvRows.push('');
+        }
+
+        // 포트폴리오 자산 가치 추이
+        if ('equity_data' in data && Array.isArray(data.equity_data) && data.equity_data.length > 0) {
+          csvRows.push('포트폴리오 자산 가치 추이');
+          csvRows.push('날짜,자산가치($)');
+          data.equity_data.forEach((point: any) => {
+            csvRows.push(`${point.date},${point.equity.toFixed(2)}`);
+          });
+          csvRows.push('');
+        }
+
+      } else if ('ticker' in data && data.ticker) {
+        // 단일 종목 백테스트 CSV
+        csvRows.push('백테스트 결과 리포트 (CSV)');
+        csvRows.push(`생성 일시,${timestamp}`);
+        csvRows.push('');
+
+        csvRows.push('기본 정보');
+        csvRows.push('항목,값');
+        csvRows.push(`종목,${data.ticker || 'N/A'}`);
+        csvRows.push(`전략,${data.strategy || 'N/A'}`);
+        csvRows.push(`백테스트 시작일,${data.start_date || 'N/A'}`);
+        csvRows.push(`백테스트 종료일,${data.end_date || 'N/A'}`);
+        csvRows.push('');
+
+        // 요약 통계
+        if (data.summary_stats) {
+          const stats = data.summary_stats as SummaryStats;
+          csvRows.push('주요 성과 지표');
+          csvRows.push('항목,값');
+          csvRows.push(`총 수익률,${typeof stats.total_return_pct === 'number' ? stats.total_return_pct.toFixed(2) : 'N/A'}%`);
+          csvRows.push(`총 거래 수,${stats.total_trades || 0}`);
+          csvRows.push(`승률,${typeof stats.win_rate_pct === 'number' ? stats.win_rate_pct.toFixed(2) : 'N/A'}%`);
+          csvRows.push(`최대 낙폭(MDD),${typeof stats.max_drawdown_pct === 'number' ? stats.max_drawdown_pct.toFixed(2) : 'N/A'}%`);
+          csvRows.push(`샤프 비율,${typeof stats.sharpe_ratio === 'number' ? stats.sharpe_ratio.toFixed(2) : 'N/A'}`);
+          csvRows.push(`프로핏 팩터,${typeof stats.profit_factor === 'number' ? stats.profit_factor.toFixed(2) : 'N/A'}`);
+          if (typeof stats.volatility_pct === 'number') csvRows.push(`변동성,${stats.volatility_pct.toFixed(2)}%`);
+          if (typeof stats.sortino_ratio === 'number') csvRows.push(`소르티노 비율,${stats.sortino_ratio.toFixed(2)}`);
+          if (typeof stats.calmar_ratio === 'number') csvRows.push(`칼마 비율,${stats.calmar_ratio.toFixed(2)}`);
+          if (typeof stats.alpha === 'number') csvRows.push(`알파,${stats.alpha.toFixed(2)}`);
+          if (typeof stats.beta === 'number') csvRows.push(`베타,${stats.beta.toFixed(2)}`);
+          csvRows.push('');
+        }
+
+        // 거래 내역
+        if (data.trade_markers && data.trade_markers.length > 0) {
+          csvRows.push('거래 내역');
+          csvRows.push('거래번호,날짜,타입,가격($),수량,손익률(%)');
+          data.trade_markers.forEach((trade: TradeMarker, idx) => {
+            const type = trade.type === 'entry' ? '진입(매수)' : '청산(매도)';
+            const price = (trade.price !== null && trade.price !== undefined && typeof trade.price === 'number') 
+              ? trade.price.toFixed(2) : 'N/A';
+            const quantity = trade.quantity || 'N/A';
+            const pnl = (trade.pnl_pct !== null && trade.pnl_pct !== undefined && typeof trade.pnl_pct === 'number')
+              ? trade.pnl_pct.toFixed(2) : 'N/A';
+            csvRows.push(`${idx + 1},${trade.date},${type},${price},${quantity},${pnl}`);
+          });
+          csvRows.push('');
+        }
+
+        // 자산 가치 추이
+        if ('equity_data' in data && Array.isArray(data.equity_data) && data.equity_data.length > 0) {
+          csvRows.push('자산 가치 추이');
+          csvRows.push('날짜,자산가치($)');
+          data.equity_data.forEach((point: any) => {
+            csvRows.push(`${point.date},${point.equity.toFixed(2)}`);
+          });
+          csvRows.push('');
+        }
+      }
+
+      // 환율 정보 (공통)
+      if ('exchange_rates' in data && data.exchange_rates && data.exchange_rates.length > 0) {
+        const rates = data.exchange_rates.filter((r): r is ExchangeRatePoint => r !== null && typeof r.rate === 'number');
+
+        if (rates.length > 0) {
+          csvRows.push('환율 정보 (KRW/USD)');
+          csvRows.push('날짜,환율(₩)');
+          rates.forEach((point) => {
+            csvRows.push(`${point.date},${point.rate.toFixed(2)}`);
+          });
+          csvRows.push('');
+        }
+      }
+
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' }); // BOM 추가로 한글 깨짐 방지
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `backtest-report-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('CSV download failed:', error);
+      alert('CSV 다운로드에 실패했습니다. 콘솔을 확인하세요.');
+    }
+  };
+
   // 데이터 유효성 검사
   if (!data) {
     return (
@@ -225,10 +381,14 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
       )}
 
       {/* 리포트 다운로드 버튼 */}
-      <div className="flex justify-end px-1 sm:px-3 lg:px-0 mb-4 sm:mb-6">
+      <div className="flex justify-end gap-2 px-1 sm:px-3 lg:px-0 mb-4 sm:mb-6">
+        <Button variant="outline" size="default" onClick={downloadAsCSV} className="shadow-sm text-xs sm:text-sm">
+          <FileSpreadsheet className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+          CSV 다운로드
+        </Button>
         <Button variant="outline" size="default" onClick={downloadAsTextReport} className="shadow-sm text-xs sm:text-sm">
           <FileDown className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-          리포트 다운로드
+          텍스트 리포트
         </Button>
       </div>
 

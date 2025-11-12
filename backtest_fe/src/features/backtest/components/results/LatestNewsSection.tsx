@@ -25,6 +25,29 @@ interface LatestNewsSectionProps {
   latestNews: { [symbol: string]: NewsItem[] };
 }
 
+/**
+ * RFC 2822 형식의 날짜를 한국어 형식으로 변환
+ * 예: "Mon, 01 Sep 2025 21:01:00 +0900" -> "2025년 9월 1일 21:01"
+ */
+const formatNewsDate = (pubDate: string): string => {
+  try {
+    const date = new Date(pubDate);
+    if (isNaN(date.getTime())) {
+      return pubDate; // 파싱 실패 시 원본 반환
+    }
+    
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    
+    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+  } catch (error) {
+    return pubDate; // 에러 발생 시 원본 반환
+  }
+};
+
 const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
   latestNews,
 }) => {
@@ -87,7 +110,7 @@ const LatestNewsSection: React.FC<LatestNewsSectionProps> = ({
                 dangerouslySetInnerHTML={{ __html: newsItem.description }}
               />
               <div className="text-xs text-muted-foreground mt-1">
-                {newsItem.pubDate}
+                {formatNewsDate(newsItem.pubDate)}
               </div>
             </a>
           ))}
