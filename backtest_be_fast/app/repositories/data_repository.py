@@ -45,6 +45,7 @@ from abc import ABC, abstractmethod
 
 from app.utils.data_fetcher import data_fetcher
 from app.services import yfinance_db
+from app.constants.data_loading import CacheConfig
 
 
 class DataRepositoryInterface(ABC):
@@ -96,11 +97,11 @@ class YFinanceDataRepository(DataRepositoryInterface):
         # 과거 데이터 (종료일이 오늘 이전): 24시간 캐시
         # 주가 데이터는 변하지 않으므로 오래 캐싱 가능
         if end_date_obj < today:
-            return 86400  # 24시간
+            return CacheConfig.MEMORY_TTL_HISTORICAL
 
         # 최근 데이터 (종료일이 오늘이거나 이후): 1시간 캐시
         # 실시간 데이터 반영 필요
-        return 3600  # 1시간
+        return CacheConfig.MEMORY_TTL_RECENT
 
     async def get_stock_data(self, ticker: str, start_date: Union[date, str],
                            end_date: Union[date, str]) -> pd.DataFrame:
