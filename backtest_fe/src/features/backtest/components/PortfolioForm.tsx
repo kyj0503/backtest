@@ -298,7 +298,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
           <Button
             type="button"
             onClick={addStock}
-            disabled={portfolio.length >= 10}
+            disabled={portfolio.length >= VALIDATION_RULES.MAX_PORTFOLIO_SIZE}
             variant="outline"
             className="rounded-full w-full sm:w-auto"
             size="sm"
@@ -310,7 +310,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
               <Button
                 type="button"
                 onClick={addCash}
-                disabled={portfolio.length >= 10}
+                disabled={portfolio.length >= VALIDATION_RULES.MAX_PORTFOLIO_SIZE}
                 variant="outline"
                 className="rounded-full border-green-300 text-green-700 hover:bg-green-50 w-full sm:w-auto"
                 size="sm"
