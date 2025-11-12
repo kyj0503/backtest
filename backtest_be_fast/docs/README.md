@@ -1,35 +1,95 @@
-# 백엔드 기술 문서
+# Backend Technical Documentation
 
-이 디렉토리에는 백엔드 시스템의 아키텍처, 핵심 로직, 문제 해결 가이드에 대한 기술 문서가 포함되어 있습니다.
+This directory contains technical documentation for backend system architecture, core logic, and troubleshooting guides.
 
-## 아키텍처
+## Directory Structure
 
--   [**백테스트 로직 아키텍처](./architecture/backtest_logic.md)**
-    -   `backtesting.py` 라이브러리의 역할과 커스텀 구현 로직의 경계를 설명합니다.
-    -   통화 변환, 동적 전략 생성 등 핵심 기능에 대해 기술합니다.
+- analysis/ - Code quality analysis and findings
+- architecture/ - System architecture and design documents
+- performance/ - Performance optimization documentation
+- refactoring/ - Code refactoring documentation
+- testing/ - Test strategies and guides
+- troubleshooting/ - Common issues and solutions
 
--   [**날짜 계산 아키텍처 (N번째 특정 요일)](./architecture/date_calculation.md)**
-    -   DCA 및 리밸런싱에 사용되는 "매월 N번째 요일" 계산 로직을 설명합니다.
-    -   5번째 주가 없는 달 등의 예외 상황 처리 방법을 기술합니다.
+## Architecture
 
--   [**전략 구현 가이드](./architecture/strategies.md)**
-    -   시스템에 구현된 매매 전략(SMA, RSI, MACD 등)의 로직과 매개변수를 설명합니다.
-    -   일관된 포지션 관리 방법을 기술합니다.
+- [Backtest Logic Architecture](./architecture/backtest_logic.md)
+  - Role of backtesting.py library
+  - Custom implementation boundaries
+  - Currency conversion and dynamic strategy generation
 
-## 문제 해결
+- [Date Calculation Architecture (Nth Weekday)](./architecture/date_calculation.md)
+  - Nth weekday calculation logic for DCA and rebalancing
+  - Edge case handling (months without 5th week)
 
--   [**비동기/동기 경계 문제 (Race Condition)](./troubleshooting/race_condition.md)**
-    -   첫 실행 시 백테스트 결과가 손상되는 현상의 원인과 해결 방법을 설명합니다.
-    -   `asyncio.to_thread()`의 중요성과 올바른 사용법을 안내합니다.
+- [Strategy Implementation Guide](./architecture/strategies.md)
+  - Trading strategies (SMA, RSI, MACD, etc.)
+  - Position management patterns
 
--   [**DB 트랜잭션 격리 문제](./troubleshooting/transaction_isolation.md)**
-    -   DB에 데이터를 저장한 직후 조회가 실패하는 문제의 원인과 해결 방법을 설명합니다.
-    -   커넥션 재생성을 통한 트랜잭션 스냅샷 갱신 방법을 안내합니다.
+## Performance
 
--   [**성능 최적화 가이드](./troubleshooting/performance.md)**
-    -   시스템의 주요 성능 병목 지점을 분석하고, 적용된 최적화 전략(캐싱, 인덱싱 등)을 설명합니다.
-    -   향후 성능 개선 계획을 제시합니다.
+- [Optimization Summary](./performance/optimization-summary.md)
+  - N+1 query pattern optimization (10x speedup)
+  - Parallel data loading improvements
+  - Code quality metrics before/after
 
-## 테스트 관련 문서
+## Refactoring
 
--   [**테스트 (`testing/`)**](./testing/README.md): 테스트 전략, 실행 방법, 픽스처 등 테스트와 관련된 전반적인 내용을 다룹니다.
+- [Portfolio Function Analysis](./refactoring/portfolio-function-analysis.md)
+  - Structural analysis of calculate_dca_portfolio_returns()
+  - Complexity metrics and decomposition strategy
+
+- [Function Extraction Specifications](./refactoring/function-extraction-specs.md)
+  - Detailed specs for 8 extracted helper functions
+  - Input/output contracts and responsibilities
+
+- [Function Structure Diagram](./refactoring/function-structure-diagram.md)
+  - Visual representation of function relationships
+  - Data flow diagrams
+
+## Analysis
+
+- [Backend Analysis Index](./analysis/backend-analysis-index.md)
+  - Overview of all analysis documents
+  - Quick navigation to specific findings
+
+- [Code Duplication Report](./analysis/code-duplication-index.md)
+  - Duplicate function locations and consolidation plan
+  - Data loading pattern analysis
+
+- [Logging Gaps Analysis](./analysis/logging-gaps-detailed.md)
+  - Missing logging points identification
+  - Operational visibility improvements
+
+- [Error Format Analysis](./analysis/error-format-analysis.md)
+  - Error message consistency issues
+  - Standardization recommendations
+
+## Troubleshooting
+
+- [Async/Sync Boundary Issues (Race Condition)](./troubleshooting/race_condition.md)
+  - First-run backtest corruption causes
+  - Proper asyncio.to_thread() usage
+
+- [DB Transaction Isolation Issues](./troubleshooting/transaction_isolation.md)
+  - Post-save query failure causes
+  - Transaction snapshot refresh patterns
+
+- [Performance Optimization Guide](./troubleshooting/performance.md)
+  - Performance bottleneck analysis
+  - Applied optimization strategies
+  - Future improvement roadmap
+
+## Testing
+
+- [Testing Documentation](./testing/README.md)
+  - Test strategies and execution methods
+  - Fixtures and test data management
+
+## Quick Reference
+
+For quick lookups:
+- Performance metrics: performance/optimization-summary.md
+- Common errors: analysis/error-format-analysis.md
+- Code duplication: analysis/code-duplication-reference.txt
+- Function extraction: refactoring/function-extraction-guide.txt

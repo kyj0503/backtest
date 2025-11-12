@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**라고할때살걸** - Trading strategy backtesting platform (v1.6.13)
-- **Backend**: FastAPI + Python 3.x, wraps backtesting.py library
-- **Frontend**: React 18 + TypeScript + Vite, shadcn/ui components
-- **Deployment**: Docker Compose for dev/prod environments
+라고할때살걸 - Trading strategy backtesting platform (v1.7.5)
+- Backend: FastAPI + Python 3.x, wraps backtesting.py library
+- Frontend: React 18 + TypeScript + Vite, shadcn/ui components
+- Deployment: Docker Compose for dev/prod environments
 
 ## Common Commands
 
@@ -23,7 +23,7 @@ docker compose -f compose.dev.yaml logs -f backtest-be-fast
 docker compose -f compose.dev.yaml down
 ```
 
-**Access points**:
+Access points:
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/api/v1/docs
@@ -80,28 +80,31 @@ API Layer (app/api/v1/)
   → Strategy Layer (app/strategies/strategies.py)
 ```
 
-**Core services chain**:
-1. `backtest_service.py` - Single stock backtest orchestration
-2. `portfolio_service.py` - Multi-stock portfolios, DCA strategies, rebalancing
-3. `backtest_engine.py` - Wraps backtesting.py, executes backtests
-4. `chart_data_service.py` - Serializes chart data for frontend
-5. `strategy_service.py` - Strategy class management and parameter validation
+Core services chain:
+1. backtest_service.py - Single stock backtest orchestration
+2. portfolio_service.py - Multi-stock portfolios, DCA strategies, rebalancing
+3. backtest_engine.py - Wraps backtesting.py, executes backtests
+4. chart_data_service.py - Serializes chart data for frontend
+5. strategy_service.py - Strategy class management and parameter validation
 
-**Helper/Calculator services**:
-6. `dca_calculator.py` - DCA share and return calculations
-7. `rebalance_helper.py` - Rebalancing schedule and weight calculations
+Helper/Calculator services:
+6. dca_calculator.py - DCA share and return calculations
+7. rebalance_helper.py - Rebalancing schedule and weight calculations
 
-**Strategy implementations** (consolidated in single file):
-- `strategies.py` - All 6 backtesting strategies + PositionSizingMixin
+Strategy implementations (consolidated in single file):
+- strategies.py - All 6 backtesting strategies + PositionSizingMixin
 
-**Singleton pattern**: All services are provided as module-level instances (e.g., `strategy_service`, `validation_service`)
+Singleton pattern: All services are provided as module-level instances (e.g., strategy_service, validation_service)
 
-### Currency Policy (Critical!)
-- **DB storage**: Original currency (KRW, JPY, EUR, GBP, etc.)
-- **Backtest calculation**: All prices converted to USD (13 major currencies supported)
-  - Direct rates: `KRW=X`, `JPY=X` (1 USD = X currency)
-  - USD rates: `EURUSD=X`, `GBPUSD=X` (1 currency = X USD)
-- **Frontend display**: Individual stock market data shows original currency, backtest results show USD
+### Currency Policy
+
+Critical: This directly affects calculation accuracy.
+
+- DB storage: Original currency (KRW, JPY, EUR, GBP, etc.)
+- Backtest calculation: All prices converted to USD (13 major currencies supported)
+  - Direct rates: KRW=X, JPY=X (1 USD = X currency)
+  - USD rates: EURUSD=X, GBPUSD=X (1 currency = X USD)
+- Frontend display: Individual stock market data shows original currency, backtest results show USD
 
 ### Frontend Architecture
 ```
@@ -119,31 +122,31 @@ src/
   themes/           # Theme JSON files (4 themes supported)
 ```
 
-**Routing**: Uses `react-router-dom`, main page at `/backtest`
+Routing: Uses react-router-dom, main page at /backtest
 
-**Import aliases**: Uses `@/*` alias configured in `tsconfig.json` and `vite.config.ts`
+Import aliases: Uses @/* alias configured in tsconfig.json and vite.config.ts
 ```typescript
 import { Button } from '@/shared/ui/button';
 import { useTheme } from '@/shared/hooks/useTheme';
 import { backtestApi } from '@/features/backtest/api/backtestApi';
 ```
 
-## CRITICAL: Async/Sync Boundary Management (Prevent Race Conditions)
+## Async/Sync Boundary Management
 
-**Severity**: CRITICAL - Directly impacts backtest result accuracy
+CRITICAL: Directly impacts backtest result accuracy.
 
 ### Problem Pattern
 
-FastAPI is async, but many libraries (yfinance, SQLAlchemy) use synchronous I/O. Calling synchronous functions directly in async contexts causes **race conditions** that corrupt data on first execution.
+FastAPI is async, but many libraries (yfinance, SQLAlchemy) use synchronous I/O. Calling synchronous functions directly in async contexts causes race conditions that corrupt data on first execution.
 
-**Symptoms**:
+Symptoms:
 - First run: Wrong results (graph crashes, incorrect statistics)
 - Second run (same parameters): Correct results
 - Repeats with new tickers/date ranges
 
 ### Required Rules
 
-**NEVER: Call synchronous I/O directly in async functions**
+NEVER call synchronous I/O directly in async functions:
 ```python
 # WRONG - Blocks event loop, causes race conditions
 async def process():
@@ -151,7 +154,7 @@ async def process():
     return data
 ```
 
-**ALWAYS: Wrap with asyncio.to_thread()**
+ALWAYS wrap with asyncio.to_thread():
 ```python
 # CORRECT - Safely executes in thread pool
 import asyncio
@@ -165,57 +168,57 @@ async def process():
 
 ### Functions Requiring Wrapping
 
-**Database calls** (synchronous):
-- `yfinance_db.load_ticker_data()`
-- `yfinance_db.save_ticker_data()`
-- `yfinance_db.get_ticker_info_from_db()`
+Database calls (synchronous):
+- yfinance_db.load_ticker_data()
+- yfinance_db.save_ticker_data()
+- yfinance_db.get_ticker_info_from_db()
 
-**External API calls** (synchronous):
-- `data_fetcher.get_stock_data()`
-- `yf.Ticker().history()`
-- `yf.download()`
+External API calls (synchronous):
+- data_fetcher.get_stock_data()
+- yf.Ticker().history()
+- yf.download()
 
-**All must be wrapped with `asyncio.to_thread()`!**
+All must be wrapped with asyncio.to_thread().
 
 ### Checklist
 
 When writing/reviewing code, verify:
-- [ ] All I/O calls in async functions start with `await`?
-- [ ] Synchronous I/O functions wrapped with `asyncio.to_thread()`?
-- [ ] Static methods/regular functions called from async contexts don't contain synchronous I/O?
-- [ ] Async/sync boundaries maintained during refactoring?
+- All I/O calls in async functions start with await
+- Synchronous I/O functions wrapped with asyncio.to_thread()
+- Static methods/regular functions called from async contexts do not contain synchronous I/O
+- Async/sync boundaries maintained during refactoring
 
 ### Reference Documents
 
-Detailed analysis: `backtest_be_fast/docs/race_condition_reintroduced_analysis.md`
+Detailed analysis: backtest_be_fast/docs/troubleshooting/race_condition.md
 
 ## Code Conventions
 
 ### Python Backend
 
-**Docstring pattern** (required for modules, classes, core functions):
+Docstring pattern (required for modules, classes, core functions):
 ```python
 """
 [Module/Function Name]
 
-**Role**:
+Role:
 - Core responsibility 1
 - Core responsibility 2
 
-**Key Features**:
+Key Features:
 1. method_name(): description
 
-**Dependencies**:
+Dependencies:
 - app/path/to/module.py: description
 
-**Related Components**:
+Related Components:
 - Backend: app/...
 - Frontend: src/...
 """
 ```
 See examples in `app/main.py`, `app/services/backtest_engine.py`, `app/strategies/sma_strategy.py`
 
-**Strategy implementation**: Located in `app/strategies/strategies.py`
+Strategy implementation: Located in app/strategies/strategies.py
 - All 6 strategies (SMA, EMA, RSI, Bollinger, MACD, BuyHold) in single file
 - Inherit from `backtesting.Strategy` and `PositionSizingMixin`
 - Implement `init()` and `next()` methods
@@ -223,26 +226,26 @@ See examples in `app/main.py`, `app/services/backtest_engine.py`, `app/strategie
 - Register in `STRATEGY_CLASSES` dict in `strategy_service.py`
 - Use `calculate_and_buy()` from PositionSizingMixin for consistent position sizing
 
-**Error handling**: Use custom exceptions from `app/core/exceptions.py`, includes error ID generation
+Error handling: Use custom exceptions from app/core/exceptions.py, includes error ID generation
 
-**Logging**: Standard `logging` module with `logger = logging.getLogger(__name__)`
+Logging: Standard logging module with logger = logging.getLogger(__name__)
 - INFO: Backtest start/end, data loading
 - DEBUG: Data columns, detailed flow
 - ERROR: Exception conditions
 
 ### TypeScript Frontend
 
-**shadcn/ui components**: Import from `@/shared/ui/*` (configured in `components.json`)
-- Add new components: `npx shadcn@latest add <component-name>`
-- Custom components go in `@/components/*` or `@/features/*/components/*`
+shadcn/ui components: Import from @/shared/ui/* (configured in components.json)
+- Add new components: npx shadcn@latest add <component-name>
+- Custom components go in @/components/* or @/features/*/components/*
 
-**API calls**: Fetch-based, uses Vite proxy (`/api/v1/backtest` → FastAPI)
-- Error handling: `ApiError` type, status-based classification
-- See example in `src/features/backtest/api/backtestApi.ts`
+API calls: Fetch-based, uses Vite proxy (/api/v1/backtest to FastAPI)
+- Error handling: ApiError type, status-based classification
+- See example in src/features/backtest/api/backtestApi.ts
 
-**Theme system**: `useTheme()` hook, JSON-based theme definitions (`src/themes/`)
+Theme system: useTheme() hook, JSON-based theme definitions (src/themes/)
 - Dynamic CSS variables, localStorage persistence
-- Dark mode support via `dark` class toggle
+- Dark mode support via dark class toggle
 
 ## Key Patterns
 
@@ -282,29 +285,29 @@ See examples in `app/main.py`, `app/services/backtest_engine.py`, `app/strategie
 4. Add UI in frontend `StrategySelector.tsx`
 
 ### Data Serialization Requirements
-- **Numpy types**: Use `_serialize_numpy()` to convert to Python native types
-- **Datetime**: Use `.isoformat()` for ISO 8601 strings
-- **NaN/Infinity**: Replace with `None` or remove
+- Numpy types: Use _serialize_numpy() to convert to Python native types
+- Datetime: Use .isoformat() for ISO 8601 strings
+- NaN/Infinity: Replace with None or remove
 
 ### Duplicate Stock Prevention
-- **Policy**: Cannot add same stock multiple times to portfolio (cash excluded)
-- **Reason**: Reduces UI complexity, matches real investment patterns, simplifies code
-- **Implementation**:
-  - Frontend: `validatePortfolio()` in `backtestFormReducer.ts`
-  - Backend: `PortfolioBacktestRequest.validate_portfolio()` in `app/schemas/schemas.py`
-- **Alternative**: To increase weight in same stock, adjust `amount` or `weight`
+- Policy: Cannot add same stock multiple times to portfolio (cash excluded)
+- Reason: Reduces UI complexity, matches real investment patterns, simplifies code
+- Implementation:
+  - Frontend: validatePortfolio() in backtestFormReducer.ts
+  - Backend: PortfolioBacktestRequest.validate_portfolio() in app/schemas/schemas.py
+- Alternative: To increase weight in same stock, adjust amount or weight
 
 ## Testing
 
 ### Backend Test Structure
-- **Fixtures**: Global fixtures in `tests/conftest.py`, factory patterns in `tests/fixtures/`
-- **Async tests**: `asyncio_mode = strict`, use `async def test_*` format
-- **Markers**: Use pytest markers for test categorization (see `pytest.ini`)
+- Fixtures: Global fixtures in tests/conftest.py, factory patterns in tests/fixtures/
+- Async tests: asyncio_mode = strict, use async def test_* format
+- Markers: Use pytest markers for test categorization (see pytest.ini)
 
 ### Frontend Testing
-- **Framework**: Vitest with React Testing Library
-- **Mock server**: MSW configured in `src/test/mocks/`
-- **Setup**: Global test setup in `src/test/setup.ts`
+- Framework: Vitest with React Testing Library
+- Mock server: MSW configured in src/test/mocks/
+- Setup: Global test setup in src/test/setup.ts
 
 ## Configuration
 
@@ -318,8 +321,9 @@ See examples in `app/main.py`, `app/services/backtest_engine.py`, `app/strategie
 - Accepts JSON array or comma-separated values
 
 ## Key Files Reference
-- **Architecture**: `app/main.py`, `app/api/v1/api.py`
-- **Core logic**: `app/services/portfolio_service.py`, `app/services/backtest_engine.py`
-- **Config**: `app/core/config.py`, `compose.dev.yaml`
-- **Testing**: `backtest_be_fast/pytest.ini`, `tests/conftest.py`
-- **UI**: `backtest_fe/components.json`, `src/App.tsx`
+- Architecture: app/main.py, app/api/v1/api.py
+- Core logic: app/services/portfolio_service.py, app/services/backtest_engine.py
+- Config: app/core/config.py, compose.dev.yaml
+- Testing: backtest_be_fast/pytest.ini, tests/conftest.py
+- UI: backtest_fe/components.json, src/App.tsx
+- Documentation: backtest_be_fast/docs/README.md
