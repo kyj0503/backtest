@@ -1,105 +1,90 @@
-# Quick Reference: Logging Gaps - Critical Operations
+# 빠른 참조: 로깅 누락 - 중요 작업
 
-## CRITICAL Priority (Implement Immediately)
+## 치명적 우선순위 (즉시 구현 필요)
 
-### 1. **backtest_engine.py:191-224** - Currency Conversion
-- **Missing**: Which currency being converted, exchange rates used, conversion results
-- **Impact**: Cannot audit currency conversion accuracy
-- **Fix**: Log ticker currency detection, rate values, price range before/after conversion
+### 1. backtest_engine.py:191-224 - 통화 변환
+- 누락: 변환 대상 통화, 사용된 환율, 변환 결과
+- 영향: 통화 변환 정확성 감사 불가
+- 수정: 티커 통화 감지, 환율 값, 변환 전후 가격 범위 로깅
 
-### 2. **portfolio_service.py:158-167** - Exchange Rate Loading
-- **Missing**: Which currencies are loaded, actual rate values, load status
-- **Impact**: Cannot verify exchange rates used in multi-currency portfolios
-- **Fix**: Log required currencies list, rate values range per currency, load success/failure
+### 2. portfolio_service.py:158-167 - 환율 데이터 로딩
+- 누락: 로드된 통화, 실제 환율 값, 로드 상태
+- 영향: 다중 통화 포트폴리오에서 사용된 환율 확인 불가
+- 수정: 필요한 통화 목록, 통화별 환율 범위, 로드 성공/실패 로깅
 
----
+## 높은 우선순위 (조만간 구현)
 
-## HIGH Priority (Implement Soon)
+### 3. backtest_engine.py:226-263 - 전략 파라미터 오버라이드
+- 누락: 오버라이드된 파라미터와 최종 값
+- 영향: 사용자가 전략 파라미터가 올바르게 적용되었는지 확인 불가
+- 수정: 실행 전 오버라이드된 파라미터와 값 로깅
 
-### 3. **backtest_engine.py:226-263** - Strategy Parameter Override
-- **Missing**: Which parameters were overridden and their final values
-- **Impact**: Users cannot verify if strategy params were applied correctly
-- **Fix**: Log overridden parameters and their values before execution
+### 4. portfolio_service.py:379-387 - 리밸런싱 트리거 확인
+- 누락: 특정 날짜에 리밸런싱이 트리거된/트리거되지 않은 이유
+- 영향: 사용자가 리밸런싱 스케줄 실행 확인 불가
+- 수정: 트리거 결정 및 이유 로깅 (빈도, 자산 수, 날짜 비교)
 
-### 4. **portfolio_service.py:379-387** - Rebalancing Trigger Check
-- **Missing**: Why rebalancing was/wasn't triggered on specific dates
-- **Impact**: Users cannot verify rebalancing schedule execution
-- **Fix**: Log trigger decision and reasons (frequency, asset count, date comparison)
+### 5. portfolio_service.py:438-595 - 리밸런싱 거래 실행
+- 누락: 개별 매수/매도 거래, 수수료 세부사항, 비중 조정
+- 영향: 거래 수준에서 리밸런싱 작업 가시성 없음
+- 수정: 각 매수/매도 거래, 수수료 비용, 변경 전후 비중 로깅
 
-### 5. **portfolio_service.py:438-595** - Rebalancing Trade Execution
-- **Missing**: Individual buy/sell trades, commission details, weight adjustments
-- **Impact**: No visibility into rebalancing operations at trade level
-- **Fix**: Log each buy/sell trade, commission costs, before/after weights
+### 6. portfolio_service.py:215-248 - 통화 변환 (일일 루프)
+- 누락: 환율 출처 (현재 vs 캐시된 폴백), 변환 요약
+- 영향: 환율 데이터가 누락된 날짜 식별 불가
+- 수정: 환율 출처 로깅, 일일 변환 요약 추가
 
-### 6. **portfolio_service.py:215-248** - Currency Conversion (Daily Loop)
-- **Missing**: Exchange rate source (current vs cached fallback), conversion summary
-- **Impact**: Cannot identify dates with missing rate data
-- **Fix**: Log rate source, add daily conversion summary
+## 중간 우선순위 (편할 때 구현)
 
----
+### 7. backtest_engine.py:402-428 - 벤치마크 알파/베타 계산
+- 누락: 벤치마크 데이터 로드 상태, 계산 과정, 결과
+- 영향: 조용한 실패로 결과 신뢰성 저하
+- 수정: 벤치마크 로드 성공, 상관관계 계산, 최종 알파/베타 값 로깅
 
-## MEDIUM Priority (Implement When Convenient)
+### 8. portfolio_service.py:250-283 - 상장폐지 감지
+- 누락: 가격 경과/오래됨 요약, 리밸런싱 시 상장폐지 종목 수
+- 영향: 사용자가 어떤 종목이 상장폐지되었는지 알 수 없음
+- 수정: 가격 경과 정도, 리밸런싱 시점 상장폐지 수 요약 로깅
 
-### 7. **backtest_engine.py:402-428** - Benchmark Alpha/Beta Calculation
-- **Missing**: Benchmark data load status, calculation process, results
-- **Impact**: Silent failures make results unreliable
-- **Fix**: Log benchmark load success, correlation calculations, final alpha/beta values
+## 낮은 우선순위 (향상된 로깅)
 
-### 8. **portfolio_service.py:250-283** - Delisting Detection
-- **Missing**: Price age/staleness summary, delisted stock count at rebalancing
-- **Impact**: Users may not know which stocks became delisted
-- **Fix**: Log price staleness, delisted count summary at rebalancing time
+### 9-11. DCA 실행 및 리밸런싱 비중 조정
+- 현재: 양호한 기본 로깅
+- 개선: 의사결정 지점, 계산 세부사항 추가
+- 영향: 엣지 케이스 디버깅에 유용
 
----
+## 구현 전략
 
-## LOW Priority (Enhanced Logging)
+1. 1단계 (치명적): #1, #2 수정 - 통화 작업
+2. 2단계 (높음): #3, #4, #5, #6 수정 - 전략 및 리밸런싱
+3. 3단계 (중간): #7, #8 수정 - 벤치마크 및 상장폐지
+4. 4단계 (낮음): #9-11 개선 - DCA 세부사항
 
-### 9-11. **DCA Execution & Rebalancing Weight Adjustment**
-- Current: ✅ Good basic logging
-- Enhancement: Add details on decision points, calculation details
-- Impact: Nice-to-have for debugging edge cases
+## 테스트 권장사항
 
----
+로깅 구현 후:
 
-## Implementation Strategy
+1. 다중 통화 백테스트 실행 → 환율이 올바르게 로깅되는지 확인
+2. 리밸런싱 백테스트 실행 → 모든 리밸런싱 거래가 로깅되는지 확인
+3. 벤치마크 티커로 실행 → 알파/베타 계산이 로깅되는지 확인
+4. 장기 DCA 실행 → 상장폐지 감지가 로깅되는지 확인
+5. 로그 출력 확인 → ERROR, WARNING 레벨 메시지 검색
 
-1. **Phase 1 (CRITICAL)**: Fix #1, #2 - Currency operations
-2. **Phase 2 (HIGH)**: Fix #3, #4, #5, #6 - Strategy and rebalancing
-3. **Phase 3 (MEDIUM)**: Fix #7, #8 - Benchmark and delisting
-4. **Phase 4 (LOW)**: Enhance #9-11 - DCA details
+## 수정할 파일
 
----
+- /home/user/backtest/backtest_be_fast/app/services/backtest_engine.py
+- /home/user/backtest/backtest_be_fast/app/services/portfolio_service.py
+- /home/user/backtest/backtest_be_fast/app/utils/currency_converter.py (선택적 개선)
 
-## Testing Recommendations
-
-After implementing logging:
-
-1. **Run multi-currency backtest** → Verify exchange rates logged correctly
-2. **Run rebalancing backtest** → Verify all rebalancing trades logged
-3. **Run with benchmark ticker** → Verify alpha/beta calculation logged
-4. **Run long-term DCA** → Verify delisting detection logged
-5. **Check log output** → Search for "ERROR", "WARNING" level messages
-
----
-
-## Files to Modify
-
-- `/home/user/backtest/backtest_be_fast/app/services/backtest_engine.py`
-- `/home/user/backtest/backtest_be_fast/app/services/portfolio_service.py`
-- `/home/user/backtest/backtest_be_fast/app/utils/currency_converter.py` (optional enhancements)
-
----
-
-## Example Commands for Testing
+## 테스트용 예제 명령어
 
 ```bash
-# View logs during backtest
+# 백테스트 중 로그 보기
 docker compose -f compose.dev.yaml logs -f backtest-be-fast
 
-# Search for specific operations
+# 특정 작업 검색
 grep -i "통화 변환\|환율\|리밸런싱\|분할 매수" <log_file>
 
-# Check for missing exchange rate warnings
+# 환율 누락 경고 확인
 grep "환율 없음\|환율 데이터 없음" <log_file>
 ```
-
