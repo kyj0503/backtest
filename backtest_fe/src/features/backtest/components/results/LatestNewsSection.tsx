@@ -26,8 +26,8 @@ interface LatestNewsSectionProps {
 }
 
 /**
- * RFC 2822 형식의 날짜를 한국어 형식으로 변환
- * 예: "Mon, 01 Sep 2025 21:01:00 +0900" -> "2025년 9월 1일 21:01"
+ * RFC 2822 형식의 날짜를 한국어 날짜 형식으로 변환 (시간 제외)
+ * 예: "Mon, 01 Sep 2025 21:01:00 +0900" -> "2025년 9월 1일"
  */
 const formatNewsDate = (pubDate: string): string => {
   try {
@@ -39,10 +39,8 @@ const formatNewsDate = (pubDate: string): string => {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
     
-    return `${year}년 ${month}월 ${day}일 ${hours}:${minutes}`;
+    return `${year}년 ${month}월 ${day}일`;
   } catch (error) {
     return pubDate; // 에러 발생 시 원본 반환
   }
