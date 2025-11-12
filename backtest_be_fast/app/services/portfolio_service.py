@@ -1017,7 +1017,9 @@ class PortfolioService:
             dca_info = {}
             cash_amount = 0
 
-            # 먼저 모든 종목의 투자 타입을 확인하고 총 금액 계산
+            # Phase 1: 먼저 모든 종목의 투자 타입을 확인하고 dca_info 설정
+            symbols_to_load = []  # 데이터를 로드할 종목 리스트
+
             for item in request.portfolio:
                 symbol = item.symbol
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
@@ -1027,7 +1029,7 @@ class PortfolioService:
                 if investment_type == 'dca':
                     period_info = FREQUENCY_MAP.get(dca_frequency, FREQUENCY_MAP['monthly_1'])
                     period_type, interval = period_info
-                    
+
                     # 근사 계산으로 DCA 횟수 추정
                     if period_type == 'weekly':
                         approx_days_per_period = interval * 7
@@ -1035,7 +1037,7 @@ class PortfolioService:
                         approx_days_per_period = interval * 30  # 월 평균 30일
                     else:
                         approx_days_per_period = 30
-                    
+
                     # 백테스트 기간 동안 몇 번 투자할지 계산
                     dca_periods = max(1, (backtest_days // approx_days_per_period) + 1)
                 else:
@@ -1082,23 +1084,42 @@ class PortfolioService:
                     logger.info(f"현금 자산 {symbol} 추가 (금액: ${total_investment:,.2f})")
                     continue
 
-                logger.info(f"종목 {symbol} 데이터 로드 중 (총 투자금액: ${total_investment:,.2f}, 방식: {investment_type})")
+                logger.info(f"종목 {symbol} 데이터 로드 예정 (총 투자금액: ${total_investment:,.2f}, 방식: {investment_type})")
 
                 if investment_type == 'dca':
                     logger.info(f"분할 매수: {dca_periods}회에 걸쳐 회당 ${per_period_amount:,.2f}씩 (총 ${total_investment:,.2f})")
                     logger.info(f"DCA 설정: frequency={dca_frequency}, dca_periods={dca_periods}")
 
-                # DB에서 데이터 로드
-                df = await asyncio.to_thread(
-                    load_ticker_data, symbol, request.start_date, request.end_date
-                )
+                # 로드할 종목 리스트에 추가
+                symbols_to_load.append(symbol)
 
-                if df is None or df.empty:
-                    logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
-                    continue
+            # Phase 2: 모든 종목 데이터를 병렬로 로드 (N+1 query 최적화)
+            if symbols_to_load:
+                logger.info(f"포트폴리오 데이터 병렬 로드 시작: {len(symbols_to_load)}개 종목")
 
-                portfolio_data[symbol] = df
-                logger.info(f"종목 {symbol} 데이터 로드 완료: {len(df)} 행")
+                # 병렬 로드 태스크 생성
+                load_tasks = [
+                    asyncio.to_thread(load_ticker_data, symbol, request.start_date, request.end_date)
+                    for symbol in symbols_to_load
+                ]
+
+                # 병렬 실행
+                load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
+
+                # 결과 처리
+                for symbol, result in zip(symbols_to_load, load_results):
+                    if isinstance(result, Exception):
+                        logger.warning(f"종목 {symbol} 데이터 로드 실패: {result}")
+                        continue
+
+                    if result is None or result.empty:
+                        logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
+                        continue
+
+                    portfolio_data[symbol] = result
+                    logger.info(f"종목 {symbol} 데이터 로드 완료: {len(result)} 행")
+
+                logger.info(f"포트폴리오 데이터 병렬 로드 완료: {len(portfolio_data)}/{len(symbols_to_load)}개 성공")
 
             # 총 투자 금액 계산
             total_amount = sum(amounts.values())

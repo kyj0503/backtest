@@ -338,6 +338,10 @@ class CurrencyConverter:
         exchange_start_date_obj = start_date_obj - timedelta(days=buffer_days)
         exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
 
+        # Phase 1: 로드할 통화 및 티커 필터링
+        currencies_to_load = []
+        tickers_to_load = []
+
         for currency in currencies:
             # USD는 변환 불필요
             if currency == 'USD':
@@ -352,40 +356,59 @@ class CurrencyConverter:
             if not exchange_ticker:
                 continue
 
-            try:
-                logger.info(f"{currency} 환율 데이터 로드 중: {exchange_ticker}")
+            currencies_to_load.append(currency)
+            tickers_to_load.append(exchange_ticker)
 
-                # 환율 데이터 로딩
-                exchange_data = await asyncio.to_thread(
-                    load_ticker_data, exchange_ticker, exchange_start_date, end_date
-                )
+        # Phase 2: 모든 환율 데이터를 병렬로 로드 (N+1 query 최적화)
+        if currencies_to_load:
+            logger.info(f"환율 데이터 병렬 로드 시작: {len(currencies_to_load)}개 통화 [{', '.join(currencies_to_load)}]")
 
-                if exchange_data is None or exchange_data.empty:
-                    logger.warning(f"{currency} 환율 데이터 없음, 건너뛰기")
+            # 병렬 로드 태스크 생성
+            load_tasks = [
+                asyncio.to_thread(load_ticker_data, ticker, exchange_start_date, end_date)
+                for ticker in tickers_to_load
+            ]
+
+            # 병렬 실행
+            load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
+
+            # Phase 3: 결과 처리
+            date_range_no_tz = self._remove_timezone(date_range)
+
+            for currency, ticker, result in zip(currencies_to_load, tickers_to_load, load_results):
+                try:
+                    if isinstance(result, Exception):
+                        logger.warning(f"{currency} 환율 로드 실패 ({ticker}): {result}")
+                        continue
+
+                    if result is None or result.empty:
+                        logger.warning(f"{currency} 환율 데이터 없음 ({ticker}), 건너뛰기")
+                        continue
+
+                    # 타임존 제거 및 reindex
+                    exchange_data = result
+                    exchange_data.index = self._remove_timezone(exchange_data.index)
+                    exchange_data = exchange_data.reindex(date_range_no_tz, method='ffill')
+                    exchange_data = exchange_data.bfill()
+
+                    # date-keyed dict로 변환 (O(1) 조회)
+                    currency_rates: Dict[date, float] = {}
+                    for date_idx, row in exchange_data.iterrows():
+                        if pd.notna(row['Close']):
+                            # datetime을 date로 변환
+                            if hasattr(date_idx, 'date'):
+                                currency_rates[date_idx.date()] = float(row['Close'])
+                            else:
+                                currency_rates[date_idx] = float(row['Close'])
+
+                    exchange_rates_by_currency[currency] = currency_rates
+                    logger.info(f"{currency} 환율 {len(currency_rates)}일치 로드 완료")
+
+                except Exception as e:
+                    logger.warning(f"{currency} 환율 처리 실패: {e}, 건너뛰기")
                     continue
 
-                # 타임존 제거 및 reindex
-                exchange_data.index = self._remove_timezone(exchange_data.index)
-                date_range_no_tz = self._remove_timezone(date_range)
-                exchange_data = exchange_data.reindex(date_range_no_tz, method='ffill')
-                exchange_data = exchange_data.bfill()
-
-                # date-keyed dict로 변환 (O(1) 조회)
-                currency_rates: Dict[date, float] = {}
-                for date_idx, row in exchange_data.iterrows():
-                    if pd.notna(row['Close']):
-                        # datetime을 date로 변환
-                        if hasattr(date_idx, 'date'):
-                            currency_rates[date_idx.date()] = float(row['Close'])
-                        else:
-                            currency_rates[date_idx] = float(row['Close'])
-
-                exchange_rates_by_currency[currency] = currency_rates
-                logger.info(f"{currency} 환율 {len(currency_rates)}일치 로드 완료")
-
-            except Exception as e:
-                logger.warning(f"{currency} 환율 로드 실패: {e}, 건너뛰기")
-                continue
+            logger.info(f"환율 데이터 병렬 로드 완료: {len(exchange_rates_by_currency)}/{len(currencies_to_load)}개 성공")
 
         return exchange_rates_by_currency
 
