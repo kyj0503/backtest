@@ -71,6 +71,7 @@ from app.core.exceptions import (
     ValidationError
 )
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
+from app.utils.currency_converter import currency_converter
 
 logger = logging.getLogger(__name__)
 
@@ -162,44 +163,15 @@ class PortfolioService:
             ticker_currencies = {unique_key: 'USD' for unique_key in stock_amounts.keys()}
 
         # 필요한 통화 파악 및 환율 데이터 로드
-        required_currencies = set(ticker_currencies.values()) - {'USD'}
-        exchange_rates_by_currency = {}  # {currency: {date: rate}}
-
-        # 환율 데이터는 백테스트 시작일보다 충분히 이전부터 로드
-        # (백테스트 초반에 누락된 환율을 forward-fill로 채우기 위해)
-        exchange_start_date_obj = start_date_obj - timedelta(days=EXCHANGE_RATE_LOOKBACK_DAYS * 2)
-        exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
-
-        for currency in required_currencies:
-            if currency not in SUPPORTED_CURRENCIES:
-                logger.warning(f"지원하지 않는 통화: {currency}, USD로 처리")
-                continue
-
-            exchange_ticker = SUPPORTED_CURRENCIES[currency]
-            if exchange_ticker:
-                try:
-                    # 백테스트 시작일보다 60일 전부터 로드
-                    exchange_data = await asyncio.to_thread(
-                        load_ticker_data, exchange_ticker, exchange_start_date, end_date
-                    )
-                    if exchange_data is not None and not exchange_data.empty:
-                        # 백테스트 날짜 범위로 reindex하고 forward-fill 적용
-                        # 이렇게 하면 환율 시장 휴일(주말, 공휴일)에도 이전 거래일의 환율이 채워짐
-                        exchange_data = exchange_data.reindex(date_range, method='ffill')
-
-                        # 여전히 NaN이 있으면 backward-fill로 채움 (초기 날짜 대비)
-                        exchange_data = exchange_data.bfill()
-
-                        currency_rates = {}
-                        for date_idx, row in exchange_data.iterrows():
-                            if pd.notna(row['Close']):
-                                currency_rates[date_idx.date()] = row['Close']
-
-                        exchange_rates_by_currency[currency] = currency_rates
-                        logger.info(f"{currency} 환율 데이터 로드 및 전처리 완료: {len(currency_rates)}일치 (reindex + ffill/bfill)")
-                except Exception as e:
-                    logger.warning(f"{currency} 환율 데이터 로드 실패: {e}")
-                    exchange_rates_by_currency[currency] = {}
+        # Phase 2.3 리팩토링: 환율 로딩 로직을 currency_converter로 통합
+        required_currencies = list(set(ticker_currencies.values()) - {'USD'})
+        exchange_rates_by_currency = await currency_converter.load_multiple_exchange_rates(
+            currencies=required_currencies,
+            start_date=start_date,
+            end_date=end_date,
+            date_range=date_range,
+            buffer_multiplier=2  # EXCHANGE_RATE_LOOKBACK_DAYS * 2
+        )
 
         # 목표 비중 계산 (리밸런싱용)
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
@@ -270,14 +242,9 @@ class PortfolioService:
                                     continue  # 이 종목은 건너뛰기
 
                             if exchange_rate and exchange_rate > 0:
-                                # EUR, GBP, AUD 등: 이미 USD 환율 (EURUSD=X)
-                                # KRW, JPY 등: 역수 계산 필요 (1 USD = X KRW)
-                                if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
-                                    # XXXUSD=X 형태: 1 XXX = Y USD
-                                    converted_price = raw_price * exchange_rate
-                                else:
-                                    # XXX=X 형태: 1 USD = Y XXX
-                                    converted_price = raw_price / exchange_rate
+                                # Phase 2.3 리팩토링: 통화별 변환 로직을 currency_converter로 통합
+                                multiplier = currency_converter.get_conversion_multiplier(currency, exchange_rate)
+                                converted_price = raw_price * multiplier
 
                                 logger.debug(f"{symbol} 가격 변환: {currency} {raw_price:.2f} -> ${converted_price:.2f} (환율: {exchange_rate:.2f})")
                                 current_prices[unique_key] = converted_price

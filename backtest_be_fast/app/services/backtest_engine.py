@@ -55,6 +55,7 @@ from app.services.validation_service import validation_service
 from app.services.yfinance_db import get_ticker_info_from_db, load_ticker_data
 from app.core.exceptions import ValidationError
 from app.constants.currencies import SUPPORTED_CURRENCIES
+from app.utils.currency_converter import currency_converter
 
 
 class BacktestEngine:
@@ -191,6 +192,9 @@ class BacktestEngine:
         """
         비USD 통화의 가격 데이터를 USD로 변환
 
+        이 메서드는 currency_converter 유틸리티로 리팩토링되었습니다.
+        기존 로직: 111줄 → 새 로직: 6줄 (wrapper)
+
         Parameters:
         -----------
         ticker : str
@@ -206,96 +210,16 @@ class BacktestEngine:
         --------
         pd.DataFrame
             USD로 변환된 가격 데이터
+
+        Note:
+            Phase 2.3 리팩토링: 중복 코드를 currency_converter.py로 추출
         """
-        # 통화 정보 가져오기 (asyncio.to_thread로 래핑하여 async/sync 경계 준수)
-        try:
-            ticker_info = await asyncio.to_thread(get_ticker_info_from_db, ticker)
-            currency = ticker_info.get('currency', 'USD')
-            self.logger.info(f"{ticker} 통화: {currency}")
-        except Exception as e:
-            self.logger.warning(f"{ticker} 통화 정보 조회 실패: {e}, USD로 가정")
-            currency = 'USD'
-
-        # USD면 변환 불필요
-        if currency == 'USD':
-            return data
-
-        if currency not in SUPPORTED_CURRENCIES:
-            self.logger.warning(f"지원하지 않는 통화: {currency}, 변환 없이 진행")
-            return data
-
-        exchange_ticker = SUPPORTED_CURRENCIES[currency]
-        if not exchange_ticker:
-            return data
-
-        # 환율 데이터 로드 (60일 버퍼 추가)
-        try:
-            # start_date가 문자열 또는 date/datetime 객체일 수 있음
-            if isinstance(start_date, str):
-                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
-            elif isinstance(start_date, date):
-                start_date_obj = datetime.combine(start_date, datetime.min.time())
-            else:
-                # 이미 datetime 객체인 경우
-                start_date_obj = start_date
-
-            exchange_start_date_obj = start_date_obj - timedelta(days=60)
-            exchange_start_date = exchange_start_date_obj.strftime('%Y-%m-%d')
-
-            self.logger.info(f"{currency} 환율 데이터 로드 중: {exchange_ticker}")
-            exchange_data = await asyncio.to_thread(
-                load_ticker_data, exchange_ticker, exchange_start_date, end_date
-            )
-
-            if exchange_data is None or exchange_data.empty:
-                self.logger.warning(f"{currency} 환율 데이터 없음, 변환 없이 진행")
-                return data
-
-            # 타임존 불일치 해결: 타임존 제거 후 reindex
-            # 한국 주식: datetime64[ns, Asia/Seoul], 환율: datetime64[ns]
-            data_index_no_tz = data.index.tz_localize(None) if data.index.tz is not None else data.index
-            exchange_index_no_tz = exchange_data.index.tz_localize(None) if exchange_data.index.tz is not None else exchange_data.index
-
-            # 환율 데이터 인덱스를 타임존 제거한 것으로 교체
-            exchange_data.index = exchange_index_no_tz
-
-            # 데이터 날짜 범위로 reindex하고 forward-fill
-            exchange_data = exchange_data.reindex(data_index_no_tz, method='ffill')
-            exchange_data = exchange_data.bfill()
-
-            self.logger.info(f"환율 데이터 전처리 완료: {len(exchange_data)}일치")
-
-            # 가격 데이터 복사
-            converted_data = data.copy()
-
-            # 각 행에 대해 환율 적용
-            for i, idx in enumerate(converted_data.index):
-                # 타임존 제거한 인덱스로 환율 데이터 접근
-                idx_no_tz = idx.tz_localize(None) if hasattr(idx, 'tz_localize') and idx.tz is not None else idx
-
-                if idx_no_tz in exchange_data.index and pd.notna(exchange_data.loc[idx_no_tz, 'Close']):
-                    exchange_rate = exchange_data.loc[idx_no_tz, 'Close']
-
-                    # EUR, GBP, AUD 등: XXXUSD=X 형태 (곱하기)
-                    # KRW, JPY 등: XXX=X 형태 (나누기)
-                    if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
-                        # 1 통화 = X USD
-                        multiplier = exchange_rate
-                    else:
-                        # 1 USD = X 통화
-                        multiplier = 1.0 / exchange_rate if exchange_rate > 0 else 1.0
-
-                    # OHLC 컬럼 변환
-                    for col in ['Open', 'High', 'Low', 'Close']:
-                        if col in converted_data.columns:
-                            converted_data.loc[idx, col] *= multiplier
-
-            self.logger.info(f"{ticker} 가격을 {currency}에서 USD로 변환 완료")
-            return converted_data
-
-        except Exception as e:
-            self.logger.error(f"통화 변환 중 오류: {e}, 원본 데이터 사용")
-            return data
+        return await currency_converter.convert_dataframe_to_usd(
+            ticker=ticker,
+            data=data,
+            start_date=start_date,
+            end_date=end_date
+        )
 
     def _build_strategy(
         self, strategy_name: str, params: Optional[Dict[str, Any]]
