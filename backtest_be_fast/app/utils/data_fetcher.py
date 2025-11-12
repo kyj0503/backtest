@@ -68,160 +68,42 @@ class DataFetcher:
     ) -> pd.DataFrame:
         """
         주식 데이터를 가져옵니다.
-        
+
         Args:
             ticker: 주식 티커 심볼
             start_date: 시작 날짜
             end_date: 종료 날짜
-            use_cache: 캐시 사용 여부
-            cache_hours: 캐시 유효 시간 (시간)
-            
+            use_cache: 캐시 사용 여부 (현재 미사용)
+            cache_hours: 캐시 유효 시간 (현재 미사용)
+
         Returns:
             OHLCV 데이터프레임
+
+        Raises:
+            DataNotFoundError: 데이터를 찾을 수 없는 경우
+            InvalidSymbolError: 유효하지 않은 티커인 경우
+            YFinanceRateLimitError: API 연결 오류
         """
         try:
-            # 티커를 대문자로 변환
+            # 초기 설정
             ticker = ticker.upper()
-            
-            # CSV 캐시 비활성화: 캐시 파일을 사용하지 않습니다.
-            
-            # Yahoo Finance에서 데이터 다운로드
             logger.info(f"Yahoo Finance에서 데이터 다운로드: {ticker}")
-            
+
             # 날짜를 문자열로 변환 (yfinance 호환성)
             start_str = start_date.strftime('%Y-%m-%d')
             end_str = (end_date + pd.Timedelta(days=1)).strftime('%Y-%m-%d')  # 종료일 포함
-            
+
             # yfinance 객체 생성
             stock = yf.Ticker(ticker)
-            
-            # 데이터 다운로드 시도
-            data = None
-            error_messages = []
 
-            def _try_download(s_str, e_str, method='history'):
-                nonlocal data
-                try:
-                    if method == 'history':
-                        d = stock.history(start=s_str, end=e_str, auto_adjust=True, prepost=False)
-                    else:
-                        d = yf.download(ticker, start=s_str, end=e_str, auto_adjust=True, prepost=False, progress=False, threads=False)
-                    if d is not None and not d.empty:
-                        data = d
-                        logger.info(f"{method}로 데이터 수집 성공: {ticker} ({s_str} -> {e_str})")
-                        return True
-                except Exception as e:
-                    error_messages.append(f"{method} 실패: {e}")
-                    logger.warning(f"{method} 실패: {e}")
-                return False
+            # 데이터 다운로드 (재시도 로직 포함)
+            data = self._fetch_with_retries(stock, ticker, start_str, end_str)
 
-            # 시도 1: 요청 범위
-            _try_download(start_str, end_str, method='history')
-            if data is None or data.empty:
-                _try_download(start_str, end_str, method='download')
+            # 데이터 검증 및 정리
+            data = self._validate_and_clean_data(data, ticker, start_str, end_str)
 
-            # 시도 2: 범위 확장 재시도 (+/- 3일, +/-7일)
-            if data is None or data.empty:
-                try:
-                    s_dt = datetime.strptime(start_str, '%Y-%m-%d') - pd.Timedelta(days=3)
-                    e_dt = datetime.strptime(end_str, '%Y-%m-%d') + pd.Timedelta(days=3)
-                    s2 = s_dt.strftime('%Y-%m-%d')
-                    e2 = e_dt.strftime('%Y-%m-%d')
-                    logger.info(f"데이터가 없음: 범위를 확장해 재시도 (+/-3일): {s2} -> {e2}")
-                    _try_download(s2, e2, method='history') or _try_download(s2, e2, method='download')
-                except Exception as e:
-                    logger.warning(f"범위 확장 +/-3일 재시도 실패: {e}")
-
-            if data is None or data.empty:
-                try:
-                    s_dt = datetime.strptime(start_str, '%Y-%m-%d') - pd.Timedelta(days=7)
-                    e_dt = datetime.strptime(end_str, '%Y-%m-%d') + pd.Timedelta(days=7)
-                    s3 = s_dt.strftime('%Y-%m-%d')
-                    e3 = e_dt.strftime('%Y-%m-%d')
-                    logger.info(f"데이터가 없음: 범위를 확장해 재시도 (+/-7일): {s3} -> {e3}")
-                    _try_download(s3, e3, method='history') or _try_download(s3, e3, method='download')
-                except Exception as e:
-                    logger.warning(f"범위 확장 +/-7일 재시도 실패: {e}")
-            
-            # 데이터 검증
-            if data is None or data.empty:
-                # 무효한 티커 패턴 체크
-                invalid_patterns = [
-                    'INVALID', 'NONEXISTENT', 'NOTFOUND', 'TEST', 'FAKE',
-                    'XXX', 'YYY', 'ZZZ'
-                ]
-                
-                # 숫자로만 구성되거나 무효한 패턴이 포함된 경우
-                if (ticker.isdigit() or 
-                    any(pattern in ticker.upper() for pattern in invalid_patterns) or
-                    len(ticker) > 10 or
-                    not ticker.replace('.', '').replace('-', '').isalnum()):
-                    raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 종목 심볼입니다.")
-                
-                # 그 외의 경우는 데이터 없음으로 처리
-                error_detail = f"'{ticker}' 종목에 대한 {start_str}부터 {end_str}까지의 데이터를 찾을 수 없습니다."
-                if error_messages:
-                    error_detail += f" 오류: {'; '.join(error_messages)}"
-                raise DataNotFoundError(error_detail)
-            
-            # 데이터가 너무 적은 경우 체크
-            if len(data) < 2:
-                raise DataNotFoundError(f"'{ticker}' 종목의 데이터가 부족합니다. ({len(data)}개 레코드)")
-            
-            # MultiIndex 컬럼 처리 (yfinance는 때때로 MultiIndex를 반환)
-            logger.info(f"원본 컬럼 구조: {data.columns}, 타입: {type(data.columns)}")
-            
-            if isinstance(data.columns, pd.MultiIndex):
-                # MultiIndex인 경우 첫 번째 레벨만 사용
-                data.columns = data.columns.get_level_values(0)
-                logger.info(f"MultiIndex 처리 후 컬럼: {data.columns}")
-            
-            # 컬럼 이름 정리 (공백 제거)
-            data.columns = [str(col).replace(' ', '') for col in data.columns]
-            logger.info(f"정리된 컬럼: {data.columns.tolist()}")
-            
-            # 필요한 컬럼 확인 및 선택
-            required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-            available_columns = data.columns.tolist()
-            missing_columns = [col for col in required_columns if col not in available_columns]
-            
-            logger.info(f"필요한 컬럼: {required_columns}")
-            logger.info(f"사용 가능한 컬럼: {available_columns}")
-            logger.info(f"누락된 컬럼: {missing_columns}")
-            
-            if missing_columns:
-                logger.warning(f"누락된 컬럼: {missing_columns}")
-                # 누락된 컬럼이 있어도 최소한 Close가 있으면 진행
-                if 'Close' not in available_columns:
-                    raise DataNotFoundError(f"'{ticker}' 종목의 필수 데이터 'Close'가 없습니다.")
-                
-                # 누락된 컬럼을 Close 값으로 대체
-                for col in missing_columns:
-                    if col in ['Open', 'High', 'Low']:
-                        data[col] = data['Close']
-                        logger.info(f"컬럼 '{col}'을 Close 값으로 대체")
-                    elif col == 'Volume':
-                        data[col] = 0
-                        logger.info(f"컬럼 '{col}'을 0으로 설정")
-            
-            # 컬럼 순서 맞추기
-            data = data[required_columns]
-            
-            # NaN 값 및 무한대 값 처리 (최적화: 체이닝으로 단일 패스)
-            data = data.replace([np.inf, -np.inf], np.nan).dropna()
-            
-            if data.empty:
-                raise DataNotFoundError(f"'{ticker}' 종목의 유효한 데이터가 없습니다.")
-            
-            # 날짜 범위 확인
-            if len(data) < 5:
-                logger.warning(f"데이터가 적습니다: {ticker}, {len(data)} 레코드")
-            
-            # CSV 캐시 비활성화: 파일로 저장하지 않습니다.
-            
-            logger.info(f"데이터 수집 완료: {ticker}, {len(data)} 레코드")
             return data
-            
+
         except (DataNotFoundError, InvalidSymbolError) as e:
             # 사용자 친화적 오류는 그대로 전달
             logger.warning(f"데이터 수집 실패: {ticker}, {str(e)}")
@@ -234,7 +116,175 @@ class DataFetcher:
             else:
                 logger.error(f"데이터 수집 예상치 못한 오류: {ticker}, {str(e)}")
                 raise DataNotFoundError(f"'{ticker}' 종목 데이터 수집 실패: {str(e)}")
-    
+
+    def _expand_date_range(self, start_str: str, end_str: str, days: int) -> tuple:
+        """
+        날짜 범위를 앞뒤로 확장합니다.
+
+        Args:
+            start_str: 시작 날짜 (YYYY-MM-DD)
+            end_str: 종료 날짜 (YYYY-MM-DD)
+            days: 확장할 일수
+
+        Returns:
+            (확장된_시작날짜, 확장된_종료날짜) 튜플
+        """
+        s_dt = datetime.strptime(start_str, '%Y-%m-%d') - pd.Timedelta(days=days)
+        e_dt = datetime.strptime(end_str, '%Y-%m-%d') + pd.Timedelta(days=days)
+        return s_dt.strftime('%Y-%m-%d'), e_dt.strftime('%Y-%m-%d')
+
+    def _fetch_with_retries(self, stock: yf.Ticker, ticker: str, start_str: str, end_str: str) -> pd.DataFrame:
+        """
+        재시도 로직을 포함한 데이터 다운로드.
+
+        Args:
+            stock: yfinance Ticker 객체
+            ticker: 티커 심볼
+            start_str: 시작 날짜 (YYYY-MM-DD)
+            end_str: 종료 날짜 (YYYY-MM-DD)
+
+        Returns:
+            다운로드된 DataFrame
+
+        Raises:
+            DataNotFoundError: 모든 재시도 후에도 데이터를 가져오지 못한 경우
+        """
+        data = None
+        error_messages = []
+
+        def _try_download(s_str, e_str, method='history'):
+            nonlocal data
+            try:
+                if method == 'history':
+                    d = stock.history(start=s_str, end=e_str, auto_adjust=True, prepost=False)
+                else:
+                    d = yf.download(ticker, start=s_str, end=e_str, auto_adjust=True, prepost=False, progress=False, threads=False)
+                if d is not None and not d.empty:
+                    data = d
+                    logger.info(f"{method}로 데이터 수집 성공: {ticker} ({s_str} -> {e_str})")
+                    return True
+            except Exception as e:
+                error_messages.append(f"{method} 실패: {e}")
+                logger.warning(f"{method} 실패: {e}")
+            return False
+
+        # 시도 1: 요청 범위
+        _try_download(start_str, end_str, method='history')
+        if data is None or data.empty:
+            _try_download(start_str, end_str, method='download')
+
+        # 시도 2: 범위 확장 재시도 (+/- 3일)
+        if data is None or data.empty:
+            try:
+                s2, e2 = self._expand_date_range(start_str, end_str, days=3)
+                logger.info(f"데이터가 없음: 범위를 확장해 재시도 (+/-3일): {s2} -> {e2}")
+                _try_download(s2, e2, method='history') or _try_download(s2, e2, method='download')
+            except Exception as e:
+                logger.warning(f"범위 확장 +/-3일 재시도 실패: {e}")
+
+        # 시도 3: 범위 확장 재시도 (+/- 7일)
+        if data is None or data.empty:
+            try:
+                s3, e3 = self._expand_date_range(start_str, end_str, days=7)
+                logger.info(f"데이터가 없음: 범위를 확장해 재시도 (+/-7일): {s3} -> {e3}")
+                _try_download(s3, e3, method='history') or _try_download(s3, e3, method='download')
+            except Exception as e:
+                logger.warning(f"범위 확장 +/-7일 재시도 실패: {e}")
+
+        if data is None or data.empty:
+            error_detail = f"'{ticker}' 종목에 대한 {start_str}부터 {end_str}까지의 데이터를 찾을 수 없습니다."
+            if error_messages:
+                error_detail += f" 오류: {'; '.join(error_messages)}"
+            raise DataNotFoundError(error_detail)
+
+        return data
+
+    def _validate_and_clean_data(self, data: pd.DataFrame, ticker: str, start_str: str, end_str: str) -> pd.DataFrame:
+        """
+        데이터 검증 및 정리.
+
+        Args:
+            data: 원본 DataFrame
+            ticker: 티커 심볼
+            start_str: 시작 날짜 (오류 메시지용)
+            end_str: 종료 날짜 (오류 메시지용)
+
+        Returns:
+            정리된 DataFrame
+
+        Raises:
+            InvalidSymbolError: 무효한 티커인 경우
+            DataNotFoundError: 데이터 검증 실패
+        """
+        # 무효한 티커 패턴 체크
+        invalid_patterns = [
+            'INVALID', 'NONEXISTENT', 'NOTFOUND', 'TEST', 'FAKE',
+            'XXX', 'YYY', 'ZZZ'
+        ]
+
+        # 숫자로만 구성되거나 무효한 패턴이 포함된 경우
+        if (ticker.isdigit() or
+            any(pattern in ticker.upper() for pattern in invalid_patterns) or
+            len(ticker) > 10 or
+            not ticker.replace('.', '').replace('-', '').isalnum()):
+            raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 종목 심볼입니다.")
+
+        # 데이터가 너무 적은 경우 체크
+        if len(data) < 2:
+            raise DataNotFoundError(f"'{ticker}' 종목의 데이터가 부족합니다. ({len(data)}개 레코드)")
+
+        # MultiIndex 컬럼 처리 (yfinance는 때때로 MultiIndex를 반환)
+        logger.info(f"원본 컬럼 구조: {data.columns}, 타입: {type(data.columns)}")
+
+        if isinstance(data.columns, pd.MultiIndex):
+            # MultiIndex인 경우 첫 번째 레벨만 사용
+            data.columns = data.columns.get_level_values(0)
+            logger.info(f"MultiIndex 처리 후 컬럼: {data.columns}")
+
+        # 컬럼 이름 정리 (공백 제거)
+        data.columns = [str(col).replace(' ', '') for col in data.columns]
+        logger.info(f"정리된 컬럼: {data.columns.tolist()}")
+
+        # 필요한 컬럼 확인 및 선택
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        available_columns = data.columns.tolist()
+        missing_columns = [col for col in required_columns if col not in available_columns]
+
+        logger.info(f"필요한 컬럼: {required_columns}")
+        logger.info(f"사용 가능한 컬럼: {available_columns}")
+        logger.info(f"누락된 컬럼: {missing_columns}")
+
+        if missing_columns:
+            logger.warning(f"누락된 컬럼: {missing_columns}")
+            # 누락된 컬럼이 있어도 최소한 Close가 있으면 진행
+            if 'Close' not in available_columns:
+                raise DataNotFoundError(f"'{ticker}' 종목의 필수 데이터 'Close'가 없습니다.")
+
+            # 누락된 컬럼을 Close 값으로 대체
+            for col in missing_columns:
+                if col in ['Open', 'High', 'Low']:
+                    data[col] = data['Close']
+                    logger.info(f"컬럼 '{col}'을 Close 값으로 대체")
+                elif col == 'Volume':
+                    data[col] = 0
+                    logger.info(f"컬럼 '{col}'을 0으로 설정")
+
+        # 컬럼 순서 맞추기
+        data = data[required_columns]
+
+        # NaN 값 및 무한대 값 처리 (최적화: 체이닝으로 단일 패스)
+        data = data.replace([np.inf, -np.inf], np.nan).dropna()
+
+        if data.empty:
+            raise DataNotFoundError(f"'{ticker}' 종목의 유효한 데이터가 없습니다.")
+
+        # 날짜 범위 확인
+        if len(data) < 5:
+            logger.warning(f"데이터가 적습니다: {ticker}, {len(data)} 레코드")
+
+        logger.info(f"데이터 수집 완료: {ticker}, {len(data)} 레코드")
+        return data
+
     def validate_ticker(self, ticker: str) -> bool:
         """
         티커 유효성 검증
