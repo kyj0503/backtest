@@ -1242,14 +1242,22 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - validate_commission(): 수수료 검증
   - validate_strategy_params(): 전략 파라미터 검증
   - app/validators/__init__.py: BacktestValidator 추가
+  - Commits: b307814
+
+- ✅ Phase 2.3.4: PortfolioValidator 생성
+  - app/validators/portfolio_validator.py: PortfolioValidator 클래스 생성
+  - validate_request(): 포트폴리오 요청 전체 검증
+  - validate_portfolio_composition(): 포트폴리오 구성 검증 (종목 수, 중복)
+  - validate_weights(): 비중 합계 검증 (95-105% 허용)
+  - validate_rebalance_frequency(): 리밸런싱 주기 검증
+  - validate_dca_frequency(): DCA 주기 검증
+  - app/validators/__init__.py: PortfolioValidator 추가
   - Commits: (pending)
 
 ### 진행 예정
-- ⏳ Phase 2.3.4: PortfolioValidator 생성
+
 - ⏳ Phase 2.3.5: ValidationService 리팩터링 + Pydantic schemas 단순화
 - ⏳ Phase 2.3.6: 문서 업데이트
-
-### 진행 예정
 
 ---
 
