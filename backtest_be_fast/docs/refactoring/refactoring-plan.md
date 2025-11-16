@@ -915,13 +915,19 @@ stock_repository = StockRepository()
 #### 체크리스트
 
 **파일별 마이그레이션**:
-- [ ] `portfolio_service.py`: `load_ticker_data` 5회 → `stock_repo.get_price_data`
-- [ ] `backtest_engine.py`: `load_ticker_data` 2회 → `stock_repo.get_price_data`
-- [ ] `data_service.py`: 직접 접근 → `stock_repo` 사용
-- [ ] `unified_data_service.py`: 직접 접근 → `stock_repo` 사용
-- [ ] `chart_data_service.py`: 혼용 → 완전히 `stock_repo` 사용
+- [x] `StockRepository` 생성 (app/repositories/stock_repository.py)
+- [x] `portfolio_service.py`: `load_ticker_data`, `get_ticker_info_batch_from_db` → `stock_repository` 사용
+- [x] `backtest_engine.py`: 미사용 import 제거 (data_repository 사용)
+- [x] `data_service.py`: `load_ticker_data` → `stock_repository` 사용
+- [x] `currency_converter.py`: `load_ticker_data`, `get_ticker_info_from_db` → `stock_repository` 사용
+- [x] `data_repository.py`: `load_ticker_data`, `save_ticker_data` → `stock_repository` 사용
+- [x] `portfolio_simulator.py`: 미사용 import 제거
+- [x] 모든 직접 yfinance_db import 제거 (stock_repository만 사용)
 
-**테스트**:
+**마이그레이션 완료**:
+✅ Phase 1.3 Repository Pattern 강화 완료 (5개 서비스 모두 마이그레이션)
+
+**테스트 (추후)**:
 - [ ] 각 서비스별 unit test 통과
 - [ ] Integration test 통과 (실제 DB 연결)
 - [ ] E2E test 통과 (API 엔드포인트)
@@ -2564,4 +2570,6 @@ git commit -m "refactor: Extract PortfolioDcaManager from PortfolioService"
 
 | 날짜 | 버전 | 변경 내용 |
 |------|------|-----------|
+| 2025-11-16 | 1.0.2 | **Phase 1.3 완료**: StockRepository 생성, 5개 서비스 마이그레이션, 모든 직접 yfinance_db import 제거 |
+| 2025-11-16 | 1.0.1 | Phase 1.2 완료: DatabaseConfig, PoolConfig, DatabaseConnectionManager 생성 |
 | 2025-11-16 | 1.0.0 | 초안 작성 |
