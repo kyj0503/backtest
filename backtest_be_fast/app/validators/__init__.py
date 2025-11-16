@@ -21,14 +21,16 @@ date_validator.validate_date_range(start, end)
 symbol_validator = SymbolValidator(data_fetcher)
 ticker = symbol_validator.validate_and_normalize("aapl")
 
-backtest_validator = BacktestValidator()
+backtest_validator = BacktestValidator(data_fetcher, strategy_service)
 backtest_validator.validate_request(request)
 ```
 """
 from .date_validator import DateValidator
 from .symbol_validator import SymbolValidator
+from .backtest_validator import BacktestValidator
 
 __all__ = [
     'DateValidator',
     'SymbolValidator',
+    'BacktestValidator',
 ]

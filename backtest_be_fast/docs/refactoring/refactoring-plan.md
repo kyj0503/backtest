@@ -1233,10 +1233,18 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - normalize_ticker(): 티커 정규화 (대문자 변환)
   - validate_and_normalize(): 올인원 검증 메서드
   - app/validators/__init__.py: SymbolValidator 추가
+  - Commits: 4934d02
+
+- ✅ Phase 2.3.3: BacktestValidator 생성
+  - app/validators/backtest_validator.py: BacktestValidator 클래스 생성
+  - validate_request(): 백테스트 요청 전체 검증 (DateValidator + SymbolValidator 조합)
+  - validate_initial_cash(): 초기 자본 검증
+  - validate_commission(): 수수료 검증
+  - validate_strategy_params(): 전략 파라미터 검증
+  - app/validators/__init__.py: BacktestValidator 추가
   - Commits: (pending)
 
 ### 진행 예정
-- ⏳ Phase 2.3.3: BacktestValidator 생성
 - ⏳ Phase 2.3.4: PortfolioValidator 생성
 - ⏳ Phase 2.3.5: ValidationService 리팩터링 + Pydantic schemas 단순화
 - ⏳ Phase 2.3.6: 문서 업데이트
