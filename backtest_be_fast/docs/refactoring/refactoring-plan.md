@@ -1224,11 +1224,18 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - validate_not_future(): 미래 날짜 검증
   - validate_business_days(): 영업일 수 검증
   - app/validators/__init__.py: 패키지 초기화
+  - Commits: 78ca4b6
+
+- ✅ Phase 2.3.2: SymbolValidator 생성
+  - app/validators/symbol_validator.py: SymbolValidator 클래스 생성
+  - validate_ticker_format(): 티커 형식 검증 (정규식)
+  - validate_ticker_exists(): 티커 존재 여부 확인 (DataFetcher 연동)
+  - normalize_ticker(): 티커 정규화 (대문자 변환)
+  - validate_and_normalize(): 올인원 검증 메서드
+  - app/validators/__init__.py: SymbolValidator 추가
   - Commits: (pending)
 
 ### 진행 예정
-
-- ⏳ Phase 2.3.2: SymbolValidator 생성
 - ⏳ Phase 2.3.3: BacktestValidator 생성
 - ⏳ Phase 2.3.4: PortfolioValidator 생성
 - ⏳ Phase 2.3.5: ValidationService 리팩터링 + Pydantic schemas 단순화

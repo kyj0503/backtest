@@ -13,17 +13,22 @@ Validators 패키지
 
 **사용 패턴**:
 ```python
-from app.validators import DateValidator, BacktestValidator
+from app.validators import DateValidator, SymbolValidator, BacktestValidator
 
 date_validator = DateValidator()
 date_validator.validate_date_range(start, end)
+
+symbol_validator = SymbolValidator(data_fetcher)
+ticker = symbol_validator.validate_and_normalize("aapl")
 
 backtest_validator = BacktestValidator()
 backtest_validator.validate_request(request)
 ```
 """
 from .date_validator import DateValidator
+from .symbol_validator import SymbolValidator
 
 __all__ = [
     'DateValidator',
+    'SymbolValidator',
 ]
