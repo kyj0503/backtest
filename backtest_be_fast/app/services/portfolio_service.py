@@ -64,6 +64,10 @@ from app.services.backtest_service import backtest_service
 from app.services.dca_calculator import DCACalculator
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
 from app.services.portfolio_calculator_service import portfolio_calculator_service
+from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
+from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
+from app.services.portfolio.portfolio_simulator import PortfolioSimulator
+from app.services.portfolio.portfolio_metrics import PortfolioMetrics
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
     DataNotFoundError,
@@ -80,6 +84,14 @@ class PortfolioService:
     """포트폴리오 백테스트 서비스"""
     def __init__(self):
         """포트폴리오 서비스 초기화"""
+        # 추출된 컴포넌트 초기화
+        self.dca_manager = PortfolioDcaManager()
+        self.rebalancer = PortfolioRebalancer()
+        self.simulator = PortfolioSimulator(
+            dca_manager=self.dca_manager,
+            rebalancer=self.rebalancer
+        )
+        self.metrics = PortfolioMetrics()
         logger.info("포트폴리오 서비스가 초기화되었습니다")
 
     @staticmethod
@@ -773,8 +785,8 @@ class PortfolioService:
 
         return adjusted_target_weights
 
-    @staticmethod
     async def calculate_dca_portfolio_returns(
+        self,
         portfolio_data: Dict[str, pd.DataFrame],
         amounts: Dict[str, float],
         dca_info: Dict[str, Dict],
@@ -881,7 +893,7 @@ class PortfolioService:
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
 
         # 포트폴리오 상태 초기화 (Extract Method 리팩토링)
-        state = PortfolioService._initialize_portfolio_state(
+        state = self.simulator.initialize_portfolio_state(
             stock_amounts=stock_amounts,
             cash_amount=cash_amount,
             amounts=amounts,
@@ -914,7 +926,7 @@ class PortfolioService:
                 break
 
             # 현재 가격 가져오기 및 USD 변환 (Extract Method 리팩토링)
-            current_prices, last_valid_exchange_rates = PortfolioService._fetch_and_convert_prices(
+            current_prices, last_valid_exchange_rates = self.simulator.fetch_and_convert_prices(
                 current_date=current_date,
                 stock_amounts=stock_amounts,
                 portfolio_data=portfolio_data,
@@ -924,7 +936,7 @@ class PortfolioService:
             )
 
             # 상장폐지 감지 및 상태 업데이트 (Extract Method 리팩토링)
-            PortfolioService._detect_and_update_delisting(
+            self.simulator.detect_and_update_delisting(
                 current_date=current_date,
                 stock_amounts=stock_amounts,
                 current_prices=current_prices,
@@ -944,7 +956,7 @@ class PortfolioService:
 
             # 첫 날 초기 매수 실행 (Extract Method 리팩토링)
             if is_first_day:
-                trades, cash_inflow = PortfolioService._execute_initial_purchases(
+                trades, cash_inflow = self.dca_manager.execute_initial_purchases(
                     current_date=current_date,
                     stock_amounts=stock_amounts,
                     current_prices=current_prices,
@@ -959,7 +971,7 @@ class PortfolioService:
 
             # DCA 추가 매수 실행 (Extract Method 리팩토링)
             if prev_date is not None:
-                trades, cash_inflow = PortfolioService._execute_periodic_dca_purchases(
+                trades, cash_inflow = self.dca_manager.execute_periodic_purchases(
                     current_date=current_date,
                     prev_date=prev_date,
                     stock_amounts=stock_amounts,
@@ -997,7 +1009,7 @@ class PortfolioService:
 
             if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
                 # 상장폐지 종목이 있는 경우 동적 비중 재계산 (Extract Method 리팩토링)
-                adjusted_target_weights = PortfolioService._calculate_adjusted_rebalance_weights(
+                adjusted_target_weights = self.rebalancer.calculate_adjusted_weights(
                     target_weights=target_weights,
                     delisted_stocks=delisted_stocks,
                     dca_info=dca_info
@@ -1021,7 +1033,7 @@ class PortfolioService:
                     if key in current_prices
                 )
 
-                rebalance_result = PortfolioService._execute_rebalancing_trades(
+                rebalance_result = self.rebalancer.execute_rebalancing_trades(
                     current_date=current_date,
                     adjusted_target_weights=adjusted_target_weights,
                     shares=shares,
@@ -1055,7 +1067,7 @@ class PortfolioService:
                 total_trades += trades_in_rebalance
 
             # 일일 지표 계산 및 히스토리 기록 (Extract Method 리팩토링)
-            normalized_value, daily_return, current_weights = PortfolioService._calculate_daily_metrics_and_history(
+            normalized_value, daily_return, current_weights = self.metrics.calculate_daily_metrics_and_history(
                 current_date=current_date,
                 shares=shares,
                 available_cash=available_cash,
