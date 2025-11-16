@@ -26,7 +26,6 @@ from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
 from app.utils.currency_converter import currency_converter
-from app.services.yfinance_db import get_ticker_info_batch_from_db
 from app.constants.data_loading import TradingThresholds
 
 logger = logging.getLogger(__name__)
