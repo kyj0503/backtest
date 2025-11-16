@@ -63,7 +63,7 @@ from app.services.backtest_service import backtest_service
 from app.repositories.stock_repository import get_stock_repository
 from app.services.dca_calculator import DcaCalculator
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
-from app.services.portfolio_calculator import portfolio_calculator
+from app.services.portfolio_calculator_service import portfolio_calculator
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.portfolio.portfolio_simulator import PortfolioSimulator
