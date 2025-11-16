@@ -44,7 +44,7 @@ import logging
 from abc import ABC, abstractmethod
 
 from app.utils.data_fetcher import data_fetcher
-from app.services import yfinance_db
+from app.repositories.stock_repository import get_stock_repository
 from app.constants.data_loading import CacheConfig
 
 
@@ -73,13 +73,15 @@ class DataRepositoryInterface(ABC):
         pass
 
 
-class YFinanceDataRepository(DataRepositoryInterface):
+class YfinanceDataRepository(DataRepositoryInterface):
     """yfinance 기반 데이터 Repository"""
 
     def __init__(self):
         self.data_fetcher = data_fetcher
         self.logger = logging.getLogger(__name__)
         self._memory_cache: Dict[str, Dict[str, Any]] = {}
+        # Repository 초기화 (Repository 패턴)
+        self.stock_repository = get_stock_repository()
         # 동적 TTL: 과거 데이터 24시간, 최근 데이터 1시간
 
     def _get_cache_ttl(self, end_date: Union[date, str]) -> int:
@@ -118,7 +120,7 @@ class YFinanceDataRepository(DataRepositoryInterface):
             # 2. MySQL 캐시 확인
             try:
                 cached_data = await asyncio.to_thread(
-                    yfinance_db.load_ticker_data, ticker, start_date, end_date
+                    self.stock_repository.load_stock_data, ticker, start_date, end_date
                 )
                 if cached_data is not None and not cached_data.empty:
                     self.logger.debug(f"MySQL 캐시에서 데이터 반환: {ticker}")
@@ -135,7 +137,7 @@ class YFinanceDataRepository(DataRepositoryInterface):
             # 3. 실시간 데이터 페칭
             self.logger.info(f"실시간 데이터 페칭: {ticker}")
             fresh_data = await asyncio.to_thread(
-                self.data_fetcher.get_stock_data, ticker, start_date, end_date
+                self.data_fetcher.fetch_stock_data, ticker, start_date, end_date
             )
 
             # 4. 캐시에 저장
@@ -157,9 +159,9 @@ class YFinanceDataRepository(DataRepositoryInterface):
     async def cache_stock_data(self, ticker: str, data: pd.DataFrame) -> bool:
         """주식 데이터 캐시 저장"""
         try:
-            # MySQL 캐시에 저장 (yfinance_db 함수 사용)
+            # MySQL 캐시에 저장 (stock_repository 사용)
             success = await asyncio.to_thread(
-                yfinance_db.save_ticker_data, ticker, data
+                self.stock_repository.save_stock_data, ticker, data
             )
             if success > 0:
                 self.logger.info(f"데이터 캐시 저장 완료: {ticker}, {success}행")
@@ -239,5 +241,5 @@ class YFinanceDataRepository(DataRepositoryInterface):
 
 
 # 전역 인스턴스
-DataRepository = YFinanceDataRepository()
+DataRepository = YfinanceDataRepository()
 data_repository = DataRepository

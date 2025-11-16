@@ -2,28 +2,21 @@
 백테스트 검증 서비스
 
 **역할**:
-- 백테스트 요청 데이터의 유효성 검증
-- 데이터 가용성 확인
-- 전략 파라미터 검증
+- 백테스트 요청 데이터의 유효성 검증 (Validator 위임)
+- 폴백 통계 생성 유틸리티
 
 **주요 기능**:
-1. validate_backtest_request(): 백테스트 요청 전체 검증
-   - 날짜 범위 유효성
-   - 종목 심볼 존재 여부
-   - 전략 파라미터 유효성
-2. check_data_availability(): 데이터 조회 가능 여부 확인
-3. validate_date_range(): 날짜 범위 검증
+1. validate_backtest_request(): 백테스트 요청 전체 검증 → BacktestValidator로 위임
+2. create_fallback_stats(): 폴백 통계 생성
 
-**검증 규칙**:
-- 시작일 < 종료일
-- 날짜 포맷: YYYY-MM-DD
-- 종목 데이터 존재 확인
-- 전략별 파라미터 범위 검증
+**리팩터링 변경사항**:
+- 검증 로직은 BacktestValidator로 위임
+- 이 서비스는 호환성 레이어 역할
+- 향후 deprecate 예정
 
 **의존성**:
-- app/repositories/data_repository.py: 데이터 조회
-- app/services/strategy_service.py: 전략 검증
-- app/core/exceptions.py: 검증 예외
+- app/validators/backtest_validator: 검증 로직
+- app/core/exceptions: 검증 예외
 
 **연관 컴포넌트**:
 - Backend: app/api/v1/endpoints/backtest.py (검증 호출)
@@ -41,51 +34,50 @@ from app.schemas.requests import BacktestRequest
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
 from app.core.exceptions import ValidationError
-from app.repositories.data_repository import data_repository
+from app.validators.backtest_validator import BacktestValidator
 
 
 class ValidationService:
-    """백테스트 요청 검증 및 유틸리티 전담 서비스"""
-    
-    def __init__(self, data_repository_instance=None):
-        self.data_repository = data_repository_instance or data_repository
-        self.data_fetcher = data_fetcher
+    """백테스트 요청 검증 및 유틸리티 전담 서비스
+
+    Note: 검증 로직은 BacktestValidator로 위임됨 (Phase 2.3 리팩터링)
+    """
+
+    def __init__(self, data_fetcher_instance=None, strategy_service_instance=None):
+        """
+        Args:
+            data_fetcher_instance: DataFetcher 인스턴스 (선택)
+            strategy_service_instance: StrategyService 인스턴스 (선택)
+        """
+        self.data_fetcher = data_fetcher_instance or data_fetcher
+        self.strategy_service = strategy_service_instance or strategy_service
         self.logger = logging.getLogger(__name__)
-    
+
+        # Phase 2.3: 새로운 BacktestValidator 사용
+        self.backtest_validator = BacktestValidator(
+            data_fetcher=self.data_fetcher,
+            strategy_service=self.strategy_service
+        )
+
     def validate_backtest_request(self, request: BacktestRequest) -> None:
-        """백테스트 요청 검증"""
+        """
+        백테스트 요청 검증 (BacktestValidator로 위임)
+
+        Args:
+            request: BacktestRequest 객체
+
+        Raises:
+            ValidationError: 검증 실패 시
+        """
         try:
-            # 1. 티커 검증
-            if not self.data_fetcher.validate_ticker(request.ticker):
-                raise ValidationError(f"유효하지 않은 티커: {request.ticker}")
-            
-            # 2. 날짜 검증
-            if request.start_date >= request.end_date:
-                raise ValidationError("시작 날짜는 종료 날짜보다 빨라야 합니다")
-            
-            # 3. 현금 검증
-            if request.initial_cash <= 0:
-                raise ValidationError("초기 현금은 0보다 커야 합니다")
-            
-            # 4. 전략 검증
-            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
-            if strategy_name not in strategy_service.get_all_strategies():
-                raise ValidationError(f"지원하지 않는 전략: {request.strategy}")
-            
-            # 5. 전략 파라미터 검증
-            if request.strategy_params:
-                try:
-                    strategy_service.validate_strategy_params(
-                        strategy_name, 
-                        request.strategy_params
-                    )
-                except ValueError as ve:
-                    raise ValidationError(f"전략 파라미터 오류: {str(ve)}")
-            
+            # Phase 2.3: BacktestValidator로 위임
+            self.backtest_validator.validate_request(request)
             self.logger.info(f"백테스트 요청 검증 완료: {request.ticker}")
-            
-        except ValidationError:
-            raise
+
+        except ValueError as ve:
+            # BacktestValidator의 ValueError를 ValidationError로 변환
+            self.logger.error(f"백테스트 요청 검증 실패: {str(ve)}")
+            raise ValidationError(str(ve))
         except Exception as e:
             self.logger.error(f"백테스트 요청 검증 중 오류: {str(e)}")
             raise ValidationError(f"요청 검증 실패: {str(e)}")

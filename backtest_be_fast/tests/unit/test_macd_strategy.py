@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from backtesting import Backtest
-from app.strategies.macd_strategy import MACDStrategy
+from app.strategies.strategies import MacdStrategy
 
 
 class TestMACDCalculation:
@@ -31,7 +31,7 @@ class TestMACDCalculation:
         prices = pd.Series([100 + i for i in range(50)])
 
         # When: MACD 라인 계산
-        macd_line = MACDStrategy._macd_line(None, prices, fast=12, slow=26)
+        macd_line = MacdStrategy._macd_line(None, prices, fast=12, slow=26)
 
         # Then: MACD 라인이 계산됨
         assert not macd_line.isna().all()
@@ -45,7 +45,7 @@ class TestMACDCalculation:
         prices = pd.Series([100 + i for i in range(50)])
 
         # When: 시그널 라인 계산
-        signal_line = MACDStrategy._signal_line(None, prices, fast=12, slow=26, signal=9)
+        signal_line = MacdStrategy._signal_line(None, prices, fast=12, slow=26, signal=9)
 
         # Then: 시그널 라인이 계산됨
         assert not signal_line.isna().all()
@@ -59,7 +59,7 @@ class TestMACDCalculation:
         prices = pd.Series([100 + i * 2 for i in range(50)])
 
         # When
-        macd_line = MACDStrategy._macd_line(None, prices, fast=12, slow=26)
+        macd_line = MacdStrategy._macd_line(None, prices, fast=12, slow=26)
 
         # Then: 상승 추세에서 MACD > 0
         assert macd_line.iloc[-1] > 0
@@ -72,7 +72,7 @@ class TestMACDCalculation:
         prices = pd.Series([200 - i * 2 for i in range(50)])
 
         # When
-        macd_line = MACDStrategy._macd_line(None, prices, fast=12, slow=26)
+        macd_line = MacdStrategy._macd_line(None, prices, fast=12, slow=26)
 
         # Then: 하락 추세에서 MACD < 0
         assert macd_line.iloc[-1] < 0
@@ -85,13 +85,13 @@ class TestMACDCalculation:
         prices = pd.Series([100.0] * 50)
 
         # When
-        macd_line = MACDStrategy._macd_line(None, prices, fast=12, slow=26)
+        macd_line = MacdStrategy._macd_line(None, prices, fast=12, slow=26)
 
         # Then: MACD가 0
         assert macd_line.iloc[-1] == pytest.approx(0.0, abs=0.01)
 
 
-class TestMACDStrategy:
+class TestMacdStrategy:
     """MACD 전략 시그널 생성 검증"""
 
     def create_sample_data(self, close_prices):
@@ -121,7 +121,7 @@ class TestMACDStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_period=12, slow_period=26, signal_period=9)
 
         # Then: 거래 발생
@@ -141,7 +141,7 @@ class TestMACDStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_period=12, slow_period=26, signal_period=9)
 
         # Then: 거래 발생
@@ -161,7 +161,7 @@ class TestMACDStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.0)
         result = bt.run()
 
         # Then: 최종 자본이 초기 자본의 85% 이상
@@ -180,7 +180,7 @@ class TestMACDStrategy:
         data = self.create_sample_data(close_prices)
 
         # When: 커스텀 파라미터 (더 빠른 MACD)
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_period=5, slow_period=13, signal_period=5)
 
         # Then: 백테스트 완료
@@ -196,7 +196,7 @@ class TestMACDStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.0)
         result = bt.run()
 
         # Then: 에러 없이 실행
@@ -228,7 +228,7 @@ class TestMACDEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.0)
         result = bt.run()
 
         # Then: 에러 없이 실행
@@ -243,7 +243,7 @@ class TestMACDEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.0)
         result = bt.run()
 
         # Then: 백테스트 완료 (거래는 적을 수 있음)
@@ -262,7 +262,7 @@ class TestMACDEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.01)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.01)
         result = bt.run()
 
         # Then: 빈번한 거래로 수수료 손실 가능
@@ -281,7 +281,7 @@ class TestMACDEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.01)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.01)
         result = bt.run(fast_period=5, slow_period=10, signal_period=3)
 
         # Then: 여러 거래 발생 가능
@@ -296,7 +296,7 @@ class TestMACDEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When: 매우 느린 MACD
-        bt = Backtest(data, MACDStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_period=26, slow_period=52, signal_period=18)
 
         # Then: 거래가 적음
@@ -310,8 +310,8 @@ class TestMACDEdgeCases:
         prices = pd.Series([100 + i * 0.5 for i in range(50)])
 
         # When
-        macd_line = MACDStrategy._macd_line(None, prices, 12, 26)
-        signal_line = MACDStrategy._signal_line(None, prices, 12, 26, 9)
+        macd_line = MacdStrategy._macd_line(None, prices, 12, 26)
+        signal_line = MacdStrategy._signal_line(None, prices, 12, 26, 9)
         histogram = macd_line - signal_line
 
         # Then: 히스토그램이 계산됨
@@ -328,7 +328,7 @@ class TestMACDEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, MACDStrategy, cash=0, commission=0.0)
+        bt = Backtest(data, MacdStrategy, cash=0, commission=0.0)
         result = bt.run()
 
         # Then: 거래 없음
