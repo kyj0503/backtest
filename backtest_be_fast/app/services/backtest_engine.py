@@ -52,7 +52,6 @@ from app.utils.data_fetcher import data_fetcher, InvalidSymbolError as DataFetch
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
 from app.services.validation_service import validation_service
-from app.services.yfinance_db import get_ticker_info_from_db, load_ticker_data
 from app.core.exceptions import ValidationError
 from app.constants.currencies import SUPPORTED_CURRENCIES
 from app.utils.currency_converter import currency_converter
