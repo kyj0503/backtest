@@ -1,49 +1,8 @@
-"""
-차트 데이터 생성 서비스 (Strategy Pattern 적용)
+"""차트 데이터 생성 서비스
 
-**역할**:
-- 백테스트 결과를 프론트엔드 차트 라이브러리(Recharts)가 사용할 수 있는 형식으로 변환
-- OHLC, 자산 곡선, 기술 지표, 거래 마커 등 다양한 차트 데이터 생성
-
-**주요 기능**:
-1. generate_chart_data(): 메인 차트 데이터 생성 메서드
-   - 입력: BacktestRequest (백테스트 설정)
-   - 출력: ChartDataResponse (모든 차트 데이터 포함)
-
-2. 데이터 생성 메서드:
-   - _generate_ohlc_data(): OHLC 캔들스틱 차트 데이터
-   - _generate_equity_data(): 자산 가치 곡선 데이터
-   - _generate_trade_markers(): 매수/매도 거래 표시
-   - _generate_indicators(): 기술 지표 데이터 (Strategy Pattern 사용)
-   - _generate_benchmark_data(): 벤치마크 지수 데이터
-
-**지원 기술 지표** (Strategy Pattern):
-- SMA (단순 이동평균): 추세 파악
-- RSI (상대강도지수): 과매수/과매도 판단
-- Bollinger Bands: 변동성 측정
-- MACD (이동평균수렴확산): 매매 시그널
-- EMA (지수 이동평균): 최근 가격 중시
-
-**설계 패턴**:
-- Strategy Pattern: 기술 지표 계산 로직을 전략으로 분리
-- Factory Pattern: IndicatorFactory를 통해 지표 인스턴스 생성
-- Open/Closed Principle: 새로운 지표 추가 시 기존 코드 수정 불필요
-
-**의존성**:
-- app/services/indicators: 기술 지표 Strategy 구현
-- app/services/strategy_service.py: 전략 파라미터 검증
-- app/utils/data_fetcher.py: 주가 데이터 조회
-- pandas, numpy: 데이터 처리 및 지표 계산
-
-**연관 컴포넌트**:
-- Backend: app/api/v1/endpoints/backtest.py (차트 데이터 응답)
-- Frontend: src/features/backtest/components/ChartDisplay.tsx (차트 렌더링)
-- Frontend: src/shared/components/charts/ (개별 차트 컴포넌트)
-
-**출력 형식**:
-- JSON 직렬화 가능한 리스트/딕셔너리
-- 날짜는 ISO 8601 문자열 형식
-- NaN/Infinity는 None으로 변환
+백테스트 결과를 Recharts용 형식으로 변환합니다.
+OHLC, 자산 곡선, 기술 지표(SMA, RSI, Bollinger Bands, MACD, EMA), 거래 마커, 벤치마크 데이터를 생성합니다.
+Strategy Pattern과 Factory Pattern을 사용합니다.
 """
 import asyncio
 import logging
@@ -83,36 +42,7 @@ class ChartDataService:
         self.logger = logging.getLogger(__name__)
     
     async def generate_chart_data(self, request: BacktestRequest, backtest_result: BacktestResult = None) -> ChartDataResponse:
-        """
-        백테스트 결과로부터 Recharts용 차트 데이터를 생성합니다.
-        
-        ★ 주요 금융 용어 설명:
-        
-        1. OHLC: Open(시가), High(고가), Low(저가), Close(종가)
-           - 하루의 주가 움직임을 나타내는 4가지 기본 가격
-        
-        2. SMA (Simple Moving Average, 단순 이동평균):
-           - 일정 기간의 주가 평균값으로 추세를 파악하는 지표
-           - SMA_20 = 최근 20일간 종가의 평균
-           - 주가가 SMA 위에 있으면 상승추세, 아래에 있으면 하락추세
-        
-        3. 드로우다운 (Drawdown):
-           - 투자 포트폴리오가 최고점에서 얼마나 떨어졌는지 나타내는 지표
-           - 예: 1000만원 → 800만원 = -20% 드로우다운
-           - 투자 위험을 측정하는 중요한 지표
-        
-        4. Buy & Hold 전략:
-           - 주식을 사서 장기간 보유하는 가장 단순한 투자 전략
-           - 시장 타이밍을 맞추려 하지 않고 꾸준히 보유
-        
-        5. 수익률 (Return):
-           - 투자 원금 대비 얼마나 수익을 냈는지의 비율
-           - (현재가 - 매수가) / 매수가 × 100
-        
-        6. 승률 (Win Rate):
-           - 전체 거래 중 수익을 낸 거래의 비율
-           - 높을수록 좋지만 수익 크기도 함께 고려해야 함
-        """
+        """Recharts용 차트 데이터 생성 (OHLC, 자산 곡선, 지표, 거래 마커, 벤치마크)"""
         try:
             # 전략 파라미터 검증 (전략이 buy_hold_strategy가 아닐 때만)
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
@@ -216,16 +146,10 @@ class ChartDataService:
             raise
 
     async def _get_price_data(self, ticker, start_date, end_date) -> pd.DataFrame:
-        """
-        캐시 우선 가격 데이터 조회
-
-        FIXED: Race condition bug - data_fetcher.fetch_stock_data() is synchronous
-        and must be wrapped with asyncio.to_thread() to prevent blocking the event loop.
-        """
+        """캐시 우선 가격 데이터 조회"""
         if self.data_repository:
             data = await self.data_repository.get_stock_data(ticker, start_date, end_date)
         else:
-            # FIXED: Wrap synchronous call with asyncio.to_thread() (async/sync boundary)
             data = await asyncio.to_thread(
                 self.data_fetcher.fetch_stock_data,
                 ticker=ticker,
@@ -375,20 +299,7 @@ class ChartDataService:
         return markers
     
     def _generate_indicators(self, data: pd.DataFrame, strategy: str, strategy_params: Dict[str, Any]) -> List[IndicatorData]:
-        """
-        기술 지표 데이터 생성 (Strategy Pattern 적용)
-
-        Strategy Pattern을 사용하여 각 지표의 계산 로직을 분리했습니다.
-        새로운 지표 추가 시 이 메서드를 수정할 필요 없습니다 (Open/Closed Principle).
-
-        Args:
-            data: OHLCV 데이터
-            strategy: 전략명 (sma_crossover, rsi_strategy 등)
-            strategy_params: 전략 파라미터 딕셔너리
-
-        Returns:
-            IndicatorData 객체 리스트
-        """
+        """기술 지표 데이터 생성 (Strategy Pattern)"""
         indicators = []
 
         # 전략에 해당하는 지표명 조회
@@ -398,13 +309,10 @@ class ChartDataService:
             return indicators
 
         try:
-            # Factory Pattern: 지표 인스턴스 획득
             indicator_strategy = indicator_factory.get_indicator(indicator_name)
 
-            # 지표 계산
             result_data = indicator_strategy.calculate(data, strategy_params)
 
-            # 결과를 IndicatorData 형식으로 변환
             indicators = self._convert_indicator_results(result_data, indicator_name)
 
         except Exception as e:
@@ -413,16 +321,7 @@ class ChartDataService:
         return indicators
 
     def _convert_indicator_results(self, result_data: pd.DataFrame, indicator_name: str) -> List[IndicatorData]:
-        """
-        지표 계산 결과를 IndicatorData 형식으로 변환
-
-        Args:
-            result_data: 지표 계산 결과 DataFrame (원본 데이터 + 지표 컬럼)
-            indicator_name: 지표명
-
-        Returns:
-            IndicatorData 객체 리스트
-        """
+        """지표 계산 결과를 IndicatorData 형식으로 변환"""
         indicators = []
         color_map = {
             'SMA': ['#8884d8', '#82ca9d'],

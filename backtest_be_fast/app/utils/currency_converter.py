@@ -1,49 +1,11 @@
-"""
-환율 변환 유틸리티
+"""환율 변환 유틸리티
 
-**역할**:
-- 주가 데이터를 원래 통화에서 USD로 변환
-- 환율 데이터 로딩, 전처리, 캐싱 로직 중앙화
-- 코드 중복 제거 (backtest_engine, portfolio_service)
+주가 데이터를 원래 통화에서 USD로 변환합니다.
+지원 통화: KRW, JPY, CNY, EUR, GBP, AUD, CAD, CHF 등
 
-**주요 기능**:
-1. get_conversion_multiplier(): 통화별 변환 비율 계산
-2. load_and_prepare_exchange_rates(): 환율 데이터 로딩 및 전처리
-3. convert_dataframe_to_usd(): DataFrame 전체를 USD로 변환
-4. load_multiple_exchange_rates(): 여러 통화 환율 일괄 로딩
-
-**변환 정책**:
-- **직접 환율** (KRW, JPY, CNY, etc.): 1 USD = X 통화 → 가격을 환율로 나누기
-- **USD 환율** (EUR, GBP, AUD, etc.): 1 통화 = X USD → 가격에 환율 곱하기
-
-**의존성**:
-- app/constants/currencies.py: SUPPORTED_CURRENCIES 정의
-- app/services/yfinance_db.py: 환율 데이터 로딩
-
-**연관 컴포넌트**:
-- Backend: app/services/backtest_engine.py (단일 종목 백테스트)
-- Backend: app/services/portfolio_service.py (포트폴리오 백테스트)
-
-**사용 예**:
-```python
-from app.utils.currency_converter import CurrencyConverter
-
-# 단일 종목 변환
-converter = CurrencyConverter()
-usd_data = await converter.convert_dataframe_to_usd(
-    ticker="005930.KS",
-    data=krw_price_data,
-    start_date="2023-01-01",
-    end_date="2023-12-31"
-)
-
-# 여러 통화 환율 로딩 (포트폴리오용)
-exchange_rates = await converter.load_multiple_exchange_rates(
-    currencies=['KRW', 'JPY', 'EUR'],
-    start_date="2023-01-01",
-    end_date="2023-12-31"
-)
-```
+변환 정책:
+- 직접 환율 (KRW, JPY 등): 1 USD = X 통화 → 가격을 환율로 나누기
+- USD 환율 (EUR, GBP 등): 1 통화 = X USD → 가격에 환율 곱하기
 """
 import asyncio
 import logging
@@ -59,47 +21,22 @@ logger = logging.getLogger(__name__)
 
 
 class CurrencyConverter:
-    """환율 변환 유틸리티 클래스"""
+    """환율 변환 유틸리티"""
 
     def __init__(self):
-        """환율 변환기 초기화"""
-        # Repository 초기화 (Repository 패턴)
         self.stock_repository = get_stock_repository()
 
     @staticmethod
     def get_conversion_multiplier(currency: str, exchange_rate: float) -> float:
-        """
-        통화 타입에 따라 USD 변환 비율을 계산합니다.
-
-        Args:
-            currency: 통화 코드 (ISO 4217)
-            exchange_rate: Yahoo Finance에서 가져온 환율
-
-        Returns:
-            float: USD 변환 시 곱해야 할 비율
-
-        Note:
-            - EUR, GBP, AUD, CAD, CHF: XXXUSD=X 형태 (1 통화 = X USD) → 곱하기
-            - KRW, JPY, CNY, etc.: XXX=X 형태 (1 USD = X 통화) → 나누기
-        """
-        # USD 환율 (XXXUSD=X): 통화에 환율을 곱함
+        """통화 타입에 따라 USD 변환 비율 계산"""
         if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
             return exchange_rate
 
-        # 직접 환율 (XXX=X): 통화를 환율로 나눔
         return 1.0 / exchange_rate if exchange_rate > 0 else 1.0
 
     @staticmethod
     def _normalize_date_to_datetime(date_value) -> datetime:
-        """
-        다양한 날짜 형식을 datetime 객체로 정규화합니다.
-
-        Args:
-            date_value: str, date, datetime, 또는 pd.Timestamp
-
-        Returns:
-            datetime: 정규화된 datetime 객체
-        """
+        """다양한 날짜 형식을 datetime 객체로 정규화"""
         if isinstance(date_value, str):
             return datetime.strptime(date_value, '%Y-%m-%d')
         elif isinstance(date_value, date) and not isinstance(date_value, datetime):
@@ -112,18 +49,7 @@ class CurrencyConverter:
 
     @staticmethod
     def _remove_timezone(index: pd.DatetimeIndex) -> pd.DatetimeIndex:
-        """
-        DatetimeIndex에서 타임존을 제거합니다.
-
-        Args:
-            index: pandas DatetimeIndex
-
-        Returns:
-            pd.DatetimeIndex: 타임존이 제거된 인덱스
-
-        Note:
-            한국 주식(Asia/Seoul)과 환율(UTC) 간 타임존 불일치 해결
-        """
+        """DatetimeIndex에서 타임존 제거"""
         if index.tz is not None:
             return index.tz_localize(None)
         return index
