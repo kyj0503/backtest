@@ -21,9 +21,9 @@
 
 **사용 예**:
 ```python
-from app.services.dca_calculator import DcaCalculator
+from app.services.dca_calculator import DCACalculator
 
-total_shares, avg_price, return_pct, log = DcaCalculator.calculate_dca_shares_and_return(
+total_shares, avg_price, return_pct, log = DCACalculator.calculate_dca_shares_and_return(
     df=price_df,
     period_amount=1000.0,     # 월 1000달러
     dca_periods=12,           # 12개월
@@ -50,7 +50,7 @@ from app.services.rebalance_helper import get_next_nth_weekday
 logger = logging.getLogger(__name__)
 
 
-class DcaCalculator:
+class DCACalculator:
     """분할 매수(DCA) 계산 유틸리티"""
 
     @staticmethod
@@ -84,7 +84,7 @@ class DcaCalculator:
 
         Examples
         --------
-        >>> total_shares, avg_price, return_pct, log = DcaCalculator.calculate_dca_shares_and_return(
+        >>> total_shares, avg_price, return_pct, log = DCACalculator.calculate_dca_shares_and_return(
         ...     df=df,
         ...     period_amount=1000.0,
         ...     dca_periods=12,

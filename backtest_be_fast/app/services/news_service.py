@@ -46,7 +46,7 @@ from ..constants import TICKER_TO_COMPANY_NAME
 logger = logging.getLogger(__name__)
 
 
-class NewsService:
+class NaverNewsService:
     """네이버 검색 API를 사용한 뉴스 서비스"""
 
     # 티커 매핑을 외부 상수에서 가져옴
@@ -197,4 +197,4 @@ class NewsService:
 
 
 # 서비스 인스턴스 (싱글톤)
-news_service = NewsService()
+news_service = NaverNewsService()

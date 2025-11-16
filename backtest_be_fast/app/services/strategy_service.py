@@ -43,11 +43,11 @@ import logging
 from backtesting import Strategy
 
 from app.strategies.strategies import (
-    SmaCrossStrategy,
-    RsiStrategy,
+    SMACrossStrategy,
+    RSIStrategy,
     BollingerBandsStrategy,
-    MacdStrategy,
-    EmaStrategy,
+    MACDStrategy,
+    EMAStrategy,
     BuyAndHoldStrategy
 )
 
@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 STRATEGIES: Dict[str, Dict[str, Any]] = {
     'sma_strategy': {
-        'class': SmaCrossStrategy,
+        'class': SMACrossStrategy,
         'name': 'Simple Moving Average Crossover',
         'description': 'SMA 단기/장기 이동평균 교차 전략',
         'parameters': {
@@ -79,7 +79,7 @@ STRATEGIES: Dict[str, Dict[str, Any]] = {
         'constraints': ['short_window < long_window']
     },
     'rsi_strategy': {
-        'class': RsiStrategy,
+        'class': RSIStrategy,
         'name': 'RSI Strategy',
         'description': 'RSI 과매수/과매도 기반 전략',
         'parameters': {
@@ -130,7 +130,7 @@ STRATEGIES: Dict[str, Dict[str, Any]] = {
         'constraints': []
     },
     'macd_strategy': {
-        'class': MacdStrategy,
+        'class': MACDStrategy,
         'name': 'MACD Strategy',
         'description': 'MACD 기반 전략',
         'parameters': {
@@ -159,7 +159,7 @@ STRATEGIES: Dict[str, Dict[str, Any]] = {
         'constraints': ['fast_period < slow_period']
     },
     'ema_strategy': {
-        'class': EmaStrategy,
+        'class': EMAStrategy,
         'name': 'EMA Crossover Strategy',
         'description': 'EMA 단기/장기 이동평균 교차 전략',
         'parameters': {

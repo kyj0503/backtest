@@ -40,7 +40,7 @@ import logging
 import asyncio
 
 from app.repositories.data_repository import data_repository
-from app.repositories.stock_repository import get_stock_repository
+from app.services.yfinance_db import load_ticker_data
 from app.utils.data_fetcher import data_fetcher
 from app.core.exceptions import DataNotFoundError
 
@@ -53,8 +53,6 @@ class DataService:
     def __init__(self):
         self.data_repository = data_repository
         self.data_fetcher = data_fetcher
-        # Repository 초기화 (Repository 패턴)
-        self.stock_repository = get_stock_repository()
 
     def _get_ticker_data_internal(
         self,
@@ -87,14 +85,14 @@ class DataService:
         try:
             if use_db_first:
                 # 1. DB 캐시에서 조회 시도
-                df = self.stock_repository.load_stock_data(ticker, start_date, end_date)
+                df = load_ticker_data(ticker, start_date, end_date)
                 if df is not None and not df.empty:
                     logger.debug(f"DB 캐시에서 데이터 반환: {ticker}")
                     return df
 
             # 2. yfinance에서 실시간 조회
             logger.info(f"yfinance에서 데이터 조회: {ticker}")
-            df = self.data_fetcher.fetch_stock_data(ticker, start_date, end_date)
+            df = self.data_fetcher.get_stock_data(ticker, start_date, end_date)
 
             if df is None or df.empty:
                 raise DataNotFoundError(ticker, str(start_date), str(end_date))

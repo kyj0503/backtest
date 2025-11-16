@@ -66,7 +66,7 @@ class InvalidSymbolError(HTTPException):
         logger.warning(f"잘못된 심볼: {symbol}")
 
 
-class YfinanceRateLimitError(HTTPException):
+class YFinanceRateLimitError(HTTPException):
     """Yahoo Finance API 제한에 도달했을 때 발생하는 예외"""
     def __init__(self, retry_after: int = 60):
         detail = f"Yahoo Finance API 요청 제한에 도달했습니다. {retry_after}초 후 다시 시도해주세요."

@@ -16,7 +16,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from backtesting import Backtest
-from app.strategies.strategies import SmaCrossStrategy, _sma_helper as SMA
+from app.strategies.sma_strategy import SMACrossStrategy, SMA
 
 
 class TestSMACalculation:
@@ -81,7 +81,7 @@ class TestSMACalculation:
         assert sma_short.iloc[-1] > sma_long.iloc[-1]
 
 
-class TestSmaCrossStrategy:
+class TestSMACrossStrategy:
     """SMA 전략 시그널 생성 검증"""
 
     def create_sample_data(self, close_prices):
@@ -109,7 +109,7 @@ class TestSmaCrossStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.0)
         result = bt.run(sma_short=3, sma_long=5)
 
         # Then: 거래 발생 (골든 크로스에서 매수)
@@ -127,7 +127,7 @@ class TestSmaCrossStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.0)
         result = bt.run(sma_short=3, sma_long=5)
 
         # Then: 거래 발생 (매수 후 매도)
@@ -145,7 +145,7 @@ class TestSmaCrossStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.0)
         result = bt.run(sma_short=3, sma_long=5)
 
         # Then: 최종 자본이 초기 자본의 85% 이상
@@ -163,7 +163,7 @@ class TestSmaCrossStrategy:
         data = self.create_sample_data(close_prices)
 
         # When: 커스텀 파라미터
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.0)
         result = bt.run(sma_short=5, sma_long=10)
 
         # Then: 백테스트 완료
@@ -181,7 +181,7 @@ class TestSmaCrossStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.01)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.01)
         result = bt.run(sma_short=2, sma_long=3)
 
         # Then: 높은 수수료로 손실 가능
@@ -214,7 +214,7 @@ class TestSMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.0)
         result = bt.run(sma_short=3, sma_long=5)
 
         # Then: 에러 없이 실행
@@ -229,7 +229,7 @@ class TestSMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.0)
         result = bt.run(sma_short=3, sma_long=5)
 
         # Then: 거래 없음
@@ -244,7 +244,7 @@ class TestSMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When: 단기 = 장기
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.0)
         result = bt.run(sma_short=5, sma_long=5)
 
         # Then: 거래 없음 (교차 없음)
@@ -262,7 +262,7 @@ class TestSMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When: 높은 수수료
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.01)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.01)
         result = bt.run(sma_short=3, sma_long=5)
 
         # Then: 수수료 차감으로 수익률 감소
@@ -280,7 +280,7 @@ class TestSMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When: position_size = 0
-        bt = Backtest(data, SmaCrossStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, SMACrossStrategy, cash=10000, commission=0.0)
         # position_size를 0으로 설정하려면 strategy 클래스 수정 필요
         # 여기서는 매우 작은 값으로 테스트
         result = bt.run(sma_short=3, sma_long=5, position_size=0.001)

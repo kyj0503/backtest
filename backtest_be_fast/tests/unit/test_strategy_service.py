@@ -13,14 +13,12 @@
 """
 import pytest
 from app.services.strategy_service import StrategyService
-from app.strategies.strategies import (
-    BuyAndHoldStrategy,
-    SmaCrossStrategy,
-    RsiStrategy,
-    BollingerBandsStrategy,
-    MacdStrategy,
-    EmaStrategy
-)
+from app.strategies.buy_hold_strategy import BuyAndHoldStrategy
+from app.strategies.sma_strategy import SMACrossStrategy
+from app.strategies.rsi_strategy import RSIStrategy
+from app.strategies.bollinger_strategy import BollingerBandsStrategy
+from app.strategies.macd_strategy import MACDStrategy
+from app.strategies.ema_strategy import EMAStrategy
 
 
 class TestStrategyService:
@@ -46,7 +44,7 @@ class TestStrategyService:
     
     # Given: SMA 전략 요청
     # When: 전략 클래스 반환
-    # Then: SmaCrossStrategy 클래스 반환
+    # Then: SMACrossStrategy 클래스 반환
     def test_sma_strategy_class(self):
         """SMA 전략 클래스 반환 검증"""
         # Given
@@ -56,11 +54,11 @@ class TestStrategyService:
         strategy_class = self.service.get_strategy_class(strategy_name)
         
         # Then
-        assert strategy_class == SmaCrossStrategy
+        assert strategy_class == SMACrossStrategy
     
     # Given: RSI 전략 요청
     # When: 전략 클래스 반환
-    # Then: RsiStrategy 클래스 반환
+    # Then: RSIStrategy 클래스 반환
     def test_rsi_strategy_class(self):
         """RSI 전략 클래스 반환 검증"""
         # Given
@@ -70,7 +68,7 @@ class TestStrategyService:
         strategy_class = self.service.get_strategy_class(strategy_name)
         
         # Then
-        assert strategy_class == RsiStrategy
+        assert strategy_class == RSIStrategy
     
     # Given: 존재하지 않는 전략명
     # When: 전략 클래스 반환 시도

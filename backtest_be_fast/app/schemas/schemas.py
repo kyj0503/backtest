@@ -1,18 +1,10 @@
 """
 포트폴리오 백테스트 관련 스키마
 
-**Phase 2.3 리팩터링 변경사항**:
-- Pydantic schemas는 타입 검증과 파싱만 담당
-- 비즈니스 로직 검증은 app/validators/portfolio_validator.py로 이동
-- Field 제약조건(gt, ge, le 등)은 FastAPI 문서 생성을 위해 유지
-- field_validator는 타입 변환과 기본 포맷 검증만 수행
-- 복잡한 비즈니스 규칙은 PortfolioValidator에서 처리
-
 **역할**:
 - 포트폴리오 백테스트 요청/응답 데이터 모델 정의
-- 기본적인 타입 및 포맷 검증
+- 복잡한 포트폴리오 구성 검증
 - Pydantic을 사용한 타입 안전성 제공
-- FastAPI 자동 문서 생성
 
 **주요 모델**:
 1. PortfolioStock: 개별 종목 설정
@@ -27,26 +19,17 @@
    - rebalance_frequency: 리밸런싱 주기
    - commission: 거래 수수료
 
-**기본 검증 (Pydantic)**:
-- 날짜 형식: YYYY-MM-DD
-- 포트폴리오 크기: 1~10개
+**검증 규칙**:
+- 총 비중 = 100% (비중 기반 모드)
+- 자산 개수: 1~10개
+- 날짜 범위: start_date < end_date
 - 금액/비중: 양수
-- 심볼 포맷: 영문자, 숫자, '.', '-'
-
-**비즈니스 로직 검증 (PortfolioValidator)**:
-- 티커 존재 여부 확인
-- 날짜 범위 유효성 (최소 30일)
-- 미래 날짜 방지
-- 비중 합계 검증 (95-105%)
-- 중복 종목 검증
-- DCA/리밸런싱 주기 유효성
 
 **의존성**:
 - pydantic: 데이터 검증
 
 **연관 컴포넌트**:
 - Backend: app/api/v1/endpoints/backtest.py (요청 모델)
-- Backend: app/validators/portfolio_validator.py (비즈니스 로직 검증)
 - Backend: app/services/portfolio_service.py (데이터 사용)
 - Frontend: src/features/backtest/model/backtest-types.ts (TypeScript 타입)
 """
@@ -82,11 +65,6 @@ class PortfolioStock(BaseModel):
     @field_validator('amount', 'weight')
     @classmethod
     def validate_amount_weight_exclusive(cls, v, info):
-        """
-        기본 상호 배타성 검증 (FastAPI 조기 검증용)
-
-        Note: 이 필드는 타입 및 기본 제약만 검증함
-        """
         # amount와 weight는 동시에 입력 불가
         data = info.data
         amount = data.get('amount')
@@ -98,17 +76,12 @@ class PortfolioStock(BaseModel):
     @field_validator('symbol')
     @classmethod
     def validate_symbol(cls, v, info):
-        """
-        기본 심볼 포맷 검증 (FastAPI 조기 검증용)
-
-        Note: 티커 존재 여부 확인 등 상세한 검증은 SymbolValidator에서 수행됨
-        """
         # asset_type이 'cash'인 경우 더 유연한 검증
         asset_type = info.data.get('asset_type', 'stock')
         if asset_type == 'cash':
             # 현금 자산은 심볼 제한 없음 (한글 "현금" 등 허용)
             return v
-
+        
         # CASH는 특별한 심볼로 허용
         if v.upper() == 'CASH':
             return v.upper()
@@ -153,15 +126,9 @@ class PortfolioBacktestRequest(BaseModel):
     @field_validator('portfolio')
     @classmethod
     def validate_portfolio(cls, v):
-        """
-        기본 포트폴리오 구성 검증 (FastAPI 조기 검증용)
-
-        Note: 상세한 비즈니스 로직 검증(종목 수 제한, 비중 범위 등)은
-        PortfolioValidator에서 수행됨
-        """
         if not v:
             raise ValueError('포트폴리오는 최소 1개 종목을 포함해야 합니다.')
-
+        
         # 중복 종목 검증 (현금 제외)
         stock_symbols = [item.symbol.upper() for item in v if item.asset_type != 'cash']
         if len(stock_symbols) != len(set(stock_symbols)):
@@ -173,13 +140,13 @@ class PortfolioBacktestRequest(BaseModel):
                     duplicates.add(symbol)
                 seen.add(symbol)
             raise ValueError(f'중복된 종목이 있습니다: {", ".join(sorted(duplicates))}. 같은 종목은 한 번만 추가할 수 있습니다.')
-
+        
         # amount/weight 혼합 입력 불가, 모두 amount만 입력 or 모두 weight만 입력 or 일부만 weight면 amount 자동 환산
         has_amount = any(item.amount is not None for item in v)
         has_weight = any(item.weight is not None for item in v)
         if has_amount and has_weight:
             raise ValueError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다. 혼합 입력 불가.')
-
+        
         if has_weight:
             total_weight = sum(item.weight or 0 for item in v)
             # 비중 합계 검증: 100% ± 5% 범위 허용 (프론트엔드와 동일)
@@ -195,11 +162,6 @@ class PortfolioBacktestRequest(BaseModel):
     @field_validator('start_date', 'end_date')
     @classmethod
     def validate_date_format(cls, v):
-        """
-        날짜 포맷 검증 (타입 변환)
-
-        Note: 이 필드는 날짜 형식만 검증함
-        """
         try:
             datetime.strptime(v, '%Y-%m-%d')
         except ValueError:
@@ -209,12 +171,6 @@ class PortfolioBacktestRequest(BaseModel):
     @field_validator('end_date')
     @classmethod
     def validate_date_range(cls, v, info):
-        """
-        기본 날짜 순서 검증 (FastAPI 조기 검증용)
-
-        Note: 상세한 비즈니스 로직 검증(기간 제한, 미래 날짜 등)은
-        DateValidator에서 수행됨
-        """
         if 'start_date' in info.data:
             start = datetime.strptime(info.data['start_date'], '%Y-%m-%d')
             end = datetime.strptime(v, '%Y-%m-%d')

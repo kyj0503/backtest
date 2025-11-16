@@ -53,18 +53,13 @@ import pandas as pd
 
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
 from app.constants.data_loading import TradingThresholds
-from app.repositories.stock_repository import get_stock_repository
+from app.services.yfinance_db import load_ticker_data, get_ticker_info_from_db
 
 logger = logging.getLogger(__name__)
 
 
 class CurrencyConverter:
     """환율 변환 유틸리티 클래스"""
-
-    def __init__(self):
-        """환율 변환기 초기화"""
-        # Repository 초기화 (Repository 패턴)
-        self.stock_repository = get_stock_repository()
 
     @staticmethod
     def get_conversion_multiplier(currency: str, exchange_rate: float) -> float:
@@ -180,7 +175,7 @@ class CurrencyConverter:
 
         # 환율 데이터 로딩 (asyncio.to_thread로 async/sync 경계 준수)
         exchange_data = await asyncio.to_thread(
-            self.stock_repository.load_stock_data, exchange_ticker, exchange_start_date, end_date
+            load_ticker_data, exchange_ticker, exchange_start_date, end_date
         )
 
         if exchange_data is None or exchange_data.empty:
@@ -227,7 +222,7 @@ class CurrencyConverter:
         # 통화 정보 조회
         if currency is None:
             try:
-                ticker_info = await asyncio.to_thread(self.stock_repository.get_ticker_info, ticker)
+                ticker_info = await asyncio.to_thread(get_ticker_info_from_db, ticker)
                 currency = ticker_info.get('currency', 'USD')
                 logger.info(f"{ticker} 통화: {currency}")
             except Exception as e:
@@ -370,7 +365,7 @@ class CurrencyConverter:
 
             # 병렬 로드 태스크 생성
             load_tasks = [
-                asyncio.to_thread(self.stock_repository.load_stock_data, ticker, exchange_start_date, end_date)
+                asyncio.to_thread(load_ticker_data, ticker, exchange_start_date, end_date)
                 for ticker in tickers_to_load
             ]
 

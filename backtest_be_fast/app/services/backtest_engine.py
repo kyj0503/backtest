@@ -52,6 +52,7 @@ from app.utils.data_fetcher import data_fetcher, InvalidSymbolError as DataFetch
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
 from app.services.validation_service import validation_service
+from app.services.yfinance_db import get_ticker_info_from_db, load_ticker_data
 from app.core.exceptions import ValidationError
 from app.constants.currencies import SUPPORTED_CURRENCIES
 from app.utils.currency_converter import currency_converter
@@ -176,7 +177,7 @@ class BacktestEngine:
         else:
             # 동기 data_fetcher를 안전하게 async로 실행
             data = await asyncio.to_thread(
-                self.data_fetcher.fetch_stock_data,
+                self.data_fetcher.get_stock_data,
                 ticker=ticker,
                 start_date=start_date,
                 end_date=end_date,
@@ -407,7 +408,7 @@ class BacktestEngine:
             if getattr(request, 'benchmark_ticker', None):
                 try:
                     self.logger.info(f"벤치마크 데이터 로딩 중: {request.benchmark_ticker}")
-                    benchmark = self.data_fetcher.fetch_stock_data(
+                    benchmark = self.data_fetcher.get_stock_data(
                         ticker=request.benchmark_ticker,
                         start_date=start_date,
                         end_date=end_date

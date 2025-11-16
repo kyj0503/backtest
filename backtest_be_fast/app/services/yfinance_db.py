@@ -43,26 +43,109 @@ import logging
 import time
 import email.utils
 from typing import Optional, Union, List, Dict, Any, Tuple
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 import pandas as pd
 from datetime import datetime, date, timedelta
 from app.utils.data_fetcher import data_fetcher
-from app.services.database.connection_manager import DatabaseConnectionManager
 
 logger = logging.getLogger(__name__)
 
+_ENGINE_CACHE: Optional[Engine] = None
+
 
 def _get_engine() -> Engine:
-    """
-    데이터베이스 Engine을 가져옵니다.
+    global _ENGINE_CACHE
+    if _ENGINE_CACHE is not None:
+        return _ENGINE_CACHE
+    # Prefer settings (which loads .env) but allow direct env fallback if necessary
+    try:
+        from app.core.config import settings
+        db_url = settings.database_url or os.getenv("DATABASE_URL")
+    except Exception:
+        db_url = os.getenv("DATABASE_URL")
 
-    DatabaseConnectionManager를 통해 싱글톤 Engine 인스턴스를 반환합니다.
+    # Ensure these local variables always exist for logging/fallbacks
+    db_host = None
+    db_port = None
+    db_user = None
+    db_pass = None
+    db_name = None
 
-    Returns:
-        SQLAlchemy Engine 인스턴스
-    """
-    return DatabaseConnectionManager.get_engine()
+    if db_url:
+        # Try to parse components from the full DATABASE_URL for informative logging
+        try:
+            # sqlalchemy >=1.4 exposes make_url in sqlalchemy.engine
+            try:
+                from sqlalchemy.engine import make_url
+            except Exception:
+                from sqlalchemy.engine.url import make_url
+
+            parsed = make_url(db_url)
+            db_host = parsed.host
+            db_port = str(parsed.port) if parsed.port is not None else None
+            db_user = parsed.username
+            db_pass = parsed.password
+            db_name = parsed.database
+        except Exception:
+            # If parsing fails, try to fallback to individual env vars so logs
+            # and diagnostic output remain useful instead of None.
+            try:
+                db_host = settings.database_host or os.getenv("DATABASE_HOST")
+                db_port = settings.database_port or os.getenv("DATABASE_PORT")
+                db_user = settings.database_user or os.getenv("DATABASE_USER")
+                db_pass = settings.database_password or os.getenv("DATABASE_PASSWORD")
+                db_name = settings.database_name or os.getenv("DATABASE_NAME")
+            except Exception:
+                db_host = os.getenv("DATABASE_HOST")
+                db_port = os.getenv("DATABASE_PORT")
+                db_user = os.getenv("DATABASE_USER")
+                db_pass = os.getenv("DATABASE_PASSWORD")
+                db_name = os.getenv("DATABASE_NAME")
+    else:
+        # If DATABASE_URL is not provided, build it from individual env vars so
+        # the service can connect to the Docker Compose mysql host (e.g. 'mysql').
+        try:
+            db_host = settings.database_host or os.getenv("DATABASE_HOST", "127.0.0.1")
+            db_port = settings.database_port or os.getenv("DATABASE_PORT", "3306")
+            db_user = settings.database_user or os.getenv("DATABASE_USER", "root")
+            db_pass = settings.database_password or os.getenv("DATABASE_PASSWORD", "password")
+            db_name = settings.database_name or os.getenv("DATABASE_NAME", "stock_data_cache")
+            db_url = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}?charset=utf8mb4"
+        except Exception:
+            db_host = os.getenv("DATABASE_HOST", "127.0.0.1")
+            db_port = os.getenv("DATABASE_PORT", "3306")
+            db_user = os.getenv("DATABASE_USER", "root")
+            db_pass = os.getenv("DATABASE_PASSWORD", "password")
+            db_name = os.getenv("DATABASE_NAME", "stock_data_cache")
+            db_url = f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}?charset=utf8mb4"
+    # Log the connection info we will use (mask password)
+    try:
+        masked_db_url = db_url.replace(db_pass, "***") if (db_pass and isinstance(db_url, str)) else db_url
+    except Exception:
+        masked_db_url = "<unavailable>"
+    logger.info(
+        "Creating SQLAlchemy engine -> host=%s port=%s user=%s db=%s DATABASE_URL_set=%s",
+        db_host or "<unknown>", db_port or "<unknown>", db_user or "<unknown>", db_name or "<unknown>", 'yes' if os.getenv('DATABASE_URL') else 'no'
+    )
+    logger.debug(f"SQLAlchemy URL (masked): {masked_db_url}")
+    # Also print to stdout and log as error to ensure visibility in all log configurations
+    try:
+        print(f"[yfinance_db] Creating engine -> host={db_host} port={db_port} user={db_user} db={db_name} masked_url={masked_db_url}")
+    except Exception:
+        pass
+    logger.error(f"[yfinance_db] SQLAlchemy URL (masked): {masked_db_url}")
+
+    _ENGINE_CACHE = create_engine(
+        db_url,
+        pool_pre_ping=True,
+        pool_size=40,           # 기본 5 → 40 (동시 연결 수 증가)
+        max_overflow=80,        # 기본 10 → 80 (추가 연결 허용)
+        pool_timeout=30,        # 연결 대기 시간 30초
+        pool_recycle=3600,      # 1시간마다 연결 재생성 (커넥션 풀 관리)
+        future=True
+    )
+    return _ENGINE_CACHE
 
 
 def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
@@ -77,7 +160,7 @@ def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
         # ensure stock exists
         info = {}
         try:
-            info = data_fetcher.fetch_ticker_info(ticker)
+            info = data_fetcher.get_ticker_info(ticker)
         except Exception:
             logger.warning("티커 info 조회 실패")
 
@@ -251,7 +334,7 @@ def get_ticker_info_from_db(ticker: str) -> Dict[str, Any]:
                 if not info.get('first_trade_date'):
                     logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
                     try:
-                        fresh_info = data_fetcher.fetch_ticker_info(ticker)
+                        fresh_info = data_fetcher.get_ticker_info(ticker)
                         if fresh_info.get('first_trade_date'):
                             info['first_trade_date'] = fresh_info['first_trade_date']
                             # DB 업데이트
@@ -475,7 +558,7 @@ def _ensure_stock_exists(conn, engine: Engine, ticker: str, start_date: date, en
     if not row:
         logger.info(f"티커 '{ticker}'이 DB에 없음 — yfinance에서 수집 시도")
         try:
-            df_new = data_fetcher.fetch_stock_data(ticker, start_date, end_date, use_cache=True)
+            df_new = data_fetcher.get_stock_data(ticker, start_date, end_date, use_cache=True)
             if df_new is None or df_new.empty:
                 raise ValueError("yfinance에서 유효한 데이터가 반환되지 않았습니다.")
             save_ticker_data(ticker, df_new)
@@ -577,7 +660,7 @@ def _fetch_and_save_missing_data(
 
         try:
             logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다(통합+패드): {ticker} {co_start} -> {co_end}")
-            df_new = data_fetcher.fetch_stock_data(ticker, co_start, co_end, use_cache=True)
+            df_new = data_fetcher.get_stock_data(ticker, co_start, co_end, use_cache=True)
             if df_new is not None and not df_new.empty:
                 save_ticker_data(ticker, df_new)
                 # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
@@ -599,7 +682,7 @@ def _fetch_and_save_missing_data(
             continue
         try:
             logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다: {ticker} {s} -> {e}")
-            df_new = data_fetcher.fetch_stock_data(ticker, s, e, use_cache=True)
+            df_new = data_fetcher.get_stock_data(ticker, s, e, use_cache=True)
             if df_new is not None and not df_new.empty:
                 save_ticker_data(ticker, df_new)
                 # 데이터 저장 후 커넥션 갱신

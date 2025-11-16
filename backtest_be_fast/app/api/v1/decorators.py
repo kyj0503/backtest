@@ -51,7 +51,7 @@ from fastapi import HTTPException, status
 from app.core.exceptions import (
     DataNotFoundError,
     InvalidSymbolError,
-    YfinanceRateLimitError,
+    YFinanceRateLimitError,
     ValidationError
 )
 
@@ -87,7 +87,7 @@ def handle_backtest_errors(func):
                 detail=str(e)
             )
         
-        except (DataNotFoundError, InvalidSymbolError, YfinanceRateLimitError) as e:
+        except (DataNotFoundError, InvalidSymbolError, YFinanceRateLimitError) as e:
             # 이미 적절한 HTTP 상태코드를 가진 커스텀 예외들은 그대로 전파
             raise e
         
@@ -138,7 +138,7 @@ def handle_portfolio_errors(func):
                 detail=str(e)
             )
         
-        except (DataNotFoundError, InvalidSymbolError, YfinanceRateLimitError) as e:
+        except (DataNotFoundError, InvalidSymbolError, YFinanceRateLimitError) as e:
             raise e
         
         except ValueError as e:
