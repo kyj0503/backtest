@@ -1139,6 +1139,29 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
 
 ---
 
+## ✅ Phase 2.2 실행 현황
+
+**Phase 2.2: Naming Convention 표준화 - 진행 중** (2025-11-16)
+
+### 완료된 작업
+
+- ✅ Phase 2.2.1: DCACalculator → DcaCalculator 변경
+  - dca_calculator.py: 클래스 정의 변경
+  - dca_calculator.py: docstring 예제 코드 업데이트
+  - portfolio_service.py: import 및 사용처 업데이트
+  - docs/architecture/date_calculation.md: 문서 업데이트
+  - Commits: (pending)
+
+### 진행 예정
+
+- ⏳ Phase 2.2.2: Strategy 클래스들 (SMA, EMA, RSI, MACD) 변경
+- ⏳ Phase 2.2.3: YFinance → Yfinance 변경
+- ⏳ Phase 2.2.4: PortfolioCalculatorService → PortfolioCalculator 변경
+- ⏳ Phase 2.2.5: NaverNewsService → NewsService 변경
+- ⏳ Phase 2.2.6: DataFetcher 메서드 (get_ → fetch_) 변경
+
+---
+
 ### 2.1 chart_data_service.py Indicator Strategy Pattern
 
 #### 현재 문제

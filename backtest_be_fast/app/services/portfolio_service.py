@@ -61,7 +61,7 @@ from app.schemas.schemas import PortfolioBacktestRequest, FREQUENCY_MAP
 from app.schemas.requests import BacktestRequest
 from app.services.backtest_service import backtest_service
 from app.repositories.stock_repository import get_stock_repository
-from app.services.dca_calculator import DCACalculator
+from app.services.dca_calculator import DcaCalculator
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
 from app.services.portfolio_calculator_service import portfolio_calculator_service
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
@@ -990,12 +990,12 @@ class PortfolioService:
                             }
                             
                         else:  # DCA
-                            # 분할매수: DCACalculator를 사용하여 수익률 계산
+                            # 분할매수: DcaCalculator를 사용하여 수익률 계산
                             dca_periods = dca_info[unique_key]['dca_periods']
                             period_amount = dca_info[unique_key]['monthly_amount']  # 회당 투자 금액
                             dca_frequency = dca_info[unique_key].get('dca_frequency', 'monthly_1')  # DCA 주기
 
-                            total_shares, average_price, individual_return, dca_trade_log = DCACalculator.calculate_dca_shares_and_return(
+                            total_shares, average_price, individual_return, dca_trade_log = DcaCalculator.calculate_dca_shares_and_return(
                                 df, period_amount, dca_periods, request.start_date, dca_frequency
                             )
 

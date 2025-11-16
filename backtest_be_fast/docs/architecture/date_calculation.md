@@ -41,7 +41,7 @@
 ## 사용 흐름 (포트폴리오 서비스)
 
 1.  **DCA/리밸런싱 첫 실행**: `portfolio_service`는 `get_weekday_occurrence`를 호출하여 시작 날짜의 "N번째" 값을 계산하고, 이를 `dca_info` 또는 `original_rebalance_nth` 변수에 저장합니다.
-2.  **다음 실행일 계산**: 매일의 백테스트 루프에서 `RebalanceHelper.is_rebalance_date` 또는 `DCACalculator` 로직이 `get_next_nth_weekday`를 호출합니다. 이때 저장해둔 `original_nth` 값을 전달하여 일관성을 유지합니다.
+2.  **다음 실행일 계산**: 매일의 백테스트 루프에서 `RebalanceHelper.is_rebalance_date` 또는 `DcaCalculator` 로직이 `get_next_nth_weekday`를 호출합니다. 이때 저장해둔 `original_nth` 값을 전달하여 일관성을 유지합니다.
 3.  **실행**: 계산된 다음 실행일이 되면, DCA 또는 리밸런싱 로직이 실행됩니다.
 
 이러한 구조를 통해, 월마다 주의 개수가 달라 발생하는 예외 상황을 안정적으로 처리하고 예측 가능한 투자 스케줄을 보장합니다.
