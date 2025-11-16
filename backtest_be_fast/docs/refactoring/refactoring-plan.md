@@ -1210,6 +1210,30 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
 - ✅ 구현 세부사항 추상화 (NaverNewsService)
 - ✅ 테스트 파일까지 일관성 유지
 
+---
+
+## ✅ Phase 2.3 실행 현황
+
+**Phase 2.3: Validation Logic 통합 - 진행 중** (2025-11-16)
+
+### 완료된 작업
+
+- ✅ Phase 2.3.1: DateValidator 생성
+  - app/validators/date_validator.py: DateValidator 클래스 생성
+  - validate_date_range(): 날짜 범위 및 기간 검증
+  - validate_not_future(): 미래 날짜 검증
+  - validate_business_days(): 영업일 수 검증
+  - app/validators/__init__.py: 패키지 초기화
+  - Commits: (pending)
+
+### 진행 예정
+
+- ⏳ Phase 2.3.2: SymbolValidator 생성
+- ⏳ Phase 2.3.3: BacktestValidator 생성
+- ⏳ Phase 2.3.4: PortfolioValidator 생성
+- ⏳ Phase 2.3.5: ValidationService 리팩터링 + Pydantic schemas 단순화
+- ⏳ Phase 2.3.6: 문서 업데이트
+
 ### 진행 예정
 
 ---
