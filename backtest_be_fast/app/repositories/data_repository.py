@@ -73,7 +73,7 @@ class DataRepositoryInterface(ABC):
         pass
 
 
-class YFinanceDataRepository(DataRepositoryInterface):
+class YfinanceDataRepository(DataRepositoryInterface):
     """yfinance 기반 데이터 Repository"""
 
     def __init__(self):
@@ -241,5 +241,5 @@ class YFinanceDataRepository(DataRepositoryInterface):
 
 
 # 전역 인스턴스
-DataRepository = YFinanceDataRepository()
+DataRepository = YfinanceDataRepository()
 data_repository = DataRepository

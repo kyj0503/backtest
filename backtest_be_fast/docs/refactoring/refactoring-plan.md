@@ -1166,8 +1166,14 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - tests/unit/test_strategy_service.py: import 및 클래스 참조 업데이트
   - Commits: (pending)
 
+- ✅ Phase 2.2.3: YFinance → Yfinance 변경
+  - data_repository.py: YFinanceDataRepository → YfinanceDataRepository
+  - exceptions.py: YFinanceRateLimitError → YfinanceRateLimitError
+  - data_fetcher.py: YFinanceRateLimitError → YfinanceRateLimitError
+  - decorators.py: YFinanceRateLimitError import 업데이트
+  - Commits: (pending)
+
 ### 진행 예정
-- ⏳ Phase 2.2.3: YFinance → Yfinance 변경
 - ⏳ Phase 2.2.4: PortfolioCalculatorService → PortfolioCalculator 변경
 - ⏳ Phase 2.2.5: NaverNewsService → NewsService 변경
 - ⏳ Phase 2.2.6: DataFetcher 메서드 (get_ → fetch_) 변경
