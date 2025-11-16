@@ -4,6 +4,45 @@
 **대상**: backtest_be_fast 백엔드 서비스
 **목표**: 클린코드 원칙에 따른 구조 개선 및 유지보수성 향상
 
+## ✅ 실행 현황
+
+**Phase 1.1: portfolio_service.py 분할 - 완료** (2025-11-16)
+
+### 완료된 작업
+- ✅ PortfolioDcaManager 클래스 추출 (DCA 투자 관리)
+  - execute_initial_purchases(): 첫 날 초기 매수
+  - execute_periodic_purchases(): Nth Weekday 기반 주기적 매수
+  - Commits: 3c42d84
+
+- ✅ PortfolioRebalancer 클래스 추출 (포트폴리오 리밸런싱)
+  - calculate_adjusted_weights(): 상장폐지 종목을 고려한 목표 비중 동적 조정
+  - execute_rebalancing_trades(): 리밸런싱 거래 실행
+  - Commits: 9a092ec
+
+- ✅ PortfolioSimulator 클래스 추출 (시뮬레이션 루프 실행)
+  - initialize_portfolio_state(): 포트폴리오 상태 초기화
+  - detect_and_update_delisting(): 상장폐지 종목 감지
+  - fetch_and_convert_prices(): 가격 데이터 추출 및 USD 변환
+  - calculate_daily_metrics_and_history(): 일일 메트릭 계산
+  - Commits: 4e469f0
+
+- ✅ PortfolioMetrics 클래스 추출 (지표 계산)
+  - calculate_daily_metrics_and_history(): 정규화된 포트폴리오 가치 및 수익률
+  - calculate_portfolio_statistics(): Sharpe ratio, max drawdown, volatility 등 통계
+  - Commits: 6297fc1
+
+- ✅ PortfolioService 리팩터링 (위임 패턴)
+  - 컴포넌트 인스턴스 주입 (DcaManager, Rebalancer, Simulator, Metrics)
+  - 모든 정적 메서드 호출을 인스턴스 메서드로 변환
+  - calculate_dca_portfolio_returns 정적 메서드 제거
+  - Commits: f64d085, 4f61258
+
+### 통계
+- 추출된 클래스: 4개
+- 총 추출 라인 수: ~950줄
+- 생성된 파일: 4개 (portfolio_dca_manager.py, portfolio_rebalancer.py, portfolio_simulator.py, portfolio_metrics.py)
+- 리팩터링 코드 라인: 30줄 (PortfolioService)
+
 ---
 
 ## 📊 코드베이스 현황 분석
@@ -2157,12 +2196,12 @@ async def get_chart_data(
 ### Phase 1 체크리스트 (필수)
 
 **1.1 portfolio_service.py 분할**:
-- [ ] `PortfolioDcaManager` 클래스 추출
-- [ ] `PortfolioRebalancer` 클래스 추출
-- [ ] `PortfolioSimulator` 클래스 추출
-- [ ] `PortfolioMetrics` 클래스 추출
-- [ ] `PortfolioService` 리팩터링 (위임 패턴)
-- [ ] Import 경로 업데이트
+- [x] `PortfolioDcaManager` 클래스 추출 (commit: 3c42d84)
+- [x] `PortfolioRebalancer` 클래스 추출 (commit: 9a092ec)
+- [x] `PortfolioSimulator` 클래스 추출 (commit: 4e469f0)
+- [x] `PortfolioMetrics` 클래스 추출 (commit: 6297fc1)
+- [x] `PortfolioService` 리팩터링 (위임 패턴) (commit: f64d085)
+- [x] Import 경로 업데이트 (commit: 4f61258)
 - [ ] 단위 테스트 작성
 - [ ] Integration 테스트 통과
 
