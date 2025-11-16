@@ -1,44 +1,6 @@
-"""
-분할 매수(DCA) 계산 서비스
+"""분할 매수(DCA) 계산 서비스
 
-**역할**:
-- 분할 매수(Dollar Cost Averaging) 투자의 공유 수량 및 수익률 계산
-- DCA 매수 로그 생성
-- 평균 단가 계산
-
-**주요 기능**:
-1. calculate_dca_shares_and_return(): DCA 투자 결과 계산
-   - 총 주식 수량
-   - 평균 구매 단가
-   - 수익률
-   - 매수 로그
-
-**DCA(분할 매수) 개념**:
-- Dollar Cost Averaging
-- 일정 금액을 정기적으로 나누어 투자
-- 시장 변동성 위험 분산
-- 심리적 부담 감소
-
-**사용 예**:
-```python
-from app.services.dca_calculator import DcaCalculator
-
-total_shares, avg_price, return_pct, log = DcaCalculator.calculate_dca_shares_and_return(
-    df=price_df,
-    period_amount=1000.0,     # 월 1000달러
-    dca_periods=12,           # 12개월
-    start_date='2023-01-01',
-    interval_weeks=4          # 4주마다
-)
-```
-
-**의존성**:
-- pandas: 데이터 처리
-- datetime: 날짜 계산
-
-**연관 컴포넌트**:
-- Backend: app/services/portfolio_service.py (포트폴리오 통합)
-- Backend: app/schemas/schemas.py (DCA 설정 데이터)
+Dollar Cost Averaging 투자의 총 주식 수량, 평균 단가, 수익률을 계산합니다.
 """
 from typing import Dict, List, Tuple
 from datetime import datetime
