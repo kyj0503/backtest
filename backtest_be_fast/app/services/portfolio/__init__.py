@@ -10,9 +10,15 @@
 """
 
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
+from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
+from app.services.portfolio.portfolio_simulator import PortfolioSimulator
+from app.services.portfolio.portfolio_metrics import PortfolioMetrics
 from app.services.portfolio.portfolio_service import PortfolioService
 
 __all__ = [
     'PortfolioService',
     'PortfolioDcaManager',
+    'PortfolioRebalancer',
+    'PortfolioSimulator',
+    'PortfolioMetrics',
 ]
