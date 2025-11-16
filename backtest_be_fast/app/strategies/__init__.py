@@ -2,21 +2,21 @@
 전략 구현체들의 중앙 집약 import
 """
 from .strategies import (
-    SMACrossStrategy,
-    RSIStrategy,
+    SmaCrossStrategy,
+    RsiStrategy,
     BollingerBandsStrategy,
-    MACDStrategy,
-    EMAStrategy,
+    MacdStrategy,
+    EmaStrategy,
     BuyAndHoldStrategy,
     PositionSizingMixin
 )
 
 __all__ = [
-    'SMACrossStrategy',
-    'RSIStrategy',
+    'SmaCrossStrategy',
+    'RsiStrategy',
     'BollingerBandsStrategy',
-    'MACDStrategy',
-    'EMAStrategy',
+    'MacdStrategy',
+    'EmaStrategy',
     'BuyAndHoldStrategy',
     'PositionSizingMixin'
 ]

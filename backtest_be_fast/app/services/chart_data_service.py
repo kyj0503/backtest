@@ -1,5 +1,5 @@
 """
-차트 데이터 생성 서비스
+차트 데이터 생성 서비스 (Strategy Pattern 적용)
 
 **역할**:
 - 백테스트 결과를 프론트엔드 차트 라이브러리(Recharts)가 사용할 수 있는 형식으로 변환
@@ -14,17 +14,23 @@
    - _generate_ohlc_data(): OHLC 캔들스틱 차트 데이터
    - _generate_equity_data(): 자산 가치 곡선 데이터
    - _generate_trade_markers(): 매수/매도 거래 표시
-   - _generate_indicators(): 기술 지표 데이터 (SMA, RSI, Bollinger, MACD, EMA)
+   - _generate_indicators(): 기술 지표 데이터 (Strategy Pattern 사용)
    - _generate_benchmark_data(): 벤치마크 지수 데이터
 
-**지원 기술 지표**:
+**지원 기술 지표** (Strategy Pattern):
 - SMA (단순 이동평균): 추세 파악
 - RSI (상대강도지수): 과매수/과매도 판단
 - Bollinger Bands: 변동성 측정
 - MACD (이동평균수렴확산): 매매 시그널
 - EMA (지수 이동평균): 최근 가격 중시
 
+**설계 패턴**:
+- Strategy Pattern: 기술 지표 계산 로직을 전략으로 분리
+- Factory Pattern: IndicatorFactory를 통해 지표 인스턴스 생성
+- Open/Closed Principle: 새로운 지표 추가 시 기존 코드 수정 불필요
+
 **의존성**:
+- app/services/indicators: 기술 지표 Strategy 구현
 - app/services/strategy_service.py: 전략 파라미터 검증
 - app/utils/data_fetcher.py: 주가 데이터 조회
 - pandas, numpy: 데이터 처리 및 지표 계산
@@ -54,12 +60,22 @@ from app.schemas.responses import (
 )
 from app.utils.data_fetcher import data_fetcher
 from app.services.strategy_service import strategy_service
+from app.services.indicators import indicator_factory
 from app.core.exceptions import ValidationError
 
 
 class ChartDataService:
     """차트 데이터 생성 전담 서비스"""
-    
+
+    # 전략명을 지표명으로 매핑
+    STRATEGY_TO_INDICATOR_MAP = {
+        'sma_crossover': 'SMA',
+        'rsi_strategy': 'RSI',
+        'bollinger_bands': 'Bollinger Bands',
+        'macd_strategy': 'MACD',
+        'ema_crossover': 'EMA',
+    }
+
     def __init__(self, data_repository=None, strategy_service_instance=None):
         self.data_repository = data_repository
         self.data_fetcher = data_fetcher
@@ -203,7 +219,7 @@ class ChartDataService:
         """
         캐시 우선 가격 데이터 조회
 
-        FIXED: Race condition bug - data_fetcher.get_stock_data() is synchronous
+        FIXED: Race condition bug - data_fetcher.fetch_stock_data() is synchronous
         and must be wrapped with asyncio.to_thread() to prevent blocking the event loop.
         """
         if self.data_repository:
@@ -211,7 +227,7 @@ class ChartDataService:
         else:
             # FIXED: Wrap synchronous call with asyncio.to_thread() (async/sync boundary)
             data = await asyncio.to_thread(
-                self.data_fetcher.get_stock_data,
+                self.data_fetcher.fetch_stock_data,
                 ticker=ticker,
                 start_date=start_date,
                 end_date=end_date,
@@ -359,247 +375,203 @@ class ChartDataService:
         return markers
     
     def _generate_indicators(self, data: pd.DataFrame, strategy: str, strategy_params: Dict[str, Any]) -> List[IndicatorData]:
-        """기술 지표 데이터 생성"""
-        indicators = []
-        
-        if strategy == "sma_crossover":
-            indicators.extend(self._generate_sma_indicators(data, strategy_params))
-        elif strategy == "rsi_strategy":
-            indicators.extend(self._generate_rsi_indicators(data, strategy_params))
-        elif strategy == "bollinger_bands":
-            indicators.extend(self._generate_bollinger_indicators(data, strategy_params))
-        elif strategy == "macd_strategy":
-            indicators.extend(self._generate_macd_indicators(data, strategy_params))
-        elif strategy == "ema_crossover":
-            indicators.extend(self._generate_ema_indicators(data, strategy_params))
+        """
+        기술 지표 데이터 생성 (Strategy Pattern 적용)
 
-        return indicators
-    
-    def _generate_sma_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
-        """SMA 지표 생성"""
+        Strategy Pattern을 사용하여 각 지표의 계산 로직을 분리했습니다.
+        새로운 지표 추가 시 이 메서드를 수정할 필요 없습니다 (Open/Closed Principle).
+
+        Args:
+            data: OHLCV 데이터
+            strategy: 전략명 (sma_crossover, rsi_strategy 등)
+            strategy_params: 전략 파라미터 딕셔너리
+
+        Returns:
+            IndicatorData 객체 리스트
+        """
         indicators = []
-        short_window = params.get('short_window', 10)
-        long_window = params.get('long_window', 20)
-        
-        # 단기 SMA
-        sma_short = data['Close'].rolling(window=short_window).mean()
-        short_data = []
-        for idx, sma_value in sma_short.items():
-            if not pd.isna(sma_value):
-                short_data.append({
-                    "timestamp": idx.isoformat(),
-                    "date": idx.strftime('%Y-%m-%d'),
-                    "value": safe_float(sma_value)
-                })
-        
-        if short_data:
-            indicators.append(IndicatorData(
-                name=f"SMA_{short_window}",
-                type="line",
-                color="#8884d8",
-                data=short_data
-            ))
-        
-        # 장기 SMA
-        sma_long = data['Close'].rolling(window=long_window).mean()
-        long_data = []
-        for idx, sma_value in sma_long.items():
-            if not pd.isna(sma_value):
-                long_data.append({
-                    "timestamp": idx.isoformat(),
-                    "date": idx.strftime('%Y-%m-%d'),
-                    "value": safe_float(sma_value)
-                })
-        
-        if long_data:
-            indicators.append(IndicatorData(
-                name=f"SMA_{long_window}",
-                type="line",
-                color="#82ca9d",
-                data=long_data
-            ))
-        
-        return indicators
-    
-    def _generate_rsi_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
-        """RSI 지표 생성"""
+
+        # 전략에 해당하는 지표명 조회
+        indicator_name = self.STRATEGY_TO_INDICATOR_MAP.get(strategy)
+        if not indicator_name:
+            self.logger.debug(f"지표 없음: 전략 '{strategy}'에 해당하는 지표가 없습니다")
+            return indicators
+
         try:
-            period = int(params.get('rsi_period', 14))
-            overbought = float(params.get('rsi_overbought', 70))
-            oversold = float(params.get('rsi_oversold', 30))
+            # Factory Pattern: 지표 인스턴스 획득
+            indicator_strategy = indicator_factory.get_indicator(indicator_name)
 
-            close = pd.Series(data['Close'])
-            delta = close.diff()
-            gain = delta.where(delta > 0, 0.0)
-            loss = -delta.where(delta < 0, 0.0)
-            avg_gain = gain.ewm(alpha=1 / period, adjust=False).mean()
-            avg_loss = loss.ewm(alpha=1 / period, adjust=False).mean()
-            avg_loss = avg_loss.replace(0, np.finfo(float).eps)
-            rs = avg_gain / avg_loss
-            rsi = 100 - (100 / (1 + rs))
+            # 지표 계산
+            result_data = indicator_strategy.calculate(data, strategy_params)
 
-            rsi_data = []
-            for idx, val in rsi.items():
+            # 결과를 IndicatorData 형식으로 변환
+            indicators = self._convert_indicator_results(result_data, indicator_name)
+
+        except Exception as e:
+            self.logger.error(f"지표 계산 실패 ({indicator_name}): {str(e)}")
+
+        return indicators
+
+    def _convert_indicator_results(self, result_data: pd.DataFrame, indicator_name: str) -> List[IndicatorData]:
+        """
+        지표 계산 결과를 IndicatorData 형식으로 변환
+
+        Args:
+            result_data: 지표 계산 결과 DataFrame (원본 데이터 + 지표 컬럼)
+            indicator_name: 지표명
+
+        Returns:
+            IndicatorData 객체 리스트
+        """
+        indicators = []
+        color_map = {
+            'SMA': ['#8884d8', '#82ca9d'],
+            'RSI': ['#EC4899', '#EF4444', '#10B981'],
+            'Bollinger Bands': ['#8884d8', '#6B7280', '#6B7280'],
+            'MACD': ['#8B5CF6', '#F59E0B'],
+            'EMA': ['#8B5CF6', '#F59E0B'],
+        }
+
+        # 지표별로 컬럼 추출
+        if indicator_name == 'SMA':
+            self._extract_sma_lines(result_data, indicators, color_map['SMA'])
+        elif indicator_name == 'RSI':
+            self._extract_rsi_lines(result_data, indicators, color_map['RSI'])
+        elif indicator_name == 'Bollinger Bands':
+            self._extract_bollinger_lines(result_data, indicators, color_map['Bollinger Bands'])
+        elif indicator_name == 'MACD':
+            self._extract_macd_lines(result_data, indicators, color_map['MACD'])
+        elif indicator_name == 'EMA':
+            self._extract_ema_lines(result_data, indicators, color_map['EMA'])
+
+        return indicators
+
+    def _extract_sma_lines(self, result_data: pd.DataFrame, indicators: List[IndicatorData], colors: List[str]):
+        """SMA 라인 추출"""
+        sma_columns = [col for col in result_data.columns if col.startswith('SMA_')]
+        for idx, col in enumerate(sorted(sma_columns)):
+            line_data = []
+            for date_idx, val in result_data[col].items():
                 if not pd.isna(val):
-                    rsi_data.append({
-                        "timestamp": idx.isoformat(),
-                        "date": idx.strftime('%Y-%m-%d'),
+                    line_data.append({
+                        "timestamp": date_idx.isoformat(),
+                        "date": date_idx.strftime('%Y-%m-%d'),
+                        "value": safe_float(val)
+                    })
+            if line_data:
+                indicators.append(IndicatorData(
+                    name=col,
+                    type="line",
+                    color=colors[idx % len(colors)],
+                    data=line_data
+                ))
+
+    def _extract_rsi_lines(self, result_data: pd.DataFrame, indicators: List[IndicatorData], colors: List[str]):
+        """RSI 라인 추출"""
+        rsi_columns = [col for col in result_data.columns if col.startswith('RSI_')]
+        for idx, col in enumerate(rsi_columns):
+            if col.endswith('OVERBOUGHT') or col.endswith('OVERSOLD'):
+                # Reference lines: 모든 데이터 포인트에 값 포함
+                line_data = []
+                for date_idx in result_data.index:
+                    val = result_data.loc[date_idx, col]
+                    line_data.append({
+                        "timestamp": date_idx.isoformat(),
+                        "date": date_idx.strftime('%Y-%m-%d'),
                         "value": float(val)
                     })
-
-            indicators: List[IndicatorData] = []
-            if rsi_data:
-                indicators.append(IndicatorData(
-                    name=f"RSI_{period}",
-                    type="line",
-                    color="#EC4899",  # pink-500
-                    data=rsi_data
-                ))
-
-                # Overbought/Oversold reference lines
-                ob_data = []
-                os_data = []
-                for idx in data.index:
-                    ob_data.append({
-                        "timestamp": idx.isoformat(),
-                        "date": idx.strftime('%Y-%m-%d'),
-                        "value": overbought
-                    })
-                    os_data.append({
-                        "timestamp": idx.isoformat(),
-                        "date": idx.strftime('%Y-%m-%d'),
-                        "value": oversold
-                    })
-
-                indicators.append(IndicatorData(
-                    name="RSI_OVERBOUGHT",
-                    type="line",
-                    color="#EF4444",  # red-500
-                    data=ob_data
-                ))
-                indicators.append(IndicatorData(
-                    name="RSI_OVERSOLD",
-                    type="line",
-                    color="#10B981",  # green-500
-                    data=os_data
-                ))
-
-            return indicators
-        except Exception:
-            return []
-    
-    def _generate_bollinger_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
-        """볼린저 밴드 지표 생성"""
-        try:
-            period = int(params.get('period', 20))
-            std_dev = float(params.get('std_dev', 2.0))
-
-            close = pd.Series(data['Close'])
-            sma = close.rolling(window=period).mean()
-            std = close.rolling(window=period).std()
-            upper = sma + (std_dev * std)
-            lower = sma - (std_dev * std)
-
-            indicators: List[IndicatorData] = []
-
-            def make_line(series: pd.Series, name: str, color: str) -> IndicatorData:
-                line = []
-                for idx, val in series.items():
+            else:
+                # RSI 라인: NaN 제거
+                line_data = []
+                for date_idx, val in result_data[col].items():
                     if not pd.isna(val):
-                        line.append({
-                            "timestamp": idx.isoformat(),
-                            "date": idx.strftime('%Y-%m-%d'),
+                        line_data.append({
+                            "timestamp": date_idx.isoformat(),
+                            "date": date_idx.strftime('%Y-%m-%d'),
                             "value": float(val)
                         })
-                return IndicatorData(name=name, type="line", color=color, data=line)
 
-            indicators.append(make_line(sma, f"SMA_{period}", "#8884d8"))
-            indicators.append(make_line(upper, "BB_UPPER", "#6B7280"))  # gray-500
-            indicators.append(make_line(lower, "BB_LOWER", "#6B7280"))
-
-            return indicators
-        except Exception:
-            return []
-    
-    def _generate_macd_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
-        """MACD 지표 생성"""
-        try:
-            fast = int(params.get('fast_period', 12))
-            slow = int(params.get('slow_period', 26))
-            signal = int(params.get('signal_period', 9))
-
-            close = pd.Series(data['Close'])
-            ema_fast = close.ewm(span=fast).mean()
-            ema_slow = close.ewm(span=slow).mean()
-            macd = ema_fast - ema_slow
-            sig = macd.ewm(span=signal).mean()
-
-            macd_data = []
-            sig_data = []
-            for idx in data.index:
-                mv = macd.loc[idx] if idx in macd.index else np.nan
-                sv = sig.loc[idx] if idx in sig.index else np.nan
-                if not pd.isna(mv):
-                    macd_data.append({
-                        "timestamp": idx.isoformat(),
-                        "date": idx.strftime('%Y-%m-%d'),
-                        "value": float(mv)
-                    })
-                if not pd.isna(sv):
-                    sig_data.append({
-                        "timestamp": idx.isoformat(),
-                        "date": idx.strftime('%Y-%m-%d'),
-                        "value": float(sv)
-                    })
-
-            indicators: List[IndicatorData] = []
-            if macd_data:
+            if line_data:
+                color_idx = 2 if 'OVERBOUGHT' in col else (0 if 'OVERSOLD' not in col else 1)
                 indicators.append(IndicatorData(
-                    name="MACD",
+                    name=col,
                     type="line",
-                    color="#8B5CF6",  # violet-500
-                    data=macd_data
-                ))
-            if sig_data:
-                indicators.append(IndicatorData(
-                    name="MACD_SIGNAL",
-                    type="line",
-                    color="#F59E0B",  # amber-500
-                    data=sig_data
+                    color=colors[color_idx % len(colors)],
+                    data=line_data
                 ))
 
-            return indicators
-        except Exception:
-            return []
+    def _extract_bollinger_lines(self, result_data: pd.DataFrame, indicators: List[IndicatorData], colors: List[str]):
+        """Bollinger Bands 라인 추출"""
+        bb_mapping = {
+            'BB_MIDDLE': (colors[0], 0),
+            'BB_UPPER': (colors[1], 1),
+            'BB_LOWER': (colors[2], 2),
+        }
 
-    def _generate_ema_indicators(self, data: pd.DataFrame, params: Dict[str, Any]) -> List[IndicatorData]:
-        """EMA 지표 생성"""
-        try:
-            fast = int(params.get('fast_window', 12))
-            slow = int(params.get('slow_window', 26))
-
-            close = pd.Series(data['Close'])
-            ema_fast = close.ewm(span=fast, adjust=False).mean()
-            ema_slow = close.ewm(span=slow, adjust=False).mean()
-
-            def make_line(series: pd.Series, name: str, color: str) -> IndicatorData:
-                line = []
-                for idx, val in series.items():
+        for col_name, (color, _) in bb_mapping.items():
+            if col_name in result_data.columns:
+                line_data = []
+                for date_idx, val in result_data[col_name].items():
                     if not pd.isna(val):
-                        line.append({
-                            "timestamp": idx.isoformat(),
-                            "date": idx.strftime('%Y-%m-%d'),
+                        line_data.append({
+                            "timestamp": date_idx.isoformat(),
+                            "date": date_idx.strftime('%Y-%m-%d'),
                             "value": float(val)
                         })
-                return IndicatorData(name=name, type="line", color=color, data=line)
+                if line_data:
+                    indicators.append(IndicatorData(
+                        name=col_name,
+                        type="line",
+                        color=color,
+                        data=line_data
+                    ))
 
-            return [
-                make_line(ema_fast, f"EMA_{fast}", "#8B5CF6"),
-                make_line(ema_slow, f"EMA_{slow}", "#F59E0B"),
-            ]
-        except Exception:
-            return []
-    
+    def _extract_macd_lines(self, result_data: pd.DataFrame, indicators: List[IndicatorData], colors: List[str]):
+        """MACD 라인 추출"""
+        macd_mapping = {
+            'MACD': (colors[0], 0),
+            'MACD_SIGNAL': (colors[1], 1),
+            'MACD_HISTOGRAM': (colors[0], 0),
+        }
+
+        for col_name, (color, _) in macd_mapping.items():
+            if col_name in result_data.columns:
+                line_data = []
+                for date_idx, val in result_data[col_name].items():
+                    if not pd.isna(val):
+                        line_data.append({
+                            "timestamp": date_idx.isoformat(),
+                            "date": date_idx.strftime('%Y-%m-%d'),
+                            "value": float(val)
+                        })
+                if line_data:
+                    indicators.append(IndicatorData(
+                        name=col_name,
+                        type="line",
+                        color=color,
+                        data=line_data
+                    ))
+
+    def _extract_ema_lines(self, result_data: pd.DataFrame, indicators: List[IndicatorData], colors: List[str]):
+        """EMA 라인 추출"""
+        ema_columns = [col for col in result_data.columns if col.startswith('EMA_')]
+        for idx, col in enumerate(sorted(ema_columns)):
+            line_data = []
+            for date_idx, val in result_data[col].items():
+                if not pd.isna(val):
+                    line_data.append({
+                        "timestamp": date_idx.isoformat(),
+                        "date": date_idx.strftime('%Y-%m-%d'),
+                        "value": safe_float(val)
+                    })
+            if line_data:
+                indicators.append(IndicatorData(
+                    name=col,
+                    type="line",
+                    color=colors[idx % len(colors)],
+                    data=line_data
+                ))
+
     def _calculate_backtest_stats(self, data: pd.DataFrame, initial_cash: float) -> Dict[str, Any]:
         """백테스트 통계 계산"""
         initial_price = float(data['Close'].iloc[0])

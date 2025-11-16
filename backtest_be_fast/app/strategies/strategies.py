@@ -112,7 +112,7 @@ def _sma_helper(values, n):
     return pd.Series(values).rolling(n).mean()
 
 
-class SMACrossStrategy(PositionSizingMixin, Strategy):
+class SmaCrossStrategy(PositionSizingMixin, Strategy):
     """
     이동평균 교차 전략
 
@@ -153,7 +153,7 @@ class SMACrossStrategy(PositionSizingMixin, Strategy):
 # Strategy: EMA Crossover
 # ========================
 
-class EMAStrategy(PositionSizingMixin, Strategy):
+class EmaStrategy(PositionSizingMixin, Strategy):
     """EMA 교차 전략
 
     지수 이동평균(EMA) 교차를 사용한 추세 추종 전략
@@ -197,7 +197,7 @@ class EMAStrategy(PositionSizingMixin, Strategy):
 # Strategy: RSI
 # ========================
 
-class RSIStrategy(PositionSizingMixin, Strategy):
+class RsiStrategy(PositionSizingMixin, Strategy):
     """RSI 기반 매매 전략
 
     RSI(Relative Strength Index) 지표를 사용하여 과매도/과매수 구간에서 매매하는 전략
@@ -328,7 +328,7 @@ class BollingerBandsStrategy(PositionSizingMixin, Strategy):
 # Strategy: MACD
 # ========================
 
-class MACDStrategy(PositionSizingMixin, Strategy):
+class MacdStrategy(PositionSizingMixin, Strategy):
     """MACD 전략
 
     MACD 지표를 사용한 추세 추종 및 모멘텀 전략

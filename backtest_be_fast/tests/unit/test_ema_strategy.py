@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from backtesting import Backtest
-from app.strategies.ema_strategy import EMAStrategy
+from app.strategies.strategies import EmaStrategy
 
 
 class TestEMACalculation:
@@ -31,7 +31,7 @@ class TestEMACalculation:
         prices = pd.Series([100, 102, 104, 106, 108, 110])
 
         # When: 3일 EMA 계산
-        ema_3 = EMAStrategy._ema(prices, 3)
+        ema_3 = EmaStrategy._ema(prices, 3)
 
         # Then: EMA가 계산됨 (최근 데이터에 더 높은 가중치)
         assert not ema_3.isna().all()
@@ -47,7 +47,7 @@ class TestEMACalculation:
         prices = pd.Series([100, 100, 100, 100, 100, 120, 120, 120])
 
         # When
-        ema_5 = EMAStrategy._ema(prices, 5)
+        ema_5 = EmaStrategy._ema(prices, 5)
         sma_5 = prices.rolling(5).mean()
 
         # Then: 급등 후 EMA가 SMA보다 빠르게 상승
@@ -62,7 +62,7 @@ class TestEMACalculation:
         prices = pd.Series([100.0] * 10)
 
         # When
-        ema_5 = EMAStrategy._ema(prices, 5)
+        ema_5 = EmaStrategy._ema(prices, 5)
 
         # Then: EMA가 100
         assert ema_5.iloc[-1] == pytest.approx(100.0, abs=0.01)
@@ -75,14 +75,14 @@ class TestEMACalculation:
         prices = pd.Series([100, 101, 102, 103, 104, 115])
 
         # When
-        ema_5 = EMAStrategy._ema(prices, 5)
+        ema_5 = EmaStrategy._ema(prices, 5)
 
         # Then: 마지막 EMA가 단순 평균보다 높음 (최근 가격 115에 가중치)
         simple_avg = prices.mean()
         assert ema_5.iloc[-1] > simple_avg
 
 
-class TestEMAStrategy:
+class TestEmaStrategy:
     """EMA 전략 시그널 생성 검증"""
 
     def create_sample_data(self, close_prices):
@@ -110,7 +110,7 @@ class TestEMAStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=3, slow_window=5)
 
         # Then: 거래 발생
@@ -128,7 +128,7 @@ class TestEMAStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=3, slow_window=5)
 
         # Then: 거래 발생
@@ -146,7 +146,7 @@ class TestEMAStrategy:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=3, slow_window=5)
 
         # Then: 최종 자본이 초기 자본의 85% 이상
@@ -164,7 +164,7 @@ class TestEMAStrategy:
         data = self.create_sample_data(close_prices)
 
         # When: 커스텀 파라미터
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=5, slow_window=10)
 
         # Then: 백테스트 완료
@@ -184,7 +184,7 @@ class TestEMAStrategy:
         data = self.create_sample_data(close_prices)
 
         # When: 기본 파라미터
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run()  # 기본값 사용
 
         # Then: 백테스트 완료
@@ -216,7 +216,7 @@ class TestEMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=3, slow_window=5)
 
         # Then: 에러 없이 실행
@@ -231,7 +231,7 @@ class TestEMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=3, slow_window=5)
 
         # Then: 백테스트 실행됨
@@ -246,7 +246,7 @@ class TestEMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=5, slow_window=5)
 
         # Then: 거래 없음
@@ -264,7 +264,7 @@ class TestEMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.01)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.01)
         result = bt.run(fast_window=2, slow_window=3)
 
         # Then: 빈번한 거래로 수수료 손실 가능
@@ -279,7 +279,7 @@ class TestEMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When: 매우 긴 윈도우
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=10, slow_window=50)
 
         # Then: 거래가 적음
@@ -294,7 +294,7 @@ class TestEMAEdgeCases:
         data = self.create_sample_data(close_prices)
 
         # When
-        bt = Backtest(data, EMAStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, EmaStrategy, cash=10000, commission=0.0)
         result = bt.run(fast_window=12, slow_window=26)
 
         # Then: 정상 실행

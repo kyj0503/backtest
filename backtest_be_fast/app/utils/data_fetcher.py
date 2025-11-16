@@ -45,7 +45,7 @@ class InvalidSymbolError(Exception):
     """잘못된 종목 심볼일 때 발생하는 예외"""
     pass
 
-class YFinanceRateLimitError(Exception):
+class YfinanceRateLimitError(Exception):
     """Yahoo Finance API 제한에 도달했을 때 발생하는 예외"""
     pass
 
@@ -58,7 +58,7 @@ class DataFetcher:
     def __init__(self):
         pass
 
-    def get_stock_data(
+    def fetch_stock_data(
         self,
         ticker: str,
         start_date: date,
@@ -82,7 +82,7 @@ class DataFetcher:
         Raises:
             DataNotFoundError: 데이터를 찾을 수 없는 경우
             InvalidSymbolError: 유효하지 않은 티커인 경우
-            YFinanceRateLimitError: API 연결 오류
+            YfinanceRateLimitError: API 연결 오류
         """
         try:
             # 초기 설정
@@ -112,7 +112,7 @@ class DataFetcher:
             # 기타 오류는 yfinance 관련 오류로 분류
             error_msg = str(e).lower()
             if any(keyword in error_msg for keyword in ['timeout', 'connection', 'network', 'rate limit']):
-                raise YFinanceRateLimitError(f"야후 파이낸스 연결 오류: {str(e)}")
+                raise YfinanceRateLimitError(f"야후 파이낸스 연결 오류: {str(e)}")
             else:
                 logger.error(f"데이터 수집 예상치 못한 오류: {ticker}, {str(e)}")
                 raise DataNotFoundError(f"'{ticker}' 종목 데이터 수집 실패: {str(e)}")
@@ -319,7 +319,7 @@ class DataFetcher:
             logger.error(f"티커 검증 실패: {ticker}, {e}")
             return False
     
-    def get_ticker_info(self, ticker: str) -> dict:
+    def fetch_ticker_info(self, ticker: str) -> dict:
         """
         티커 정보 조회
         

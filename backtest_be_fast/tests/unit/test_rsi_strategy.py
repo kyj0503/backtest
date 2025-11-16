@@ -16,7 +16,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from backtesting import Backtest
-from app.strategies.rsi_strategy import RSIStrategy
+from app.strategies.strategies import RsiStrategy
 
 
 class TestRSICalculation:
@@ -34,8 +34,8 @@ class TestRSICalculation:
         
         # When: RSI 계산 (클래스 메서드를 직접 호출)
         # Strategy 인스턴스화 없이 _rsi 메서드만 테스트
-        from app.strategies.rsi_strategy import RSIStrategy
-        rsi_values = RSIStrategy._rsi(None, close_prices, period=14)
+        from app.strategies.strategies import RsiStrategy
+        rsi_values = RsiStrategy._rsi(None, close_prices, period=14)
         
         # Then: RSI 값이 50 이상 (상승 추세)
         assert not rsi_values.empty
@@ -55,7 +55,7 @@ class TestRSICalculation:
         ])
         
         # When: RSI 계산
-        rsi_values = RSIStrategy._rsi(None, close_prices, period=14)
+        rsi_values = RsiStrategy._rsi(None, close_prices, period=14)
         
         # Then: RSI가 50 이하 (하락 추세)
         assert rsi_values.iloc[-1] < 50
@@ -69,7 +69,7 @@ class TestRSICalculation:
         close_prices = pd.Series([100.0] * 20)
         
         # When: RSI 계산
-        rsi_values = RSIStrategy._rsi(None, close_prices, period=14)
+        rsi_values = RsiStrategy._rsi(None, close_prices, period=14)
         
         # Then: RSI가 낮은 값 (변동이 없으면 RS=0, RSI=0)
         # 가격 변동이 없으면 delta가 모두 0이므로 avg_gain과 avg_loss가 0
@@ -84,7 +84,7 @@ class TestRSICalculation:
         close_prices = pd.Series([100, 102, np.nan, 104, 105])
         
         # When: RSI 계산
-        rsi_values = RSIStrategy._rsi(None, close_prices, period=3)
+        rsi_values = RsiStrategy._rsi(None, close_prices, period=3)
         
         # Then: 결과에 NaN이 없음
         assert not rsi_values.isna().any()
@@ -100,7 +100,7 @@ class TestRSICalculation:
         ])
         
         # When: RSI 계산
-        rsi_values = RSIStrategy._rsi(None, close_prices, period=14)
+        rsi_values = RsiStrategy._rsi(None, close_prices, period=14)
         
         # Then: RSI가 과매도 구간
         assert rsi_values.iloc[-1] < 30
@@ -116,13 +116,13 @@ class TestRSICalculation:
         ])
         
         # When: RSI 계산
-        rsi_values = RSIStrategy._rsi(None, close_prices, period=14)
+        rsi_values = RsiStrategy._rsi(None, close_prices, period=14)
         
         # Then: RSI가 과매수 구간
         assert rsi_values.iloc[-1] > 70
 
 
-class TestRSIStrategy:
+class TestRsiStrategy:
     """RSI 전략 시그널 생성 검증"""
     
     def create_sample_data(self, close_prices):
@@ -152,7 +152,7 @@ class TestRSIStrategy:
         data = self.create_sample_data(close_prices)
         
         # When: 백테스트 실행
-        bt = Backtest(data, RSIStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, RsiStrategy, cash=10000, commission=0.0)
         result = bt.run(rsi_period=14, rsi_oversold=30, rsi_overbought=70)
         
         # Then: 거래가 발생할 수 있음 (RSI 패턴에 따라)
@@ -172,7 +172,7 @@ class TestRSIStrategy:
         data = self.create_sample_data(close_prices)
         
         # When: 백테스트 실행
-        bt = Backtest(data, RSIStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, RsiStrategy, cash=10000, commission=0.0)
         result = bt.run(rsi_period=14, rsi_oversold=30, rsi_overbought=70)
         
         # Then: 거래가 발생함 (과매수 구간에서 매도)
@@ -191,7 +191,7 @@ class TestRSIStrategy:
         data = self.create_sample_data(close_prices)
         
         # When
-        bt = Backtest(data, RSIStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, RsiStrategy, cash=10000, commission=0.0)
         result = bt.run(rsi_period=14)
         
         # Then: 최종 자본이 초기 자본의 85% 이상 (손실이 너무 크지 않음)
@@ -210,7 +210,7 @@ class TestRSIStrategy:
         data = self.create_sample_data(close_prices)
         
         # When: 커스텀 파라미터로 실행
-        bt = Backtest(data, RSIStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, RsiStrategy, cash=10000, commission=0.0)
         result = bt.run(rsi_period=10, rsi_oversold=25, rsi_overbought=75)
         
         # Then: 백테스트 완료
@@ -229,7 +229,7 @@ class TestRSIStrategy:
         data = self.create_sample_data(close_prices)
         
         # When
-        bt = Backtest(data, RSIStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, RsiStrategy, cash=10000, commission=0.0)
         result = bt.run(rsi_period=14)
         
         # Then: 거래가 거의 없거나 적음
@@ -262,7 +262,7 @@ class TestRSIEdgeCases:
         data = self.create_sample_data(close_prices)
         
         # When
-        bt = Backtest(data, RSIStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, RsiStrategy, cash=10000, commission=0.0)
         result = bt.run(rsi_period=14)
         
         # Then: 에러 없이 실행
@@ -277,7 +277,7 @@ class TestRSIEdgeCases:
         data = self.create_sample_data(close_prices)
         
         # When
-        bt = Backtest(data, RSIStrategy, cash=10000, commission=0.0)
+        bt = Backtest(data, RsiStrategy, cash=10000, commission=0.0)
         result = bt.run(rsi_period=14)
         
         # Then: 정상 실행 (에러 없이 백테스트 완료)
@@ -296,7 +296,7 @@ class TestRSIEdgeCases:
         data = self.create_sample_data(close_prices)
         
         # When
-        bt = Backtest(data, RSIStrategy, cash=100, commission=0.0)
+        bt = Backtest(data, RsiStrategy, cash=100, commission=0.0)
         result = bt.run(rsi_period=14)
         
         # Then: 거래 없음 (자본 부족)
