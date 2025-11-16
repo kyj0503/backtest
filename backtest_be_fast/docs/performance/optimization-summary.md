@@ -72,28 +72,37 @@ load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
 
 ## 리팩터링 성과
 
-### 함수 추출
+### 함수 추출 및 모듈 분리
 
-대형 calculate_dca_portfolio_returns() 함수 분할:
-- 이전: 625줄, 매우 높은 순환 복잡도
-- 이후: 평균 72줄의 집중된 헬퍼 함수 8개
-- 커밋: c1e42b3
+대형 calculate_dca_portfolio_returns() 함수 분할 및 모듈화:
+- 이전: 625줄, 매우 높은 순환 복잡도의 단일 함수
+- 이후: portfolio/ 디렉토리의 독립적인 모듈로 분리
 
-추출된 함수:
-1. _initialize_portfolio_state() - 23줄
-2. _fetch_and_convert_prices() - 47줄
-3. _detect_and_update_delisting() - 30줄
-4. _execute_initial_purchases() - 28줄
-5. _execute_periodic_dca_purchases() - 97줄
-6. _calculate_adjusted_rebalance_weights() - 67줄
-7. _execute_rebalancing_trades() - 220줄
-8. _calculate_daily_metrics_and_history() - 69줄
+분리된 모듈:
+1. portfolio_simulator.py - 포트폴리오 시뮬레이션 실행
+   - initialize_portfolio_state()
+   - detect_and_update_delisting()
+   - fetch_and_convert_prices()
+   - calculate_daily_metrics_and_history()
+
+2. portfolio_dca_manager.py - DCA 투자 관리
+   - execute_initial_purchases()
+   - execute_periodic_purchases()
+
+3. portfolio_rebalancer.py - 리밸런싱 관리
+   - calculate_adjusted_weights()
+   - execute_rebalancing_trades()
+
+4. portfolio_metrics.py - 지표 계산
+   - calculate_portfolio_statistics()
+   - _get_max_consecutive()
 
 이점:
-- 단일 책임 원칙 적용
-- 각 함수 단위 테스트 가능
-- 코드 가독성 향상
+- 단일 책임 원칙 적용 (모듈 수준)
+- 각 모듈 독립적으로 테스트 가능
+- 코드 가독성 및 유지보수성 향상
 - 버그 격리 및 수정 용이
+- 관심사 분리 (Separation of Concerns)
 
 ### 타입 안전성
 
