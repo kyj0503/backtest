@@ -1179,8 +1179,12 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - portfolio_service.py: import 및 사용처 업데이트
   - Commits: (pending)
 
+- ✅ Phase 2.2.5: NaverNewsService → NewsService 변경
+  - news_service.py: NaverNewsService → NewsService
+  - 구현 세부사항(Naver API) 추상화
+  - Commits: (pending)
+
 ### 진행 예정
-- ⏳ Phase 2.2.5: NaverNewsService → NewsService 변경
 - ⏳ Phase 2.2.6: DataFetcher 메서드 (get_ → fetch_) 변경
 
 ---
