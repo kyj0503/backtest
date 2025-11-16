@@ -8,8 +8,8 @@
 - 상장폐지 종목 감지
 
 **의존성**:
-- app/services/portfolio_dca_manager.py: DCA 관리
-- app/services/portfolio_rebalancer.py: 리밸런싱
+- app/services/portfolio/portfolio_dca_manager.py: DCA 관리
+- app/services/portfolio/portfolio_rebalancer.py: 리밸런싱
 - app/services/rebalance_helper.py: 리밸런싱 헬퍼
 - app/utils/currency_converter.py: 통화 변환
 - app/constants/data_loading.py: 데이터 로딩 상수
@@ -22,8 +22,8 @@ from datetime import datetime, date
 import pandas as pd
 import numpy as np
 
-from app.services.portfolio_dca_manager import PortfolioDcaManager
-from app.services.portfolio_rebalancer import PortfolioRebalancer
+from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
+from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
 from app.utils.currency_converter import currency_converter
 from app.services.yfinance_db import get_ticker_info_batch_from_db
