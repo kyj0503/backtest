@@ -59,8 +59,8 @@ import logging
 
 from app.schemas.schemas import PortfolioBacktestRequest, FREQUENCY_MAP
 from app.schemas.requests import BacktestRequest
-from app.services.yfinance_db import load_ticker_data, get_ticker_info_batch_from_db
 from app.services.backtest_service import backtest_service
+from app.repositories.stock_repository import get_stock_repository
 from app.services.dca_calculator import DCACalculator
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
 from app.services.portfolio_calculator_service import portfolio_calculator_service
@@ -92,6 +92,8 @@ class PortfolioService:
             rebalancer=self.rebalancer
         )
         self.metrics = PortfolioMetrics()
+        # Repository 초기화 (Repository 패턴)
+        self.stock_repository = get_stock_repository()
         logger.info("포트폴리오 서비스가 초기화되었습니다")
 
     async def calculate_dca_portfolio_returns(
@@ -155,7 +157,7 @@ class PortfolioService:
         symbols = [dca_info[unique_key]['symbol'] for unique_key in stock_amounts.keys()]
         try:
             ticker_info_dict = await asyncio.to_thread(
-                get_ticker_info_batch_from_db, symbols
+                self.stock_repository.get_tickers_info_batch, symbols
             )
             ticker_currencies = {}
             for unique_key in stock_amounts.keys():
@@ -812,7 +814,7 @@ class PortfolioService:
 
                 # 병렬 로드 태스크 생성
                 load_tasks = [
-                    asyncio.to_thread(load_ticker_data, symbol, request.start_date, request.end_date)
+                    asyncio.to_thread(self.stock_repository.load_stock_data, symbol, request.start_date, request.end_date)
                     for symbol in symbols_to_load
                 ]
 
