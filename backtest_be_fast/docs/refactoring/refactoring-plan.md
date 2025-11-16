@@ -1150,11 +1150,23 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - dca_calculator.py: docstring 예제 코드 업데이트
   - portfolio_service.py: import 및 사용처 업데이트
   - docs/architecture/date_calculation.md: 문서 업데이트
+  - Commits: c10b9a7
+
+- ✅ Phase 2.2.2: Strategy 클래스들 (SMA, EMA, RSI, MACD) 변경
+  - strategies.py: SMACrossStrategy → SmaCrossStrategy
+  - strategies.py: EMAStrategy → EmaStrategy
+  - strategies.py: RSIStrategy → RsiStrategy
+  - strategies.py: MACDStrategy → MacdStrategy
+  - __init__.py: export 업데이트
+  - strategy_service.py: import 및 STRATEGIES 딕셔너리 업데이트
+  - tests/unit/test_sma_strategy.py: import 및 클래스 참조 업데이트
+  - tests/unit/test_ema_strategy.py: import 및 클래스 참조 업데이트
+  - tests/unit/test_rsi_strategy.py: import 및 클래스 참조 업데이트
+  - tests/unit/test_macd_strategy.py: import 및 클래스 참조 업데이트
+  - tests/unit/test_strategy_service.py: import 및 클래스 참조 업데이트
   - Commits: (pending)
 
 ### 진행 예정
-
-- ⏳ Phase 2.2.2: Strategy 클래스들 (SMA, EMA, RSI, MACD) 변경
 - ⏳ Phase 2.2.3: YFinance → Yfinance 변경
 - ⏳ Phase 2.2.4: PortfolioCalculatorService → PortfolioCalculator 변경
 - ⏳ Phase 2.2.5: NaverNewsService → NewsService 변경
