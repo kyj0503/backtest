@@ -27,7 +27,7 @@ from app.schemas.schemas import PortfolioBacktestRequest
 logger = logging.getLogger(__name__)
 
 
-class PortfolioCalculatorService:
+class PortfolioCalculator:
     """포트폴리오 통계 및 Equity Curve 계산 서비스"""
 
     @staticmethod
@@ -67,8 +67,8 @@ class PortfolioCalculatorService:
 
         # 최대 연속 상승/하락일
         daily_changes = daily_returns > 0
-        consecutive_gains = PortfolioCalculatorService._get_max_consecutive(daily_changes, True)
-        consecutive_losses = PortfolioCalculatorService._get_max_consecutive(daily_changes, False)
+        consecutive_gains = PortfolioCalculator._get_max_consecutive(daily_changes, True)
+        consecutive_losses = PortfolioCalculator._get_max_consecutive(daily_changes, False)
 
         # Profit Factor 계산 (이익일 수익률의 합 / 손실일 손실률의 절댓값 합)
         positive_returns = daily_returns[daily_returns > 0]
@@ -277,4 +277,4 @@ class PortfolioCalculatorService:
 
 
 # 싱글톤 인스턴스
-portfolio_calculator_service = PortfolioCalculatorService()
+portfolio_calculator = PortfolioCalculator()

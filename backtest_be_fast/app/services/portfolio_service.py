@@ -63,7 +63,7 @@ from app.services.backtest_service import backtest_service
 from app.repositories.stock_repository import get_stock_repository
 from app.services.dca_calculator import DcaCalculator
 from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
-from app.services.portfolio_calculator_service import portfolio_calculator_service
+from app.services.portfolio_calculator import portfolio_calculator
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.portfolio.portfolio_simulator import PortfolioSimulator
@@ -612,7 +612,7 @@ class PortfolioService:
             annual_return = ((total_portfolio_value / total_amount) ** (365.25 / duration_days) - 1) * 100 if duration_days > 0 else 0
 
             # 먼저 equity curve, daily returns, weight history 계산
-            equity_curve, daily_returns, weight_history = await portfolio_calculator_service._calculate_realistic_equity_curve(
+            equity_curve, daily_returns, weight_history = await portfolio_calculator._calculate_realistic_equity_curve(
                 request, portfolio_results, total_amount
             )
 
@@ -921,7 +921,7 @@ class PortfolioService:
             
             # 통계 계산
             logger.info("포트폴리오 통계 계산 중...")
-            statistics = portfolio_calculator_service.calculate_portfolio_statistics(portfolio_result, total_amount)
+            statistics = portfolio_calculator.calculate_portfolio_statistics(portfolio_result, total_amount)
             
             # 개별 종목 수익률 (참고용, 현금 포함)
             individual_returns = {}

@@ -1173,8 +1173,13 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - decorators.py: YFinanceRateLimitError import 업데이트
   - Commits: (pending)
 
+- ✅ Phase 2.2.4: PortfolioCalculatorService → PortfolioCalculator 변경
+  - portfolio_calculator_service.py: PortfolioCalculatorService → PortfolioCalculator
+  - portfolio_calculator_service.py: portfolio_calculator_service → portfolio_calculator (싱글톤 인스턴스)
+  - portfolio_service.py: import 및 사용처 업데이트
+  - Commits: (pending)
+
 ### 진행 예정
-- ⏳ Phase 2.2.4: PortfolioCalculatorService → PortfolioCalculator 변경
 - ⏳ Phase 2.2.5: NaverNewsService → NewsService 변경
 - ⏳ Phase 2.2.6: DataFetcher 메서드 (get_ → fetch_) 변경
 
