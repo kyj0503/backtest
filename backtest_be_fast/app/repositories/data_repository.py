@@ -137,7 +137,7 @@ class YfinanceDataRepository(DataRepositoryInterface):
             # 3. 실시간 데이터 페칭
             self.logger.info(f"실시간 데이터 페칭: {ticker}")
             fresh_data = await asyncio.to_thread(
-                self.data_fetcher.get_stock_data, ticker, start_date, end_date
+                self.data_fetcher.fetch_stock_data, ticker, start_date, end_date
             )
 
             # 4. 캐시에 저장

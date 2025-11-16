@@ -219,7 +219,7 @@ class ChartDataService:
         """
         캐시 우선 가격 데이터 조회
 
-        FIXED: Race condition bug - data_fetcher.get_stock_data() is synchronous
+        FIXED: Race condition bug - data_fetcher.fetch_stock_data() is synchronous
         and must be wrapped with asyncio.to_thread() to prevent blocking the event loop.
         """
         if self.data_repository:
@@ -227,7 +227,7 @@ class ChartDataService:
         else:
             # FIXED: Wrap synchronous call with asyncio.to_thread() (async/sync boundary)
             data = await asyncio.to_thread(
-                self.data_fetcher.get_stock_data,
+                self.data_fetcher.fetch_stock_data,
                 ticker=ticker,
                 start_date=start_date,
                 end_date=end_date,

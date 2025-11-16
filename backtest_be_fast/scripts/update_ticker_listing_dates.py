@@ -47,7 +47,7 @@ def update_listing_dates():
                 
                 # Yahoo Finance에서 상장일 조회
                 logger.info(f"{ticker}: Yahoo Finance에서 상장일 조회 중...")
-                ticker_info = data_fetcher.get_ticker_info(ticker)
+                ticker_info = data_fetcher.fetch_ticker_info(ticker)
                 first_trade_date = ticker_info.get('first_trade_date')
                 
                 if first_trade_date:

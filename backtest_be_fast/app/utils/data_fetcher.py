@@ -58,7 +58,7 @@ class DataFetcher:
     def __init__(self):
         pass
 
-    def get_stock_data(
+    def fetch_stock_data(
         self,
         ticker: str,
         start_date: date,
@@ -319,7 +319,7 @@ class DataFetcher:
             logger.error(f"티커 검증 실패: {ticker}, {e}")
             return False
     
-    def get_ticker_info(self, ticker: str) -> dict:
+    def fetch_ticker_info(self, ticker: str) -> dict:
         """
         티커 정보 조회
         

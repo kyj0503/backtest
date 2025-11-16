@@ -77,7 +77,7 @@ def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
         # ensure stock exists
         info = {}
         try:
-            info = data_fetcher.get_ticker_info(ticker)
+            info = data_fetcher.fetch_ticker_info(ticker)
         except Exception:
             logger.warning("티커 info 조회 실패")
 
@@ -251,7 +251,7 @@ def get_ticker_info_from_db(ticker: str) -> Dict[str, Any]:
                 if not info.get('first_trade_date'):
                     logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
                     try:
-                        fresh_info = data_fetcher.get_ticker_info(ticker)
+                        fresh_info = data_fetcher.fetch_ticker_info(ticker)
                         if fresh_info.get('first_trade_date'):
                             info['first_trade_date'] = fresh_info['first_trade_date']
                             # DB 업데이트
@@ -475,7 +475,7 @@ def _ensure_stock_exists(conn, engine: Engine, ticker: str, start_date: date, en
     if not row:
         logger.info(f"티커 '{ticker}'이 DB에 없음 — yfinance에서 수집 시도")
         try:
-            df_new = data_fetcher.get_stock_data(ticker, start_date, end_date, use_cache=True)
+            df_new = data_fetcher.fetch_stock_data(ticker, start_date, end_date, use_cache=True)
             if df_new is None or df_new.empty:
                 raise ValueError("yfinance에서 유효한 데이터가 반환되지 않았습니다.")
             save_ticker_data(ticker, df_new)
@@ -577,7 +577,7 @@ def _fetch_and_save_missing_data(
 
         try:
             logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다(통합+패드): {ticker} {co_start} -> {co_end}")
-            df_new = data_fetcher.get_stock_data(ticker, co_start, co_end, use_cache=True)
+            df_new = data_fetcher.fetch_stock_data(ticker, co_start, co_end, use_cache=True)
             if df_new is not None and not df_new.empty:
                 save_ticker_data(ticker, df_new)
                 # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
@@ -599,7 +599,7 @@ def _fetch_and_save_missing_data(
             continue
         try:
             logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다: {ticker} {s} -> {e}")
-            df_new = data_fetcher.get_stock_data(ticker, s, e, use_cache=True)
+            df_new = data_fetcher.fetch_stock_data(ticker, s, e, use_cache=True)
             if df_new is not None and not df_new.empty:
                 save_ticker_data(ticker, df_new)
                 # 데이터 저장 후 커넥션 갱신

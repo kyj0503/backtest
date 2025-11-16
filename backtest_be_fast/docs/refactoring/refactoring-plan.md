@@ -1184,8 +1184,33 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - 구현 세부사항(Naver API) 추상화
   - Commits: (pending)
 
+- ✅ Phase 2.2.6: DataFetcher 메서드 (get_ → fetch_) 변경
+  - data_fetcher.py: get_stock_data → fetch_stock_data
+  - data_fetcher.py: get_ticker_info → fetch_ticker_info
+  - data_repository.py: 메서드 호출 업데이트
+  - yfinance_db.py: 메서드 호출 업데이트 (5곳)
+  - data_service.py: 메서드 호출 업데이트
+  - backtest_engine.py: 메서드 호출 업데이트 (2곳)
+  - chart_data_service.py: 메서드 호출 및 주석 업데이트 (2곳)
+  - scripts/update_ticker_listing_dates.py: 메서드 호출 업데이트
+  - 명명 규칙 적용: fetch_ = 외부 API 호출
+  - Commits: (pending)
+
+### Phase 2.2 완료 요약
+
+**완료 시간**: 2025-11-16
+**총 작업**: 6개 하위 단계
+**변경된 파일**: 30개+
+**커밋**: 7개 (pending push)
+
+**주요 성과**:
+- ✅ 모든 클래스 이름을 PascalCase로 통일
+- ✅ 메서드 명명 규칙 표준화 (get_/fetch_/load_)
+- ✅ 중복 suffix 제거 (PortfolioCalculatorService)
+- ✅ 구현 세부사항 추상화 (NaverNewsService)
+- ✅ 테스트 파일까지 일관성 유지
+
 ### 진행 예정
-- ⏳ Phase 2.2.6: DataFetcher 메서드 (get_ → fetch_) 변경
 
 ---
 

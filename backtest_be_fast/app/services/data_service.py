@@ -94,7 +94,7 @@ class DataService:
 
             # 2. yfinance에서 실시간 조회
             logger.info(f"yfinance에서 데이터 조회: {ticker}")
-            df = self.data_fetcher.get_stock_data(ticker, start_date, end_date)
+            df = self.data_fetcher.fetch_stock_data(ticker, start_date, end_date)
 
             if df is None or df.empty:
                 raise DataNotFoundError(ticker, str(start_date), str(end_date))

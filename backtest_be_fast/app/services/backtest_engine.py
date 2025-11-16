@@ -176,7 +176,7 @@ class BacktestEngine:
         else:
             # 동기 data_fetcher를 안전하게 async로 실행
             data = await asyncio.to_thread(
-                self.data_fetcher.get_stock_data,
+                self.data_fetcher.fetch_stock_data,
                 ticker=ticker,
                 start_date=start_date,
                 end_date=end_date,
@@ -407,7 +407,7 @@ class BacktestEngine:
             if getattr(request, 'benchmark_ticker', None):
                 try:
                     self.logger.info(f"벤치마크 데이터 로딩 중: {request.benchmark_ticker}")
-                    benchmark = self.data_fetcher.get_stock_data(
+                    benchmark = self.data_fetcher.fetch_stock_data(
                         ticker=request.benchmark_ticker,
                         start_date=start_date,
                         end_date=end_date
