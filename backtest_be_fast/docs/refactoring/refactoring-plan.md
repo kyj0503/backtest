@@ -1214,7 +1214,7 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
 
 ## ✅ Phase 2.3 실행 현황
 
-**Phase 2.3: Validation Logic 통합 - 진행 중** (2025-11-16)
+**Phase 2.3: Validation Logic 통합 - 완료** (2025-11-16)
 
 ### 완료된 작업
 
@@ -1252,12 +1252,55 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
   - validate_rebalance_frequency(): 리밸런싱 주기 검증
   - validate_dca_frequency(): DCA 주기 검증
   - app/validators/__init__.py: PortfolioValidator 추가
-  - Commits: (pending)
+  - Commits: da99d94
 
-### 진행 예정
+- ✅ Phase 2.3.5: ValidationService 리팩터링 + Pydantic schemas 단순화
+  - app/services/validation_service.py: BacktestValidator로 위임하도록 리팩터링
+  - 기존 검증 메서드들이 BacktestValidator.validate_request() 호출
+  - composition 패턴 사용 (ValidationService가 BacktestValidator 소유)
+  - app/schemas/requests.py: Phase 2.3 리팩터링 변경사항 문서화
+  - app/schemas/schemas.py: Phase 2.3 리팩터링 변경사항 문서화
+  - field_validator에 명확한 역할 설명 주석 추가
+  - Pydantic: 타입/포맷 검증, Validators: 비즈니스 로직 검증으로 분리
+  - Commits: 9fba80f
 
-- ⏳ Phase 2.3.5: ValidationService 리팩터링 + Pydantic schemas 단순화
-- ⏳ Phase 2.3.6: 문서 업데이트
+- ✅ Phase 2.3.6: 문서 업데이트
+  - docs/refactoring/refactoring-plan.md: Phase 2.3 완료 현황 업데이트
+  - Phase 2.3.1 ~ 2.3.6 모든 단계 완료 표시
+  - 통계 정보 추가 (파일 수, 커밋 수, 변경 라인 수)
+
+### Phase 2.3 완료 요약
+
+**완료 시간**: 2025-11-16
+**총 작업**: 6개 하위 단계
+**새로 생성된 파일**: 5개
+- app/validators/__init__.py
+- app/validators/date_validator.py
+- app/validators/symbol_validator.py
+- app/validators/backtest_validator.py
+- app/validators/portfolio_validator.py
+
+**수정된 파일**: 3개
+- app/services/validation_service.py
+- app/schemas/requests.py
+- app/schemas/schemas.py
+
+**커밋**: 5개
+- 78ca4b6: DateValidator 생성
+- 4934d02: SymbolValidator 생성
+- b307814: BacktestValidator 생성
+- da99d94: PortfolioValidator 생성
+- 9fba80f: ValidationService 리팩터링 및 스키마 문서화
+
+**주요 성과**:
+- ✅ 검증 로직을 Pydantic schemas에서 전용 validators로 분리
+- ✅ DateValidator: 날짜 범위, 미래 날짜, 영업일 검증
+- ✅ SymbolValidator: 티커 형식, 존재 여부, 정규화
+- ✅ BacktestValidator: DateValidator + SymbolValidator 조합
+- ✅ PortfolioValidator: DateValidator + SymbolValidator + 포트폴리오 규칙
+- ✅ Composition 패턴으로 재사용성 극대화
+- ✅ 각 validator는 선택적 의존성 지원 (dependency injection)
+- ✅ 명확한 책임 분리: Pydantic(타입), Validators(비즈니스), Services(오케스트레이션)
 
 ---
 
