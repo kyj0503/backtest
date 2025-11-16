@@ -1058,6 +1058,87 @@ Phase 1 완료 후 진행하며, 코드 품질과 확장성을 개선합니다.
 
 ---
 
+## ✅ Phase 2.1 실행 현황
+
+**Phase 2.1: chart_data_service.py Indicator Strategy Pattern - 완료** (2025-11-16)
+
+### 완료된 작업
+
+- ✅ IndicatorStrategy 추상 기본 클래스 생성 (base.py, 97줄)
+  - 모든 지표가 구현해야 할 인터페이스 정의
+  - 공통 검증 로직 (_validate_data)
+  - 공통 로깅 로직 (_log_calculation)
+  - Commits: ea82411
+
+- ✅ SmaIndicator 구현 (sma_indicator.py, 100줄)
+  - short_window (default 10), long_window (default 20) 지원
+  - SMA_short, SMA_long 컬럼 추가
+  - Commits: cdb1d7c
+
+- ✅ RsiIndicator 구현 (rsi_indicator.py, 129줄)
+  - Wilder's method (EMA 기반) 구현
+  - period (14), overbought (70), oversold (30) 지원
+  - 나눗셈 0 보호 (np.finfo(float).eps)
+  - Commits: 29b6878
+
+- ✅ BollingerIndicator 구현 (bollinger_indicator.py, 116줄)
+  - period (20), std_dev (2.0) 지원
+  - BB_MIDDLE, BB_UPPER, BB_LOWER 컬럼 추가
+  - Commits: 8259aac
+
+- ✅ MacdIndicator 구현 (macd_indicator.py, 127줄)
+  - fast_period (12), slow_period (26), signal_period (9) 지원
+  - MACD, MACD_SIGNAL, MACD_HISTOGRAM 컬럼 추가
+  - Commits: b2c2557
+
+- ✅ EmaIndicator 구현 (ema_indicator.py, 110줄)
+  - short_span (12), long_span (26) 지원
+  - EMA_short, EMA_long 컬럼 추가
+  - Commits: e502bf2
+
+- ✅ IndicatorFactory 생성 (__init__.py, 157줄)
+  - 모든 5개 지표 자동 등록
+  - get_indicator(name) 팩토리 메서드
+  - register(name, indicator) 확장 메서드
+  - list_indicators() 발견 메서드
+  - Commits: b4b0a8f
+
+- ✅ ChartDataService 리팩터링 (chart_data_service.py)
+  - STRATEGY_TO_INDICATOR_MAP 상수 추가 (전략→지표 매핑)
+  - _generate_indicators() 메서드 리팩터링 (Factory Pattern 적용)
+  - _convert_indicator_results() 추가 (결과 변환)
+  - 5개 _extract_*_lines() 추가 (지표별 결과 추출)
+  - 224줄의 중복 지표 계산 로직 제거
+  - Commits: 6fdde4f
+
+### 통계 (Phase 2.1)
+- 생성된 클래스: 6개 (5개 지표 + 1개 팩토리)
+- 생성된 파일: 6개 (base + 5개 지표 + __init__)
+- 총 추가 라인: ~637줄 (indicators 패키지)
+- 제거된 라인: 224줄 (chart_data_service 중복 로직)
+- 순 변경: +413줄 (더 나은 구조)
+- 파일 크기: chart_data_service 627줄 → 598줄 (-29줄)
+
+### 아키텍처 개선 효과
+
+✅ **Open/Closed Principle (OCP)**
+- 새로운 지표 추가 시 chart_data_service 수정 불필요
+- IndicatorFactory에 등록만 하면 자동으로 사용 가능
+
+✅ **Single Responsibility Principle (SRP)**
+- 각 지표는 자신의 계산 로직만 담당
+- ChartDataService는 지표 오케스트레이션만 담당
+
+✅ **코드 재사용성**
+- 각 지표를 독립적으로 테스트 가능
+- 지표 로직을 다른 서비스에서도 재사용 가능
+
+✅ **유지보수성**
+- 지표별 버그 수정이 한 곳에서만 필요
+- 파라미터 변경이 명확하고 일관성 있음
+
+---
+
 ### 2.1 chart_data_service.py Indicator Strategy Pattern
 
 #### 현재 문제
