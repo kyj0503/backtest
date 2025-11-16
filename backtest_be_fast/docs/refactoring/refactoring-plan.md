@@ -37,11 +37,51 @@
   - calculate_dca_portfolio_returns 정적 메서드 제거
   - Commits: f64d085, 4f61258
 
-### 통계
+### 통계 (Phase 1.1)
 - 추출된 클래스: 4개
 - 총 추출 라인 수: ~950줄
 - 생성된 파일: 4개 (portfolio_dca_manager.py, portfolio_rebalancer.py, portfolio_simulator.py, portfolio_metrics.py)
 - 리팩터링 코드 라인: 30줄 (PortfolioService)
+
+---
+
+## ✅ Phase 1.2 실행 현황
+
+**Phase 1.2: yfinance_db.py 분할 - 완료** (2025-11-16)
+
+### 완료된 작업
+
+- ✅ DatabaseConfig 클래스 생성 (155줄)
+  - 환경 변수 및 settings에서 DB 설정 로드
+  - DATABASE_URL 파싱 및 개별 설정 혼합 지원
+  - 마스킹된 URL 생성 (로깅용)
+  - Commits: c728f37
+
+- ✅ PoolConfig 클래스 생성 (130줄)
+  - SQLAlchemy 연결 풀 설정 관리
+  - 기본값 최적화 (pool_size=40, max_overflow=80)
+  - 설정값 유효성 검증
+  - SQLAlchemy create_engine() kwargs 제공
+  - Commits: c728f37
+
+- ✅ DatabaseConnectionManager 클래스 생성 (140줄)
+  - 싱글톤 패턴으로 Engine 캐싱
+  - DatabaseConfig와 PoolConfig 통합 관리
+  - 테스트용 reset_cache() 제공
+  - Commits: c728f37
+
+- ✅ yfinance_db.py _get_engine() 간소화
+  - 94줄 → 9줄 (90% 감소)
+  - DatabaseConnectionManager로 위임
+  - 복잡한 설정 로직 제거
+  - Commits: 63f3db5
+
+### 통계 (Phase 1.2)
+- 생성된 클래스: 3개
+- 생성된 파일: 4개 (database_config.py, pool_config.py, connection_manager.py, __init__.py)
+- 총 추가 라인: ~402줄
+- 제거된 라인: 85줄 (yfinance_db.py)
+- 순 변경: +317줄 (더 나은 구조)
 
 ---
 
@@ -2206,10 +2246,10 @@ async def get_chart_data(
 - [ ] Integration 테스트 통과
 
 **1.2 yfinance_db.py 분할**:
-- [ ] `DatabaseConfig` 클래스 생성
-- [ ] `PoolConfig` 클래스 생성
-- [ ] `DatabaseConnectionManager` 클래스 생성
-- [ ] `_get_engine()` 간소화
+- [x] `DatabaseConfig` 클래스 생성 (commit: c728f37)
+- [x] `PoolConfig` 클래스 생성 (commit: c728f37)
+- [x] `DatabaseConnectionManager` 클래스 생성 (commit: c728f37)
+- [x] `_get_engine()` 간소화 (commit: 63f3db5)
 - [ ] 단위 테스트 작성
 
 **1.3 Repository Pattern 강화**:
