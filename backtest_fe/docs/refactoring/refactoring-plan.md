@@ -1,7 +1,8 @@
 # 프론트엔드 클린코드 리팩터링 계획
 
 **작성일**: 2025-11-16
-**상태**: 계획 수립 완료
+**최종 수정일**: 2025-11-18
+**상태**: 진행 중 (Phase 1.1, 1.2, 2.1 완료)
 **목표**: 클린 코드 원칙에 따른 구조 개선 및 유지보수성 향상
 
 ---
@@ -32,40 +33,40 @@
 
 ## Phase 1: 대형 컴포넌트 분할
 
-### 1.1. PortfolioForm.tsx 분할 (643줄)
+### 1.1. PortfolioForm.tsx 분할 (643줄) - 완료
 
 **문제**: 모바일/데스크톱 레이아웃, 테이블 렌더링, DCA 계산 로직이 하나의 파일에 집중
 
 **해결**: 관심사 분리를 통한 독립 컴포넌트 추출
 
-분리 대상:
+분리 완료:
 - **DcaPreview.tsx** - DCA 프리뷰 컴포넌트
 - **PortfolioMobileCard.tsx** - 모바일 카드 레이아웃
 - **PortfolioTable.tsx** - 데스크톱 테이블 레이아웃
 - **PortfolioInputModeToggle.tsx** - 입력 모드 전환 버튼
 - **PortfolioSummary.tsx** - 총 투자금 및 비중 요약
 
-**예상 결과**:
-- 메인 컴포넌트 643줄 → 150줄 이하
-- 각 하위 컴포넌트 50~150줄
+**실제 결과**:
+- 메인 컴포넌트 643줄 → 126줄 (80% 감소)
+- 각 하위 컴포넌트 30~250줄
 - 컴포넌트 재사용성 향상
 
-### 1.2. BacktestResults.tsx 분할 (460줄)
+### 1.2. BacktestResults.tsx 분할 (460줄) - 완료
 
-**문제**: 리포트 생성 로직(generateReportText)이 컴포넌트 내부에 존재
+**문제**: 리포트 생성 로직(generateReportText, downloadAsCSV)이 컴포넌트 내부에 존재
 
 **해결**: 비즈니스 로직을 서비스 레이어로 이동
 
-분리 대상:
+분리 완료:
 - **services/reportGenerator.ts** - 리포트 생성 로직 (순수 함수)
-- **PortfolioReportSection.tsx** - 포트폴리오 리포트 섹션
-- **SingleStockReportSection.tsx** - 단일 종목 리포트 섹션
-- **ExportButtons.tsx** - 내보내기 버튼 그룹
+  - generateTextReport(): 텍스트 리포트 생성
+  - generateCSVReport(): CSV 리포트 생성
 
-**예상 결과**:
-- 컴포넌트 460줄 → 150줄 이하
-- 비즈니스 로직 테스트 가능
+**실제 결과**:
+- 컴포넌트 460줄 → 96줄 (79% 감소)
+- 비즈니스 로직 테스트 가능 (순수 함수)
 - 리포트 형식 변경 용이
+- UI와 로직의 명확한 분리
 
 ### 1.3. HomePage.tsx 간소화 (258줄)
 
@@ -88,32 +89,28 @@
 
 ## Phase 2: 비즈니스 로직 분리
 
-### 2.1. 계산 로직 서비스화
+### 2.1. 계산 로직 서비스화 - 부분 완료
 
 **문제**: 컴포넌트 내부에 산재된 계산 로직
 
 **해결**: services 디렉토리로 순수 함수 이동
 
-생성할 서비스:
-- **services/portfolioCalculator.ts**
-  - calculateWeightPercent()
-  - calculateDcaAdjustedTotal()
-  - calculateStockTotalAmount()
+완료된 서비스:
+- **services/reportGenerator.ts** - 리포트 생성 로직
+  - generateTextReport(): 텍스트 리포트 생성
+  - generateCSVReport(): CSV 리포트 생성
 
-- **services/backtestMetrics.ts**
-  - formatMetricValue()
-  - calculateReturns()
-  - calculateDrawdown()
+기존 유틸리티 (이미 존재):
+- **utils/portfolioCalculations.ts** - 포트폴리오 계산 로직
+  - getDcaAdjustedTotal()
+  - calculateWeight()
+  - calculateTotalAmount()
 
-- **services/reportGenerator.ts**
-  - generateTextReport()
-  - generateCSVReport()
-  - generateJSONReport()
-
-**예상 결과**:
+**실제 결과**:
 - 순수 함수로 테스트 용이
 - 로직 재사용성 증가
 - 컴포넌트는 UI 렌더링에만 집중
+- BacktestResults 컴포넌트 79% 감소
 
 ### 2.2. 데이터 변환 로직 분리
 
