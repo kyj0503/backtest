@@ -2,8 +2,15 @@
 
 **작성일**: 2025-11-16
 **최종 수정일**: 2025-11-18
-**상태**: 진행 중 (Phase 1.1, 1.2, 2.1 완료)
+**상태**: Phase 1 & 2.1 완료 (대형 컴포넌트 분할 및 비즈니스 로직 분리)
 **목표**: 클린 코드 원칙에 따른 구조 개선 및 유지보수성 향상
+
+## 완료 현황
+
+- Phase 1.1: PortfolioForm 분할 - 643줄 → 126줄 (80% 감소)
+- Phase 1.2: BacktestResults 분할 - 460줄 → 96줄 (79% 감소)
+- Phase 1.3: HomePage 분할 - 258줄 → 23줄 (91% 감소)
+- Phase 2.1: 비즈니스 로직 서비스화 (reportGenerator 추출)
 
 ---
 
@@ -68,22 +75,24 @@
 - 리포트 형식 변경 용이
 - UI와 로직의 명확한 분리
 
-### 1.3. HomePage.tsx 간소화 (258줄)
+### 1.3. HomePage.tsx 간소화 (258줄) - 완료
 
 **문제**: 랜딩 페이지의 모든 섹션이 하나의 파일에 존재
 
 **해결**: 섹션별 컴포넌트 분리
 
-분리 대상:
+분리 완료:
 - **landing/HeroSection.tsx** - 히어로 섹션
 - **landing/WhatIsBacktestSection.tsx** - 백테스트 설명 섹션
-- **landing/FeaturesSection.tsx** - 기능 소개 섹션
-- **landing/GetStartedSection.tsx** - 시작하기 섹션
+- **landing/HowToUseSection.tsx** - 사용 가이드 섹션
+- **landing/KeyFeaturesSection.tsx** - 주요 기능 섹션
+- **landing/CTASection.tsx** - 행동 유도 섹션
 
-**예상 결과**:
-- 메인 페이지 258줄 → 50줄 이하 (섹션 조합만)
+**실제 결과**:
+- 메인 페이지 258줄 → 23줄 (91% 감소)
 - 각 섹션 독립적 수정 가능
 - 재사용 가능한 랜딩 컴포넌트
+- 랜딩 페이지 구조 명확화
 
 ---
 
