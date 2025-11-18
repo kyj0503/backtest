@@ -1,4 +1,12 @@
-import type { BacktestResultData, TradeMarker, ExchangeRatePoint } from '../model/types/backtest-result-types';
+import type {
+  BacktestResultData,
+  TradeMarker,
+  ExchangeRatePoint,
+  RebalanceEvent,
+  RebalanceTrade,
+  WeightHistoryPoint,
+  EquityPoint
+} from '../model/types/backtest-result-types';
 
 interface SummaryStats {
   total_return_pct?: number;
@@ -209,10 +217,11 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
     if ('rebalance_history' in data && Array.isArray(data.rebalance_history) && data.rebalance_history.length > 0) {
       csvRows.push('리밸런싱 히스토리');
       csvRows.push('날짜,종목,거래타입,거래금액($),거래수량,거래가격($),수수료($)');
-      data.rebalance_history.forEach((event: any) => {
+      data.rebalance_history.forEach((event: RebalanceEvent) => {
         const trades = event.trades || [];
-        trades.forEach((trade: any) => {
-          csvRows.push(`${event.date},${trade.symbol},${trade.action === 'buy' ? '매수' : '매도'},${Math.abs(trade.value).toFixed(2)},${trade.shares.toFixed(4)},${trade.price.toFixed(2)},${(trade.commission || 0).toFixed(2)}`);
+        trades.forEach((trade: RebalanceTrade) => {
+          const value = trade.amount !== undefined ? trade.amount : (trade.shares * trade.price);
+          csvRows.push(`${event.date},${trade.symbol},${trade.action === 'buy' ? '매수' : '매도'},${Math.abs(value).toFixed(2)},${trade.shares.toFixed(4)},${trade.price.toFixed(2)},${(event.commission_cost || 0).toFixed(2)}`);
         });
       });
       csvRows.push('');
@@ -221,18 +230,19 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
     if ('weight_history' in data && Array.isArray(data.weight_history) && data.weight_history.length > 0) {
       csvRows.push('포트폴리오 비중 변화 (매월 1일 기준)');
 
-      const symbols = Object.keys(data.weight_history[0].weights || {});
+      const symbols = Object.keys(data.weight_history[0]).filter(key => key !== 'date');
       csvRows.push(`날짜,${symbols.join(',')}`);
 
       const weightHistory = data.weight_history;
-      const sampledHistory = weightHistory.filter((_: any, idx: number) => {
+      const sampledHistory = weightHistory.filter((_: WeightHistoryPoint, idx: number) => {
         return idx === 0 || idx === weightHistory.length - 1 || idx % 30 === 0;
       });
 
-      sampledHistory.forEach((point: any) => {
-        const weights = symbols.map(symbol =>
-          (point.weights[symbol] * 100).toFixed(2) + '%'
-        );
+      sampledHistory.forEach((point: WeightHistoryPoint) => {
+        const weights = symbols.map(symbol => {
+          const weight = point[symbol];
+          return typeof weight === 'number' ? (weight * 100).toFixed(2) + '%' : 'N/A';
+        });
         csvRows.push(`${point.date},${weights.join(',')}`);
       });
       csvRows.push('');
@@ -244,11 +254,12 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
 
       const equityData = data.equity_data;
       const sampledEquity = equityData.length > 100
-        ? equityData.filter((_: any, idx: number) => idx % 7 === 0 || idx === equityData.length - 1)
+        ? equityData.filter((_: EquityPoint, idx: number) => idx % 7 === 0 || idx === equityData.length - 1)
         : equityData;
 
-      sampledEquity.forEach((point: any) => {
-        csvRows.push(`${point.date},${point.equity.toFixed(2)}`);
+      sampledEquity.forEach((point: EquityPoint) => {
+        const equityValue = point.value !== undefined ? point.value : (point as { equity?: number }).equity || 0;
+        csvRows.push(`${point.date},${equityValue.toFixed(2)}`);
       });
       csvRows.push('');
     }
@@ -305,11 +316,12 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
 
       const equityData = data.equity_data;
       const sampledEquity = equityData.length > 100
-        ? equityData.filter((_: any, idx: number) => idx % 7 === 0 || idx === equityData.length - 1)
+        ? equityData.filter((_: EquityPoint, idx: number) => idx % 7 === 0 || idx === equityData.length - 1)
         : equityData;
 
-      sampledEquity.forEach((point: any) => {
-        csvRows.push(`${point.date},${point.equity.toFixed(2)}`);
+      sampledEquity.forEach((point: EquityPoint) => {
+        const equityValue = point.value !== undefined ? point.value : (point as { equity?: number }).equity || 0;
+        csvRows.push(`${point.date},${equityValue.toFixed(2)}`);
       });
       csvRows.push('');
     }
