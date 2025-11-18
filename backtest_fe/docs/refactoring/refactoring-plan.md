@@ -2,7 +2,7 @@
 
 **작성일**: 2025-11-16
 **최종 수정일**: 2025-11-18
-**상태**: Phase 1 & 2.1 완료 (대형 컴포넌트 분할 및 비즈니스 로직 분리)
+**상태**: Phase 1, 2.1, 4.1 완료 (컴포넌트 분할, 로직 분리, 타입 안전성 강화)
 **목표**: 클린 코드 원칙에 따른 구조 개선 및 유지보수성 향상
 
 ## 완료 현황
@@ -11,6 +11,7 @@
 - Phase 1.2: BacktestResults 분할 - 460줄 → 96줄 (79% 감소)
 - Phase 1.3: HomePage 분할 - 258줄 → 23줄 (91% 감소)
 - Phase 2.1: 비즈니스 로직 서비스화 (reportGenerator 추출)
+- Phase 4.1: 타입 안전성 강화 (any 타입 제거, strict 옵션 추가)
 
 ---
 
@@ -197,34 +198,32 @@
 
 ## Phase 4: 타입 안전성 강화
 
-### 4.1. 타입 정의 개선
+### 4.1. 타입 정의 개선 - 완료
 
 **문제**: any 타입 사용, 불완전한 타입 정의
 
 **해결**: 엄격한 타입 정의 및 검증
 
-개선 대상:
-- **model/types/api.ts**
-  - API 응답 타입 정확히 정의
-  - Zod 스키마로 런타임 검증 추가
+완료된 개선:
+- **BacktestResultData 타입 추가**
+  - ChartData | PortfolioData union 타입 정의
+  - reportGenerator.ts에서 사용
 
-- **model/types/chart.ts**
-  - 차트 데이터 타입 명확화
-  - Recharts 타입과 정확히 매핑
+- **reportGenerator.ts any 타입 제거**
+  - RebalanceEvent, RebalanceTrade 타입 적용
+  - WeightHistoryPoint 타입 적용
+  - EquityPoint 타입 적용
+  - 모든 any 타입을 구체적인 타입으로 교체
 
 - **tsconfig.json 강화**
-  ```json
-  {
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitReturns": true
-  }
-  ```
+  - noUncheckedIndexedAccess: true (배열/객체 접근 안전성)
+  - noImplicitReturns: true (명시적 반환값)
 
-**예상 결과**:
+**실제 결과**:
 - 런타임 에러 사전 방지
 - IDE 자동완성 개선
 - 리팩터링 안전성 향상
+- 타입 안전성 대폭 강화
 
 ### 4.2. Prop 타입 명확화
 
