@@ -1,6 +1,6 @@
 # Backtesting Frontend
 
-**라고할때살걸** - 트레이딩 전략 백테스팅 플랫폼 프론트엔드
+**트레이딩 전략 백테스팅 플랫폼 프론트엔드**
 
 ## 기술 스택
 
@@ -96,7 +96,7 @@ npm run test:ui       # UI 모드
 
 ### 임포트 규칙
 
-#### ✅ 권장 패턴
+#### 권장 패턴
 ```typescript
 // 절대 경로 사용 (tsconfig paths)
 import { Button } from '@/shared/ui/button';
@@ -105,10 +105,10 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/shared/lib/utils/formatters';
 ```
 
-#### ❌ 금지 패턴
+#### 금지 패턴
 ```typescript
 // 3단계 이상 상대 경로 금지
-import { Button } from '../../../shared/ui/button';  // ❌
+import { Button } from '../../../shared/ui/button';
 
 // 순환 의존 금지
 // Feature A → Feature B 임포트 금지
