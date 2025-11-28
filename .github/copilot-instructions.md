@@ -36,18 +36,18 @@ pages/ → features/ → shared/
 
 ## Critical Patterns & Pitfalls
 
-### 🚨 ASYNC/SYNC BOUNDARY (CRITICAL)
+### ASYNC/SYNC BOUNDARY (CRITICAL)
 **Problem:** Race conditions occur when synchronous I/O (DB queries, yfinance API) runs directly in async context without `asyncio.to_thread()`.
 
 **Symptoms:** First backtest with new data fails, second run succeeds.
 
 **Solution:** ALL synchronous I/O in async functions MUST be wrapped:
 ```python
-# ❌ WRONG - causes race conditions
+# WRONG - causes race conditions
 async def some_function():
     data = load_ticker_data(symbol, start, end)  # Sync I/O in async context
 
-# ✅ CORRECT
+# CORRECT
 async def some_function():
     data = await asyncio.to_thread(load_ticker_data, symbol, start, end)
 ```

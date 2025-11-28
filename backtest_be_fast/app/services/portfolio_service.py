@@ -1,54 +1,12 @@
-"""
-포트폴리오 백테스트 서비스
+"""포트폴리오 백테스트 서비스
 
-**역할**:
-- 여러 종목으로 구성된 포트폴리오의 백테스트 실행
-- 분할 매수(DCA) 전략 지원
-- 리밸런싱 로직 구현
-- 포트폴리오 수익률 및 통계 계산
+여러 종목으로 구성된 포트폴리오의 백테스트를 실행합니다.
+DCA(분할 매수), 리밸런싱, 다중 통화를 지원합니다.
 
-**통화 정책**:
-- 개별 종목 가격: DB에 원래 통화로 저장 (KRW, JPY, EUR, GBP 등)
-- 백테스트 연산: 모든 가격을 USD로 변환하여 계산
-- 환율 변환: 13개 주요 통화 지원
-  * 직접 환율: KRW=X, JPY=X, CNY=X 등 (1 USD = X 통화)
-  * USD 환율: EURUSD=X, GBPUSD=X 등 (1 통화 = X USD)
-- 프론트엔드 표시:
-  * 개별 종목 시장 데이터(주가, 급등락) → 원래 통화
-  * 백테스트 결과(리밸런싱, 수수료) → USD
-
-**주요 기능**:
-1. run_portfolio_backtest(): 메인 백테스트 실행 메서드
-   - 단일 종목 → backtest_service로 위임
-   - 다중 종목 → 전략에 따라 분기
-2. run_buy_and_hold_portfolio_backtest(): Buy & Hold 전략 백테스트
-3. run_strategy_portfolio_backtest(): 기술적 전략 백테스트
-4. calculate_dca_portfolio_returns(): DCA 투자 수익률 계산
-5. calculate_portfolio_statistics(): 샤프 비율, 최대 낙폭 등 통계
-
-**지원 투자 방식**:
-- lump_sum: 일시불 투자 (전액 한 번에 투자)
-- dca: 분할 매수 (Dollar Cost Averaging, 정기적으로 나누어 투자)
-
-**리밸런싱**:
-- 주기적으로 포트폴리오 비중을 원래대로 조정
-- 지원 주기: weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none
-
-**의존성**:
-- app/services/backtest_service.py: 단일 종목 백테스트
-- app/services/yfinance_db.py: 주가 데이터 로딩
-- app/repositories/backtest_repository.py: 백테스트 결과 저장
-
-**연관 컴포넌트**:
-- Backend: app/api/v1/endpoints/backtest.py (API 엔드포인트)
-- Frontend: src/features/backtest/components/PortfolioForm.tsx (포트폴리오 설정)
-- Frontend: src/features/backtest/hooks/useBacktestForm.ts (폼 상태 관리)
-
-**통계 지표**:
-- 총 수익률, 연환산 수익률
-- 샤프 비율: 위험 대비 수익률
-- 최대 낙폭(Max Drawdown): 최고점 대비 최대 하락폭
-- 승률, 평균 수익/손실
+통화 정책:
+- DB 저장: 원본 통화 (KRW, JPY, EUR 등)
+- 백테스트 계산: 모든 가격을 USD로 변환
+- 프론트엔드: 개별 종목은 원본 통화, 결과는 USD
 """
 import asyncio
 import pandas as pd
@@ -106,25 +64,9 @@ class PortfolioService:
         rebalance_frequency: str = "weekly_4",
         commission: float = 0.0
     ) -> pd.DataFrame:
-        """
-        분할 매수(DCA)와 리밸런싱을 고려한 포트폴리오 수익률을 계산합니다.
+        """DCA와 리밸런싱을 고려한 포트폴리오 수익률 계산
 
-        Args:
-            portfolio_data: 각 종목의 가격 데이터 {symbol: DataFrame}
-            amounts: 각 종목의 총 투자 금액 {symbol: amount}
-            dca_info: 분할 매수 정보 {symbol: {investment_type, dca_periods, period_amount, interval_weeks}}
-            start_date: 시작 날짜
-            end_date: 종료 날짜
-            rebalance_frequency: 리밸런싱 주기 (weekly_1, weekly_2, weekly_4, weekly_8, weekly_12, weekly_24, weekly_48, none)
-            commission: 거래 수수료율 (예: 0.002 = 0.2%)
-
-        Returns:
-            포트폴리오 가치와 수익률이 포함된 DataFrame
-            
-        Note:
-            - last_rebalance_date는 리밸런싱 예정일 추적용 (거래 여부 무관)
-            - rebalance_history는 실제 거래가 발생한 리밸런싱만 기록
-            - 이는 의도된 동작: 다음 리밸런싱 스케줄 계산을 위해 예정일 기준 추적
+        Note: last_rebalance_date는 예정일 추적용, rebalance_history는 실제 거래만 기록
         """
         # 현금 처리
         cash_amount = 0
@@ -169,8 +111,6 @@ class PortfolioService:
             logger.warning(f"티커 정보 배치 조회 실패: {e}, 모두 USD로 가정")
             ticker_currencies = {unique_key: 'USD' for unique_key in stock_amounts.keys()}
 
-        # 필요한 통화 파악 및 환율 데이터 로드
-        # Phase 2.3 리팩토링: 환율 로딩 로직을 currency_converter로 통합
         required_currencies = list(set(ticker_currencies.values()) - {'USD'})
 
         if required_currencies:
@@ -200,10 +140,8 @@ class PortfolioService:
                     logger.warning(f"환율 데이터 없음 ({currency}): 변환 불가")
             logger.info(f"총 {len(exchange_rates_by_currency)}/{len(required_currencies)}개 통화 환율 로드 완료")
 
-        # 목표 비중 계산 (리밸런싱용)
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
 
-        # 포트폴리오 상태 초기화 (Extract Method 리팩토링)
         state = self.simulator.initialize_portfolio_state(
             stock_amounts=stock_amounts,
             cash_amount=cash_amount,
@@ -211,7 +149,6 @@ class PortfolioService:
             dca_info=dca_info
         )
 
-        # 상태 변수 언팩
         shares = state['shares']
         portfolio_values = state['portfolio_values']
         daily_returns = state['daily_returns']
@@ -236,7 +173,6 @@ class PortfolioService:
             if current_date.date() > end_date_obj.date():
                 break
 
-            # 현재 가격 가져오기 및 USD 변환 (Extract Method 리팩토링)
             current_prices, last_valid_exchange_rates = self.simulator.fetch_and_convert_prices(
                 current_date=current_date,
                 stock_amounts=stock_amounts,
@@ -246,7 +182,6 @@ class PortfolioService:
                 exchange_rates_by_currency=exchange_rates_by_currency
             )
 
-            # 상장폐지 감지 및 상태 업데이트 (Extract Method 리팩토링)
             self.simulator.detect_and_update_delisting(
                 current_date=current_date,
                 stock_amounts=stock_amounts,
@@ -257,7 +192,6 @@ class PortfolioService:
                 last_price_date=last_price_date
             )
 
-            # 상장폐지 종목 요약 (리밸런싱 날짜 또는 매주 월요일에 로깅)
             if delisted_stocks and (should_rebalance or current_date.weekday() == 0):
                 delisted_symbols = [dca_info[key]['symbol'] for key in delisted_stocks if key in dca_info]
                 logger.info(
@@ -265,7 +199,6 @@ class PortfolioService:
                     f"[{', '.join(delisted_symbols)}]"
                 )
 
-            # 첫 날 초기 매수 실행 (Extract Method 리팩토링)
             if is_first_day:
                 trades, cash_inflow = self.dca_manager.execute_initial_purchases(
                     current_date=current_date,
@@ -280,7 +213,6 @@ class PortfolioService:
                 is_first_day = False
                 prev_date = current_date
 
-            # DCA 추가 매수 실행 (Extract Method 리팩토링)
             if prev_date is not None:
                 trades, cash_inflow = self.dca_manager.execute_periodic_purchases(
                     current_date=current_date,
@@ -295,8 +227,6 @@ class PortfolioService:
                 total_trades += trades
                 daily_cash_inflow += cash_inflow
 
-            # 리밸런싱 실행
-            # 첫 리밸런싱 시 original_nth 설정
             if original_rebalance_nth is None and rebalance_frequency != 'none':
                 original_rebalance_nth = get_weekday_occurrence(start_date_obj)
                 logger.debug(f"리밸런싱 원본 Nth 값 설정 = {original_rebalance_nth}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
@@ -305,7 +235,6 @@ class PortfolioService:
                 current_date, prev_date, rebalance_frequency, start_date_obj, last_rebalance_date, original_rebalance_nth
             )
 
-            # 리밸런싱 트리거 결정 로깅
             if rebalance_frequency != 'none':
                 if should_rebalance and len(target_weights) > 1:
                     logger.info(
@@ -318,15 +247,13 @@ class PortfolioService:
                         f"{current_date.date()}: 리밸런싱 조건 충족하지만 자산 수 부족 (자산 수: {len(target_weights)})"
                     )
 
-            if should_rebalance and len(target_weights) > 1:  # 자산이 2개 이상일 때만
-                # 상장폐지 종목이 있는 경우 동적 비중 재계산 (Extract Method 리팩토링)
+            if should_rebalance and len(target_weights) > 1:
                 adjusted_target_weights = self.rebalancer.calculate_adjusted_weights(
                     target_weights=target_weights,
                     delisted_stocks=delisted_stocks,
                     dca_info=dca_info
                 )
 
-                # 조정된 비중 추가 로깅 (거래 가능 종목)
                 if delisted_stocks:
                     for unique_key, adj_weight in adjusted_target_weights.items():
                         if unique_key not in delisted_stocks:
@@ -336,8 +263,7 @@ class PortfolioService:
                                 logger.debug(
                                     f"  {symbol}: {original_weight:.2%} -> {adj_weight:.2%}"
                                 )
-                
-                # 리밸런싱 거래 실행 (Extract Method 리팩토링)
+
                 total_stock_value = sum(
                     shares[key] * current_prices.get(key, 0)
                     for key in shares.keys()
@@ -357,13 +283,11 @@ class PortfolioService:
                     delisted_stocks=delisted_stocks
                 )
 
-                # 상태 업데이트
                 shares = rebalance_result['updated_shares']
                 cash_holdings = rebalance_result['updated_cash_holdings']
                 available_cash = rebalance_result['updated_available_cash']
                 trades_in_rebalance = rebalance_result['trades_executed']
 
-                # 리밸런싱 히스토리 기록
                 if rebalance_result['rebalance_trades']:
                     rebalance_history.append({
                         'date': current_date.strftime('%Y-%m-%d'),
@@ -373,11 +297,9 @@ class PortfolioService:
                         'commission_cost': rebalance_result['commission_cost']
                     })
 
-                # 마지막 리밸런싱 날짜 업데이트
                 last_rebalance_date = current_date
                 total_trades += trades_in_rebalance
 
-            # 일일 지표 계산 및 히스토리 기록 (Extract Method 리팩토링)
             normalized_value, daily_return, current_weights = self.metrics.calculate_daily_metrics_and_history(
                 current_date=current_date,
                 shares=shares,
@@ -394,18 +316,15 @@ class PortfolioService:
             daily_returns.append(daily_return)
             weight_history.append(current_weights)
 
-            # 다음 반복을 위한 상태 업데이트
-            prev_portfolio_value = normalized_value * total_amount  # 비정규화된 값으로 저장
+            prev_portfolio_value = normalized_value * total_amount
             prev_date = current_date
 
-        # 결과 DataFrame 생성
         valid_dates = [d for d in date_range if start_date_obj.date() <= d.date() <= end_date_obj.date()]
 
         if len(portfolio_values) != len(valid_dates):
             logger.warning(f"포트폴리오 값 길이 불일치: portfolio_values={len(portfolio_values)}, valid_dates={len(valid_dates)}")
             logger.warning(f"첫 3개 날짜: {valid_dates[:3] if len(valid_dates) > 0 else 'None'}")
             logger.warning(f"마지막 3개 날짜: {valid_dates[-3:] if len(valid_dates) > 0 else 'None'}")
-            # 길이가 맞지 않으면 오류 발생 (기본값으로 채우는 대신)
             raise ValueError(f"계산된 포트폴리오 값 개수({len(portfolio_values)})가 날짜 개수({len(valid_dates)})와 일치하지 않습니다.")
 
         result = pd.DataFrame({
@@ -416,7 +335,6 @@ class PortfolioService:
         })
         result.set_index('Date', inplace=True)
 
-        # 메타데이터 저장
         result.attrs['total_trades'] = total_trades
         result.attrs['rebalance_history'] = rebalance_history
         result.attrs['weight_history'] = weight_history

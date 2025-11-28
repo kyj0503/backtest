@@ -182,8 +182,10 @@ export interface PortfolioData {
   warnings?: string[];
 }
 
+export type BacktestResultData = ChartData | PortfolioData;
+
 export interface BacktestResultsProps {
-  data: ChartData | PortfolioData;
+  data: BacktestResultData;
   isPortfolio: boolean;
 }
 

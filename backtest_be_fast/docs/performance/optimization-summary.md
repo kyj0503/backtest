@@ -1,11 +1,3 @@
-# 백엔드 성능 최적화 요약
-
-버전: 1.7.5
-
-## 개요
-
-쿼리 패턴, 코드 품질, 함수 복잡도에 초점을 맞춘 종합적인 백엔드 최적화를 수행했습니다. 상당한 성능 개선과 유지보수성 향상을 달성했습니다.
-
 ## 성능 개선
 
 ### N+1 쿼리 패턴 최적화
@@ -13,9 +5,12 @@
 asyncio.gather()를 사용하여 순차적 데이터베이스 쿼리를 병렬 실행으로 변환했습니다.
 
 #### 포트폴리오 데이터 로딩
-- 이전: 순차 로딩 (10개 종목 기준 3-12초)
-- 이후: asyncio.gather()를 사용한 병렬 로딩
-- 성능 향상: 10배 빠름 (10개 종목 기준 0.3초)
+- 테스트 환경: 18개 종목, 5년치 데이터 (2020-2024)
+- 결과:
+  - 순차 로딩: 2.00초
+  - 병렬 로딩: 1.09초
+  - 성능 향상: **1.8배**
+- 분석: 데이터 양이 많아질수록(5년치) DB I/O 및 데이터프레임 변환(CPU) 부하가 커져 병렬화의 이점이 다소 감소함 (소량 데이터에서는 5~6배 향상).
 - 위치: app/services/portfolio_service.py 라인 1490-1510 부근
 
 구현:
@@ -28,150 +23,41 @@ load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
 ```
 
 #### 환율 데이터 로딩
-- 이전: 순차 로딩 (4개 통화 기준 2초)
+- 이전: 순차 로딩
 - 이후: asyncio.gather()를 사용한 병렬 로딩
-- 성능 향상: 3-4배 빠름 (4개 통화 기준 0.5초)
+- 성능 향상: 포트폴리오 데이터 로딩과 유사한 수준의 병렬화 이점 제공 (약 3-5배 예상)
 - 위치: app/utils/currency_converter.py 라인 360-390 부근
-
-총 절감 시간: 포트폴리오 백테스트 요청당 최대 12초
 
 ### 데이터베이스 쿼리 최적화
 
-- 티커 정보 일괄 조회 구현
-- 데이터베이스 왕복 횟수 감소
-- 커넥션 풀링 지원 추가
+- 티커 정보 일괄 조회 구현 (N+1 문제 해결)
+- 테스트 결과 (18개 종목):
+  - 개별 조회: 0.37초
+  - 배치 조회: 0.02초
+  - 성능 향상: **16.4배**
+- 데이터베이스 왕복 횟수 감소: N회 → 1회
 - 위치: app/services/yfinance_db.py
 
-## 코드 품질 개선
+### 주가 데이터 조회와 티커 정보 조회 구현이 다른 이유
 
-### 치명적 버그 수정
+두 방식이 다른 이유는 데이터의 성격과 로직의 복잡성 때문입니다.
 
-레이스 컨디션을 유발하던 비동기/동기 경계 위반 2건 수정:
-- app/services/backtest_engine.py - asyncio.to_thread() 래퍼 추가
-- app/services/portfolio_service.py - 동기 I/O 호출 래핑
+1. 티커 정보 (Metadata) -> IN 절 사용 (Batch Query)
+성격: 데이터 크기가 작고(종목당 1행), 단순 조회(SELECT)만 수행합니다.
+구현: "여러 종목의 정보를 줘"라는 쿼리 하나로 DB에서 가져오기만 하면 끝납니다.
+이유: 구현이 매우 간단하고, DB 왕복 횟수를 줄이는 효과가 확실하기 때문에 IN 절을 사용했습니다.
 
-영향: 첫 실행 시 잘못된 결과 방지
+2. 주가 데이터 (Time Series) -> 병렬 실행 (asyncio.gather)
+성격: 데이터 양이 많고(종목당 수천 행), **"캐시 확인 -> 누락 구간 파악 -> 외부 API(yfinance) 데이터 수집 -> DB 저장 -> 조회"**라는 복잡한 로직이 포함됩니다.
+이유:
+로직 재사용: 이미 단일 종목에 대해 "누락된 기간만 채워넣는" 복잡한 로직(_load_ticker_data_internal)이 잘 구현되어 있습니다. 이를 배치(Batch)로 다시 짜려면, 각 종목마다 제각각인 누락 기간을 한 번에 처리하는 매우 복잡한 로직이 필요합니다.
+외부 API 제약: DB 조회는 IN 절로 한 번에 할 수 있지만, 외부 API(yfinance)에서 데이터를 가져올 때는 어차피 종목별로 요청해야 하는 경우가 많습니다.
+병렬성의 이점: asyncio.gather를 쓰면 여러 종목의 DB 조회와 외부 API 요청을 동시에 진행하므로, 복잡한 로직을 그대로 쓰면서도 전체 시간을 획기적으로 단축할 수 있습니다.
 
-### 코드 중복 제거
+결론:
+단순 조회는 **Batch Query (IN 절)**가 좋음.
+복잡한 로직(캐싱, 외부 요청 등)이 섞여 있을 때는 병렬 실행이 구현 난이도 대비 성능 효율이 가장 좋음.
 
-중앙 집중식 타입 변환 유틸리티 생성:
-- 신규 모듈: app/utils/type_converters.py
-- safe_float/safe_int 중복 코드 34줄 제거
-- 3개의 개별 구현을 단일 소스로 통합
+## 성능 테스트 방법
 
-### 매직 넘버 상수화
-
-거래 임계값 중앙 집중화:
-- 위치: app/constants/data_loading.py:60-78
-- 상수: RSI_OVERSOLD, RSI_OVERBOUGHT, DELISTING_THRESHOLD_DAYS 등
-- 코드베이스 전체 5개 이상 위치에 적용
-
-### 데드 코드 제거
-
-서비스 파일 전반에서 사용되지 않는 import 3개 제거
-
-## 리팩터링 성과
-
-### 함수 추출
-
-대형 calculate_dca_portfolio_returns() 함수 분할:
-- 이전: 625줄, 매우 높은 순환 복잡도
-- 이후: 평균 72줄의 집중된 헬퍼 함수 8개
-- 커밋: c1e42b3
-
-추출된 함수:
-1. _initialize_portfolio_state() - 23줄
-2. _fetch_and_convert_prices() - 47줄
-3. _detect_and_update_delisting() - 30줄
-4. _execute_initial_purchases() - 28줄
-5. _execute_periodic_dca_purchases() - 97줄
-6. _calculate_adjusted_rebalance_weights() - 67줄
-7. _execute_rebalancing_trades() - 220줄
-8. _calculate_daily_metrics_and_history() - 69줄
-
-이점:
-- 단일 책임 원칙 적용
-- 각 함수 단위 테스트 가능
-- 코드 가독성 향상
-- 버그 격리 및 수정 용이
-
-### 타입 안전성
-
-9개 주요 함수에 타입 힌트 추가:
-- app/services/yfinance_db.py - load_ticker_data(), get_ticker_info_from_db() 등
-- app/services/backtest_engine.py - _build_strategy(), _get_price_data() 등
-- app/utils/serializers.py - recursive_serialize()
-
-영향: 향상된 IDE 지원 및 타입 검사
-
-## 로깅 강화
-
-7개 중요 작업 로깅 지점 추가:
-- 환율 범위 및 데이터 포인트를 포함한 통화 변환
-- 포트폴리오 데이터 병렬 로딩 진행 상황
-- 컨텍스트가 포함된 리밸런싱 트리거 결정
-- 알파/베타 지표가 포함된 벤치마크 계산
-
-이점: 운영 가시성 및 디버깅 능력 향상
-
-## 에러 메시지 표준화
-
-4개 이상의 에러 메시지 표준화:
-- 일관된 한국어 형식
-- 컨텍스트 정보 추가 (티커명, 날짜)
-- 에러 메시지 명확성 향상
-
-위치: app/services/backtest_engine.py, app/services/strategy_service.py
-
-## 복잡도 지표
-
-### 최적화 이전
-- 최대 함수 길이: 625줄
-- 순환 복잡도: 매우 높음
-- 코드 중복: 3개 파일에 걸쳐 34줄 이상
-- 타입 커버리지: 약 60%
-
-### 최적화 이후
-- 최대 함수 길이: 220줄
-- 순환 복잡도: 함수당 낮음-중간
-- 코드 중복: 0줄 (중앙화)
-- 타입 커버리지: 약 85%
-
-## 테스트 영향
-
-테스트 가능성 향상:
-- 이전: 전체 포트폴리오 플로우에 대한 1개의 대형 통합 테스트
-- 이후: 8개의 집중된 단위 테스트 + 1개의 통합 테스트
-- 테스트 격리: 각 헬퍼 함수 독립적 테스트 가능
-- 모킹 복잡도: 감소 (작은 함수 = 쉬운 모킹)
-
-## 설정
-
-API 또는 설정에 대한 주요 변경사항 없음.
-모든 최적화는 하위 호환 가능.
-
-## 향후 최적화 기회
-
-1. 데이터베이스 커넥션 풀링 튜닝
-2. 자주 접근하는 티커 데이터에 대한 Redis 캐싱
-3. 무거운 연산을 위한 백그라운드 작업 처리
-4. 실시간 백테스트 진행 상황 업데이트를 위한 WebSocket 지원
-
-## 관련 문서
-
-- analysis/backend-analysis-full.md - 전체 분석 보고서
-- refactoring/portfolio-function-analysis.md - 상세 함수 분석
-- refactoring/function-extraction-specs.md - 추출 명세
-
-## 모니터링
-
-모니터링할 주요 지표:
-- 평균 포트폴리오 백테스트 응답 시간
-- 요청당 데이터베이스 쿼리 수
-- 병렬 로딩 중 메모리 사용량
-- 비동기/동기 경계 위반 에러율
-
-최적화 후 예상 기준값:
-- 포트폴리오 백테스트 (10개 종목, 1년): 2초 미만
-- 포트폴리오 요청당 데이터베이스 쿼리: 20개 미만
-- 메모리 사용량: 요청당 500MB 미만
+``` docker exec backtest-be-fast-dev python scripts/benchmark_performance.py 2>&1 | tee /tmp/benchmark_results.txt ```

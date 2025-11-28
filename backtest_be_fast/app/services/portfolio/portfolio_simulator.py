@@ -1,18 +1,6 @@
-"""
-포트폴리오 시뮬레이션 실행
+"""포트폴리오 시뮬레이션 실행
 
-**역할**:
-- 포트폴리오 시뮬레이션 루프 실행
-- 포트폴리오 상태 관리 및 추적
-- 가격 데이터 처리 및 환율 변환
-- 상장폐지 종목 감지
-
-**의존성**:
-- app/services/portfolio/portfolio_dca_manager.py: DCA 관리
-- app/services/portfolio/portfolio_rebalancer.py: 리밸런싱
-- app/services/rebalance_helper.py: 리밸런싱 헬퍼
-- app/utils/currency_converter.py: 통화 변환
-- app/constants/data_loading.py: 데이터 로딩 상수
+포트폴리오 시뮬레이션 루프, 가격 데이터 처리, 환율 변환, 상장폐지 감지를 담당합니다.
 """
 
 import asyncio

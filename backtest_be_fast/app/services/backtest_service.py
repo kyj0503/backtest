@@ -1,29 +1,7 @@
-"""
-백테스팅 실행 서비스
+"""백테스팅 실행 서비스
 
-**역할**:
-- backtesting.py 라이브러리를 사용하여 단일 종목 백테스트 실행
-- 백테스트 결과를 프론트엔드가 사용할 수 있는 형식으로 변환
-- pandas Timedelta 호환성 문제 해결을 위한 Monkey Patch 적용
-
-**주요 기능**:
-1. 백테스트 실행: 주어진 전략과 파라미터로 백테스트 수행
-2. 통계 계산: 수익률, 샤프 비율, 최대 낙폭 등 성과 지표 계산
-3. 거래 로그 변환: 백테스트 거래 기록을 JSON 직렬화 가능한 형식으로 변환
-
-**의존성**:
-- app/repositories/data_repository.py: 주가 데이터 조회
-- app/services/strategy_service.py: 백테스트 전략 검증
-- backtesting.py: 외부 백테스팅 라이브러리
-
-**연관 컴포넌트**:
-- Backend: app/api/v1/endpoints/backtest.py (API 엔드포인트)
-- Backend: app/services/portfolio_service.py (포트폴리오 백테스트)
-- Frontend: src/features/backtest/api/backtestService.ts (API 클라이언트)
-
-**아키텍처 패턴**:
-- Repository Pattern: 데이터 접근은 repository를 통해서만 수행
-- Factory Pattern: 전략 객체 생성은 strategy_factory를 통해 수행
+단일 종목 백테스트 실행 및 결과 변환을 담당합니다.
+pandas Timedelta 호환성 문제 해결을 위한 Monkey Patch를 적용합니다.
 """
 from typing import Dict, Any
 import pandas as pd
@@ -115,14 +93,7 @@ logger = logging.getLogger(__name__)
 
 
 class BacktestService:
-    """
-    백테스팅 서비스 클래스
-    
-    분리된 전담 서비스들에게 작업을 위임:
-    - BacktestEngine: 백테스트 실행
-    - ChartDataService: 차트 데이터 생성
-    - ValidationService: 검증 및 유틸리티
-    """
+    """백테스팅 서비스 - BacktestEngine, ChartDataService, ValidationService에 작업 위임"""
     
     def __init__(self):
         # 서비스들 직접 임포트

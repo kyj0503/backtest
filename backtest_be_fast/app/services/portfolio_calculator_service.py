@@ -1,20 +1,6 @@
-"""
-포트폴리오 계산 서비스
+"""포트폴리오 계산 서비스
 
-**역할**:
-- 포트폴리오 통계 계산 (샤프 비율, 최대 낙폭 등)
-- 포트폴리오 Equity Curve 계산
-- 포트폴리오 일일 수익률 및 비중 히스토리 관리
-
-**주요 기능**:
-1. calculate_portfolio_statistics(): 백테스트 결과 통계 계산
-2. _get_max_consecutive(): 연속된 상승/하락일 계산
-3. _calculate_realistic_equity_curve(): 개별 종목 equity curve 합산
-4. _fallback_equity_curve(): 데이터 없을 때 선형 equity curve
-
-**의존성**:
-- pandas: 시계열 데이터 처리
-- numpy: 수치 계산
+포트폴리오 통계(샤프 비율, 최대 낙폭 등) 및 Equity Curve를 계산합니다.
 """
 import pandas as pd
 import numpy as np

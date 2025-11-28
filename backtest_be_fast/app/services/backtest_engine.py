@@ -1,39 +1,6 @@
-"""
-백테스트 실행 엔진
+"""백테스트 실행 엔진
 
-**역할**:
-- backtesting.py 라이브러리를 래핑하여 백테스트 실행
-- 백테스트 결과를 표준 형식으로 변환
-- 거래 로그 및 통계 생성
-
-**주요 기능**:
-1. run_backtest(): 백테스트 메인 실행 메서드
-   - 데이터 로드
-   - 전략 적용
-   - 결과 계산
-2. extract_trade_log(): 거래 내역 추출
-3. calculate_statistics(): 백테스트 통계 계산
-
-**백테스트 파이프라인**:
-1. 데이터 로드 (yfinance or DB)
-2. Backtest 인스턴스 생성
-3. 전략 클래스 적용
-4. 백테스트 실행
-5. 결과 추출 및 직렬화
-
-**의존성**:
-- backtesting.py: 백테스팅 라이브러리
-- app/utils/data_fetcher.py: 데이터 조회
-- app/services/strategy_service.py: 전략 관리
-
-**연관 컴포넌트**:
-- Backend: app/services/backtest_service.py (서비스 레이어)
-- Backend: app/api/v1/endpoints/backtest.py (API 엔드포인트)
-
-**통계 지표**:
-- 총 거래 수, 승률, 총 수익률
-- 샤프 비율, 소르티노 비율
-- 최대 낙폭, 평균 거래 수익
+backtesting.py 라이브러리를 래핑하여 백테스트를 실행하고 결과를 표준 형식으로 변환합니다.
 """
 import asyncio
 import logging
@@ -76,10 +43,8 @@ class BacktestEngine:
     async def run_backtest(self, request: BacktestRequest) -> BacktestResult:
         """백테스트 실행"""
         try:
-            # 요청 검증
             self.validation_service.validate_backtest_request(request)
 
-            # 데이터 가져오기 (캐시 우선)
             self.logger.info(
                 "백테스트 시작: %s, %s ~ %s",
                 request.ticker,
@@ -94,10 +59,8 @@ class BacktestEngine:
             self.logger.debug(f"데이터 컬럼: {list(data.columns)}")
             self.logger.info(f"데이터 범위: {data.index[0]} ~ {data.index[-1]}")
 
-            # 통화 변환: 비USD 통화를 USD로 변환
             data = await self._convert_to_usd(request.ticker, data, request.start_date, request.end_date)
-            
-            # 전략 클래스 가져오기
+
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
             strategy_class = self._build_strategy(strategy_name, request.strategy_params)
 
@@ -190,31 +153,7 @@ class BacktestEngine:
     async def _convert_to_usd(
         self, ticker: str, data: pd.DataFrame, start_date: str, end_date: str
     ) -> pd.DataFrame:
-        """
-        비USD 통화의 가격 데이터를 USD로 변환
-
-        이 메서드는 currency_converter 유틸리티로 리팩토링되었습니다.
-        기존 로직: 111줄 → 새 로직: 6줄 (wrapper)
-
-        Parameters:
-        -----------
-        ticker : str
-            종목 심볼
-        data : pd.DataFrame
-            가격 데이터 (Open, High, Low, Close, Volume)
-        start_date : str
-            시작 날짜
-        end_date : str
-            종료 날짜
-
-        Returns:
-        --------
-        pd.DataFrame
-            USD로 변환된 가격 데이터
-
-        Note:
-            Phase 2.3 리팩토링: 중복 코드를 currency_converter.py로 추출
-        """
+        """비USD 통화의 가격 데이터를 USD로 변환"""
         return await currency_converter.convert_dataframe_to_usd(
             ticker=ticker,
             data=data,
@@ -258,7 +197,6 @@ class BacktestEngine:
         if not overrides:
             return base_strategy
 
-        # 전략 파라미터 오버라이드 로깅
         override_details = ", ".join([f"{k}={v}" for k, v in overrides.items()])
         self.logger.info(
             f"전략 파라미터 오버라이드 ({strategy_name}): {override_details}"

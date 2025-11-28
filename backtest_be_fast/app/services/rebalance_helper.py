@@ -1,61 +1,7 @@
-"""
-포트폴리오 리밸런싱 헬퍼 (Portfolio Rebalance Helper)
+"""포트폴리오 리밸런싱 헬퍼
 
-**역할**:
-- 포트폴리오 리밸런싱 스케줄 판단
-- 목표 비중 계산
-- 리밸런싱 시점 결정
-
-**주요 기능**:
-1. is_rebalance_date(): 리밸런싱 실행 여부 판단
-   - 주기별 리밸런싱 날짜 계산
-   - 리밸런싱 빈도 확인
-
-2. calculate_target_weights(): 목표 비중 계산
-   - 각 자산의 목표 비중 계산
-   - 현금 포함
-
-**리밸런싱(Rebalancing) 개념**:
-- 포트폴리오의 원래 비중 복원
-- 정기적으로 수행 (주/월/분기 단위)
-- 위험 관리 목적
-
-**지원 리밸런싱 주기**:
-- weekly_1: 매주 (1주)
-- weekly_2: 2주마다
-- monthly_1: 한 달마다
-- monthly_2: 두 달마다
-- monthly_3: 세 달마다
-- monthly_6: 반년마다
-- monthly_12: 1년마다
-- none: 리밸런싱 없음
-
-**사용 예**:
-```python
-from app.services.rebalance_helper import RebalanceHelper
-
-# 리밸런싱 날짜 확인
-is_rebalance = RebalanceHelper.is_rebalance_date(
-    current_date=datetime(2023, 2, 1),
-    prev_date=datetime(2023, 1, 1),
-    frequency='monthly_1',
-    start_date=datetime(2023, 1, 1)
-)
-
-# 목표 비중 계산
-weights = RebalanceHelper.calculate_target_weights(
-    amounts={'AAPL': 5000, 'GOOGL': 5000, 'CASH': 0},
-    dca_info={}
-)
-```
-
-**의존성**:
-- datetime: 날짜 계산
-- app.schemas.schemas: 리밸런싱 주기 매핑
-
-**연관 컴포넌트**:
-- Backend: app/services/portfolio_service.py (포트폴리오 백테스트)
-- Backend: app/schemas/schemas.py (DCA_FREQUENCY_MAP)
+리밸런싱 스케줄 판단 및 목표 비중 계산을 담당합니다.
+Nth Weekday 방식으로 주기별 리밸런싱 날짜를 계산합니다.
 """
 from typing import Dict
 from datetime import datetime, timedelta

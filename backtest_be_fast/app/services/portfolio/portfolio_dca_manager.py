@@ -1,14 +1,7 @@
-"""
-DCA(Dollar Cost Averaging) 투자 관리
+"""DCA(Dollar Cost Averaging) 투자 관리
 
-**역할**:
-- 초기 매수 실행 (일시불 또는 DCA 첫 투자)
-- 주기적 DCA 투자 실행
-- Nth Weekday 기반 DCA 일정 관리
-
-**의존성**:
-- app/schemas/schemas.py: FREQUENCY_MAP
-- app/services/rebalance_helper.py: get_next_nth_weekday, get_weekday_occurrence
+초기 매수 및 주기적 DCA 투자 실행을 담당합니다.
+Nth Weekday 방식으로 DCA 일정을 관리합니다.
 """
 
 import logging
