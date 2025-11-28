@@ -46,6 +46,10 @@
   - 적용된 최적화 전략
   - 향후 개선 로드맵
 
+- [주가 분할/병합 처리](./troubleshooting/stock_split.md)
+  - 주가 조정 로직
+  - 백테스트에 미치는 영향
+
 ## 테스팅
 
 - [테스트 문서](./testing/README.md)

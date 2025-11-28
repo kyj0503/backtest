@@ -335,13 +335,13 @@ class DataFetcher:
 
     def fetch_ticker_info(self, ticker: str) -> dict:
         """
-        티커 정보 조회
+        티커 정보 조회 (분할 정보 포함)
 
         Args:
             ticker: 티커 심볼
 
         Returns:
-            티커 정보 딕셔너리 (상장일 포함)
+            티커 정보 딕셔너리 (상장일 및 분할 정보 포함)
         """
         try:
             ticker = ticker.upper()
@@ -358,6 +358,19 @@ class DataFetcher:
                 except Exception as e:
                     logger.warning(f"상장일 변환 실패: {ticker}, {e}")
 
+            # 분할 정보 추출
+            last_split_date = None
+            last_split_ratio = None
+            try:
+                splits = stock.splits
+                if splits is not None and not splits.empty:
+                    last_split_timestamp = splits.index[-1]
+                    last_split_date = pd.to_datetime(last_split_timestamp).date()
+                    last_split_ratio = float(splits.iloc[-1])
+                    logger.info(f"{ticker}: 분할 정보 조회 - 날짜: {last_split_date}, 비율: {last_split_ratio}")
+            except Exception as e:
+                logger.warning(f"{ticker}: 분할 정보 조회 실패 - {e}")
+
             # 기본 정보 추출
             result = {
                 'symbol': ticker,
@@ -369,7 +382,9 @@ class DataFetcher:
                 'currency': info.get('currency', 'USD'),
                 'exchange': info.get('exchange', 'Unknown'),
                 'country': info.get('country', 'Unknown'),
-                'first_trade_date': first_trade_date  # 상장일 추가
+                'first_trade_date': first_trade_date,
+                'last_split_date': last_split_date.isoformat() if last_split_date else None,
+                'last_split_ratio': last_split_ratio
             }
 
             return result
@@ -382,7 +397,9 @@ class DataFetcher:
                 'company_name': ticker,
                 'sector': 'Unknown',
                 'industry': 'Unknown',
-                'first_trade_date': None
+                'first_trade_date': None,
+                'last_split_date': None,
+                'last_split_ratio': None
             }
 
 
