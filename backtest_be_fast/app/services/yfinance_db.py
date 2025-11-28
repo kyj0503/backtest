@@ -46,6 +46,20 @@ def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
             info = data_fetcher.fetch_ticker_info(ticker)
         except Exception:
             logger.warning("티커 info 조회 실패")
+        
+        # DB에서 기존 last_handled_split 보존
+        existing_split = None
+        try:
+            existing_row = conn.execute(text("SELECT info_json FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
+            if existing_row and existing_row[0]:
+                existing_json = json.loads(existing_row[0])
+                existing_split = existing_json.get('last_handled_split')
+        except Exception:
+            pass
+        
+        # 기존 last_handled_split을 새 info에 추가 (덮어쓰지 않도록)
+        if existing_split and 'last_handled_split' not in info:
+            info['last_handled_split'] = existing_split
 
         # insert or update stocks
         insert_stock = text(
@@ -531,6 +545,71 @@ def _fetch_and_save_missing_data(
 
     # 누락된 구간이 없으면 그대로 반환
     if not missing_ranges:
+        # 누락된 구간이 없더라도, "소급 분할" 체크 (DB에 데이터는 있지만 분할이 반영 안 된 경우)
+        # 1. DB의 info_json에서 last_handled_split 확인
+        # 2. yfinance의 get_last_split_date 확인
+        # 3. 다르면 전체 재수집
+        try:
+            row = conn.execute(text("SELECT info_json FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
+            last_handled_split = None
+            if row and row[0]:
+                import json
+                try:
+                    info_data = json.loads(row[0])
+                    last_handled_split = info_data.get('last_handled_split')
+                except:
+                    pass
+            
+            latest_split_date = data_fetcher.get_last_split_date(ticker)
+            
+            if latest_split_date:
+                latest_split_str = latest_split_date.strftime('%Y-%m-%d')
+                
+                # DB에 기록된 분할일과 최신 분할일이 다르면 (또는 DB에 기록이 없으면)
+                if last_handled_split != latest_split_str:
+                    # 단, 이 분할일이 DB 데이터 범위 내에 있거나 그 이후여야 의미가 있음
+                    # (너무 옛날 분할은 이미 반영되었을 것이므로 무시...하지만 안전하게 하려면 그냥 다 하는게 나을 수도)
+                    # 여기서는 "최신 분할일 > DB 최소 날짜" 인 경우에만 반응하도록 함
+                    is_relevant = True
+                    if db_min and latest_split_date < db_min:
+                        is_relevant = False
+                        
+                    if is_relevant:
+                        logger.warning(f"새로운 주식 분할 감지됨 (메타데이터): {ticker} - 기존: {last_handled_split}, 최신: {latest_split_str}")
+                        
+                        # 기존 데이터 삭제
+                        conn.execute(text("DELETE FROM daily_prices WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)"), {"t": ticker})
+                        conn.commit()
+                        
+                        # info_json 업데이트 (새 분할일 기록)
+                        if row and row[0]:
+                            try:
+                                info_data = json.loads(row[0])
+                            except:
+                                info_data = {}
+                        else:
+                            info_data = {}
+                            
+                        info_data['last_handled_split'] = latest_split_str
+                        conn.execute(text("UPDATE stocks SET info_json = :j WHERE ticker = :t"), {"j": json.dumps(info_data), "t": ticker})
+                        conn.commit()
+                        
+                        # 전체 재수집 트리거
+                        full_start = db_min if db_min else start_date
+                        full_end = max(end_date, date.today())
+                        
+                        logger.info(f"전체 데이터 재수집 (소급 분할): {ticker} {full_start} -> {full_end}")
+                        df_full = data_fetcher.fetch_stock_data(ticker, full_start, full_end, use_cache=False)
+                        
+                        if df_full is not None and not df_full.empty:
+                            save_ticker_data(ticker, df_full)
+                            conn.close()
+                            time.sleep(0.1)
+                            conn = engine.connect()
+                            return conn
+        except Exception as e:
+            logger.error(f"소급 분할 체크 중 오류: {e}")
+
         return conn
 
     # 전략 1: 통합 fetch (여러 구간을 하나로 합쳐서 패딩 추가)
@@ -544,6 +623,32 @@ def _fetch_and_save_missing_data(
         try:
             logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다(통합+패드): {ticker} {co_start} -> {co_end}")
             df_new = data_fetcher.fetch_stock_data(ticker, co_start, co_end, use_cache=True)
+            
+            # 주식 분할/병합 감지
+            if 'StockSplits' in df_new.columns:
+                splits = df_new[df_new['StockSplits'] != 0]
+                if not splits.empty:
+                    logger.warning(f"주식 분할/병합 감지됨: {ticker} - 기존 데이터 삭제 후 전체 재수집")
+                    
+                    # 기존 데이터 삭제
+                    conn.execute(text("DELETE FROM daily_prices WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)"), {"t": ticker})
+                    conn.commit() # 커밋하여 락 해제
+                    
+                    # 전체 기간 재설정 (DB min부터 요청 end까지)
+                    full_start = db_min if db_min else start_date
+                    full_end = max(end_date, date.today())
+                    
+                    # 전체 데이터 재수집
+                    logger.info(f"전체 데이터 재수집: {ticker} {full_start} -> {full_end}")
+                    df_full = data_fetcher.fetch_stock_data(ticker, full_start, full_end, use_cache=False)
+                    
+                    if df_full is not None and not df_full.empty:
+                        save_ticker_data(ticker, df_full)
+                        conn.close()
+                        time.sleep(0.1)
+                        conn = engine.connect()
+                        return conn
+            
             if df_new is not None and not df_new.empty:
                 save_ticker_data(ticker, df_new)
                 # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
@@ -566,12 +671,32 @@ def _fetch_and_save_missing_data(
         try:
             logger.info(f"DB에 누락된 기간을 yfinance에서 가져옵니다: {ticker} {s} -> {e}")
             df_new = data_fetcher.fetch_stock_data(ticker, s, e, use_cache=True)
+            
+            # 개별 구간에서도 분할 감지 시 전체 재수집 로직 적용 가능하나, 
+            # 복잡도를 줄이기 위해 여기서는 생략하거나 동일하게 적용할 수 있음.
+            # 일단 통합 fetch가 실패해서 여기로 온 것이므로, 여기서도 분할 체크를 하는 것이 안전함.
             if df_new is not None and not df_new.empty:
-                save_ticker_data(ticker, df_new)
-                # 데이터 저장 후 커넥션 갱신
-                conn.close()
-                time.sleep(0.1)
-                conn = engine.connect()
+                 if 'StockSplits' in df_new.columns and (df_new['StockSplits'] != 0).any():
+                    logger.warning(f"주식 분할/병합 감지됨(fallback): {ticker} - 기존 데이터 삭제 후 전체 재수집")
+                    conn.execute(text("DELETE FROM daily_prices WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)"), {"t": ticker})
+                    conn.commit() # 커밋하여 락 해제
+                    
+                    full_start = db_min if db_min else start_date
+                    full_end = max(end_date, date.today())
+                    df_full = data_fetcher.fetch_stock_data(ticker, full_start, full_end, use_cache=False)
+                    if df_full is not None and not df_full.empty:
+                        save_ticker_data(ticker, df_full)
+                        conn.close()
+                        time.sleep(0.1)
+                        conn = engine.connect()
+                        # 전체 재수집했으므로 루프 종료
+                        return conn
+
+                 save_ticker_data(ticker, df_new)
+                 # 데이터 저장 후 커넥션 갱신
+                 conn.close()
+                 time.sleep(0.1)
+                 conn = engine.connect()
         except Exception:
             logger.exception("누락 기간 수집 실패")
 
