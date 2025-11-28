@@ -33,10 +33,14 @@ CREATE TABLE stocks (
     info_json JSON,                               -- yfinance의 'info' 전체를 저장할 JSON 필드
     last_info_update TIMESTAMP NULL,              -- 정보 마지막 업데이트 시각
     data_last_update TIMESTAMP NULL,              -- 데이터 마지막 업데이트 시각
+    last_split_date DATE DEFAULT NULL COMMENT '최근 주가 분할/병합 날짜',
+    last_split_ratio DECIMAL(10, 6) DEFAULT NULL COMMENT '최근 분할 비율 (2.0 = 1:2 분할, 0.1 = 10:1 병합)',
+    splits_updated_at DATETIME DEFAULT NULL COMMENT '분할 정보 마지막 업데이트 시각',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_ticker (ticker),
-    INDEX idx_last_update (data_last_update)
+    INDEX idx_last_update (data_last_update),
+    INDEX idx_splits_updated_at (splits_updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT '주식 종목의 기본 정보를 저장하는 테이블';
 
 
