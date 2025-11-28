@@ -119,17 +119,42 @@ if not missing_ranges:
 파일: `data_fetcher.py` → `get_last_split_date()`
 
 ```python
-def get_last_split_date(self, ticker: str) -> date:
-    """가장 최근 주식 분할 날짜 조회"""
-    stock = yf.Ticker(ticker)
-    splits = stock.splits  # Series: 날짜 → 분할 비율
-    
-    if not splits.empty:
-        last_split_date = splits.index.max().date()
+def get_last_split_date(self, ticker: str) -> date | None:
+    """주식의 최근 분할/병합 날짜 조회"""
+    try:
+        ticker = ticker.upper()
+        stock = yf.Ticker(ticker)
+
+        # 주식 분할 정보 조회 (Series 형태로 반환: date -> split_ratio)
+        splits = stock.splits
+
+        if splits is None or splits.empty:
+            logger.debug(f"{ticker}: 주식 분할 이력 없음")
+            return None
+
+        # 최근 분할 날짜 추출 (인덱스의 마지막 날짜)
+        last_split_timestamp = splits.index[-1]
+
+        # Timestamp를 date로 변환
+        if hasattr(last_split_timestamp, 'date'):
+            last_split_date = last_split_timestamp.date()
+        else:
+            # pandas Timestamp가 아닌 경우 처리
+            last_split_date = pd.to_datetime(last_split_timestamp).date()
+
+        logger.info(f"{ticker}: 최근 분할 날짜 = {last_split_date} (비율: {splits.iloc[-1]})")
         return last_split_date
-    
-    return None
+
+    except Exception as e:
+        logger.error(f"{ticker} 분할 정보 조회 실패: {str(e)}")
+        return None
 ```
+
+**주요 특징:**
+- ✅ 에러 처리 포함 (yfinance API 실패 시 안전하게 None 반환)
+- ✅ 상세 로깅 (디버깅 및 모니터링)
+- ✅ None 체크 강화 (splits가 None일 수 있음)
+- ✅ Timestamp 변환 안전 처리
 
 ## 시나리오 예시
 
