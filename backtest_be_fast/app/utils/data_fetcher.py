@@ -295,13 +295,51 @@ class DataFetcher:
             logger.error(f"티커 검증 실패: {ticker}, {e}")
             return False
     
+    def get_last_split_date(self, ticker: str) -> date | None:
+        """
+        주식의 최근 분할/병합 날짜 조회
+
+        Args:
+            ticker: 티커 심볼
+
+        Returns:
+            최근 분할 날짜 (date 객체) 또는 None (분할 이력이 없는 경우)
+        """
+        try:
+            ticker = ticker.upper()
+            stock = yf.Ticker(ticker)
+
+            # 주식 분할 정보 조회 (Series 형태로 반환: date -> split_ratio)
+            splits = stock.splits
+
+            if splits is None or splits.empty:
+                logger.debug(f"{ticker}: 주식 분할 이력 없음")
+                return None
+
+            # 최근 분할 날짜 추출 (인덱스의 마지막 날짜)
+            last_split_timestamp = splits.index[-1]
+
+            # Timestamp를 date로 변환
+            if hasattr(last_split_timestamp, 'date'):
+                last_split_date = last_split_timestamp.date()
+            else:
+                # pandas Timestamp가 아닌 경우 처리
+                last_split_date = pd.to_datetime(last_split_timestamp).date()
+
+            logger.info(f"{ticker}: 최근 분할 날짜 = {last_split_date} (비율: {splits.iloc[-1]})")
+            return last_split_date
+
+        except Exception as e:
+            logger.error(f"{ticker} 분할 정보 조회 실패: {str(e)}")
+            return None
+
     def fetch_ticker_info(self, ticker: str) -> dict:
         """
         티커 정보 조회
-        
+
         Args:
             ticker: 티커 심볼
-            
+
         Returns:
             티커 정보 딕셔너리 (상장일 포함)
         """
@@ -309,7 +347,7 @@ class DataFetcher:
             ticker = ticker.upper()
             stock = yf.Ticker(ticker)
             info = stock.info
-            
+
             # 상장일 추출 (firstTradeDateMilliseconds - 밀리초 단위)
             first_trade_date = None
             first_trade_millis = info.get('firstTradeDateMilliseconds')
@@ -319,7 +357,7 @@ class DataFetcher:
                     first_trade_date = datetime.fromtimestamp(first_trade_millis / 1000).strftime('%Y-%m-%d')
                 except Exception as e:
                     logger.warning(f"상장일 변환 실패: {ticker}, {e}")
-            
+
             # 기본 정보 추출
             result = {
                 'symbol': ticker,
@@ -333,13 +371,13 @@ class DataFetcher:
                 'country': info.get('country', 'Unknown'),
                 'first_trade_date': first_trade_date  # 상장일 추가
             }
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"티커 정보 조회 실패: {ticker}, {str(e)}")
             return {
-                'symbol': ticker, 
+                'symbol': ticker,
                 'error': str(e),
                 'company_name': ticker,
                 'sector': 'Unknown',
