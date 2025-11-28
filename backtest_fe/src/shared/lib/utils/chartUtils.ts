@@ -210,7 +210,7 @@ export const aggregateDataByPeriod = <T extends { date: string; value: number }>
         value: avgValue,
         count: items.length,
         total: totalValue
-      } as T;
+      } as unknown as T;
     }
     return {
       ...firstItem,
@@ -218,7 +218,7 @@ export const aggregateDataByPeriod = <T extends { date: string; value: number }>
       value: avgValue,
       count: items.length,
       total: totalValue
-    } as T;
+    } as unknown as T;
   });
 };
 
@@ -322,7 +322,7 @@ export const fillMissingData = <T extends { date: string; value: number }>(
         filledData.push({
           date: dateStr,
           value: fillValue
-        } as T);
+        } as unknown as T);
       }
     }
     currentDate.setDate(currentDate.getDate() + 1);
