@@ -194,11 +194,15 @@ class DataFetcher:
             'XXX', 'YYY', 'ZZZ'
         ]
 
-        # 숫자로만 구성되거나 무효한 패턴이 포함된 경우
+        # 숫자로만 구성되거나 무효한 패턴이 포함된 경우 (특수 심볼 허용: ^, =)
         if (ticker.isdigit() or
             any(pattern in ticker.upper() for pattern in invalid_patterns) or
-            len(ticker) > 10 or
-            not ticker.replace('.', '').replace('-', '').isalnum()):
+            len(ticker) > 15):  # 길이 제한 완화
+            raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 좁목 심볼입니다.")
+        
+        # 허용된 문자 확인: 영문, 숫자, ^, =, -, .
+        allowed_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789^=-.')
+        if not all(c in allowed_chars for c in ticker.upper()):
             raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 종목 심볼입니다.")
 
         # 데이터가 너무 적은 경우 체크
