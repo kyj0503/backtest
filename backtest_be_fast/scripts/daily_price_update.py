@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.services.database.connection_manager import DatabaseConnectionManager
 from app.services.yfinance_db import save_ticker_data
-from app.utils.data_fetcher import data_fetcher
+from app.utils.data_fetcher import data_fetcher, YfinanceRateLimitError
 
 # Configure logging
 logging.basicConfig(
@@ -71,6 +71,18 @@ def update_all_stock_data(batch_size: int = 50, limit: int = None):
                     logger.warning(f"⚠ {ticker}: No data fetched")
                     fail_count += 1
                     
+            except data_fetcher.YfinanceRateLimitError as e:
+                logger.error(f"⚠ Rate limit reached for {ticker}: {e}")
+                logger.info("Pausing for 60 seconds...")
+                time.sleep(60)
+                fail_count += 1
+                continue
+            except YfinanceRateLimitError as e:
+                logger.error(f"⚠ Rate limit reached for {ticker}: {e}")
+                logger.info("Pausing for 60 seconds...")
+                time.sleep(60)
+                fail_count += 1
+                continue
             except Exception as e:
                 logger.error(f"✗ {ticker}: Update failed - {e}")
                 fail_count += 1
