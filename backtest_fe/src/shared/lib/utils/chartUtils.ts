@@ -203,9 +203,17 @@ export const aggregateDataByPeriod = <T extends { date: string; value: number }>
   return Array.from(aggregated.entries()).map(([key, items]) => {
     const totalValue = items.reduce((sum, item) => sum + item.value, 0);
     const avgValue = totalValue / items.length;
-    
+    const firstItem = items[0];
+    if (!firstItem) {
+      return {
+        date: key,
+        value: avgValue,
+        count: items.length,
+        total: totalValue
+      } as T;
+    }
     return {
-      ...items[0],
+      ...firstItem,
       date: key,
       value: avgValue,
       count: items.length,
@@ -244,7 +252,7 @@ export const calculateRSI = (prices: number[], period = 14): (number | null)[] =
     return prices.map(() => null);
   }
 
-  const changes = prices.slice(1).map((price, i) => price - prices[i]);
+  const changes = prices.slice(1).map((price, i) => price - (prices[i] ?? 0));
   const gains = changes.map(change => change > 0 ? change : 0);
   const losses = changes.map(change => change < 0 ? Math.abs(change) : 0);
 
@@ -253,7 +261,7 @@ export const calculateRSI = (prices: number[], period = 14): (number | null)[] =
 
   return avgGains.map((avgGain, i) => {
     const avgLoss = avgLosses[i];
-    if (avgGain === null || avgLoss === null || avgLoss === 0) {
+    if (avgGain === null || avgLoss === null || avgLoss === 0 || avgLoss === undefined) {
       return null;
     }
     const rs = avgGain / avgLoss;
@@ -300,14 +308,22 @@ export const fillMissingData = <T extends { date: string; value: number }>(
   const filledData = [...data];
 
   const currentDate = new Date(start);
+  const firstItem = data[0];
   while (currentDate <= end) {
     const dateStr = formatDate(currentDate);
     if (!existingDates.has(dateStr)) {
-      filledData.push({
-        ...data[0],
-        date: dateStr,
-        value: fillValue
-      });
+      if (firstItem) {
+        filledData.push({
+          ...firstItem,
+          date: dateStr,
+          value: fillValue
+        });
+      } else {
+        filledData.push({
+          date: dateStr,
+          value: fillValue
+        } as T);
+      }
     }
     currentDate.setDate(currentDate.getDate() + 1);
   }

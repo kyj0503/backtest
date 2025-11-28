@@ -54,8 +54,10 @@ function findDataPointOnOrBefore<T extends { date: string }>(
   
   while (left <= right) {
     const mid = Math.floor((left + right) / 2);
-    if (sortedData[mid].date <= targetDate) {
-      result = sortedData[mid];
+    const midItem = sortedData[mid];
+    if (!midItem) break;
+    if (midItem.date <= targetDate) {
+      result = midItem;
       left = mid + 1;
     } else {
       right = mid - 1;
@@ -239,14 +241,14 @@ export const useChartData = (
     );
 
     return aggregatedReturns.map(r => {
-      const eq = equityByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawEquity, r.date);
+      const eq = equityByDate.get(r.date) ?? (findDataPointOnOrBefore(sortedRawEquity, r.date) ?? null);
       if (!eq) {
         console.warn(`[포트폴리오 차트] ${r.date} 날짜의 equity 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return { 
-          date: r.date, 
-          value: null as any, 
-          return_pct: r.return_pct, 
-          drawdown_pct: null as any 
+        return {
+          date: r.date,
+          value: null as any,
+          return_pct: r.return_pct,
+          drawdown_pct: null as any
         };
       }
       return {
@@ -290,14 +292,14 @@ export const useChartData = (
     );
 
     return aggregatedReturns.map(r => {
-      const eq = equityByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawEquity, r.date);
+      const eq = equityByDate.get(r.date) ?? (findDataPointOnOrBefore(sortedRawEquity, r.date) ?? null);
       if (!eq) {
         console.warn(`[단일종목 차트] ${r.date} 날짜의 equity 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return { 
-          date: r.date, 
-          value: null as any, 
-          return_pct: r.return_pct, 
-          drawdown_pct: null as any 
+        return {
+          date: r.date,
+          value: null as any,
+          return_pct: r.return_pct,
+          drawdown_pct: null as any
         };
       }
       return {

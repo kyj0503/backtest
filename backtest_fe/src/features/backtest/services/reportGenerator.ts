@@ -142,6 +142,7 @@ export const generateTextReport = (data: BacktestResultData, isPortfolio: boolea
     if (rates.length > 0) {
       const firstRate = rates[0];
       const lastRate = rates[rates.length - 1];
+      if (!firstRate || !lastRate) return lines.join('\n');
       const maxRate = Math.max(...rates.map((r) => r.rate));
       const minRate = Math.min(...rates.map((r) => r.rate));
 
@@ -230,7 +231,9 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
     if ('weight_history' in data && Array.isArray(data.weight_history) && data.weight_history.length > 0) {
       csvRows.push('포트폴리오 비중 변화 (매월 1일 기준)');
 
-      const symbols = Object.keys(data.weight_history[0]).filter(key => key !== 'date');
+      const firstWeightPoint = data.weight_history[0];
+      if (!firstWeightPoint) return csvRows.join('\n');
+      const symbols = Object.keys(firstWeightPoint).filter(key => key !== 'date');
       csvRows.push(`날짜,${symbols.join(',')}`);
 
       const weightHistory = data.weight_history;
@@ -333,6 +336,7 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
     if (rates.length > 0) {
       const firstRate = rates[0];
       const lastRate = rates[rates.length - 1];
+      if (!firstRate || !lastRate) return csvRows.join('\n');
       const maxRate = Math.max(...rates.map((r) => r.rate));
       const minRate = Math.min(...rates.map((r) => r.rate));
       const avgRate = rates.reduce((sum, r) => sum + r.rate, 0) / rates.length;

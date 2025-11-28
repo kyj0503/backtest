@@ -117,22 +117,22 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
     logs.forEach((trade) => {
       // 실제 거래 날짜 추출
       let tradeDates: string[] = [];
-      
+
       if (trade.Type) {
         // Type 필드가 있으면 (리밸런싱, DCA 등)
-        if (trade.EntryTime) {
-          const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
-          tradeDates.push(entryDate);
+        if (trade.EntryTime && typeof trade.EntryTime === 'string') {
+          const entryDate = trade.EntryTime.split('T')[0]?.split(' ')[0];
+          if (entryDate) tradeDates.push(entryDate);
         }
       } else {
         // 기존 로직 (하위 호환성)
-        if (trade.EntryTime) {
-          const entryDate = trade.EntryTime.split('T')[0].split(' ')[0];
-          tradeDates.push(entryDate);
+        if (trade.EntryTime && typeof trade.EntryTime === 'string') {
+          const entryDate = trade.EntryTime.split('T')[0]?.split(' ')[0];
+          if (entryDate) tradeDates.push(entryDate);
         }
-        if (trade.ExitTime) {
-          const exitDate = trade.ExitTime.split('T')[0].split(' ')[0];
-          tradeDates.push(exitDate);
+        if (trade.ExitTime && typeof trade.ExitTime === 'string') {
+          const exitDate = trade.ExitTime.split('T')[0]?.split(' ')[0];
+          if (exitDate) tradeDates.push(exitDate);
         }
       }
 

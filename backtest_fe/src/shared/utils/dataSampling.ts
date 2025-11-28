@@ -62,19 +62,23 @@ function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data:
 
   const weekly: T[] = [];
   const DAYS_PER_WEEK = 7;
-  
+
   // 첫 데이터는 항상 포함
-  weekly.push(data[0]);
-  
+  const firstItem = data[0];
+  if (!firstItem) return [];
+  weekly.push(firstItem);
+
   // 7일 간격으로 데이터 추출
   for (let i = DAYS_PER_WEEK; i < data.length; i += DAYS_PER_WEEK) {
-    weekly.push(data[i]);
+    const item = data[i];
+    if (item) weekly.push(item);
   }
-  
+
   // 마지막 데이터가 7일 간격에 포함되지 않았다면 추가
   const lastIndex = data.length - 1;
-  if (lastIndex > 0 && data[lastIndex] !== weekly[weekly.length - 1]) {
-    weekly.push(data[lastIndex]);
+  const lastItem = data[lastIndex];
+  if (lastIndex > 0 && lastItem && lastItem !== weekly[weekly.length - 1]) {
+    weekly.push(lastItem);
   }
 
   return weekly;
@@ -263,10 +267,12 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
   const monthly: T[] = [];
 
   // 첫 데이터는 항상 포함
-  monthly.push(data[0]);
+  const firstItem = data[0];
+  if (!firstItem) return [];
+  monthly.push(firstItem);
 
   // 시작 날짜의 "몇 번째 요일" 계산 (로컬 타임존)
-  const startDate = parseLocalDate(data[0].date);
+  const startDate = parseLocalDate(firstItem.date);
   const originalNth = getWeekdayOccurrence(startDate);
 
   // 데이터를 Map으로 변환 (O(1) 조회를 위함)
@@ -277,7 +283,9 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
 
   // 다음 월 날짜 계산하며 샘플링
   let currentDate = startDate;
-  const lastDateStr = data[data.length - 1].date;
+  const lastItemData = data[data.length - 1];
+  if (!lastItemData) return monthly;
+  const lastDateStr = lastItemData.date;
   const lastDate = parseLocalDate(lastDateStr);
 
   // 무한 루프 방지: 백테스트 기간의 최대 월 수 기반 상한 설정
@@ -340,7 +348,7 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
 
   // 마지막 데이터가 포함되지 않았다면 추가
   const lastItem = data[data.length - 1];
-  if (monthly[monthly.length - 1] !== lastItem) {
+  if (lastItem && monthly[monthly.length - 1] !== lastItem) {
     monthly.push(lastItem);
   }
 
@@ -430,16 +438,19 @@ export function sampleData<T>(data: T[], maxPoints: number = 500): T[] {
   const sampled: T[] = [];
 
   // 첫 번째 포인트는 항상 포함
-  sampled.push(data[0]);
+  const firstItem = data[0];
+  if (firstItem) sampled.push(firstItem);
 
   // 균등 간격으로 샘플링
   for (let i = step; i < data.length - 1; i += step) {
-    sampled.push(data[i]);
+    const item = data[i];
+    if (item) sampled.push(item);
   }
 
   // 마지막 포인트는 항상 포함 (종료 값 보존)
   if (data.length > 1) {
-    sampled.push(data[data.length - 1]);
+    const lastItem = data[data.length - 1];
+    if (lastItem) sampled.push(lastItem);
   }
 
   return sampled;
@@ -466,18 +477,23 @@ export function adaptiveSampleData<T>(
     return data;
   }
 
-  const sampled: T[] = [data[0]]; // 첫 포인트
+  const firstItem = data[0];
+  if (!firstItem) return [];
+  const sampled: T[] = [firstItem]; // 첫 포인트
   const threshold = calculateThreshold(data, valueKey);
 
   let lastAddedIndex = 0;
 
   for (let i = 1; i < data.length - 1; i++) {
-    const currentValue = data[i][valueKey] as number;
-    const lastValue = data[lastAddedIndex][valueKey] as number;
+    const currentItem = data[i];
+    const lastItem = data[lastAddedIndex];
+    if (!currentItem || !lastItem) continue;
+    const currentValue = currentItem[valueKey] as number;
+    const lastValue = lastItem[valueKey] as number;
 
     // 변화가 임계값보다 크면 포인트 추가
     if (Math.abs(currentValue - lastValue) > threshold) {
-      sampled.push(data[i]);
+      sampled.push(currentItem);
       lastAddedIndex = i;
     }
 
@@ -488,7 +504,8 @@ export function adaptiveSampleData<T>(
   }
 
   // 마지막 포인트 추가
-  sampled.push(data[data.length - 1]);
+  const lastItem = data[data.length - 1];
+  if (lastItem) sampled.push(lastItem);
 
   // 여전히 포인트가 부족하면 균등 샘플링으로 보완
   if (sampled.length < maxPoints * 0.5) {
@@ -574,17 +591,21 @@ function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [k
   let currentWeekData: T[] = [];
 
   for (let i = 0; i < dailyReturns.length; i++) {
-    currentWeekData.push(dailyReturns[i]);
+    const item = dailyReturns[i];
+    if (!item) continue;
+    currentWeekData.push(item);
 
     // 7일마다 또는 마지막 데이터일 때 주간 수익률 계산
     if ((i + 1) % DAYS_PER_WEEK === 0 || i === dailyReturns.length - 1) {
       if (currentWeekData.length > 0) {
         const weeklyReturn = calculateCompoundReturn(currentWeekData);
         const lastDay = currentWeekData[currentWeekData.length - 1];
-        weekly.push({
-          ...lastDay,
-          return_pct: weeklyReturn,
-        });
+        if (lastDay) {
+          weekly.push({
+            ...lastDay,
+            return_pct: weeklyReturn,
+          });
+        }
         currentWeekData = [];
       }
     }
@@ -612,7 +633,9 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
   const monthly: T[] = [];
 
   // 시작 날짜의 "몇 번째 요일" 계산 (로컬 타임존)
-  const startDate = parseLocalDate(dailyReturns[0].date);
+  const firstItem = dailyReturns[0];
+  if (!firstItem) return [];
+  const startDate = parseLocalDate(firstItem.date);
   const originalNth = getWeekdayOccurrence(startDate);
 
   let currentMonthData: T[] = [];
@@ -620,6 +643,7 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
 
   for (let i = 0; i < dailyReturns.length; i++) {
     const item = dailyReturns[i];
+    if (!item) continue;
     const itemDate = parseLocalDate(item.date);
 
     // 다음 달 경계를 넘었거나 마지막 데이터일 때
@@ -645,10 +669,12 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
           // 현재 달 데이터 마감
           const monthlyReturn = calculateCompoundReturn(currentMonthData);
           const lastDay = currentMonthData[currentMonthData.length - 1];
-          monthly.push({
-            ...lastDay,
-            return_pct: monthlyReturn,
-          });
+          if (lastDay) {
+            monthly.push({
+              ...lastDay,
+              return_pct: monthlyReturn,
+            });
+          }
           currentMonthData = [];
         }
         
@@ -673,10 +699,12 @@ function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [
       if (isLastItem && currentMonthData.length > 0) {
         const monthlyReturn = calculateCompoundReturn(currentMonthData);
         const lastDay = currentMonthData[currentMonthData.length - 1];
-        monthly.push({
-          ...lastDay,
-          return_pct: monthlyReturn,
-        });
+        if (lastDay) {
+          monthly.push({
+            ...lastDay,
+            return_pct: monthlyReturn,
+          });
+        }
       }
     } else {
       // 경계를 넘지 않은 경우 현재 달 데이터에 추가

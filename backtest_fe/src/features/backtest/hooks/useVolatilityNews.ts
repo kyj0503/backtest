@@ -83,9 +83,9 @@ export const useVolatilityNews = ({
       }
       
       setVolatilityData(results);
-      
+
       // 첫 번째 유효한 종목을 선택
-      if (validSymbols.length > 0 && !selectedStock) {
+      if (validSymbols.length > 0 && !selectedStock && validSymbols[0]) {
         setSelectedStock(validSymbols[0]);
       }
     } catch (err) {
