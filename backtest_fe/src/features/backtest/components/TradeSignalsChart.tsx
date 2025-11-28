@@ -66,7 +66,7 @@ const TradeSignalsChart: React.FC<TradeSignalsChartProps> = memo(({ trades }) =>
   }
 
   const CustomTooltip = ({ active, payload }: TooltipProps) => {
-    if (!active || !payload || payload.length === 0) return null;
+    if (!active || !payload || payload.length === 0 || !payload[0]) return null;
 
     const data = payload[0].payload;
     return (

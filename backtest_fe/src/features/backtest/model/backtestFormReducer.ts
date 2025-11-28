@@ -30,6 +30,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
 
     weightIndices.forEach((index, pos) => {
       const s = portfolio[index];
+      if (!s) return;
       const weightPercent = s.weight || 0;
       const totalAmountForStock = (weightPercent / 100) * totalInvestment;
       const isLastWeightItem = pos === weightIndices.length - 1;

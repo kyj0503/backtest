@@ -82,7 +82,9 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
 
   const minRate = Math.min(...exchangeData.map((d) => d.rate));
   const maxRate = Math.max(...exchangeData.map((d) => d.rate));
-  const rateChange = ((exchangeData[exchangeData.length - 1]?.rate - exchangeData[0]?.rate) / exchangeData[0]?.rate * 100);
+  const firstRate = exchangeData[0]?.rate ?? 0;
+  const lastRate = exchangeData[exchangeData.length - 1]?.rate ?? 0;
+  const rateChange = firstRate !== 0 ? ((lastRate - firstRate) / firstRate * 100) : 0;
 
   const chartContent = (
     <>
@@ -128,11 +130,11 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
         <div className="text-center">
           <div className="text-xs text-muted-foreground mb-1">시작 환율</div>
-          <div className="text-sm font-semibold text-foreground">{formatRate(exchangeData[0]?.rate)}</div>
+          <div className="text-sm font-semibold text-foreground">{formatRate(firstRate)}</div>
         </div>
         <div className="text-center">
           <div className="text-xs text-muted-foreground mb-1">종료 환율</div>
-          <div className="text-sm font-semibold text-foreground">{formatRate(exchangeData[exchangeData.length - 1]?.rate)}</div>
+          <div className="text-sm font-semibold text-foreground">{formatRate(lastRate)}</div>
         </div>
         <div className="text-center">
           <div className="text-xs text-muted-foreground mb-1">최고점</div>
