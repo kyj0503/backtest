@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import logging
 from datetime import date, timedelta
 from sqlalchemy import text
@@ -64,6 +65,8 @@ def update_all_stock_data(batch_size: int = 50, limit: int = None):
                     rows_updated = save_ticker_data(ticker, df)
                     logger.info(f"✓ {ticker}: {rows_updated} rows updated/inserted")
                     success_count += 1
+                    # Be polite to the API
+                    time.sleep(1)
                 else:
                     logger.warning(f"⚠ {ticker}: No data fetched")
                     fail_count += 1
