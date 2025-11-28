@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # API 설정
     api_v1_str: str = "/api/v1"
     project_name: str = "라고할때살걸"
-    version: str = "1.7.7"
+    version: str = "1.7.8"
     description: str = "FastAPI server for backtesting.py library"
     
     # 서버 설정
