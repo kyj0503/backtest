@@ -63,7 +63,7 @@ docker compose -f compose.dev.yaml down
 # 컨테이너 내에서 모든 테스트 실행
 docker compose -f compose.dev.yaml exec backtest-be-fast pytest
 
-# 특정 테스트만 실행 (예: 단위 테스트)
+# 단위 테스트
 docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit
 ```
 
@@ -77,27 +77,35 @@ docker compose -f compose.dev.yaml exec backtest-fe npm test
 docker compose -f compose.dev.yaml exec backtest-fe npm run test:ui
 ```
 
-## 프로덕션 배포
+## 커밋 메시지 컨벤션
 
-### Nginx 리버스 프록시 설정
+1. 기본 포맷 (Format)
 
-프론트엔드 컨테이너는 3000번 포트로 실행되므로, 80번 포트로 서비스하려면 Nginx를 통해 프록시해야 합니다.
+```
+태그(스코프): 제목 (50자 내외)
 
-```bash
-# 1. Nginx 설정 파일 생성
-sudo cp nginx-backtest.conf.example /etc/nginx/sites-available/backtest
+- 본문 (선택 사항, 자세한 설명이 필요할 때만 작성)
+```
 
-# 2. server_name 수정 (실제 도메인 또는 IP로)
-sudo nano /etc/nginx/sites-available/backtest
+2. 스코프 (Scope) - 위치 구분
 
-# 3. 심볼릭 링크 생성
-sudo ln -s /etc/nginx/sites-available/backtest /etc/nginx/sites-enabled/
+```
+be | Backend 관련 코드
+fe | Frontend 관련 코드
+common | 양쪽 모두 영향이 있거나, 프로젝트 전체 설정 (README, .gitignore)
+infra | 배포, Docker, CI/CD 등
+```
 
-# 4. Nginx 설정 테스트
-sudo nginx -t
+3. 태그 (Type) - 작업 성격
 
-# 5. Nginx 재시작
-sudo systemctl reload nginx
+```
+feat | 새로운 기능 추가 | API 개발, 버튼 추가
+fix | 버그 수정 | 로직 오류 수정, 오타 수정
+docs | 문서 수정 | README, Swagger, 주석 수정
+style | 코드 포맷팅 (로직 변경 X) | 세미콜론 누락, 줄바꿈, 들여쓰기 정렬
+refactor | 코드 리팩토링 | 기능 변경 없이 코드 구조 개선
+test | 테스트 코드 | 테스트 코드 추가/수정 (프로덕션 코드 변경 X)
+chore | 기타 잡무 | 빌드 설정, 패키지 매니저 설정, 라이브러리 추가
 ```
 
 ## 문서
