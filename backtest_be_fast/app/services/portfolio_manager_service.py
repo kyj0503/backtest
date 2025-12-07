@@ -1,7 +1,7 @@
-"""포트폴리오 백테스트 서비스
+"""포트폴리오 백테스트 관리 서비스 (Manager)
 
-여러 종목으로 구성된 포트폴리오의 백테스트를 실행합니다.
-DCA(분할 매수), 리밸런싱, 다중 통화를 지원합니다.
+이 모듈은 '사장님' 역할로서 포트폴리오 백테스트의 전체 수명주기(데이터 로드 -> 시뮬레이션 위임 -> 결과 처리)를 관리합니다.
+복잡한 시뮬레이션 로직은 portfolio_simulation_engine 모듈에 위임합니다.
 
 통화 정책:
 - DB 저장: 원본 통화 (KRW, JPY, EUR 등)
@@ -24,7 +24,7 @@ from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday,
 from app.services.portfolio_calculator_service import portfolio_calculator
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
-from app.services.portfolio.portfolio_simulator import PortfolioSimulator
+from app.services.portfolio.portfolio_simulation_engine import PortfolioSimulationEngine
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
@@ -38,14 +38,25 @@ from app.utils.currency_converter import currency_converter
 
 logger = logging.getLogger(__name__)
 
-class PortfolioService:
-    """포트폴리오 백테스트 서비스"""
+class PortfolioManagerService:
+    """
+    포트폴리오 백테스트 관리 서비스 (Manager/Orchestrator Role)
+
+    [역할 정의]
+    이 서비스는 '사장님'과 같은 역할로, 직접 복잡한 계산을 수행하기보다 하위 모듈들을 조율하여 전체 업무를 완수합니다.
+    API 요청을 받고, 데이터를 로드하고, 최종 결과를 포맷팅하는 **전체 흐름을 주관**합니다.
+
+    주요 책임:
+    1. Orchestration: 데이터 로딩, 시뮬레이션 실행, 결과 취합의 흐름 제어.
+    2. Data Management: StockRepository 등을 통해 필요한 외부 데이터를 준비.
+    3. Delegation: 실제 시뮬레이션 계산은 PortfolioSimulationEngine에 위임.
+    """
     def __init__(self):
         """포트폴리오 서비스 초기화"""
         # 추출된 컴포넌트 초기화
         self.dca_manager = PortfolioDcaManager()
         self.rebalancer = PortfolioRebalancer()
-        self.simulator = PortfolioSimulator(
+        self.simulation_engine = PortfolioSimulationEngine(
             dca_manager=self.dca_manager,
             rebalancer=self.rebalancer
         )
@@ -142,202 +153,22 @@ class PortfolioService:
 
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
 
-        state = self.simulator.initialize_portfolio_state(
+        # 포트폴리오 시뮬레이션 실행 (리팩터링됨)
+        result = await self.simulation_engine.execute_simulation(
+            date_range=date_range,
+            start_date_obj=start_date_obj,
+            end_date_obj=end_date_obj,
             stock_amounts=stock_amounts,
-            cash_amount=cash_amount,
             amounts=amounts,
-            dca_info=dca_info
+            cash_amount=cash_amount,
+            total_amount=total_amount,
+            portfolio_data=portfolio_data,
+            dca_info=dca_info,
+            ticker_currencies=ticker_currencies,
+            exchange_rates_by_currency=exchange_rates_by_currency,
+            rebalance_frequency=rebalance_frequency,
+            commission=commission
         )
-
-        shares = state['shares']
-        portfolio_values = state['portfolio_values']
-        daily_returns = state['daily_returns']
-        prev_portfolio_value = state['prev_portfolio_value']
-        prev_date = state['prev_date']
-        is_first_day = state['is_first_day']
-        available_cash = state['available_cash']
-        cash_holdings = state['cash_holdings']
-        total_trades = state['total_trades']
-        rebalance_history = state['rebalance_history']
-        weight_history = state['weight_history']
-        last_rebalance_date = state['last_rebalance_date']
-        original_rebalance_nth = state['original_rebalance_nth']
-        last_valid_prices = state['last_valid_prices']
-        last_price_date = state['last_price_date']
-        delisted_stocks = state['delisted_stocks']
-
-        for current_date in date_range:
-            daily_cash_inflow = 0.0  # 당일 추가 투자금 (DCA)
-            if current_date.date() < start_date_obj.date():
-                continue
-            if current_date.date() > end_date_obj.date():
-                break
-
-            current_prices, last_valid_exchange_rates = self.simulator.fetch_and_convert_prices(
-                current_date=current_date,
-                stock_amounts=stock_amounts,
-                portfolio_data=portfolio_data,
-                dca_info=dca_info,
-                ticker_currencies=ticker_currencies,
-                exchange_rates_by_currency=exchange_rates_by_currency
-            )
-
-            self.simulator.detect_and_update_delisting(
-                current_date=current_date,
-                stock_amounts=stock_amounts,
-                current_prices=current_prices,
-                dca_info=dca_info,
-                delisted_stocks=delisted_stocks,
-                last_valid_prices=last_valid_prices,
-                last_price_date=last_price_date
-            )
-
-            if delisted_stocks and (should_rebalance or current_date.weekday() == 0):
-                delisted_symbols = [dca_info[key]['symbol'] for key in delisted_stocks if key in dca_info]
-                logger.info(
-                    f"{current_date.date()}: 상장폐지 종목 {len(delisted_stocks)}개 추적 중 "
-                    f"[{', '.join(delisted_symbols)}]"
-                )
-
-            if is_first_day:
-                trades, cash_inflow = self.dca_manager.execute_initial_purchases(
-                    current_date=current_date,
-                    stock_amounts=stock_amounts,
-                    current_prices=current_prices,
-                    dca_info=dca_info,
-                    shares=shares,
-                    commission=commission
-                )
-                total_trades += trades
-                daily_cash_inflow += cash_inflow
-                is_first_day = False
-                prev_date = current_date
-
-            if prev_date is not None:
-                trades, cash_inflow = self.dca_manager.execute_periodic_purchases(
-                    current_date=current_date,
-                    prev_date=prev_date,
-                    stock_amounts=stock_amounts,
-                    current_prices=current_prices,
-                    dca_info=dca_info,
-                    shares=shares,
-                    commission=commission,
-                    start_date_obj=start_date_obj
-                )
-                total_trades += trades
-                daily_cash_inflow += cash_inflow
-
-            if original_rebalance_nth is None and rebalance_frequency != 'none':
-                original_rebalance_nth = get_weekday_occurrence(start_date_obj)
-                logger.debug(f"리밸런싱 원본 Nth 값 설정 = {original_rebalance_nth}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
-
-            should_rebalance = RebalanceHelper.is_rebalance_date(
-                current_date, prev_date, rebalance_frequency, start_date_obj, last_rebalance_date, original_rebalance_nth
-            )
-
-            if rebalance_frequency != 'none':
-                if should_rebalance and len(target_weights) > 1:
-                    logger.info(
-                        f"{current_date.date()}: 리밸런싱 트리거됨 "
-                        f"(주기: {rebalance_frequency}, 자산 수: {len(target_weights)}, "
-                        f"마지막 리밸런싱: {last_rebalance_date.date() if last_rebalance_date else '없음'})"
-                    )
-                elif should_rebalance and len(target_weights) <= 1:
-                    logger.debug(
-                        f"{current_date.date()}: 리밸런싱 조건 충족하지만 자산 수 부족 (자산 수: {len(target_weights)})"
-                    )
-
-            if should_rebalance and len(target_weights) > 1:
-                adjusted_target_weights = self.rebalancer.calculate_adjusted_weights(
-                    target_weights=target_weights,
-                    delisted_stocks=delisted_stocks,
-                    dca_info=dca_info
-                )
-
-                if delisted_stocks:
-                    for unique_key, adj_weight in adjusted_target_weights.items():
-                        if unique_key not in delisted_stocks:
-                            original_weight = target_weights.get(unique_key, 0.0)
-                            if original_weight != adj_weight:
-                                symbol = dca_info[unique_key]['symbol']
-                                logger.debug(
-                                    f"  {symbol}: {original_weight:.2%} -> {adj_weight:.2%}"
-                                )
-
-                total_stock_value = sum(
-                    shares[key] * current_prices.get(key, 0)
-                    for key in shares.keys()
-                    if key in current_prices
-                )
-
-                rebalance_result = self.rebalancer.execute_rebalancing_trades(
-                    current_date=current_date,
-                    adjusted_target_weights=adjusted_target_weights,
-                    shares=shares,
-                    current_prices=current_prices,
-                    available_cash=available_cash,
-                    cash_holdings=cash_holdings,
-                    commission=commission,
-                    total_stock_value=total_stock_value,
-                    dca_info=dca_info,
-                    delisted_stocks=delisted_stocks
-                )
-
-                shares = rebalance_result['updated_shares']
-                cash_holdings = rebalance_result['updated_cash_holdings']
-                available_cash = rebalance_result['updated_available_cash']
-                trades_in_rebalance = rebalance_result['trades_executed']
-
-                if rebalance_result['rebalance_trades']:
-                    rebalance_history.append({
-                        'date': current_date.strftime('%Y-%m-%d'),
-                        'trades': rebalance_result['rebalance_trades'],
-                        'weights_before': rebalance_result['weights_before'],
-                        'weights_after': rebalance_result['weights_after'],
-                        'commission_cost': rebalance_result['commission_cost']
-                    })
-
-                last_rebalance_date = current_date
-                total_trades += trades_in_rebalance
-
-            normalized_value, daily_return, current_weights = self.metrics.calculate_daily_metrics_and_history(
-                current_date=current_date,
-                shares=shares,
-                available_cash=available_cash,
-                current_prices=current_prices,
-                cash_holdings=cash_holdings,
-                prev_portfolio_value=prev_portfolio_value,
-                daily_cash_inflow=daily_cash_inflow,
-                total_amount=total_amount,
-                dca_info=dca_info
-            )
-
-            portfolio_values.append(normalized_value)
-            daily_returns.append(daily_return)
-            weight_history.append(current_weights)
-
-            prev_portfolio_value = normalized_value * total_amount
-            prev_date = current_date
-
-        valid_dates = [d for d in date_range if start_date_obj.date() <= d.date() <= end_date_obj.date()]
-
-        if len(portfolio_values) != len(valid_dates):
-            logger.warning(f"포트폴리오 값 길이 불일치: portfolio_values={len(portfolio_values)}, valid_dates={len(valid_dates)}")
-            logger.warning(f"첫 3개 날짜: {valid_dates[:3] if len(valid_dates) > 0 else 'None'}")
-            logger.warning(f"마지막 3개 날짜: {valid_dates[-3:] if len(valid_dates) > 0 else 'None'}")
-            raise ValueError(f"계산된 포트폴리오 값 개수({len(portfolio_values)})가 날짜 개수({len(valid_dates)})와 일치하지 않습니다.")
-
-        result = pd.DataFrame({
-            'Date': valid_dates,
-            'Portfolio_Value': portfolio_values,
-            'Daily_Return': daily_returns,
-            'Cumulative_Return': [(v - 1) * 100 for v in portfolio_values]
-        })
-        result.set_index('Date', inplace=True)
-
-        result.attrs['total_trades'] = total_trades
-        result.attrs['rebalance_history'] = rebalance_history
-        result.attrs['weight_history'] = weight_history
 
         return result
     
@@ -1057,5 +888,5 @@ class PortfolioService:
             }
 
 
-# 전역 인스턴스 생성 (기존 패턴 유지)
-portfolio_service = PortfolioService()
+# 전역 인스턴스 생성
+portfolio_manager_service = PortfolioManagerService()

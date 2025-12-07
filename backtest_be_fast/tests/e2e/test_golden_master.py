@@ -87,8 +87,8 @@ def test_golden_master_backtest_dca(mock_stock_repo, mock_currency_converter):
 
     # Patch the INSTANCE in endpoints because it's global
     # And specifically patch the StockRepository instance used by the service
-    with patch("app.api.v1.endpoints.backtest.portfolio_service.stock_repository", mock_stock_repo), \
-         patch("app.services.portfolio_service.currency_converter", mock_currency_converter), \
+    with patch("app.api.v1.endpoints.backtest.portfolio_manager_service.stock_repository", mock_stock_repo), \
+         patch("app.services.portfolio_manager_service.currency_converter", mock_currency_converter), \
          patch("app.api.v1.endpoints.backtest.get_ticker_info_batch_from_db", side_effect=mock_stock_repo.get_tickers_info_batch), \
          patch("app.api.v1.endpoints.backtest.unified_data_service", mock_unified_service):
         
