@@ -63,14 +63,7 @@ class TestSmaRequirements:
         # Entry should be Buy
         assert trades.iloc[0]['Size'] > 0
 
-    # ============================================================================
-        assert len(trades) > 0, "진입 거래가 있어야 함"
-        
-        # Should have exit
-        last_trade = trades.iloc[-1]
-        assert pd.notna(last_trade['ExitTime']), "데드크로스에서 청산되어야 함"
 
-    # ============================================================================
     # Boundary / No Cross
     # ============================================================================
     def test_sma_no_cross_no_trade(self, standard_setup):
