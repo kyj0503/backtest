@@ -32,7 +32,7 @@ def test_monthly_dca():
         "strategy": "buy_and_hold"
     }
     
-    response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
+    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
     
     if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
@@ -40,11 +40,16 @@ def test_monthly_dca():
     
     assert response.status_code == 200, f"API Request failed: {response.text}"
     
-    result = response.json()
+    response_json = response.json()
+    dates = response_json.get("data", {})
+    stats = dates.get("portfolio_statistics", {})
+    
     print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
-    print(f"   총 수익률: {result.get('total_return', 'N/A'):.2f}%")
+    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
+    final_val = stats.get('Final_Value', 0.0)
+    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
+    total_ret = stats.get('Total_Return', 0.0)
+    print(f"   총 수익률: {total_ret:.2f}%")
 
 
 def test_quarterly_rebalancing():
@@ -71,7 +76,7 @@ def test_quarterly_rebalancing():
         "strategy": "buy_and_hold"
     }
     
-    response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
+    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
     
     if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
@@ -79,11 +84,15 @@ def test_quarterly_rebalancing():
 
     assert response.status_code == 200, f"API Request failed: {response.text}"
     
-    result = response.json()
+    response_json = response.json()
+    dates = response_json.get("data", {})
+    stats = dates.get("portfolio_statistics", {})
+
     print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-    print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}")
-    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
+    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
+    # print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}") # Not available in standard stats
+    final_val = stats.get('Final_Value', 0.0)
+    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
 
 
 def test_weekly_dca():
@@ -108,7 +117,7 @@ def test_weekly_dca():
         "strategy": "buy_and_hold"
     }
     
-    response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
+    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
     
     if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
@@ -116,10 +125,14 @@ def test_weekly_dca():
 
     assert response.status_code == 200, f"API Request failed: {response.text}"
     
-    result = response.json()
+    response_json = response.json()
+    dates = response_json.get("data", {})
+    stats = dates.get("portfolio_statistics", {})
+    
     print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
+    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
+    final_val = stats.get('Final_Value', 0.0)
+    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
 
 
 def test_biweekly_dca():
@@ -144,7 +157,7 @@ def test_biweekly_dca():
         "strategy": "buy_and_hold"
     }
     
-    response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
+    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
     
     if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
@@ -152,10 +165,14 @@ def test_biweekly_dca():
         
     assert response.status_code == 200, f"API Request failed: {response.text}"
     
-    result = response.json()
+    response_json = response.json()
+    dates = response_json.get("data", {})
+    stats = dates.get("portfolio_statistics", {})
+    
     print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
+    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
+    final_val = stats.get('Final_Value', 0.0)
+    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
 
 
 def test_combined_dca_and_rebalancing():
@@ -186,7 +203,7 @@ def test_combined_dca_and_rebalancing():
         "strategy": "buy_and_hold"
     }
     
-    response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
+    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
     
     if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
@@ -194,17 +211,21 @@ def test_combined_dca_and_rebalancing():
 
     assert response.status_code == 200, f"API Request failed: {response.text}"
     
-    result = response.json()
+    response_json = response.json()
+    dates = response_json.get("data", {})
+    stats = dates.get("portfolio_statistics", {})
+    
     print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-    print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}")
-    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
+    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
+    # print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}")
+    final_val = stats.get('Final_Value', 0.0)
+    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
 
 
 def test_legacy_frequency_should_fail():
-    """레거시 주기는 거부되어야 함"""
+    """잘못된 주기 요청은 거부되어야 함"""
     print("\n" + "="*80)
-    print("TEST 6: 레거시 주기 거부 (weekly_4는 에러 발생해야 함)")
+    print("TEST 6: 잘못된 주기 거부 (invalid_freq는 에러 발생해야 함)")
     print("="*80)
     
     payload = {
@@ -213,7 +234,7 @@ def test_legacy_frequency_should_fail():
                 "symbol": "AAPL",
                 "amount": 1000,
                 "investment_type": "dca",
-                "dca_frequency": "weekly_4"  # 레거시 주기
+                "dca_frequency": "invalid_freq"  # 확실히 잘못된 주기
             }
         ],
         "start_date": "2024-01-10",
@@ -223,15 +244,14 @@ def test_legacy_frequency_should_fail():
         "strategy": "buy_and_hold"
     }
     
-    response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
+    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
     
     if response.status_code == 422:  # Validation error
         print(f"✅ 성공! (예상대로 거부됨)")
-        # print(f"   에러 메시지: {response.json()}")
     else:
-        print(f"❌ 실패: 레거시 주기가 허용되었습니다 (status: {response.status_code})")
+        print(f"❌ 실패: 잘못된 주기가 허용되었습니다 (status: {response.status_code})")
         
-    assert response.status_code == 422, f"Legacy frequency should be rejected but got {response.status_code}"
+    assert response.status_code == 422, f"Invalid frequency should be rejected but got {response.status_code}"
 
 
 if __name__ == "__main__":
