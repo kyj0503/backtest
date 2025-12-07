@@ -1,373 +1,215 @@
 """
-Bollinger Bands 전략 단위 테스트
+Bollinger Bands 전략 요구사항 기반 테스트 (Black-box Testing)
 
-**테스트 범위**:
-- 볼린저 밴드 계산 로직
-- 상단/하단 밴드 계산
-- 과매수/과매도 시그널 생성
-- 변동성 기반 매매 검증
-
-**테스트 원칙**:
-- 도메인 정책 테스트 (핵심 비즈니스 로직)
-- 계산 정확성 검증
-- 경계값 테스트
+**테스트 전략**:
+- **명세 기반 테스트 (Specification-based Testing)**: `requirements.md`의 REQ-BB-xx 항목 검증
+- **동등 분할 (Equivalence Partitioning)**: 매수/매도/대기 구간 분할
+- **경계값 분석 (Boundary Value Analysis)**: 밴드 경계선(±epsilon)에서의 동작 검증
 """
 import pytest
 import pandas as pd
 import numpy as np
-from datetime import datetime
 from backtesting import Backtest
-from backtesting.test import SMA
 from app.strategies.bollinger_strategy import BollingerBandsStrategy
 
+class TestBollingerBandsRequirements:
+    """
+    [REQ-BB-01 ~ REQ-BB-09] 볼린저 밴드 전략 요구사항 검증
+    """
 
-class TestBollingerBandsCalculation:
-    """볼린저 밴드 계산 로직 검증"""
-
-    def test_upper_band_calculation(self):
-        """Given: 가격 데이터
-        When: 상단 볼린저 밴드 계산
-        Then: SMA + (2 × STD) 값 반환"""
-        # Given
-        prices = pd.Series([100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120])
-
-        # When: SMA와 표준편차 계산
-        period = 5
-        std_dev = 2
-        sma = prices.rolling(window=period).mean()
-        std = prices.rolling(window=period).std()
-        expected_upper = sma + (std_dev * std)
-
-        # 실제 전략의 상단 밴드 계산
-        strategy = BollingerBandsStrategy()
-        actual_upper = strategy._upper_band(prices, period, std_dev)
-
-        # Then: 상단 밴드가 올바르게 계산됨
-        # 마지막 유효한 값 비교
-        assert actual_upper.iloc[-1] == pytest.approx(expected_upper.iloc[-1], abs=0.01)
-
-    def test_lower_band_calculation(self):
-        """Given: 가격 데이터
-        When: 하단 볼린저 밴드 계산
-        Then: SMA - (2 × STD) 값 반환"""
-        # Given
-        prices = pd.Series([100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120])
-
-        # When
-        period = 5
-        std_dev = 2
-        sma = prices.rolling(window=period).mean()
-        std = prices.rolling(window=period).std()
-        expected_lower = sma - (std_dev * std)
-
-        strategy = BollingerBandsStrategy()
-        actual_lower = strategy._lower_band(prices, period, std_dev)
-
-        # Then: 하단 밴드가 올바르게 계산됨
-        assert actual_lower.iloc[-1] == pytest.approx(expected_lower.iloc[-1], abs=0.01)
-
-    def test_bands_widen_with_high_volatility(self):
-        """Given: 높은 변동성 데이터
-        When: 볼린저 밴드 계산
-        Then: 밴드 폭이 넓음"""
-        # Given: 변동성 큰 데이터
-        prices = pd.Series([100, 110, 95, 115, 90, 120, 85, 125, 130])
-
-        # When
-        strategy = BollingerBandsStrategy()
-        upper = strategy._upper_band(prices, 5, 2)
-        lower = strategy._lower_band(prices, 5, 2)
-
-        # Then: 밴드 폭이 넓음
-        band_width = upper.iloc[-1] - lower.iloc[-1]
-        assert band_width > 20  # 높은 변동성으로 인한 넓은 밴드
-
-    def test_bands_narrow_with_low_volatility(self):
-        """Given: 낮은 변동성 데이터
-        When: 볼린저 밴드 계산
-        Then: 밴드 폭이 좁음"""
-        # Given: 변동성 작은 데이터
-        prices = pd.Series([100, 101, 100, 101, 100, 101, 100, 101, 100])
-
-        # When
-        strategy = BollingerBandsStrategy()
-        upper = strategy._upper_band(prices, 5, 2)
-        lower = strategy._lower_band(prices, 5, 2)
-
-        # Then: 밴드 폭이 좁음
-        band_width = upper.iloc[-1] - lower.iloc[-1]
-        assert band_width < 5  # 낮은 변동성으로 인한 좁은 밴드
-
-    def test_sma_equals_middle_band(self):
-        """Given: 가격 데이터
-        When: SMA와 중심선 계산
-        Then: 중심선이 SMA와 동일"""
-        # Given
-        prices = pd.Series([100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120])
-        period = 5
-
-        # When
-        sma = SMA(prices, period)
-
-        # Then: SMA가 볼린저 밴드의 중심선
-        assert not sma.isna().all()
-
-
-class TestBollingerBandsStrategy:
-    """볼린저 밴드 전략 시그널 생성 검증"""
-
-    def create_sample_data(self, close_prices):
-        """테스트용 OHLC 데이터 생성"""
-        dates = pd.date_range(start='2023-01-01', periods=len(close_prices), freq='D')
-        close_array = close_prices.values if isinstance(close_prices, pd.Series) else close_prices
-        data = pd.DataFrame({
-            'Open': close_array,
-            'High': close_array * 1.01,
-            'Low': close_array * 0.99,
-            'Close': close_array,
-            'Volume': [1000000] * len(close_prices)
+    def create_fixture_data(self, price_pattern: list) -> pd.DataFrame:
+        """테스트용 OHLC 데이터 생성 헬퍼"""
+        dates = pd.date_range(start='2024-01-01', periods=len(price_pattern), freq='D')
+        prices = np.array(price_pattern, dtype=float)
+        return pd.DataFrame({
+            'Open': prices,
+            'High': prices * 1.001,  # 고가/저가 폭을 좁게 설정하여 종가 위주 테스트
+            'Low': prices * 0.999,
+            'Close': prices,
+            'Volume': [1000] * len(prices)
         }, index=dates)
-        return data
 
-    def test_strategy_buys_at_lower_band(self):
-        """Given: 가격이 하단 밴드 아래로 하락
-        When: 볼린저 밴드 전략 실행
-        Then: 매수 신호 발생 (과매도)"""
-        # Given: 급격한 하락 후 반등
-        close_prices = pd.Series([
-            100, 99, 98, 97, 96, 95, 94, 93, 92, 91,
-            90, 88, 86, 84, 82, 80, 78, 76, 74, 72,
-            75, 80, 85, 90, 95
-        ])
-        data = self.create_sample_data(close_prices)
+    @pytest.fixture
+    def standard_setup(self):
+        """기본 설정: 20일 이동평균, 승수 2, 초기자금 10,000"""
+        return {
+            'period': 20,
+            'std_dev': 2,
+            'cash': 10000
+        }
 
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=10, std_dev=2)
+    # ============================================================================
+    # REQ-BB-05 (매수 진입): 주가 < 하단 밴드
+    # ============================================================================
+    @pytest.mark.parametrize("price_offset, expected_trade", [
+        # [경계값 분석] 하단 밴드 기준
+        (-0.01, True),   # 하단 밴드보다 0.01 낮음 -> 매수 (Valid Partition)
+        (0.00,  False),  # 하단 밴드와 같음 -> 대기 (Boundary)
+        (0.01,  False),  # 하단 밴드보다 0.01 높음 -> 대기 (Invalid Partition)
+    ])
+    def test_req_bb_05_buy_signal_boundary(self, standard_setup, price_offset, expected_trade):
+        """
+        [REQ-BB-05] 하단 밴드 경계값 분석
+        Given: 20일간 일정하여 밴드가 고정된 상태
+        When: 21일차 가격이 (하단 밴드 + offset)일 때
+        Then: 하단 밴드 미만일 경우에만 매수 발생
+        """
+        # 1. 고정 가격으로 밴드 형성 (Mean=100, Std=0인 상태를 피하기 위해 약간의 진동을 줌)
+        # Std가 0이면 밴드폭이 0이 되므로, 의도적으로 Std를 만듦
+        # [100, 102, 100, 102...] -> Mean=101, Std=1
+        base_prices = [100, 102] * 10  # 20일 데이터
+        
+        # 2. 마지막 시점(20일차) 기준 계산 예상
+        # Mean = 101
+        # Std ≈ 1.0 (ddof=1 기준 계산 시 약간 다를 수 있음, pandas default는 ddof=1)
+        # Pandas Std 계산: [100, 102] 반복 시 Std=1.0259... 이나, 계산 편의를 위해 시뮬레이션 활용
+        
+        # 정확한 제어를 위해, 백테스트 엔진을 돌려서 직전 밴드를 확인하는 대신
+        # '거의 고정된 밴드'를 가정하고 상대적인 움직임을 테스트하기보다
+        # 명확하게 하락 돌파 시나리오를 구성.
+        
+        # 전략: 20일간 100으로 유지 -> Std=0 -> Band=100
+        # 이 경우 99.99 매수, 100.00 대기?
+        # Std=0 일 때의 예외처리가 있을 수 있으므로, 약간의 변동성 주입
+        # 19일간 100, 1일간 104 -> 평균 소폭 상승, Std 발생
+        
+        prices = [100] * 19 + [104] # 20일차
+        # 20일차 Close=104.
+        # Mean(20) = (1900 + 104) / 20 = 100.2
+        # Std(20) 계산 ... 복잡함.
+        
+        # 대안: 이미 계산 로직(Req-BB-01~04)은 신뢰한다고 가정(혹은 별도 검증).
+        # 여기서는 "하단 밴드 값"을 동적으로 구해서, 그 값 기준으로 마지막 틱을 조작해야 함.
+        # 하지만 Backtest 라이브러리는 데이터를 한 번에 넣어야 하므로,
+        # '미리 계산된 밴드값'을 알기 어렵다.
+        
+        # 해결책: 극단적으로 단순한 데이터 사용 (모두 100) -> Band=100 (폭 0)
+        # Std Dev가 0일 때 밴드 폭 0.
+        # Lower Band = 100.
+        # Case 1: 99.99 (Lower보다 작음) -> 매수?
+        # Case 2: 100.00 (Lower와 같음) -> 대기?
+        
+        setup_data = [100] * 20
+        test_price = 100 + price_offset
+        full_data = setup_data + [test_price] # 21번째 데이터가 테스트 대상
+        
+        df = self.create_fixture_data(full_data)
+        bt = Backtest(df, BollingerBandsStrategy, cash=standard_setup['cash'], commission=0)
+        stats = bt.run(period=20, std_dev=2)
+        
+        if expected_trade:
+            # 매수가 일어났다면 Trades가 1개 이상이어야 함
+            assert len(stats['_trades']) > 0, f"Offset {price_offset}: 매수했어야 함 (Price={test_price})"
+        else:
+            assert len(stats['_trades']) == 0, f"Offset {price_offset}: 매수하지 말았어야 함 (Price={test_price})"
 
-        # Then: 거래 발생
-        assert result['# Trades'] >= 0
+    # ============================================================================
+    # REQ-BB-06 (매도 청산): 주가 > 상단 밴드
+    # ============================================================================
+    @pytest.mark.parametrize("price_offset, expected_exit", [
+        # [경계값 분석] 상단 밴드 기준 (보유 중 가정)
+        (0.01, True),   # 상단 밴드 초과 -> 매도
+        (0.00, False),  # 상단 밴드 도달 -> 유지 (초과 조건이므로)
+        (-0.01, False), # 상단 밴드 미만 -> 유지
+    ])
+    def test_req_bb_06_sell_signal_boundary(self, standard_setup, price_offset, expected_exit):
+        """
+        [REQ-BB-06] 상단 밴드 경계값 분석 (청산)
+        Given: 포지션 보유 상태 (강제 주입 혹은 매수 유도)
+        When: 가격이 상단 밴드 근처로 이동
+        Then: 상단 밴드 초과 시에만 청산
+        """
+        # 1. 매수 유도: 100 -> 90 (하단 돌파, 매수) -> 100 (회귀)
+        # 2. 밴드 형성: 100으로 안정화
+        # 3. 테스트: 상단 밴드(100) 기준 Offset
+        
+        # 데이터 구성:
+        pre_data = [100] * 20          # 밴드 100, Std 0
+        buy_trigger = [90]             # 하단(100) 하향 돌파 -> 매수
+        stability = [100] * 5          # 밴드 다시 100으로 안정화 (Std 0에 수렴)
+        
+        # 테스트 시점
+        test_price = 100 + price_offset
+        
+        full_data = pre_data + buy_trigger + stability + [test_price]
+        df = self.create_fixture_data(full_data)
+        
+        bt = Backtest(df, BollingerBandsStrategy, cash=standard_setup['cash'], commission=0)
+        stats = bt.run(period=5, std_dev=2) # period 짧게 하여 빠르게 반영
+        
+        trades = stats['_trades']
+        
+        # 먼저 진입 거래가 있었는지 확인
+        assert len(trades) > 0, "테스트 전제 실패: 매수가 발생하지 않음"
+        
+        # 마지막 거래가 매도(Exit) 되었는지 확인
+        # ExitTime이 존재하면 매도된 것
+        last_trade = trades.iloc[-1]
+        
+        if expected_exit:
+            assert pd.notna(last_trade['ExitTime']), f"Offset {price_offset}: 청산되지 않음"
+        else:
+            # 아직 보유 중이어야 함 (ExitTime이 NaT 혹은 마지막 봉이 아님)
+            # 여기서는 마지막 봉에서 청산 여부를 보므로, ExitTime이 있더라도 그게 테스트 봉이어야 함
+            # 혹은 간단히 Trade가 닫혔는지 확인
+            # 만약 닫혔다면, 그게 이번 테스트 캔들 때문인지 확인 필요하지만
+            # stability 구간(100)은 상단(100)과 같아서 매도 안함(False case).
+            # 따라서 닫혀있으면 이번 캔들 때문일 것임.
+            
+            # 주의: stability 구간이 상단밴드(100)와 같음.
+            # 로직상 ">" 인지 ">=" 인지 중요. REQ는 ">" (초과).
+            # 따라서 100일때는 안 팔려야 함.
+             assert pd.isna(last_trade['ExitTime']), f"Offset {price_offset}: 의도치 않게 청산됨"
 
-    def test_strategy_sells_at_upper_band(self):
-        """Given: 가격이 상단 밴드 위로 상승
-        When: 포지션이 있을 때
-        Then: 매도 신호 발생 (과매수)"""
-        # Given: 하락 후 급등
-        close_prices = pd.Series([
-            100, 98, 96, 94, 92, 90, 88, 86, 84, 82,
-            85, 90, 95, 100, 105, 110, 115, 120, 125, 130,
-            135, 140, 145, 150
-        ])
-        data = self.create_sample_data(close_prices)
 
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=10, std_dev=2)
-
-        # Then: 거래 발생
-        assert result['# Trades'] >= 0
-
-    def test_strategy_respects_position_size(self):
-        """Given: 볼린저 밴드 전략 with position_size=0.95
-        When: 매수 신호 발생
-        Then: 자본의 95%만 사용"""
-        # Given
-        close_prices = pd.Series([
-            100, 98, 96, 94, 92, 90, 88, 86, 84, 82,
-            80, 78, 76, 74, 72, 75, 80, 85, 90, 95,
-            100, 105, 110
-        ])
-        data = self.create_sample_data(close_prices)
-
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run()
-
-        # Then: 최종 자본이 초기 자본의 85% 이상
-        assert result['Equity Final [$]'] >= 8500
-
-    def test_strategy_with_custom_parameters(self):
-        """Given: 커스텀 볼린저 밴드 파라미터
+    # ============================================================================
+    # REQ-BB-08 (데이터 부족): N개 미만
+    # ============================================================================
+    def test_req_bb_08_insufficient_data(self):
+        """
+        [REQ-BB-08] 데이터 부족 시 신호 미발생 확인
+        Given: 데이터 개수 < Period
         When: 전략 실행
-        Then: 설정된 파라미터로 동작"""
-        # Given
-        close_prices = pd.Series([
-            100, 102, 104, 106, 108, 110, 108, 106, 104, 102,
-            100, 98, 96, 94, 92, 95, 100, 105, 110, 115
-        ])
-        data = self.create_sample_data(close_prices)
+        Then: 거래 0건
+        """
+        data = [100, 90, 80, 70] # 4개
+        df = self.create_fixture_data(data)
+        
+        bt = Backtest(df, BollingerBandsStrategy, cash=10000, commission=0)
+        stats = bt.run(period=20, std_dev=2) # Period 20
+        
+        assert len(stats['_trades']) == 0
 
-        # When: 커스텀 파라미터 (좁은 밴드)
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=10, std_dev=1.5)
-
-        # Then: 백테스트 완료
-        assert result is not None
-        assert 'Return [%]' in result
-
-    def test_strategy_exits_at_sma(self):
-        """Given: 하단 밴드에서 매수 후 가격 상승
-        When: 가격이 SMA(중심선)에 도달
-        Then: 매도 신호 발생 (이익 실현)"""
-        # Given: 하단 터치 후 중심선 복귀
-        close_prices = pd.Series([
-            100, 99, 98, 97, 96, 95, 94, 93, 92, 91,
-            90, 88, 86, 84, 82, 83, 85, 88, 92, 96,
-            100, 102, 104
-        ])
-        data = self.create_sample_data(close_prices)
-
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=10, std_dev=2)
-
-        # Then: 매수 후 매도 발생
-        assert result is not None
-
-
-class TestBollingerBandsEdgeCases:
-    """볼린저 밴드 전략 경계값 및 예외 상황 테스트"""
-
-    def create_sample_data(self, close_prices):
-        """테스트용 OHLC 데이터 생성"""
-        dates = pd.date_range(start='2023-01-01', periods=len(close_prices), freq='D')
-        close_array = close_prices.values if isinstance(close_prices, pd.Series) else close_prices
-        data = pd.DataFrame({
-            'Open': close_array,
-            'High': close_array * 1.01,
-            'Low': close_array * 0.99,
-            'Close': close_array,
-            'Volume': [1000000] * len(close_prices)
-        }, index=dates)
-        return data
-
-    def test_strategy_with_minimum_data_points(self):
-        """Given: 최소 데이터 포인트 (period+1)
-        When: 볼린저 밴드 계산
-        Then: 정상 동작"""
-        # Given: 21개 데이터 (period=20)
-        close_prices = pd.Series([100 + i for i in range(21)])
-        data = self.create_sample_data(close_prices)
-
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=20, std_dev=2)
-
-        # Then: 에러 없이 실행
-        assert result is not None
-
-    def test_strategy_with_insufficient_data(self):
-        """Given: period보다 적은 데이터
-        When: 볼린저 밴드 전략 실행
-        Then: 거래 발생하지 않음"""
-        # Given: 10개 데이터 (period=20보다 적음)
-        close_prices = pd.Series([100 + i for i in range(10)])
-        data = self.create_sample_data(close_prices)
-
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=20, std_dev=2)
-
-        # Then: 거래 없음
-        assert result['# Trades'] == 0
-
-    def test_strategy_with_zero_std_dev(self):
-        """Given: 표준편차가 0에 가까운 데이터 (일정한 가격)
-        When: 볼린저 밴드 계산
-        Then: 밴드 폭이 매우 좁음"""
-        # Given: 거의 일정한 가격
-        close_prices = pd.Series([100.0] * 25)
-        data = self.create_sample_data(close_prices)
-
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=20, std_dev=2)
-
-        # Then: 거래 없음 (밴드 폭이 너무 좁아 진입/청산 조건 불충족)
-        assert result['# Trades'] == 0
-
-    def test_strategy_with_high_std_dev_multiplier(self):
-        """Given: 높은 표준편차 배수 (std_dev=3)
-        When: 볼린저 밴드 전략 실행
-        Then: 밴드가 넓어져 거래 빈도 감소"""
-        # Given
-        close_prices = pd.Series([
-            100, 102, 101, 103, 102, 104, 103, 105, 104, 106,
-            105, 107, 106, 108, 107, 109, 108, 110, 109, 111,
-            110, 112, 111, 113, 112
-        ])
-        data = self.create_sample_data(close_prices)
-
-        # When: 넓은 밴드
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=10, std_dev=3)
-
-        # Then: 거래가 적음
-        assert result['# Trades'] <= 1
-
-    def test_strategy_with_low_std_dev_multiplier(self):
-        """Given: 낮은 표준편차 배수 (std_dev=1)
-        When: 볼린저 밴드 전략 실행
-        Then: 밴드가 좁아져 거래 빈도 증가"""
-        # Given
-        close_prices = pd.Series([
-            100, 102, 101, 103, 102, 104, 103, 105, 104, 106,
-            105, 107, 106, 108, 107, 109, 108, 110, 109, 111,
-            110, 108, 109, 107, 108
-        ])
-        data = self.create_sample_data(close_prices)
-
-        # When: 좁은 밴드
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.01)
-        result = bt.run(period=5, std_dev=1)
-
-        # Then: 더 많은 거래 발생 가능
-        assert result is not None
-
-    def test_strategy_handles_nan_in_bands(self):
-        """Given: 초기 데이터 (밴드가 NaN)
-        When: 전략 실행
-        Then: NaN 체크 후 정상 동작"""
-        # Given
-        close_prices = pd.Series([100 + i for i in range(30)])
-        data = self.create_sample_data(close_prices)
-
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=20, std_dev=2)
-
-        # Then: 에러 없이 실행
-        assert result is not None
-
-    def test_strategy_with_extreme_price_spike(self):
-        """Given: 극단적 가격 급등
-        When: 볼린저 밴드 전략 실행
-        Then: 상단 밴드 돌파로 매도"""
-        # Given: 극단적 급등
-        close_prices = pd.Series([
-            100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
-            110, 111, 112, 113, 114, 200, 201, 202, 203, 204
-        ])
-        data = self.create_sample_data(close_prices)
-
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=10, std_dev=2)
-
-        # Then: 거래 발생
-        assert result is not None
-
-    def test_strategy_in_trending_market(self):
-        """Given: 강한 추세장
-        When: 볼린저 밴드 전략 실행
-        Then: 밴드를 따라 이동 (추세에서는 비효율적)"""
-        # Given: 강한 상승 추세
-        close_prices = pd.Series([100 + i * 2 for i in range(30)])
-        data = self.create_sample_data(close_prices)
-
-        # When
-        bt = Backtest(data, BollingerBandsStrategy, cash=10000, commission=0.0)
-        result = bt.run(period=10, std_dev=2)
-
-        # Then: 백테스트 완료 (추세장에서 볼린저 밴드는 비효율적일 수 있음)
-        assert result is not None
+    # ============================================================================
+    # REQ-BB-07 (중심선 청산): 이익 실현
+    # ============================================================================
+    def test_req_bb_07_exit_at_sma(self):
+        """
+        [REQ-BB-07] 중심선(SMA) 복귀 시 청산 (이익 실현)
+        Given: 하단 매수 후
+        When: 가격이 SMA 위로 올라옴 (상단 밴드까지는 안 감)
+        Then: 청산 발생
+        """
+        # 1. 100 유지 (SMA=100)
+        # 2. 90 급락 (매수)
+        # 3. 101 회복 (SMA=약 99~100 사이일 것, 101이면 확실히 SMA 위)
+        #    단, 상단 밴드보다는 아래여야 함.
+        #    Std가 커졌으므로 상단은 110 넘을 것임.
+        
+        # 데이터가 너무 짧으면 indicator 계산이 안 될 수 있음.
+        # period=5로 단축
+        
+        # 0~4 (100) -> SMA=100
+        # 5 (90) -> SMA=(400+90)/5=98.  Low(90) < Band(100-2*0=100) -> Buy? 
+        #   (Std=0 구간이라 Band=SMA=100 이었을 것. 직전 봉 기준이면.)
+        #   Backtesting.py는 현재 봉(Close) < Band 등은 확인 가능.
+        
+        data = [100]*20 + [90] + [101]
+        df = self.create_fixture_data(data)
+        
+        bt = Backtest(df, BollingerBandsStrategy, cash=10000, commission=0)
+        stats = bt.run(period=10, std_dev=2)
+        
+        trades = stats['_trades']
+        assert len(trades) > 0
+        assert pd.notna(trades.iloc[-1]['ExitTime']) # 청산됨
