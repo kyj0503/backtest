@@ -5,6 +5,7 @@ DCA 및 리밸런싱 로직 통합 테스트
 """
 import requests
 import os
+import pytest
 
 BASE_URL = os.getenv("BACKTEST_API_URL", "http://localhost:8000")
 
@@ -33,17 +34,17 @@ def test_monthly_dca():
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
     
-    if response.status_code == 200:
-        result = response.json()
-        print(f"✅ 성공!")
-        print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-        print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
-        print(f"   총 수익률: {result.get('total_return', 'N/A'):.2f}%")
-        return True
-    else:
+    if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
         print(f"   에러: {response.text}")
-        return False
+    
+    assert response.status_code == 200, f"API Request failed: {response.text}"
+    
+    result = response.json()
+    print(f"✅ 성공!")
+    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
+    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
+    print(f"   총 수익률: {result.get('total_return', 'N/A'):.2f}%")
 
 
 def test_quarterly_rebalancing():
@@ -72,17 +73,17 @@ def test_quarterly_rebalancing():
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
     
-    if response.status_code == 200:
-        result = response.json()
-        print(f"✅ 성공!")
-        print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-        print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}")
-        print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
-        return True
-    else:
+    if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
         print(f"   에러: {response.text}")
-        return False
+
+    assert response.status_code == 200, f"API Request failed: {response.text}"
+    
+    result = response.json()
+    print(f"✅ 성공!")
+    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
+    print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}")
+    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
 
 
 def test_weekly_dca():
@@ -109,16 +110,16 @@ def test_weekly_dca():
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
     
-    if response.status_code == 200:
-        result = response.json()
-        print(f"✅ 성공!")
-        print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-        print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
-        return True
-    else:
+    if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
         print(f"   에러: {response.text}")
-        return False
+
+    assert response.status_code == 200, f"API Request failed: {response.text}"
+    
+    result = response.json()
+    print(f"✅ 성공!")
+    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
+    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
 
 
 def test_biweekly_dca():
@@ -145,16 +146,16 @@ def test_biweekly_dca():
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
     
-    if response.status_code == 200:
-        result = response.json()
-        print(f"✅ 성공!")
-        print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-        print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
-        return True
-    else:
+    if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
         print(f"   에러: {response.text}")
-        return False
+        
+    assert response.status_code == 200, f"API Request failed: {response.text}"
+    
+    result = response.json()
+    print(f"✅ 성공!")
+    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
+    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
 
 
 def test_combined_dca_and_rebalancing():
@@ -187,17 +188,17 @@ def test_combined_dca_and_rebalancing():
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest/portfolio", json=payload)
     
-    if response.status_code == 200:
-        result = response.json()
-        print(f"✅ 성공!")
-        print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
-        print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}")
-        print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
-        return True
-    else:
+    if response.status_code != 200:
         print(f"❌ 실패: {response.status_code}")
         print(f"   에러: {response.text}")
-        return False
+
+    assert response.status_code == 200, f"API Request failed: {response.text}"
+    
+    result = response.json()
+    print(f"✅ 성공!")
+    print(f"   총 거래 횟수: {result.get('total_trades', 'N/A')}")
+    print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}")
+    print(f"   최종 포트폴리오 가치: ${result.get('final_value', 'N/A'):,.2f}")
 
 
 def test_legacy_frequency_should_fail():
@@ -226,56 +227,39 @@ def test_legacy_frequency_should_fail():
     
     if response.status_code == 422:  # Validation error
         print(f"✅ 성공! (예상대로 거부됨)")
-        print(f"   에러 메시지: {response.json()}")
-        return True
+        # print(f"   에러 메시지: {response.json()}")
     else:
         print(f"❌ 실패: 레거시 주기가 허용되었습니다 (status: {response.status_code})")
-        return False
+        
+    assert response.status_code == 422, f"Legacy frequency should be rejected but got {response.status_code}"
 
 
 if __name__ == "__main__":
+    # 스크립트로 직접 실행 시 pytest를 통해 실행하거나, 간단히 함수들만 호출
+    # 여기서는 간단호출 방식으로 유지
     print("\n" + "🚀 DCA 및 리밸런싱 Nth Weekday 로직 통합 테스트 시작" + "\n")
-    
-    results = []
     
     # 서버 health check
     try:
         response = requests.get(f"{BASE_URL}/health")
-        if response.status_code == 200:
-            print("✅ 서버 연결 확인")
-        else:
+        if response.status_code != 200:
             print("❌ 서버 응답 이상")
             exit(1)
+        print("✅ 서버 연결 확인")
     except Exception as e:
         print(f"❌ 서버 연결 실패: {e}")
         print("   docker compose -f compose.dev.yaml up -d 로 서버를 먼저 실행하세요.")
         exit(1)
-    
-    # 테스트 실행
-    results.append(("Monthly DCA", test_monthly_dca()))
-    results.append(("Quarterly Rebalancing", test_quarterly_rebalancing()))
-    results.append(("Weekly DCA", test_weekly_dca()))
-    results.append(("Biweekly DCA", test_biweekly_dca()))
-    results.append(("Combined DCA + Rebalancing", test_combined_dca_and_rebalancing()))
-    results.append(("Legacy Frequency Rejection", test_legacy_frequency_should_fail()))
-    
-    # 결과 요약
-    print("\n" + "="*80)
-    print("테스트 결과 요약")
-    print("="*80)
-    
-    passed = sum(1 for _, result in results if result)
-    total = len(results)
-    
-    for name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status} - {name}")
-    
-    print("\n" + f"총 {passed}/{total} 테스트 통과")
-    
-    if passed == total:
+
+    # 직접 실행 시에는 assert가 실패하면 프로그램이 종료됨
+    try:
+        test_monthly_dca()
+        test_quarterly_rebalancing()
+        test_weekly_dca()
+        test_biweekly_dca()
+        test_combined_dca_and_rebalancing()
+        test_legacy_frequency_should_fail()
         print("\n🎉 모든 테스트 통과!")
-        exit(0)
-    else:
-        print(f"\n⚠️  {total - passed}개 테스트 실패")
+    except AssertionError as e:
+        print(f"\n❌ 테스트 실패: {e}")
         exit(1)
