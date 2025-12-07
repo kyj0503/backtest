@@ -5,7 +5,7 @@ DCA 및 리밸런싱 로직 통합 테스트
 """
 import requests
 import os
-import pytest
+
 
 BASE_URL = os.getenv("BACKTEST_API_URL", "http://localhost:8000")
 
