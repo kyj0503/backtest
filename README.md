@@ -64,7 +64,7 @@ docker compose -f compose.dev.yaml down
 docker compose -f compose.dev.yaml exec backtest-be-fast pytest
 
 # 특정 테스트만 실행 (예: 단위 테스트)
-docker compose -f compose.dev.yaml exec backtest-be-fast pytest -m unit
+docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit
 ```
 
 ### 프론트엔드 테스트
