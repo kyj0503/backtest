@@ -1,0 +1,165 @@
+{
+  "data": {
+    "daily_returns": {
+      "2023-01-01": 0.0,
+      "2023-01-02": 3.2894736842105257,
+      "2023-01-03": 1.2738853503184842,
+      "2023-01-04": 1.2578616352201164,
+      "2023-01-05": 1.2422360248447113,
+      "2023-01-06": -0.613496932515333,
+      "2023-01-09": 1.6638214701007243,
+      "2023-01-10": 1.212121212121203,
+      "2023-01-11": 1.197604790419153,
+      "2023-01-12": 1.1834319526627346
+    },
+    "equity_curve": {
+      "2023-01-01": 998.0,
+      "2023-01-02": 1030.828947368421,
+      "2023-01-03": 1043.9605263157896,
+      "2023-01-04": 1057.092105263158,
+      "2023-01-05": 1070.2236842105262,
+      "2023-01-06": 1063.657894736842,
+      "2023-01-09": 2081.355263157895,
+      "2023-01-10": 2106.583811802233,
+      "2023-01-11": 2131.812360446571,
+      "2023-01-12": 2157.0409090909093
+    },
+    "exchange_rates": {},
+    "individual_results": [
+      {
+        "amount": 2000.0,
+        "final_equity": 2161.3636363636365,
+        "sharpe_ratio": 0.0,
+        "ticker": "AAPL",
+        "total_return_pct": 8.06818181818183,
+        "trades": 1,
+        "weight": 1.0,
+        "win_rate": 100.0
+      }
+    ],
+    "individual_returns": {
+      "AAPL": {
+        "amount": 2000.0,
+        "dca_periods": 2,
+        "end_price": 171.0,
+        "investment_type": "dca",
+        "return": 8.06818181818183,
+        "start_price": 158.2334384858044,
+        "symbol": "AAPL",
+        "weight": 1.0
+      }
+    },
+    "latest_news": [],
+    "nasdaq_benchmark": [],
+    "portfolio_composition": [
+      {
+        "amount": 2000.0,
+        "asset_type": "stock",
+        "dca_periods": 2,
+        "investment_type": "dca",
+        "symbol": "AAPL",
+        "weight": 1.0
+      }
+    ],
+    "portfolio_result": {
+      "total_equity": 2157.0409090909093,
+      "total_return_pct": 7.852045454545453
+    },
+    "portfolio_statistics": {
+      "Annual_Return": 1130.415058466056,
+      "Annual_Volatility": 16.147522342460668,
+      "Avg_Drawdown": -0.6134969325153306,
+      "Duration": "11 days",
+      "End": "2023-01-12",
+      "Final_Value": 2157.0409090909093,
+      "Initial_Value": 2000.0,
+      "Max_Consecutive_Gains": 4,
+      "Max_Consecutive_Losses": 1,
+      "Max_Drawdown": -0.6134969325153306,
+      "Negative_Days": 1,
+      "Peak_Value": 2157.0409090909093,
+      "Positive_Days": 8,
+      "Profit_Factor": 20.08231087543332,
+      "Sharpe_Ratio": 70.00548037599407,
+      "Start": "2023-01-01",
+      "Total_Return": 7.852045454545453,
+      "Total_Trades": 2,
+      "Total_Trading_Days": 10,
+      "Win_Rate": 80.0
+    },
+    "rebalance_history": [],
+    "sp500_benchmark": [],
+    "status": "success",
+    "strategy_details": {
+      "AAPL": {
+        "trade_log": [
+          {
+            "Duration": null,
+            "EntryPrice": 152.0,
+            "EntryTime": "2023-01-01T00:00:00",
+            "ExitPrice": null,
+            "ExitTime": null,
+            "PnL": null,
+            "ReturnPct": null,
+            "Size": 6.578947368421052,
+            "Type": "BUY"
+          },
+          {
+            "Duration": null,
+            "EntryPrice": 165.0,
+            "EntryTime": "2023-01-09T00:00:00",
+            "ExitPrice": null,
+            "ExitTime": null,
+            "PnL": null,
+            "ReturnPct": null,
+            "Size": 6.0606060606060606,
+            "Type": "BUY"
+          }
+        ]
+      }
+    },
+    "weight_history": [
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-01"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-02"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-03"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-04"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-05"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-06"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-09"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-10"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-11"
+      },
+      {
+        "AAPL": 1.0,
+        "date": "2023-01-12"
+      }
+    ]
+  },
+  "status": "success"
+}
