@@ -1,9 +1,5 @@
 """
 MACD Strategy Requirements-based Testing (Black-box Testing)
-
-**Test Strategy**:
-- **Spec-based**: Validate REQ-MACD-xx from `requirements.md`
-- **Equivalence Partitioning**: MACD > Signal (Buy), MACD < Signal (Sell)
 """
 import pytest
 import pandas as pd
@@ -12,9 +8,6 @@ from backtesting import Backtest
 from app.strategies.strategies import MacdStrategy
 
 class TestMacdRequirements:
-    """
-    [REQ-MACD-01 ~ REQ-MACD-04] MACD 전략 요구사항 검증
-    """
 
     def create_fixture_data(self, price_pattern: list) -> pd.DataFrame:
         dates = pd.date_range(start='2024-01-01', periods=len(price_pattern), freq='D')
@@ -27,44 +20,43 @@ class TestMacdRequirements:
             'Volume': [1000] * len(prices)
         }, index=dates)
 
-    # ============================================================================
-    # REQ-MACD-03 (매수): MACD 상향 돌파
-    # ============================================================================
     def test_req_macd_03_buy_signal(self):
         """
         [REQ-MACD-03] MACD Line > Signal Line 교차 시 매수
-        Given: 하락 추세 (MACD < Signal)
-        When: 상승 반전 (MACD > Signal)
-        Then: 매수 발생
         """
-        # 하락 -> 상승 패턴
-        # 100 -> 80 (20일), 80 -> 120 (20일)
-        p1 = [100 - i for i in range(20)]
-        p2 = [80 + i*2 for i in range(20)]
+        # MACD(12, 26). Signal(9).
+        # Need long periods.
+        
+        # 1. Strong Down trend
+        p1 = np.linspace(200, 100, 60).tolist()
+        
+        # 2. Strong Up trend
+        p2 = np.linspace(100, 200, 60).tolist()
         
         data = p1 + p2
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, MacdStrategy, cash=10000, commission=0)
+        bt = Backtest(df, MacdStrategy, cash=100000, commission=0, finalize_trades=True)
         stats = bt.run(fast_period=12, slow_period=26, signal_period=9)
         
         assert len(stats['_trades']) > 0, "MACD 골든크로스 매수"
 
-    # ============================================================================
-    # REQ-MACD-04 (매도): MACD 하향 돌파
-    # ============================================================================
     def test_req_macd_04_sell_signal(self):
         """
         [REQ-MACD-04] MACD Line < Signal Line 교차 시 매도
         """
-        # 상승 -> 하락 패턴
-        p1 = [100 + i for i in range(30)]
-        p2 = [130 - i*2 for i in range(20)]
+        # 0. Setup Phase (Down)
+        p0 = np.linspace(200, 100, 40).tolist()
+
+        # 1. Up trend (Buy)
+        p1 = np.linspace(100, 200, 60).tolist()
+        # 2. Down trend (Sell)
+        p2 = np.linspace(200, 100, 60).tolist()
         
-        data = p1 + p2
+        data = p0 + p1 + p2
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, MacdStrategy, cash=10000, commission=0)
+        bt = Backtest(df, MacdStrategy, cash=100000, commission=0, finalize_trades=True)
         stats = bt.run()
         
         trades = stats['_trades']
