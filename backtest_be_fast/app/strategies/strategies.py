@@ -135,8 +135,19 @@ class RsiStrategy(PositionSizingMixin, Strategy):
 
         avg_loss = avg_loss.replace(0, np.finfo(float).eps)
 
+        # Handle case where both gain and loss are 0 (Flat data) => RSI 50
         rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
+        
+        # If avg_loss was 0 (and avg_gain 0), rs is 0, rsi is 0. 
+        # But if both are 0, it implies no change.
+        # We can detect this via the original Gain/Loss or just fix the 0/0 case.
+        # Simple fix: If avg_gain is also 0 (and avg_loss is eps), RSI becomes 0.
+        # We want 50.
+        
+        # Vectorized fix:
+        condition = (avg_gain == 0) & (avg_loss <= np.finfo(float).eps)
+        rsi[condition] = 50
 
         return rsi.fillna(50)
 
