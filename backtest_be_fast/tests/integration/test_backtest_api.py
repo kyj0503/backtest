@@ -43,7 +43,7 @@ class TestBacktestEndpoint:
             "end_date": "2023-06-30",
             "strategy": "buy_hold_strategy",
             "commission": 0.002,
-            "rebalance_frequency": "weekly_4"
+            "rebalance_frequency": "monthly_1"
         }
         
         # When

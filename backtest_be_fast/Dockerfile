@@ -33,6 +33,11 @@ RUN curl -Ls https://astral.sh/uv/install.sh | sh \
 # requirements 설치 (venv 내부 pip 사용)
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 테스트 의존성 설치 (requirements-test.txt)
+# 주의: 운영 배포 시에는 이 부분이 포함되지 않도록 멀티 스테이지 빌드 사용 권장
+COPY requirements-test.txt .
+RUN pip install --no-cache-dir -r requirements-test.txt
+
 # 애플리케이션 코드 복사
 COPY app ./app
 COPY scripts ./scripts
