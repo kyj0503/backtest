@@ -49,6 +49,9 @@ async def lifespan(app: FastAPI):
     logger.info(f"{settings.project_name} v{settings.version} 시작됨")
     logger.info(f"문서 URL: http://{settings.host}:{settings.port}{settings.api_v1_str}/docs")
     
+    # Prometheus Metrics Expose (라우트 추가는 여기서 안전함)
+    instrumentator.expose(app)
+    
     yield
     
     # 종료 시 정리
@@ -77,6 +80,10 @@ app.add_middleware(
 
 # API 라우터 포함
 app.include_router(api_router, prefix=settings.api_v1_str)
+
+# Prometheus Monitoring 설정 (Global Scope)
+from prometheus_fastapi_instrumentator import Instrumentator
+instrumentator = Instrumentator().instrument(app)
 
 
 @app.get("/", include_in_schema=False)
