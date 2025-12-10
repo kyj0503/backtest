@@ -190,12 +190,22 @@ class PortfolioSimulationEngine:
             currency = ticker_currencies.get(unique_key, 'USD')
             if currency != 'USD' and currency in aligned_exchange_rates:
                 # 벡터 연산으로 전체 기간 환율 적용
-                # [Copilot Suggestion] 벡터 연산 (환율 적용)
+                # [Copilot Suggestion] 벡터 연산 (환율 적용) - apply 제거 및 Vectorization 적용
                 exchange_rates = aligned_exchange_rates[currency]
                 
-                price_series = price_series * exchange_rates.apply(
-                    lambda r: currency_converter.get_conversion_multiplier(currency, r) if pd.notnull(r) else 1.0
-                )
+                # 주요 통화(EUR, GBP 등)는 직접 곱하기, 그 외(KRW, JPY 등)는 나누기 역수
+                # CurrencyConverter.get_conversion_multiplier 로직을 벡터화
+                if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
+                     # Direct multiplication
+                     price_series = price_series * exchange_rates
+                else:
+                     # Inverse (1 / rate)
+                     # 0 또는 NaN인 경우 1.0으로 처리 (Division by Zero 방지)
+                     valid_mask = (exchange_rates > 0) & (pd.notnull(exchange_rates))
+                     multipliers = pd.Series(1.0, index=exchange_rates.index)
+                     multipliers[valid_mask] = 1.0 / exchange_rates[valid_mask]
+                     
+                     price_series = price_series * multipliers
             elif currency != 'USD':
                 # [Copilot Suggestion] 지원하지 않는 통화 경고 로그 복원
                 # (USD가 아닌데 exchange_rates에 없는 경우)
@@ -294,7 +304,7 @@ class PortfolioSimulationEngine:
         aligned_prices, aligned_exchange_rates = self._pre_calculate_prices(
             date_range, stock_amounts, portfolio_data, dca_info, ticker_currencies, exchange_rates_by_currency
         )
-        last_valid_exchange_rates = {} # ループ内でのキャッシュ用
+        last_valid_exchange_rates = {} # 루프 내 캐싱용
 
         # 2. 메인 루프 실행
         for current_date in date_range:
