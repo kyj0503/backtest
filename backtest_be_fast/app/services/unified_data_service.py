@@ -8,7 +8,7 @@ import pandas as pd
 from typing import List, Dict, Any
 
 from .data_service import data_service
-from app.repositories.yfinance_repository import get_ticker_info_batch_from_db, load_news_from_db, save_news_to_db
+from app.repositories.stock_repository import get_stock_repository
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,13 @@ class UnifiedDataService:
         Args:
             news_service: 뉴스 서비스 인스턴스 (의존성 주입)
         """
+    def __init__(self, news_service=None):
+        """
+        Args:
+            news_service: 뉴스 서비스 인스턴스 (의존성 주입)
+        """
         self.news_service = news_service
+        self.stock_repo = get_stock_repository()
     
     def collect_ticker_info(
         self,
@@ -39,7 +45,7 @@ class UnifiedDataService:
         """
         # 배치 조회로 N+1 쿼리 문제 해결
         try:
-            ticker_info = get_ticker_info_batch_from_db(symbols)
+            ticker_info = self.stock_repo.get_tickers_info_batch(symbols)
         except Exception as e:
             logger.warning(f"티커 정보 일괄 조회 실패: {str(e)}")
             # 실패 시 기본값 반환
@@ -247,7 +253,7 @@ class UnifiedDataService:
         for symbol in symbols:
             try:
                 # 1. DB에서 먼저 조회 (3시간 이내)
-                cached_news = load_news_from_db(symbol, max_age_hours=max_cache_hours)
+                cached_news = self.stock_repo.load_ticker_news(symbol, max_age_hours=max_cache_hours)
 
                 if cached_news and len(cached_news) > 0:
                     # DB에 신선한 데이터가 있으면 반환
@@ -261,7 +267,7 @@ class UnifiedDataService:
 
                     # 3. API 결과를 DB에 저장
                     if news_list:
-                        save_news_to_db(symbol, news_list)
+                        self.stock_repo.save_ticker_news(symbol, news_list)
 
                     latest_news[symbol] = news_list
                     logger.info(f"{symbol} 뉴스 {len(news_list)}개 (API 수집 완료)")

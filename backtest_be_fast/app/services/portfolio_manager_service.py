@@ -35,7 +35,8 @@ from app.core.exceptions import (
 )
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
 from app.constants.data_loading import TradingThresholds
-from app.utils.currency_converter import currency_converter
+from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
+from app.utils.currency_converter import currency_converter, CurrencyConverter
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class PortfolioManagerService:
         self,
         portfolio_data: Dict[str, pd.DataFrame],
         amounts: Dict[str, float],
-        dca_info: Dict[str, Dict],
+        dca_info: Dict[str, DcaStrategyInfo],
         start_date: str,
         end_date: str,
         rebalance_frequency: str = "weekly_4",
@@ -90,15 +91,15 @@ class PortfolioManagerService:
         # 현금 처리
         cash_amount = 0
         for unique_key, amount in amounts.items():
-            if dca_info[unique_key].get('asset_type') == 'cash':
+            if unique_key in dca_info and dca_info[unique_key].asset_type == 'cash':
                 cash_amount += amount
 
-        stock_amounts = {k: v for k, v in amounts.items() if dca_info[k].get('asset_type') != 'cash'}
+        stock_amounts = {k: v for k, v in amounts.items() if k in dca_info and dca_info[k].asset_type != 'cash'}
 
         # 날짜 범위 설정
         all_dates = set()
         for unique_key, df in portfolio_data.items():
-            if dca_info.get(unique_key, {}).get('asset_type') != 'cash':
+            if unique_key in dca_info and dca_info[unique_key].asset_type != 'cash':
                 all_dates.update(df.index)
 
         if not all_dates and cash_amount == 0:
@@ -115,7 +116,7 @@ class PortfolioManagerService:
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
 
         # 각 종목의 currency 정보 및 환율 로드 (Data Loader 위임)
-        symbols = [dca_info[unique_key]['symbol'] for unique_key in stock_amounts.keys()]
+        symbols = [dca_info[unique_key].symbol for unique_key in stock_amounts.keys()]
         
         # 1. Ticker Currencies 로드
         ticker_currencies = await self.data_loader.load_ticker_currencies(symbols)
@@ -123,7 +124,7 @@ class PortfolioManagerService:
         # unique_key에 맵핑
         keyed_ticker_currencies = {}
         for unique_key in stock_amounts.keys():
-            symbol = dca_info[unique_key]['symbol']
+            symbol = dca_info[unique_key].symbol
             keyed_ticker_currencies[unique_key] = ticker_currencies.get(symbol, 'USD')
 
         # 2. Exchange Rates 로드
@@ -514,17 +515,15 @@ class PortfolioManagerService:
                 amounts[symbol] = total_investment
 
                 # 분할 매수 정보 저장
-                dca_info[symbol] = {
-                    'symbol': symbol,
-                    'investment_type': investment_type,
-                    'dca_frequency': dca_frequency,
-                    'dca_periods': dca_periods,
-                    'monthly_amount': per_period_amount,  # 회당 투자 금액
-                    'asset_type': asset_type,
-                    'executed_count': 0,  # 실행된 DCA 횟수 추적
-                    'last_dca_date': None,  # 마지막 DCA 실행 날짜 추적
-                    'original_nth_weekday': None  # 원본 "몇 번째 요일" 값 추적 (일관성 유지용)
-                }
+                dca_info[symbol] = DcaStrategyInfo(
+                    symbol=symbol,
+                    allocation=0.0, # Will be calculated if needed, or derived from amounts
+                    asset_type=asset_type,
+                    investment_type=investment_type,
+                    monthly_amount=per_period_amount,
+                    dca_frequency=dca_frequency,
+                    dca_periods=dca_periods
+                )
 
                 # 진짜 현금 자산 처리 (asset_type이 'cash'인 경우)
                 if asset_type == 'cash':
@@ -655,15 +654,15 @@ class PortfolioManagerService:
             
             # 주식 수익률 추가 (중복 종목 지원)
             for unique_key, amount in amounts.items():
-                if unique_key.endswith('_CASH') or dca_info[unique_key].get('asset_type') == 'cash':
+                if unique_key.endswith('_CASH') or (unique_key in dca_info and dca_info[unique_key].asset_type == 'cash'):
                     continue
                     
-                symbol = dca_info[unique_key]['symbol']
+                symbol = dca_info[unique_key].symbol
                 
                 if symbol in portfolio_data:
                     df = portfolio_data[symbol]
                     if len(df) > 0:
-                        investment_type = dca_info[unique_key]['investment_type']
+                        investment_type = dca_info[unique_key].investment_type
                         weight = amount / total_amount
                         
                         if investment_type == 'lump_sum':
@@ -705,9 +704,9 @@ class PortfolioManagerService:
                             
                         else:  # DCA
                             # 분할매수: DcaCalculator를 사용하여 수익률 계산
-                            dca_periods = dca_info[unique_key]['dca_periods']
-                            period_amount = dca_info[unique_key]['monthly_amount']  # 회당 투자 금액
-                            dca_frequency = dca_info[unique_key].get('dca_frequency', 'monthly_1')  # DCA 주기
+                            dca_periods = dca_info[unique_key].dca_periods
+                            period_amount = dca_info[unique_key].monthly_amount  # 회당 투자 금액
+                            dca_frequency = dca_info[unique_key].dca_frequency  # DCA 주기
 
                             total_shares, average_price, individual_return, dca_trade_log = DcaCalculator.calculate_dca_shares_and_return(
                                 df, period_amount, dca_periods, request.start_date, dca_frequency
@@ -759,7 +758,7 @@ class PortfolioManagerService:
                     # unique_key 찾기 (symbol로 매칭)
                     unique_key = None
                     for key in dca_info.keys():
-                        if dca_info[key]['symbol'] == symbol:
+                        if dca_info[key].symbol == symbol:
                             unique_key = key
                             break
 
@@ -792,12 +791,12 @@ class PortfolioManagerService:
                     },
                     'portfolio_composition': [
                         {
-                            'symbol': dca_info[unique_key]['symbol'],  # 실제 symbol 사용 (프론트엔드 호환)
+                            'symbol': dca_info[unique_key].symbol,  # 실제 symbol 사용 (프론트엔드 호환)
                             'weight': amount / total_amount,
                             'amount': amount,
-                            'investment_type': dca_info[unique_key]['investment_type'],
-                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None,
-                            'asset_type': dca_info[unique_key].get('asset_type', 'stock')
+                            'investment_type': dca_info[unique_key].investment_type,
+                            'dca_periods': dca_info[unique_key].dca_periods if dca_info[unique_key].investment_type == 'dca' else None,
+                            'asset_type': dca_info[unique_key].asset_type
                         }
                         for unique_key, amount in amounts.items()
                     ],

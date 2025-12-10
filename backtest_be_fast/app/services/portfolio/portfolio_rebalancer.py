@@ -5,6 +5,7 @@
 
 import logging
 from typing import Dict, Any, Tuple
+from app.domain.portfolio_domain import DcaStrategyInfo
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class PortfolioRebalancer:
         self,
         target_weights: Dict[str, float],
         delisted_stocks: set,
-        dca_info: Dict[str, Dict]
+        dca_info: Dict[str, DcaStrategyInfo]
     ) -> Dict[str, float]:
         """
         상장폐지 종목이 있을 경우 목표 비중을 동적으로 조정합니다.
@@ -73,7 +74,7 @@ class PortfolioRebalancer:
         # 조정된 비중 로깅
         for unique_key in delisted_stocks:
             if unique_key in target_weights:
-                symbol = dca_info[unique_key]['symbol']
+                symbol = dca_info[unique_key].symbol
                 logger.debug(
                     f"  {symbol}: {target_weights[unique_key]:.2%} -> 0.00% (상장폐지)"
                 )
@@ -90,7 +91,7 @@ class PortfolioRebalancer:
         cash_holdings: Dict[str, float],
         commission: float,
         total_stock_value: float,
-        dca_info: Dict[str, Dict],
+        dca_info: Dict[str, DcaStrategyInfo],
         delisted_stocks: set,
         trading_thresholds=None  # TradingThresholds
     ) -> Dict[str, Any]:
@@ -106,13 +107,13 @@ class PortfolioRebalancer:
         **파라미터**:
         - current_date: 현재 시뮬레이션 날짜
         - adjusted_target_weights: 조정된 목표 비중 (상장폐지 반영)
-        - shares: 종목별 보유 주식 수 (MODIFIED)
+        - shares: 종목별 보유 주식 수
         - current_prices: 종목별 현재 가격
-        - available_cash: 사용 가능한 현금 (MODIFIED)
-        - cash_holdings: 현금 자산별 보유액 (MODIFIED)
+        - available_cash: 사용 가능한 현금
+        - cash_holdings: 현금 자산별 보유액
         - commission: 거래 수수료
         - total_stock_value: 주식 자산 총 가치
-        - dca_info: 종목 정보 (심볼, asset_type 조회용)
+        - dca_info: 종목 정보 (DcaStrategyInfo 모델)
         - delisted_stocks: 상장폐지 종목 집합
         - trading_thresholds: 거래 임계값 설정
 
@@ -150,10 +151,10 @@ class PortfolioRebalancer:
         for unique_key in shares.keys():
             if unique_key in current_prices:
                 current_value = shares[unique_key] * current_prices[unique_key]
-                weights_before[dca_info[unique_key]['symbol']] = current_value / total_portfolio_value
+                weights_before[dca_info[unique_key].symbol] = current_value / total_portfolio_value
         # 현금 비중 추가
         for unique_key in cash_holdings.keys():
-            weights_before[dca_info[unique_key]['symbol']] = cash_holdings[unique_key] / total_portfolio_value
+            weights_before[dca_info[unique_key].symbol] = cash_holdings[unique_key] / total_portfolio_value
 
         # 목표 비중대로 재조정 (조정된 비중 사용)
         new_shares = {}
@@ -166,7 +167,7 @@ class PortfolioRebalancer:
             target_value = total_portfolio_value * target_weight
 
             # 현금 처리
-            if dca_info[unique_key].get('asset_type') == 'cash':
+            if dca_info[unique_key].asset_type == 'cash':
                 current_value = cash_holdings.get(unique_key, 0)
                 # 현금은 거래 수수료 없이 조정
                 new_cash_holdings[unique_key] = target_value
@@ -174,7 +175,7 @@ class PortfolioRebalancer:
                 # 현금 조정 내역 기록 (차이가 있을 때만)
                 if abs(target_value - current_value) / total_portfolio_value > trading_thresholds.REBALANCING_THRESHOLD_PCT:
                     trades_in_rebalance += 1
-                    symbol = dca_info[unique_key]['symbol']
+                    symbol = dca_info[unique_key].symbol
                     if target_value > current_value:
                         rebalance_trades.append({
                             'symbol': symbol,
@@ -196,7 +197,7 @@ class PortfolioRebalancer:
                 if unique_key in delisted_stocks:
                     new_shares[unique_key] = shares[unique_key]
                     current_price = current_prices.get(unique_key, 0)
-                    symbol = dca_info[unique_key]['symbol']
+                    symbol = dca_info[unique_key].symbol
 
                     if current_price == 0:
                         logger.warning(
@@ -217,7 +218,7 @@ class PortfolioRebalancer:
 
                 price = current_prices[unique_key]
                 current_value = shares[unique_key] * price
-                symbol = dca_info[unique_key]['symbol']
+                symbol = dca_info[unique_key].symbol
 
                 # 매도/매수가 발생했는지 확인 (0.01% 이상 차이나면 거래로 간주)
                 if abs(target_value - current_value) / total_portfolio_value > trading_thresholds.REBALANCING_THRESHOLD_PCT:
@@ -271,10 +272,10 @@ class PortfolioRebalancer:
         for unique_key in updated_shares.keys():
             if unique_key in current_prices:
                 new_value = updated_shares[unique_key] * current_prices[unique_key]
-                weights_after[dca_info[unique_key]['symbol']] = new_value / new_total_portfolio_value
+                weights_after[dca_info[unique_key].symbol] = new_value / new_total_portfolio_value
         # 현금 비중 추가
         for unique_key in updated_cash_holdings.keys():
-            weights_after[dca_info[unique_key]['symbol']] = updated_cash_holdings[unique_key] / new_total_portfolio_value
+            weights_after[dca_info[unique_key].symbol] = updated_cash_holdings[unique_key] / new_total_portfolio_value
 
         # 리밸런싱 거래 상세 로깅
         if rebalance_trades:

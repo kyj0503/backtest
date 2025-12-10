@@ -7,6 +7,7 @@ import logging
 from typing import Dict, Any, Tuple
 from datetime import datetime
 import pandas as pd
+from app.domain.portfolio_domain import DcaStrategyInfo
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class PortfolioMetrics:
         prev_portfolio_value: float,
         daily_cash_inflow: float,
         total_amount: float,
-        dca_info: Dict[str, Dict]
+        dca_info: Dict[str, DcaStrategyInfo]
     ) -> Tuple[float, float, Dict[str, Any]]:
         """
         일일 포트폴리오 가치, 수익률, 비중을 계산합니다.
@@ -56,14 +57,14 @@ class PortfolioMetrics:
             for unique_key in shares.keys():
                 if unique_key in current_prices:
                     stock_value = shares[unique_key] * current_prices[unique_key]
-                    symbol = dca_info[unique_key]['symbol']
+                    symbol = dca_info[unique_key].symbol
                     current_weights[symbol] = (
                         current_weights.get(symbol, 0) +
                         stock_value / current_portfolio_value
                     )
             # 현금 비중
             for unique_key, amount in cash_holdings.items():
-                symbol = dca_info[unique_key]['symbol']
+                symbol = dca_info[unique_key].symbol
                 current_weights[symbol] = (
                     current_weights.get(symbol, 0) +
                     amount / current_portfolio_value

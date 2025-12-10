@@ -10,7 +10,7 @@ from datetime import datetime
 
 from ....schemas.schemas import PortfolioBacktestRequest
 from ....services.portfolio_manager_service import portfolio_manager_service
-from ....repositories.yfinance_repository import get_ticker_info_batch_from_db
+from ....repositories.stock_repository import get_stock_repository
 from ....services.unified_data_service import unified_data_service
 from ....services.news_service import news_service
 from ....core.exceptions import ValidationError
@@ -41,9 +41,9 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     ]
     symbols = list(set(symbols))  # 중복 제거
 
-    # 종목 정보 조회 (상장일 확인용) - 배치 조회로 최적화 (N개 쿼리 → 1개 쿼리)
+    # 종목 정보 조회 (상장일 확인용) - 배치 조회로 최적화 (N+1 쿼리 → 1개 쿼리)
     ticker_info_dict = await asyncio.to_thread(
-        get_ticker_info_batch_from_db, symbols
+        get_stock_repository().get_tickers_info_batch, symbols
     )
 
     validation_errors = []
