@@ -204,10 +204,10 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
                     found_anomaly = False
                     if len(price_rows) > 1:
                         # 최신순으로 정렬되어 있으므로, prev(과거) -> curr(최신) 로 갈 때 가격이 급락하는지 확인
-                        # Loop through rows: from row[i+1] (older) to row[i] (newer)
-                        for i in range(len(price_rows) - 1):
-                            curr_date, curr_close = price_rows[i]
-                            prev_date, prev_close = price_rows[i+1]
+                        # Loop through rows: from row[j+1] (older) to row[j] (newer)
+                        for j in range(len(price_rows) - 1):
+                            curr_date, curr_close = price_rows[j]
+                            prev_date, prev_close = price_rows[j+1]
                             
                             if curr_close > 0 and prev_close > 0:
                                 ratio = prev_close / curr_close
