@@ -7,11 +7,11 @@ RUN apk add --no-cache git
 WORKDIR /app
 
 # Install dependencies (cached at image build time)
-COPY package.json ./
+# Install dependencies (cached at image build time)
+COPY package*.json ./
 RUN npm install
 
-# Copy rest of source (will be overridden by bind mount in dev)
-COPY . .
+# Skip copying source code - use bind mount in compose.dev.yaml instead
 
 ENV NODE_ENV=development
 

@@ -1,0 +1,43 @@
+# Development Dockerfile for Backend
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    curl \
+    python3-venv \
+    python3-dev \
+    libssl-dev \
+    libffi-dev \
+    cargo \
+    rustc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Setup virtual environment
+ENV VENV_DIR=/opt/venv
+RUN python3 -m venv ${VENV_DIR}
+ENV PATH="${VENV_DIR}/bin:$PATH"
+
+# Install dependencies layer (cached)
+COPY requirements.txt .
+COPY requirements-test.txt .
+RUN pip install -r requirements.txt
+RUN pip install -r requirements-test.txt
+
+# NOTE: We do NOT COPY app code here because it is bind-mounted in docker-compose.dev.yaml.
+# This prevents cache invalidation when source code changes.
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+ENTRYPOINT ["/entrypoint.sh"]
+# Command is overridden in compose.dev.yaml, but default here for reference
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
