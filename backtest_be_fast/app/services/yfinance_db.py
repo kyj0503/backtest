@@ -11,6 +11,7 @@ import email.utils
 from typing import Optional, Union, List, Dict, Any, Tuple
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.exc import OperationalError
 import pandas as pd
 from datetime import datetime, date, timedelta
 from app.utils.data_fetcher import data_fetcher
@@ -31,142 +32,179 @@ def _get_engine() -> Engine:
     return DatabaseConnectionManager.get_engine()
 
 
+def _retry_on_deadlock(func, max_retries=3, delay=1.0, *args, **kwargs):
+    """
+    데드락 또는 일시적 DB 에러 발생 시 재시도하는 헬퍼
+    """
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except OperationalError as e:
+            # Deadlock found when trying to get lock; try restarting transaction
+            if '1213' in str(e) or 'Deadlock' in str(e) or 'Lock wait timeout' in str(e):
+                logger.warning(f"DB Deadlock/Timeout detected (Attempt {attempt+1}/{max_retries}): {e}")
+                last_error = e
+                time.sleep(delay * (attempt + 1))  # Exponential backoff-ish
+            else:
+                raise e
+        except Exception as e:
+            raise e
+    
+    logger.error(f"DB Operation failed after {max_retries} attempts: {last_error}")
+    raise last_error
+
+def _save_stock_metadata(conn, ticker: str) -> int:
+    """stocks 테이블에 메타데이터 저장 (Upsert)"""
+    # ensure stock exists
+    info = {}
+    try:
+        info = data_fetcher.fetch_ticker_info(ticker)
+    except Exception:
+        logger.warning(f"{ticker} info 조회 실패/누락, 기본값으로 진행")
+    
+    # DB에서 기존 last_handled_split 보존
+    existing_split = None
+    try:
+        existing_row = conn.execute(text("SELECT info_json FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
+        if existing_row and existing_row[0]:
+            existing_json = json.loads(existing_row[0])
+            existing_split = existing_json.get('last_handled_split')
+    except Exception:
+        pass
+    
+    # 기존 last_handled_split을 새 info에 추가 (덮어쓰지 않도록)
+    if existing_split and 'last_handled_split' not in info:
+        info['last_handled_split'] = existing_split
+
+    # 분할 정보 추출
+    last_split_date_str = info.get('last_split_date')
+    last_split_ratio = info.get('last_split_ratio')
+    splits_updated_at = datetime.utcnow()
+
+    # insert or update stocks
+    insert_stock = text(
+        """
+        INSERT INTO stocks (
+            ticker, name, exchange, sector, industry, summary, info_json, last_info_update,
+            last_split_date, last_split_ratio, splits_updated_at
+        )
+        VALUES (
+            :ticker, :name, :exchange, :sector, :industry, :summary, :info_json, :now,
+            :last_split_date, :last_split_ratio, :splits_updated_at
+        )
+        ON DUPLICATE KEY UPDATE
+            name=VALUES(name),
+            exchange=VALUES(exchange),
+            sector=VALUES(sector),
+            industry=VALUES(industry),
+            summary=VALUES(summary),
+            info_json=VALUES(info_json),
+            last_info_update=VALUES(last_info_update),
+            last_split_date=VALUES(last_split_date),
+            last_split_ratio=VALUES(last_split_ratio),
+            splits_updated_at=VALUES(splits_updated_at)
+        """
+    )
+    now = datetime.utcnow()
+    conn.execute(insert_stock, {
+        "ticker": ticker,
+        "name": info.get("company_name"),
+        "exchange": info.get("exchange"),
+        "sector": info.get("sector"),
+        "industry": info.get("industry"),
+        "summary": None,
+        "info_json": json.dumps(info),
+        "now": now,
+        "last_split_date": last_split_date_str,
+        "last_split_ratio": last_split_ratio,
+        "splits_updated_at": splits_updated_at
+    })
+    
+    # Return stock_id for chaining
+    stock_id_row = conn.execute(text("SELECT id FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
+    if not stock_id_row:
+        raise RuntimeError(f"{ticker} stock_id 생성/조회 실패")
+    return stock_id_row[0]
+
+def _save_daily_prices(conn, stock_id: int, df: pd.DataFrame) -> int:
+    """daily_prices 테이블에 가격 데이터 배치 저장 (Upsert)"""
+    rows = []
+    df_proc = df.copy()
+    
+    # Date 컬럼 처리
+    if 'Date' in df_proc.columns:
+        df_proc['date'] = pd.to_datetime(df_proc['Date']).dt.date
+    else:
+        df_proc = df_proc.reset_index()
+        # index 이름이 없거나 Date가 아닐 수 있으므로 첫번째 컬럼을 날짜로 가정
+        df_proc['date'] = pd.to_datetime(df_proc.iloc[:, 0]).dt.date
+
+    for _, r in df_proc.iterrows():
+        o = None if pd.isna(r.get('Open')) else float(r.get('Open'))
+        h = None if pd.isna(r.get('High')) else float(r.get('High'))
+        l = None if pd.isna(r.get('Low')) else float(r.get('Low'))
+        c = None if pd.isna(r.get('Close')) else float(r.get('Close'))
+        
+        ac = None
+        for col in ['Adj Close', 'AdjClose', 'Adj_Close']:
+            if col in r:
+                val = r.get(col)
+                if not pd.isna(val):
+                    ac = float(val)
+                    break
+        
+        vol = 0 if pd.isna(r.get('Volume')) else int(r.get('Volume'))
+        
+        rows.append({
+            'stock_id': stock_id,
+            'date': r['date'].isoformat(),
+            'open': o,
+            'high': h,
+            'low': l,
+            'close': c,
+            'adj_close': ac,
+            'volume': vol
+        })
+
+    if rows:
+        insert_stmt = text(
+            """
+            INSERT INTO daily_prices (stock_id, date, open, high, low, close, adj_close, volume)
+            VALUES (:stock_id, :date, :open, :high, :low, :close, :adj_close, :volume)
+            ON DUPLICATE KEY UPDATE 
+                open=VALUES(open), high=VALUES(high), low=VALUES(low), close=VALUES(close), 
+                adj_close=VALUES(adj_close), volume=VALUES(volume)
+            """
+        )
+        chunk_size = 500
+        for i in range(0, len(rows), chunk_size):
+            batch = rows[i:i+chunk_size]
+            conn.execute(insert_stmt, batch)
+            
+    return len(rows)
+
 def save_ticker_data(ticker: str, df: pd.DataFrame) -> int:
     """stocks 테이블에 티커 등록 및 daily_prices에 행을 upsert 합니다.
 
     Returns: 저장된 행 수
     """
-    engine = _get_engine()
-    conn = engine.connect()
-    trans = conn.begin()
+    def _transactional_save():
+        engine = _get_engine()
+        with engine.begin() as conn:  # Context manager handles commit/rollback automatically
+            # 1. Metadata 저장
+            stock_id = _save_stock_metadata(conn, ticker)
+            
+            # 2. Price 저장
+            saved_count = _save_daily_prices(conn, stock_id, df)
+            return saved_count
+
     try:
-        # ensure stock exists
-        info = {}
-        try:
-            info = data_fetcher.fetch_ticker_info(ticker)
-        except Exception:
-            logger.warning("티커 info 조회 실패")
-        
-        # DB에서 기존 last_handled_split 보존
-        existing_split = None
-        try:
-            existing_row = conn.execute(text("SELECT info_json FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
-            if existing_row and existing_row[0]:
-                existing_json = json.loads(existing_row[0])
-                existing_split = existing_json.get('last_handled_split')
-        except Exception:
-            pass
-        
-        # 기존 last_handled_split을 새 info에 추가 (덮어쓰지 않도록)
-        if existing_split and 'last_handled_split' not in info:
-            info['last_handled_split'] = existing_split
-
-        # 분할 정보 추출
-        last_split_date_str = info.get('last_split_date')
-        last_split_ratio = info.get('last_split_ratio')
-        splits_updated_at = datetime.utcnow()
-
-        # insert or update stocks
-        insert_stock = text(
-            """
-            INSERT INTO stocks (
-                ticker, name, exchange, sector, industry, summary, info_json, last_info_update,
-                last_split_date, last_split_ratio, splits_updated_at
-            )
-            VALUES (
-                :ticker, :name, :exchange, :sector, :industry, :summary, :info_json, :now,
-                :last_split_date, :last_split_ratio, :splits_updated_at
-            )
-            ON DUPLICATE KEY UPDATE
-                name=VALUES(name),
-                exchange=VALUES(exchange),
-                sector=VALUES(sector),
-                industry=VALUES(industry),
-                summary=VALUES(summary),
-                info_json=VALUES(info_json),
-                last_info_update=VALUES(last_info_update),
-                last_split_date=VALUES(last_split_date),
-                last_split_ratio=VALUES(last_split_ratio),
-                splits_updated_at=VALUES(splits_updated_at)
-            """
-        )
-        now = datetime.utcnow()
-        conn.execute(insert_stock, {
-            "ticker": ticker,
-            "name": info.get("company_name"),
-            "exchange": info.get("exchange"),
-            "sector": info.get("sector"),
-            "industry": info.get("industry"),
-            "summary": None,
-            "info_json": json.dumps(info),
-            "now": now,
-            "last_split_date": last_split_date_str,
-            "last_split_ratio": last_split_ratio,
-            "splits_updated_at": splits_updated_at
-        })
-
-        # get stock_id
-        stock_id_row = conn.execute(text("SELECT id FROM stocks WHERE ticker = :t"), {"t": ticker}).fetchone()
-        if not stock_id_row:
-            raise RuntimeError("stock_id를 찾을 수 없습니다.")
-        stock_id = stock_id_row[0]
-
-        # prepare daily prices upsert
-        rows = []
-        df_proc = df.copy()
-        if 'Date' in df_proc.columns:
-            df_proc['date'] = pd.to_datetime(df_proc['Date']).dt.date
-        else:
-            df_proc = df_proc.reset_index()
-            df_proc['date'] = pd.to_datetime(df_proc[df_proc.columns[0]]).dt.date
-
-        for _, r in df_proc.iterrows():
-            o = None if pd.isna(r.get('Open')) else float(r.get('Open'))
-            h = None if pd.isna(r.get('High')) else float(r.get('High'))
-            l = None if pd.isna(r.get('Low')) else float(r.get('Low'))
-            c = None if pd.isna(r.get('Close')) else float(r.get('Close'))
-            ac = None
-            if 'Adj Close' in r or 'AdjClose' in r or 'Adj_Close' in r:
-                ac = r.get('Adj Close') or r.get('AdjClose') or r.get('Adj_Close')
-                ac = None if pd.isna(ac) else float(ac)
-            vol = 0 if pd.isna(r.get('Volume')) else int(r.get('Volume'))
-            rows.append({
-                'stock_id': stock_id,
-                'date': r['date'].isoformat(),
-                'open': o,
-                'high': h,
-                'low': l,
-                'close': c,
-                'adj_close': ac,
-                'volume': vol
-            })
-
-        if rows:
-            # batch upsert
-            insert_stmt = text(
-                """
-                INSERT INTO daily_prices (stock_id, date, open, high, low, close, adj_close, volume)
-                VALUES (:stock_id, :date, :open, :high, :low, :close, :adj_close, :volume)
-                ON DUPLICATE KEY UPDATE open=VALUES(open), high=VALUES(high), low=VALUES(low), close=VALUES(close), adj_close=VALUES(adj_close), volume=VALUES(volume)
-                """
-            )
-            # chunking
-            chunk_size = 500
-            total = 0
-            for i in range(0, len(rows), chunk_size):
-                batch = rows[i:i+chunk_size]
-                conn.execute(insert_stmt, batch)
-                total += len(batch)
-
-        trans.commit()
-        return len(rows)
-
+        # Retry logic apply
+        return _retry_on_deadlock(_transactional_save)
     except Exception as e:
-        trans.rollback()
-        logger.exception("save_ticker_data 실패")
+        logger.exception(f"save_ticker_data 실패: {ticker}")
         raise
-    finally:
-        conn.close()
 
 
 def load_ticker_data(ticker: str, start_date: Optional[Union[str, date]] = None, end_date: Optional[Union[str, date]] = None, max_retries: int = 3, retry_delay: float = 2.0) -> pd.DataFrame:

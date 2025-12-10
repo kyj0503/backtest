@@ -25,6 +25,7 @@ from app.services.portfolio_calculator_service import portfolio_calculator
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.portfolio.portfolio_simulation_engine import PortfolioSimulationEngine
+from app.services.portfolio.portfolio_data_loader import PortfolioDataLoader
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
@@ -63,6 +64,13 @@ class PortfolioManagerService:
         self.metrics = PortfolioMetrics()
         # Repository 초기화 (Repository 패턴)
         self.stock_repository = get_stock_repository()
+        
+        # Data Loader 초기화 (데이터 준비 역할)
+        self.data_loader = PortfolioDataLoader(
+            stock_repository=self.stock_repository,
+            currency_converter=currency_converter
+        )
+        
         logger.info("포트폴리오 서비스가 초기화되었습니다")
 
     async def calculate_dca_portfolio_returns(
@@ -106,50 +114,27 @@ class PortfolioManagerService:
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
 
-        # 각 종목의 currency 정보 먼저 가져오기 (배치 조회로 최적화)
+        # 각 종목의 currency 정보 및 환율 로드 (Data Loader 위임)
         symbols = [dca_info[unique_key]['symbol'] for unique_key in stock_amounts.keys()]
-        try:
-            ticker_info_dict = await asyncio.to_thread(
-                self.stock_repository.get_tickers_info_batch, symbols
-            )
-            ticker_currencies = {}
-            for unique_key in stock_amounts.keys():
-                symbol = dca_info[unique_key]['symbol']
-                ticker_info = ticker_info_dict.get(symbol, {})
-                ticker_currencies[unique_key] = ticker_info.get('currency', 'USD')
-                logger.debug(f"{symbol} currency: {ticker_currencies[unique_key]}")
-        except Exception as e:
-            logger.warning(f"티커 정보 배치 조회 실패: {e}, 모두 USD로 가정")
-            ticker_currencies = {unique_key: 'USD' for unique_key in stock_amounts.keys()}
+        
+        # 1. Ticker Currencies 로드
+        ticker_currencies = await self.data_loader.load_ticker_currencies(symbols)
+        
+        # unique_key에 맵핑
+        keyed_ticker_currencies = {}
+        for unique_key in stock_amounts.keys():
+            symbol = dca_info[unique_key]['symbol']
+            keyed_ticker_currencies[unique_key] = ticker_currencies.get(symbol, 'USD')
 
-        required_currencies = list(set(ticker_currencies.values()) - {'USD'})
-
-        if required_currencies:
-            logger.info(f"포트폴리오 환율 로딩 시작: {len(required_currencies)}개 통화 [{', '.join(required_currencies)}]")
-
-        exchange_rates_by_currency = await currency_converter.load_multiple_exchange_rates(
+        # 2. Exchange Rates 로드
+        required_currencies = list(set(keyed_ticker_currencies.values()) - {'USD'})
+        
+        exchange_rates_by_currency = await self.data_loader.load_exchange_rates(
             currencies=required_currencies,
             start_date=start_date,
             end_date=end_date,
-            date_range=date_range,
-            buffer_multiplier=2  # EXCHANGE_RATE_LOOKBACK_DAYS * 2
+            date_range=date_range
         )
-
-        # 환율 로드 결과 요약 로깅
-        if required_currencies:
-            for currency, rates in exchange_rates_by_currency.items():
-                if rates:
-                    rate_values = list(rates.values())
-                    rate_min = min(rate_values)
-                    rate_max = max(rate_values)
-                    rate_mean = sum(rate_values) / len(rate_values)
-                    logger.info(
-                        f"환율 로드 완료 ({currency}): {len(rates)} 포인트, "
-                        f"범위 {rate_min:.4f} ~ {rate_max:.4f} (평균 {rate_mean:.4f})"
-                    )
-                else:
-                    logger.warning(f"환율 데이터 없음 ({currency}): 변환 불가")
-            logger.info(f"총 {len(exchange_rates_by_currency)}/{len(required_currencies)}개 통화 환율 로드 완료")
 
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
 
@@ -557,33 +542,13 @@ class PortfolioManagerService:
                 # 로드할 종목 리스트에 추가
                 symbols_to_load.append(symbol)
 
-            # Phase 2: 모든 종목 데이터를 병렬로 로드 (N+1 query 최적화)
+            # Phase 2: 모든 종목 데이터를 병렬로 로드 (Data Loader 위임)
             if symbols_to_load:
-                logger.info(f"포트폴리오 데이터 병렬 로드 시작: {len(symbols_to_load)}개 종목")
-
-                # 병렬 로드 태스크 생성
-                load_tasks = [
-                    asyncio.to_thread(self.stock_repository.load_stock_data, symbol, request.start_date, request.end_date)
-                    for symbol in symbols_to_load
-                ]
-
-                # 병렬 실행
-                load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
-
-                # 결과 처리
-                for symbol, result in zip(symbols_to_load, load_results):
-                    if isinstance(result, Exception):
-                        logger.warning(f"종목 {symbol} 데이터 로드 실패: {result}")
-                        continue
-
-                    if result is None or result.empty:
-                        logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
-                        continue
-
-                    portfolio_data[symbol] = result
-                    logger.info(f"종목 {symbol} 데이터 로드 완료: {len(result)} 행")
-
-                logger.info(f"포트폴리오 데이터 병렬 로드 완료: {len(portfolio_data)}/{len(symbols_to_load)}개 성공")
+                portfolio_data = await self.data_loader.load_stock_data_parallel(
+                    symbols_to_load=symbols_to_load,
+                    start_date=request.start_date,
+                    end_date=request.end_date
+                )
 
             # 총 투자 금액 계산
             total_amount = sum(amounts.values())

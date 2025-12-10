@@ -14,11 +14,13 @@ Note:
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.portfolio.portfolio_simulation_engine import PortfolioSimulationEngine
+from app.services.portfolio.portfolio_data_loader import PortfolioDataLoader
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
 
 __all__ = [
     'PortfolioDcaManager',
     'PortfolioRebalancer',
     'PortfolioSimulationEngine',
+    'PortfolioDataLoader',
     'PortfolioMetrics',
 ]
