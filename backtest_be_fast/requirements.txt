@@ -8,7 +8,7 @@ starlette==0.27.0
 backtesting==0.3.0
 yfinance==0.2.65
 requests==2.31.0
-pandas==2.0.0
+pandas>=2.0.3,<3.0.0
 python-dotenv==1.0.0
 python-multipart==0.0.6
 pytz>=2023.3

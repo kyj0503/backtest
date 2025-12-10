@@ -17,11 +17,7 @@ logger = logging.getLogger(__name__)
 class UnifiedDataService:
     """통합 데이터 수집 서비스"""
     
-    def __init__(self, news_service=None):
-        """
-        Args:
-            news_service: 뉴스 서비스 인스턴스 (의존성 주입)
-        """
+
     def __init__(self, news_service=None):
         """
         Args:

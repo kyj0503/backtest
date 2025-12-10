@@ -49,7 +49,7 @@ class PortfolioDcaManager:
                 continue
 
             info = dca_info[unique_key]
-            symbol = info.symbol
+
             investment_type = info.investment_type
 
             if unique_key not in current_prices:

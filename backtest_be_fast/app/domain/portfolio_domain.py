@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Dict, List, Optional, Any, Set
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 import pandas as pd
 
 class DcaStrategyInfo(BaseModel):
@@ -23,7 +23,8 @@ class DcaStrategyInfo(BaseModel):
     original_nth_weekday: Optional[int] = Field(default=None, description="최초 DCA 실행 시의 n번째 요일 정보")
 
     model_config = {
-        "arbitrary_types_allowed": True 
+        "arbitrary_types_allowed": True,
+        "validate_assignment": True
     }
 
 class PortfolioState(BaseModel):
@@ -55,5 +56,6 @@ class PortfolioState(BaseModel):
     delisted_stocks: Set[str] = Field(default_factory=set, description="상장폐지된 종목 집합")
 
     model_config = {
-        "arbitrary_types_allowed": True
+        "arbitrary_types_allowed": True,
+        "validate_assignment": True
     }

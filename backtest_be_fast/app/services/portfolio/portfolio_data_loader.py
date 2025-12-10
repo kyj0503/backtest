@@ -3,8 +3,7 @@
 import asyncio
 import logging
 import pandas as pd
-from typing import Dict, List, Any, Tuple
-from datetime import datetime
+from typing import Dict, List
 from app.repositories.stock_repository import StockRepository
 from app.utils.currency_converter import CurrencyConverter, currency_converter as default_currency_converter
 
