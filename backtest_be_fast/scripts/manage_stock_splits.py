@@ -61,7 +61,7 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
             query = text("""
                 SELECT ticker, last_split_date, splits_updated_at
                 FROM stocks
-                ORDER BY splits_updated_at ASC NULLS FIRST
+                ORDER BY splits_updated_at ASC
                 LIMIT :limit
             """)
             params = {"limit": batch_size}
@@ -72,7 +72,7 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
                 FROM stocks
                 WHERE splits_updated_at IS NULL
                    OR splits_updated_at < :cutoff
-                ORDER BY splits_updated_at ASC NULLS FIRST
+                ORDER BY splits_updated_at ASC
                 LIMIT :limit
             """)
             params = {"cutoff": cutoff_time, "limit": batch_size}
@@ -129,6 +129,38 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
                     change_marker = ""
                     if old_split_date and old_split_date != last_split_date:
                         change_marker = f" (변경: {old_split_date} → {last_split_date})"
+                        
+                        # [Split Auto-Correction]
+                        # 분할 정보가 변경되었으므로, 기존 가격 데이터는 오염되었을 가능성이 높음.
+                        # 따라서 daily_prices를 삭제하고 재수집을 시도함.
+                        logger.warning(f"  ⚠ {ticker}: 분할 정보 변경 감지! 데이터 정합성을 위해 재수집을 진행합니다.")
+                        try:
+                            # 1. 기존 데이터 삭제
+                            conn.execute(text("DELETE FROM daily_prices WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)"), {"t": ticker})
+                            conn.commit()
+                            logger.info(f"  ✓ {ticker}: 기존 가격 데이터 삭제 완료")
+                            
+                            # 2. 데이터 재수집 (최근 10년 치)
+                            # 주의: 여기서 data_fetcher를 직접 사용
+                            from app.utils.data_fetcher import data_fetcher
+                            from app.repositories.yfinance_repository import YFinanceRepository
+                            
+                            repo = YFinanceRepository()
+                            start_date = date.today() - timedelta(days=365*10)
+                            end_date = date.today()
+                            
+                            logger.info(f"  ↻ {ticker}: 데이터 재수집 시작 ({start_date} ~ {end_date})...")
+                            df_new = data_fetcher.fetch_stock_data(ticker, start_date, end_date, use_cache=False)
+                            
+                            if df_new is not None and not df_new.empty:
+                                repo.save_ticker_data(ticker, df_new)
+                                logger.info(f"  ✓ {ticker}: 재수집 및 저장 완료 ({len(df_new)}행)")
+                            else:
+                                logger.error(f"  ✗ {ticker}: 재수집 실패 (데이터 없음)")
+                                
+                        except Exception as e:
+                            logger.error(f"  ✗ {ticker}: 데이터 자동 보정 실패 - {e}")
+
                     logger.info(
                         f"  ✓ {ticker}: 분할 날짜 = {last_split_date}, "
                         f"비율 = {last_split_ratio}{change_marker}"
@@ -138,8 +170,8 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
 
                 success_count += 1
 
-                # Rate limiting (초당 2개 종목)
-                time.sleep(0.5)
+                # Rate limiting (초당 2개 종목) - 재수집 시에는 조금 더 쉬어줌
+                time.sleep(1.0 if 'change_marker' in locals() and change_marker else 0.5)
 
             except Exception as e:
                 logger.error(f"  ✗ {ticker}: 업데이트 실패 - {e}")
