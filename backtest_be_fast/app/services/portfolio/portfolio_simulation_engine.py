@@ -4,6 +4,7 @@
 매일의 시장 데이터(가격, 환율)를 처리하고 DCA 매수, 리밸런싱, 상장폐지 등의 핵심 로직을 실행합니다.
 """
 
+import logging
 from typing import Dict, Tuple
 from datetime import datetime, date
 import pandas as pd
