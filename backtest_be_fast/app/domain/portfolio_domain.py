@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Dict, List, Optional, Any, Set
 from pydantic import BaseModel, Field
-import pandas as pd
+
 
 class DcaStrategyInfo(BaseModel):
     """

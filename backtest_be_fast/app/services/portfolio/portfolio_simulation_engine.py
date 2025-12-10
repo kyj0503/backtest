@@ -4,16 +4,13 @@
 매일의 시장 데이터(가격, 환율)를 처리하고 DCA 매수, 리밸런싱, 상장폐지 등의 핵심 로직을 실행합니다.
 """
 
-import asyncio
-import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Tuple
 from datetime import datetime, date
 import pandas as pd
-import numpy as np
 
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
-from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
+from app.services.rebalance_helper import RebalanceHelper, get_weekday_occurrence
 from app.utils.currency_converter import currency_converter
 from app.constants.data_loading import TradingThresholds
 from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
