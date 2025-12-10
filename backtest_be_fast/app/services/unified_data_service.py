@@ -8,7 +8,7 @@ import pandas as pd
 from typing import List, Dict, Any
 
 from .data_service import data_service
-from .yfinance_db import get_ticker_info_batch_from_db, load_news_from_db, save_news_to_db
+from app.repositories.yfinance_repository import get_ticker_info_batch_from_db, load_news_from_db, save_news_to_db
 from ..core.config import settings
 
 logger = logging.getLogger(__name__)

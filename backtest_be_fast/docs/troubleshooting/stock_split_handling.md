@@ -59,7 +59,7 @@
 
 ### 1. 데이터 내 분할 감지
 
-파일: `yfinance_db.py` → `_fetch_and_save_missing_data()`
+파일: `yfinance_repository.py` → `_fetch_and_save_missing_data()`
 
 ```python
 # yfinance에서 받은 데이터 확인
@@ -85,7 +85,7 @@ if not df_new.empty and 'StockSplits' in df_new.columns:
 
 ### 2. 소급 분할 감지 (메타데이터)
 
-파일: `yfinance_db.py` → `_fetch_and_save_missing_data()`
+파일: `yfinance_repository.py` → `_fetch_and_save_missing_data()`
 
 ```python
 # 누락된 구간이 없더라도 소급 분할 체크

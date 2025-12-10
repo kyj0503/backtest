@@ -10,7 +10,7 @@ from datetime import datetime
 
 from ....schemas.schemas import PortfolioBacktestRequest
 from ....services.portfolio_manager_service import portfolio_manager_service
-from ....services.yfinance_db import get_ticker_info_batch_from_db
+from ....repositories.yfinance_repository import get_ticker_info_batch_from_db
 from ....services.unified_data_service import unified_data_service
 from ....services.news_service import news_service
 from ....core.exceptions import ValidationError
