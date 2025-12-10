@@ -238,7 +238,7 @@ class PortfolioSimulationEngine:
                 if pd.notnull(rate):
                     last_valid_exchange_rates[currency] = rate
             except KeyError:
-                pass
+                pass # 해당 통화의 환율 데이터가 없는 날짜는 캐시 갱신 없이 진행
 
         # 2. 가격 조회
         for unique_key, price_series in aligned_prices.items():
@@ -248,7 +248,7 @@ class PortfolioSimulationEngine:
                 if pd.notnull(price):
                     current_prices[unique_key] = float(price)
             except KeyError:
-                pass
+                pass # 배열에 해당 날짜 데이터가 없으면 스킵 (상장폐지, 휴장일 등)
                 
         return current_prices, last_valid_exchange_rates
 
