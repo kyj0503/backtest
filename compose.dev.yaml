@@ -4,7 +4,7 @@ services:
   backtest-be-fast:
     build:
       context: ./backtest_be_fast
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     image: backtest-be-fast:dev
     container_name: backtest-be-fast-dev
     networks:
@@ -20,8 +20,10 @@ services:
     volumes:
       - ./backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
-    # 개발 환경: 8 논리 코어 → (8 × 2) + 1 = 17 workers (reload 모드에서는 1개만 사용)
-    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--limit-concurrency", "100", "--backlog", "200" ]
+    # 런타임에 venv 의존성 동기화 후 서버 시작 (이미지와 볼륨의 동기화 보장)
+    command: >
+      sh -c "pip install -r requirements.txt && 
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --limit-concurrency 100 --backlog 200"
   backtest-fe:
     build:
       context: ./backtest_fe
@@ -46,7 +48,8 @@ services:
       - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
       - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest-be-fast:8000}"
       - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest-be-fast:8000}"
-    command: [ "npm", "run", "dev" ]
+    # 런타임에 node_modules 동기화 후 vite 시작
+    command: [ "sh", "-c", "npm install && npm run dev" ]
 
 volumes:
   backtest_fe_node_modules:
