@@ -28,7 +28,9 @@ import os
 # 프로젝트 루트를 Python 경로에 추가
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from typing import List, Optional
+import time
 from sqlalchemy import text
 from app.services.database.connection_manager import DatabaseConnectionManager
 import yfinance as yf
@@ -43,7 +45,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, force_all: bool = False):
+def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, force_all: bool = False, target_ticker: str = None):
     """
     분할 정보 배치 업데이트
 
@@ -51,20 +53,29 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
         batch_size: 한 번에 처리할 종목 수
         max_age_days: 이보다 오래된 데이터만 업데이트
         force_all: True면 모든 종목 강제 업데이트
+        target_ticker: 특정 종목 하나만 지정해서 업데이트
     """
     engine = DatabaseConnectionManager.get_engine()
     conn = engine.connect()
 
     try:
         # 업데이트가 필요한 종목 조회
-        if force_all:
+        if target_ticker:
+            query = text("""
+                SELECT ticker, last_split_date, splits_updated_at
+                FROM stocks
+                WHERE ticker = :ticker
+            """)
+            params = {"ticker": target_ticker}
+        elif force_all:
+            # force_all=True일 때는 배치 제한 없이 전체 종목 처리
             query = text("""
                 SELECT ticker, last_split_date, splits_updated_at
                 FROM stocks
                 ORDER BY splits_updated_at ASC
-                LIMIT :limit
             """)
-            params = {"limit": batch_size}
+            # params에 limit 제거
+            params = {}
         else:
             cutoff_time = datetime.utcnow() - timedelta(days=max_age_days)
             query = text("""
@@ -78,6 +89,7 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
             params = {"cutoff": cutoff_time, "limit": batch_size}
 
         rows = conn.execute(query, params).fetchall()
+
 
         if not rows:
             logger.info("✓ 업데이트가 필요한 종목이 없습니다.")
@@ -174,72 +186,68 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
                 time.sleep(1.0 if 'change_marker' in locals() and change_marker else 0.5)
 
                 # [Smart Validation: Price Continuity Check]
-                # 메타데이터는 변경되지 않았더라도(이미 최신이라도),
-                # DB에 저장된 실제 가격 데이터가 "분할 전/후가 섞여있는지" 확인해야 함.
-                # 예: 넷플릭스(NFLX) 10:1 분할.
-                #     DB에 11월 11일(500불), 11월 17일 분할, 11월 22일(50불) 이렇게 섞여있으면
-                #     11월 16일(500불) -> 11월 17일(50불) 로 90% 폭락하는 대참사가 백테스트에서 발생.
-                # 따라서, "마지막 분할 날짜" 주변의 가격 연속성을 검사하여, 비정상적인 괴리가 있으면 재수집 트리거.
+                # 타겟: 24년치 데이터 스캔 (약 6000 거래일)
+                # 20년 전 데이터와 갱신된 데이터 사이의 정합성 불일치(Lag)까지 잡기 위함.
 
-                if last_split_date and not change_marker:  # 메타데이터 변경이 없었을 때만 검사 (변경됐으면 이미 위에서 재수집함)
-                    try:
-                        # 분할일(D)과 그 전 거래일(D-1)의 종가를 가져옴
-                        # (정확히 D, D-1이 휴일일 수 있으므로, split_date 이하의 날짜 중 최근 2개를 가져옴)
-                        check_query = text("""
-                            SELECT date, close 
-                            FROM daily_prices 
-                            WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)
-                              AND date <= :split_date
-                            ORDER BY date DESC
-                            LIMIT 2
-                        """)
-                        price_rows = conn.execute(check_query, {"t": ticker, "split_date": last_split_date}).fetchall()
-                        
-                        if len(price_rows) == 2:
-                            # d0: 분할일(또는 그 직전 거래일 중 더 최근), d1: 그 전 거래일
-                            d0_date, d0_close = price_rows[0]
-                            d1_date, d1_close = price_rows[1]
+                check_rows_limit = 6000  # 약 24년치 거래일 (넉넉하게)
+                try:
+                    # 전체 기간(최근 24년) 데이터 조회
+                    scan_query = text("""
+                        SELECT date, close 
+                        FROM daily_prices 
+                        WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)
+                        ORDER BY date DESC
+                        LIMIT :limit
+                    """)
+                    price_rows = conn.execute(scan_query, {"t": ticker, "limit": check_rows_limit}).fetchall()
+                    
+                    found_anomaly = False
+                    if len(price_rows) > 1:
+                        # 최신순으로 정렬되어 있으므로, prev(과거) -> curr(최신) 로 갈 때 가격이 급락하는지 확인
+                        # Loop through rows: from row[j+1] (older) to row[j] (newer)
+                        for j in range(len(price_rows) - 1):
+                            curr_date, curr_close = price_rows[j]
+                            prev_date, prev_close = price_rows[j+1]
                             
-                            if d0_close > 0:
-                                ratio = d1_close / d0_close
+                            if curr_close > 0 and prev_close > 0:
+                                ratio = prev_close / curr_close
                                 
-                                # 분할 비율(split_ratio)과 비교?
-                                # 보통 주식 분할은 2:1, 10:1 등 가격이 낮아짐 -> ratio가 2.0, 10.0 등이 됨 (d1 > d0)
-                                # 만약 이미 보정된(Adjusted) 데이터라면 ratio는 1.0 근처여야 함 (하루만에 50% 폭락은 드무니까)
-                                # 따라서 ratio가 1.5 이상이면 "보정되지 않은 데이터가 섞여있음"으로 강력히 의심 가능.
-                                
-                                # 임계값: 1.8 (약 -45% 이상의 하락). 일반적인 시장 붕괴로도 -45%는 하루만에 잘 안일어남.
+                                # 약 45% 이상 급락 (비율 > 1.8) -> 분할 의심
                                 if ratio > 1.8:
                                     logger.warning(
-                                            f"  ⚠ {ticker}: 가격 불연속성 감지! (Date: {d1_date}->{d0_date}, Price: {d1_close}->{d0_close}, Ratio: {ratio:.2f}) "
-                                            f"분할 반영이 안 된 데이터가 섞여있습니다. 재수집합니다."
+                                            f"  ⚠ {ticker}: 가격 불연속성 감지! (Date: {prev_date}->{curr_date}, Price: {prev_close}->{curr_close}, Ratio: {ratio:.2f}) "
+                                            f"데이터 정합성 오류 발견. 전량 재수집."
                                     )
-                                    
-                                    # --- 재수집 로직 (위와 동일하므로 함수로 빼는게 좋겠지만 일단 중복 구현) ---
-                                    # 1. 기존 데이터 삭제
-                                    conn.execute(text("DELETE FROM daily_prices WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)"), {"t": ticker})
-                                    conn.commit()
-                                    logger.info(f"  ✓ {ticker}: 오염된 가격 데이터 삭제 완료")
-                                    
-                                    # 2. 데이터 재수집
-                                    from app.utils.data_fetcher import data_fetcher
-                                    from app.repositories.yfinance_repository import YFinanceRepository
-                                    
-                                    repo = YFinanceRepository()
-                                    start_date = date.today() - timedelta(days=365*10)
-                                    end_date = date.today()
-                                    
-                                    logger.info(f"  ↻ {ticker}: 데이터 재수집 시작 ({start_date} ~ {end_date})...")
-                                    df_new = data_fetcher.fetch_stock_data(ticker, start_date, end_date, use_cache=False)
-                                    
-                                    if df_new is not None and not df_new.empty:
-                                        repo.save_ticker_data(ticker, df_new)
-                                        logger.info(f"  ✓ {ticker}: 재수집 및 저장 완료 ({len(df_new)}행)")
-                                    else:
-                                        logger.error(f"  ✗ {ticker}: 재수집 실패 (데이터 없음)")
-
-                    except Exception as e:
-                        logger.error(f"  ✗ {ticker}: 가격 연속성 검사 중 오류 - {e}")
+                                    found_anomaly = True
+                                    break
+                    
+                    if found_anomaly:
+                        # --- 재수집 로직 ---
+                        # 1. 기존 데이터 삭제
+                        conn.execute(text("DELETE FROM daily_prices WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)"), {"t": ticker})
+                        conn.commit()
+                        logger.info(f"  ✓ {ticker}: 오염된 가격 데이터 삭제 완료")
+                        
+                        # 2. 데이터 재수집
+                        from app.utils.data_fetcher import data_fetcher
+                        from app.repositories.yfinance_repository import YFinanceRepository
+                        
+                        repo = YFinanceRepository()
+                        # 20년치 재수집
+                        start_date = date.today() - timedelta(days=365*20)
+                        end_date = date.today()
+                        
+                        logger.info(f"  ↻ {ticker}: 데이터 재수집 시작 ({start_date} ~ {end_date})...")
+                        df_new = data_fetcher.fetch_stock_data(ticker, start_date, end_date, use_cache=False)
+                        
+                        if df_new is not None and not df_new.empty:
+                            repo.save_ticker_data(ticker, df_new)
+                            logger.info(f"  ✓ {ticker}: 재수집 및 저장 완료 ({len(df_new)}행)")
+                        else:
+                            logger.error(f"  ✗ {ticker}: 재수집 실패 (데이터 없음)")
+                
+                except Exception as e:
+                    logger.error(f"  ✗ {ticker}: 가격 연속성 검사 중 오류 - {e}")
 
             except Exception as e:
                 logger.error(f"  ✗ {ticker}: 업데이트 실패 - {e}")
@@ -316,8 +324,8 @@ if __name__ == "__main__":
     parser.add_argument(
         '--batch-size',
         type=int,
-        default=50,
-        help='한 번에 처리할 종목 수 (기본: 50)'
+        default=1000,
+        help='한 번에 처리할 종목 수 (기본값: 1000)'
     )
     parser.add_argument(
         '--max-age-days',
@@ -336,6 +344,12 @@ if __name__ == "__main__":
         help='통계만 조회하고 업데이트는 하지 않음'
     )
 
+    parser.add_argument(
+        '--ticker',
+        type=str,
+        help='특정 종목만 업데이트 (예: NFLX)'
+    )
+
     args = parser.parse_args()
 
     logger.info("=" * 60)
@@ -352,12 +366,16 @@ if __name__ == "__main__":
         logger.info(f"  - 배치 크기: {args.batch_size}")
         logger.info(f"  - 최대 age: {args.max_age_days}일")
         logger.info(f"  - 강제 업데이트: {args.all}")
+        if args.ticker:
+            logger.info(f"  - 타겟 종목: {args.ticker}")
         logger.info("")
 
+        # 배치 업데이트 실행
         update_split_metadata_batch(
             batch_size=args.batch_size,
             max_age_days=args.max_age_days,
-            force_all=args.all
+            force_all=args.all,
+            target_ticker=args.ticker
         )
 
         # 업데이트 후 통계 다시 조회
