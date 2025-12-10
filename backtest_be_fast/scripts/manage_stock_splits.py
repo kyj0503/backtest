@@ -28,7 +28,9 @@ import os
 # 프로젝트 루트를 Python 경로에 추가
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from typing import List, Optional
+import time
 from sqlalchemy import text
 from app.services.database.connection_manager import DatabaseConnectionManager
 import yfinance as yf
@@ -184,7 +186,7 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
                 time.sleep(1.0 if 'change_marker' in locals() and change_marker else 0.5)
 
                 # [Smart Validation: Price Continuity Check]
-                # 타겟: 20년치 데이터 스캔 (약 5500~6000 거래일)
+                # 타겟: 24년치 데이터 스캔 (약 6000 거래일)
                 # 20년 전 데이터와 갱신된 데이터 사이의 정합성 불일치(Lag)까지 잡기 위함.
 
                 check_rows_limit = 6000  # 약 24년치 거래일 (넉넉하게)
@@ -210,7 +212,7 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
                             if curr_close > 0 and prev_close > 0:
                                 ratio = prev_close / curr_close
                                 
-                                # 50% 이상 급락 (비율 > 1.8) -> 분할 의심
+                                # 약 45% 이상 급락 (비율 > 1.8) -> 분할 의심
                                 if ratio > 1.8:
                                     logger.warning(
                                             f"  ⚠ {ticker}: 가격 불연속성 감지! (Date: {prev_date}->{curr_date}, Price: {prev_close}->{curr_close}, Ratio: {ratio:.2f}) "
@@ -229,7 +231,6 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
                         # 2. 데이터 재수집
                         from app.utils.data_fetcher import data_fetcher
                         from app.repositories.yfinance_repository import YFinanceRepository
-                        from datetime import date
                         
                         repo = YFinanceRepository()
                         # 20년치 재수집
@@ -369,10 +370,7 @@ if __name__ == "__main__":
             logger.info(f"  - 타겟 종목: {args.ticker}")
         logger.info("")
 
-        # 특정 종목 지정 시 force_all=True 처럼 동작하되 해당 ticker만 필터링하도록 로직 수정 필요
-        # 하지만 API 서명 변경보다는, 여기서 처리하는게 나을듯.
-        # update_split_metadata_batch 함수를 수정하여 ticker 인자를 받도록 변경.
-        
+        # 배치 업데이트 실행
         update_split_metadata_batch(
             batch_size=args.batch_size,
             max_age_days=args.max_age_days,
