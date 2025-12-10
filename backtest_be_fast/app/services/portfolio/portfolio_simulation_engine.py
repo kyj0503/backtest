@@ -152,7 +152,7 @@ class PortfolioSimulationEngine:
         - 환율 변환 미리 적용 (가능한 경우)
 
         Returns:
-            aligned_prices_df: {ticker: Series(adjusted_price, index=date_range)}
+            aligned_prices: {ticker: Series(adjusted_price, index=date_range)}
             aligned_exchange_rates: {currency: Series(rate, index=date_range)}
         """
         aligned_prices = {}
@@ -168,7 +168,9 @@ class PortfolioSimulationEngine:
             rates_series.index = pd.to_datetime(rates_series.index)
             
             # Reindex & FFill
-            aligned_rate = rates_series.reindex(date_range).ffill()
+            # [Copilot Suggestion] ffill만 하면 시뮬레이션 시작일보다 환율 데이터가 늦게 시작될 경우 앞부분이 NaN이 됨.
+            # bfill을 추가하여 앞부분 결측치도 보완 (최초 환율로 메꿈)
+            aligned_rate = rates_series.reindex(date_range).ffill().bfill()
             aligned_exchange_rates[currency] = aligned_rate
 
         # 2. 주가 데이터 정렬 & 환율 적용
@@ -189,11 +191,18 @@ class PortfolioSimulationEngine:
             currency = ticker_currencies.get(unique_key, 'USD')
             if currency != 'USD' and currency in aligned_exchange_rates:
                 # 벡터 연산으로 전체 기간 환율 적용
+                # [Copilot Suggestion] 벡터 연산 (환율 적용)
                 exchange_rates = aligned_exchange_rates[currency]
-                # 환율 데이터가 있는 구간만 계산 (나머지는 NaN 유지 또는 로직에 따라 처리)
-                # 여기서는 간단히 곱셈. 환율이 NaN인 날짜는 결과도 NaN -> 상장폐지 로직 등에서 처리
+                
                 price_series = price_series * exchange_rates.apply(
                     lambda r: currency_converter.get_conversion_multiplier(currency, r) if pd.notnull(r) else 1.0
+                )
+            elif currency != 'USD':
+                # [Copilot Suggestion] 지원하지 않는 통화 경고 로그 복원
+                # (USD가 아닌데 exchange_rates에 없는 경우)
+                self.logger.warning(
+                    f"{symbol} ({unique_key}) 지원하지 않는 통화 '{currency}' 또는 환율 데이터 누락. "
+                    f"변환 없이 원본 가격 사용."
                 )
             
             aligned_prices[unique_key] = price_series
