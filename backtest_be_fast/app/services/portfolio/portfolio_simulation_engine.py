@@ -40,7 +40,7 @@ class PortfolioSimulationEngine:
         rebalancer: PortfolioRebalancer = None
     ):
         """
-        포트폴리오 시뮬레이터 초기화
+        포트폴리오 시뮬레이션 엔진 초기화
 
         Args:
             dca_manager: DCA 관리 매니저
