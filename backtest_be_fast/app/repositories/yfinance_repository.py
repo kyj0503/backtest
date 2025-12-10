@@ -3,7 +3,6 @@
 yfinance API로 수집한 주가 데이터를 MySQL DB에 저장하고 조회합니다.
 DB 우선 조회 전략으로 외부 API 호출을 최소화합니다.
 """
-import os
 import json
 import logging
 import time
@@ -55,7 +54,9 @@ class YFinanceRepository:
                 raise e
         
         self.logger.error(f"DB Operation failed after {max_retries} attempts: {last_error}")
-        raise last_error
+        if last_error:
+            raise last_error
+        raise RuntimeError(f"DB Operation failed after {max_retries} attempts, but no exception was captured.")
 
     def _save_stock_metadata(self, conn, ticker: str) -> int:
         """stocks 테이블에 메타데이터 저장 (Upsert)"""

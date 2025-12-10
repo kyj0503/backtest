@@ -6,9 +6,6 @@ import os
 from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi.testclient import TestClient
 from app.main import app
-from app.repositories.stock_repository import StockRepository
-from app.utils.currency_converter import CurrencyConverter
-from typing import Dict, Any, List
 
 # Load mock data
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
