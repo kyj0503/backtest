@@ -21,7 +21,7 @@ services:
       - ./backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
     # 개발 환경: 8 논리 코어 → (8 × 2) + 1 = 17 workers (reload 모드에서는 1개만 사용)
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--limit-concurrency", "100", "--backlog", "200"]
+    command: [ "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--limit-concurrency", "100", "--backlog", "200" ]
   backtest-fe:
     build:
       context: ./backtest_fe
@@ -46,11 +46,12 @@ services:
       - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
       - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest-be-fast:8000}"
       - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest-be-fast:8000}"
-    command: ["npm", "run", "dev"]
+    command: [ "npm", "run", "dev" ]
 
 volumes:
   backtest_fe_node_modules:
   backtest_be_fast_venv:
+
 
 networks:
   backtest-net:

@@ -9,7 +9,7 @@ from sqlalchemy import text
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.services.database.connection_manager import DatabaseConnectionManager
-from app.services.yfinance_db import save_ticker_data
+from app.repositories.yfinance_repository import save_ticker_data
 from app.utils.data_fetcher import data_fetcher, YfinanceRateLimitError
 
 # Configure logging

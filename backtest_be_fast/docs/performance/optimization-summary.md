@@ -36,7 +36,7 @@ load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
   - 배치 조회: 0.02초
   - 성능 향상: **16.4배**
 - 데이터베이스 왕복 횟수 감소: N회 → 1회
-- 위치: app/services/yfinance_db.py
+- 위치: app/repositories/yfinance_repository.py
 
 ### 주가 데이터 조회와 티커 정보 조회 구현이 다른 이유
 

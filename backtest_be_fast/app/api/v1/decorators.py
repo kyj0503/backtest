@@ -55,7 +55,20 @@ from app.core.exceptions import (
     ValidationError
 )
 
+import uuid
+
 logger = logging.getLogger(__name__)
+
+
+def log_error_for_debugging(error: Exception, source: str, context: dict) -> str:
+    error_id = str(uuid.uuid4())
+    logger.error(f"Error ID: {error_id} | Source: {source} | Error: {error}")
+    return error_id
+
+
+def get_user_friendly_message(error_type: str, detail: str) -> str:
+    return f"[{error_type}] {detail}"
+
 
 
 def handle_backtest_errors(func):

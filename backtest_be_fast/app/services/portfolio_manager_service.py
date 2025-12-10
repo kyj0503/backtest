@@ -1,7 +1,7 @@
-"""포트폴리오 백테스트 서비스
+"""포트폴리오 백테스트 관리 서비스 (Manager)
 
-여러 종목으로 구성된 포트폴리오의 백테스트를 실행합니다.
-DCA(분할 매수), 리밸런싱, 다중 통화를 지원합니다.
+이 모듈은 '사장님' 역할로서 포트폴리오 백테스트의 전체 수명주기(데이터 로드 -> 시뮬레이션 위임 -> 결과 처리)를 관리합니다.
+복잡한 시뮬레이션 로직은 portfolio_simulation_engine 모듈에 위임합니다.
 
 통화 정책:
 - DB 저장: 원본 통화 (KRW, JPY, EUR 등)
@@ -11,9 +11,10 @@ DCA(분할 매수), 리밸런싱, 다중 통화를 지원합니다.
 import asyncio
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, List, Optional
 from datetime import datetime, timedelta, date
 import logging
+import time
 
 from app.schemas.schemas import PortfolioBacktestRequest, FREQUENCY_MAP
 from app.schemas.requests import BacktestRequest
@@ -24,7 +25,8 @@ from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday,
 from app.services.portfolio_calculator_service import portfolio_calculator
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
-from app.services.portfolio.portfolio_simulator import PortfolioSimulator
+from app.services.portfolio.portfolio_simulation_engine import PortfolioSimulationEngine
+from app.services.portfolio.portfolio_data_loader import PortfolioDataLoader
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
@@ -34,31 +36,55 @@ from app.core.exceptions import (
 )
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
 from app.constants.data_loading import TradingThresholds
-from app.utils.currency_converter import currency_converter
+from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
+from app.utils.currency_converter import currency_converter, CurrencyConverter
+from app.monitoring.custom_metrics import (
+    BACKTEST_EXECUTION_TOTAL,
+    TICKER_POPULARITY_TOTAL,
+    BACKTEST_PROCESSING_SECONDS
+)
 
 logger = logging.getLogger(__name__)
 
-class PortfolioService:
-    """포트폴리오 백테스트 서비스"""
+class PortfolioManagerService:
+    """
+    포트폴리오 백테스트 관리 서비스 (Manager/Orchestrator Role)
+
+    [역할 정의]
+    이 서비스는 '사장님'과 같은 역할로, 직접 복잡한 계산을 수행하기보다 하위 모듈들을 조율하여 전체 업무를 완수합니다.
+    API 요청을 받고, 데이터를 로드하고, 최종 결과를 포맷팅하는 **전체 흐름을 주관**합니다.
+
+    주요 책임:
+    1. Orchestration: 데이터 로딩, 시뮬레이션 실행, 결과 취합의 흐름 제어.
+    2. Data Management: StockRepository 등을 통해 필요한 외부 데이터를 준비.
+    3. Delegation: 실제 시뮬레이션 계산은 PortfolioSimulationEngine에 위임.
+    """
     def __init__(self):
         """포트폴리오 서비스 초기화"""
         # 추출된 컴포넌트 초기화
         self.dca_manager = PortfolioDcaManager()
         self.rebalancer = PortfolioRebalancer()
-        self.simulator = PortfolioSimulator(
+        self.simulation_engine = PortfolioSimulationEngine(
             dca_manager=self.dca_manager,
             rebalancer=self.rebalancer
         )
         self.metrics = PortfolioMetrics()
         # Repository 초기화 (Repository 패턴)
         self.stock_repository = get_stock_repository()
+        
+        # Data Loader 초기화 (데이터 준비 역할)
+        self.data_loader = PortfolioDataLoader(
+            stock_repository=self.stock_repository,
+            currency_converter=currency_converter
+        )
+        
         logger.info("포트폴리오 서비스가 초기화되었습니다")
 
     async def calculate_dca_portfolio_returns(
         self,
         portfolio_data: Dict[str, pd.DataFrame],
         amounts: Dict[str, float],
-        dca_info: Dict[str, Dict],
+        dca_info: Dict[str, DcaStrategyInfo],
         start_date: str,
         end_date: str,
         rebalance_frequency: str = "weekly_4",
@@ -71,15 +97,15 @@ class PortfolioService:
         # 현금 처리
         cash_amount = 0
         for unique_key, amount in amounts.items():
-            if dca_info[unique_key].get('asset_type') == 'cash':
+            if unique_key in dca_info and dca_info[unique_key].asset_type == 'cash':
                 cash_amount += amount
 
-        stock_amounts = {k: v for k, v in amounts.items() if dca_info[k].get('asset_type') != 'cash'}
+        stock_amounts = {k: v for k, v in amounts.items() if k in dca_info and dca_info[k].asset_type != 'cash'}
 
         # 날짜 범위 설정
         all_dates = set()
         for unique_key, df in portfolio_data.items():
-            if dca_info.get(unique_key, {}).get('asset_type') != 'cash':
+            if unique_key in dca_info and dca_info[unique_key].asset_type != 'cash':
                 all_dates.update(df.index)
 
         if not all_dates and cash_amount == 0:
@@ -95,249 +121,46 @@ class PortfolioService:
         start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
         end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
 
-        # 각 종목의 currency 정보 먼저 가져오기 (배치 조회로 최적화)
-        symbols = [dca_info[unique_key]['symbol'] for unique_key in stock_amounts.keys()]
-        try:
-            ticker_info_dict = await asyncio.to_thread(
-                self.stock_repository.get_tickers_info_batch, symbols
-            )
-            ticker_currencies = {}
-            for unique_key in stock_amounts.keys():
-                symbol = dca_info[unique_key]['symbol']
-                ticker_info = ticker_info_dict.get(symbol, {})
-                ticker_currencies[unique_key] = ticker_info.get('currency', 'USD')
-                logger.debug(f"{symbol} currency: {ticker_currencies[unique_key]}")
-        except Exception as e:
-            logger.warning(f"티커 정보 배치 조회 실패: {e}, 모두 USD로 가정")
-            ticker_currencies = {unique_key: 'USD' for unique_key in stock_amounts.keys()}
+        # 각 종목의 currency 정보 및 환율 로드 (Data Loader 위임)
+        symbols = [dca_info[unique_key].symbol for unique_key in stock_amounts.keys()]
+        
+        # 1. Ticker Currencies 로드
+        ticker_currencies = await self.data_loader.load_ticker_currencies(symbols)
+        
+        # unique_key에 맵핑
+        keyed_ticker_currencies = {}
+        for unique_key in stock_amounts.keys():
+            symbol = dca_info[unique_key].symbol
+            keyed_ticker_currencies[unique_key] = ticker_currencies.get(symbol, 'USD')
 
-        required_currencies = list(set(ticker_currencies.values()) - {'USD'})
-
-        if required_currencies:
-            logger.info(f"포트폴리오 환율 로딩 시작: {len(required_currencies)}개 통화 [{', '.join(required_currencies)}]")
-
-        exchange_rates_by_currency = await currency_converter.load_multiple_exchange_rates(
+        # 2. Exchange Rates 로드
+        required_currencies = list(set(keyed_ticker_currencies.values()) - {'USD'})
+        
+        exchange_rates_by_currency = await self.data_loader.load_exchange_rates(
             currencies=required_currencies,
             start_date=start_date,
             end_date=end_date,
-            date_range=date_range,
-            buffer_multiplier=2  # EXCHANGE_RATE_LOOKBACK_DAYS * 2
+            date_range=date_range
         )
-
-        # 환율 로드 결과 요약 로깅
-        if required_currencies:
-            for currency, rates in exchange_rates_by_currency.items():
-                if rates:
-                    rate_values = list(rates.values())
-                    rate_min = min(rate_values)
-                    rate_max = max(rate_values)
-                    rate_mean = sum(rate_values) / len(rate_values)
-                    logger.info(
-                        f"환율 로드 완료 ({currency}): {len(rates)} 포인트, "
-                        f"범위 {rate_min:.4f} ~ {rate_max:.4f} (평균 {rate_mean:.4f})"
-                    )
-                else:
-                    logger.warning(f"환율 데이터 없음 ({currency}): 변환 불가")
-            logger.info(f"총 {len(exchange_rates_by_currency)}/{len(required_currencies)}개 통화 환율 로드 완료")
 
         target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
 
-        state = self.simulator.initialize_portfolio_state(
+        # 포트폴리오 시뮬레이션 실행 (리팩터링됨)
+        result = await self.simulation_engine.execute_simulation(
+            date_range=date_range,
+            start_date_obj=start_date_obj,
+            end_date_obj=end_date_obj,
             stock_amounts=stock_amounts,
-            cash_amount=cash_amount,
             amounts=amounts,
-            dca_info=dca_info
+            cash_amount=cash_amount,
+            total_amount=total_amount,
+            portfolio_data=portfolio_data,
+            dca_info=dca_info,
+            ticker_currencies=ticker_currencies,
+            exchange_rates_by_currency=exchange_rates_by_currency,
+            rebalance_frequency=rebalance_frequency,
+            commission=commission
         )
-
-        shares = state['shares']
-        portfolio_values = state['portfolio_values']
-        daily_returns = state['daily_returns']
-        prev_portfolio_value = state['prev_portfolio_value']
-        prev_date = state['prev_date']
-        is_first_day = state['is_first_day']
-        available_cash = state['available_cash']
-        cash_holdings = state['cash_holdings']
-        total_trades = state['total_trades']
-        rebalance_history = state['rebalance_history']
-        weight_history = state['weight_history']
-        last_rebalance_date = state['last_rebalance_date']
-        original_rebalance_nth = state['original_rebalance_nth']
-        last_valid_prices = state['last_valid_prices']
-        last_price_date = state['last_price_date']
-        delisted_stocks = state['delisted_stocks']
-
-        for current_date in date_range:
-            daily_cash_inflow = 0.0  # 당일 추가 투자금 (DCA)
-            if current_date.date() < start_date_obj.date():
-                continue
-            if current_date.date() > end_date_obj.date():
-                break
-
-            current_prices, last_valid_exchange_rates = self.simulator.fetch_and_convert_prices(
-                current_date=current_date,
-                stock_amounts=stock_amounts,
-                portfolio_data=portfolio_data,
-                dca_info=dca_info,
-                ticker_currencies=ticker_currencies,
-                exchange_rates_by_currency=exchange_rates_by_currency
-            )
-
-            self.simulator.detect_and_update_delisting(
-                current_date=current_date,
-                stock_amounts=stock_amounts,
-                current_prices=current_prices,
-                dca_info=dca_info,
-                delisted_stocks=delisted_stocks,
-                last_valid_prices=last_valid_prices,
-                last_price_date=last_price_date
-            )
-
-            if delisted_stocks and (should_rebalance or current_date.weekday() == 0):
-                delisted_symbols = [dca_info[key]['symbol'] for key in delisted_stocks if key in dca_info]
-                logger.info(
-                    f"{current_date.date()}: 상장폐지 종목 {len(delisted_stocks)}개 추적 중 "
-                    f"[{', '.join(delisted_symbols)}]"
-                )
-
-            if is_first_day:
-                trades, cash_inflow = self.dca_manager.execute_initial_purchases(
-                    current_date=current_date,
-                    stock_amounts=stock_amounts,
-                    current_prices=current_prices,
-                    dca_info=dca_info,
-                    shares=shares,
-                    commission=commission
-                )
-                total_trades += trades
-                daily_cash_inflow += cash_inflow
-                is_first_day = False
-                prev_date = current_date
-
-            if prev_date is not None:
-                trades, cash_inflow = self.dca_manager.execute_periodic_purchases(
-                    current_date=current_date,
-                    prev_date=prev_date,
-                    stock_amounts=stock_amounts,
-                    current_prices=current_prices,
-                    dca_info=dca_info,
-                    shares=shares,
-                    commission=commission,
-                    start_date_obj=start_date_obj
-                )
-                total_trades += trades
-                daily_cash_inflow += cash_inflow
-
-            if original_rebalance_nth is None and rebalance_frequency != 'none':
-                original_rebalance_nth = get_weekday_occurrence(start_date_obj)
-                logger.debug(f"리밸런싱 원본 Nth 값 설정 = {original_rebalance_nth}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
-
-            should_rebalance = RebalanceHelper.is_rebalance_date(
-                current_date, prev_date, rebalance_frequency, start_date_obj, last_rebalance_date, original_rebalance_nth
-            )
-
-            if rebalance_frequency != 'none':
-                if should_rebalance and len(target_weights) > 1:
-                    logger.info(
-                        f"{current_date.date()}: 리밸런싱 트리거됨 "
-                        f"(주기: {rebalance_frequency}, 자산 수: {len(target_weights)}, "
-                        f"마지막 리밸런싱: {last_rebalance_date.date() if last_rebalance_date else '없음'})"
-                    )
-                elif should_rebalance and len(target_weights) <= 1:
-                    logger.debug(
-                        f"{current_date.date()}: 리밸런싱 조건 충족하지만 자산 수 부족 (자산 수: {len(target_weights)})"
-                    )
-
-            if should_rebalance and len(target_weights) > 1:
-                adjusted_target_weights = self.rebalancer.calculate_adjusted_weights(
-                    target_weights=target_weights,
-                    delisted_stocks=delisted_stocks,
-                    dca_info=dca_info
-                )
-
-                if delisted_stocks:
-                    for unique_key, adj_weight in adjusted_target_weights.items():
-                        if unique_key not in delisted_stocks:
-                            original_weight = target_weights.get(unique_key, 0.0)
-                            if original_weight != adj_weight:
-                                symbol = dca_info[unique_key]['symbol']
-                                logger.debug(
-                                    f"  {symbol}: {original_weight:.2%} -> {adj_weight:.2%}"
-                                )
-
-                total_stock_value = sum(
-                    shares[key] * current_prices.get(key, 0)
-                    for key in shares.keys()
-                    if key in current_prices
-                )
-
-                rebalance_result = self.rebalancer.execute_rebalancing_trades(
-                    current_date=current_date,
-                    adjusted_target_weights=adjusted_target_weights,
-                    shares=shares,
-                    current_prices=current_prices,
-                    available_cash=available_cash,
-                    cash_holdings=cash_holdings,
-                    commission=commission,
-                    total_stock_value=total_stock_value,
-                    dca_info=dca_info,
-                    delisted_stocks=delisted_stocks
-                )
-
-                shares = rebalance_result['updated_shares']
-                cash_holdings = rebalance_result['updated_cash_holdings']
-                available_cash = rebalance_result['updated_available_cash']
-                trades_in_rebalance = rebalance_result['trades_executed']
-
-                if rebalance_result['rebalance_trades']:
-                    rebalance_history.append({
-                        'date': current_date.strftime('%Y-%m-%d'),
-                        'trades': rebalance_result['rebalance_trades'],
-                        'weights_before': rebalance_result['weights_before'],
-                        'weights_after': rebalance_result['weights_after'],
-                        'commission_cost': rebalance_result['commission_cost']
-                    })
-
-                last_rebalance_date = current_date
-                total_trades += trades_in_rebalance
-
-            normalized_value, daily_return, current_weights = self.metrics.calculate_daily_metrics_and_history(
-                current_date=current_date,
-                shares=shares,
-                available_cash=available_cash,
-                current_prices=current_prices,
-                cash_holdings=cash_holdings,
-                prev_portfolio_value=prev_portfolio_value,
-                daily_cash_inflow=daily_cash_inflow,
-                total_amount=total_amount,
-                dca_info=dca_info
-            )
-
-            portfolio_values.append(normalized_value)
-            daily_returns.append(daily_return)
-            weight_history.append(current_weights)
-
-            prev_portfolio_value = normalized_value * total_amount
-            prev_date = current_date
-
-        valid_dates = [d for d in date_range if start_date_obj.date() <= d.date() <= end_date_obj.date()]
-
-        if len(portfolio_values) != len(valid_dates):
-            logger.warning(f"포트폴리오 값 길이 불일치: portfolio_values={len(portfolio_values)}, valid_dates={len(valid_dates)}")
-            logger.warning(f"첫 3개 날짜: {valid_dates[:3] if len(valid_dates) > 0 else 'None'}")
-            logger.warning(f"마지막 3개 날짜: {valid_dates[-3:] if len(valid_dates) > 0 else 'None'}")
-            raise ValueError(f"계산된 포트폴리오 값 개수({len(portfolio_values)})가 날짜 개수({len(valid_dates)})와 일치하지 않습니다.")
-
-        result = pd.DataFrame({
-            'Date': valid_dates,
-            'Portfolio_Value': portfolio_values,
-            'Daily_Return': daily_returns,
-            'Cumulative_Return': [(v - 1) * 100 for v in portfolio_values]
-        })
-        result.set_index('Date', inplace=True)
-
-        result.attrs['total_trades'] = total_trades
-        result.attrs['rebalance_history'] = rebalance_history
-        result.attrs['weight_history'] = weight_history
 
         return result
     
@@ -376,6 +199,11 @@ class PortfolioService:
         각 종목에 동일한 전략을 적용하고 투자 금액으로 결합
         """
         try:
+            # --- [Custom Metrics] Start Timer ---
+            start_time = time.time()
+            strategy_label = str(request.strategy) if request.strategy else "unknown"
+            # ------------------------------------
+
             portfolio_results = {}
             individual_returns = {}
             total_portfolio_value = 0
@@ -391,6 +219,11 @@ class PortfolioService:
             else:
                 raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             
+            # --- [Custom Metrics] Ticker Popularity ---
+            for item in request.portfolio:
+                TICKER_POPULARITY_TOTAL.labels(ticker=item.symbol).inc()
+            # ------------------------------------------
+
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
             logger.info(f"전략 기반 백테스트: {strategy_name}, 총 투자금액: ${total_amount:,.2f}")
             
@@ -616,9 +449,18 @@ class PortfolioService:
             
             logger.info(f"전략 포트폴리오 백테스트 완료: 총 수익률 {portfolio_return:.2f}%")
             
+            # --- [Custom Metrics] Record Success ---
+            duration = time.time() - start_time
+            BACKTEST_PROCESSING_SECONDS.labels(strategy_type="strategy_portfolio").observe(duration)
+            BACKTEST_EXECUTION_TOTAL.labels(strategy_type="strategy_portfolio", status="success").inc()
+            # ---------------------------------------
+            
             return recursive_serialize(result)
             
         except Exception as e:
+            # --- [Custom Metrics] Record Error ---
+            BACKTEST_EXECUTION_TOTAL.labels(strategy_type="strategy_portfolio", status="error").inc()
+            # -------------------------------------
             logger.exception("전략 포트폴리오 백테스트 실행 중 오류 발생")
             return {
                 'status': 'error',
@@ -632,6 +474,10 @@ class PortfolioService:
         현금(CASH)과 주식을 함께 처리, 분할 매수(DCA) 지원
         """
         try:
+            # --- [Custom Metrics] Start Timer ---
+            start_time = time.time()
+            # ------------------------------------
+
             # 각 종목의 데이터 수집 (중복 종목 지원)
             portfolio_data = {}
             amounts = {}  # 실제 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
@@ -655,6 +501,11 @@ class PortfolioService:
 
             for item in request.portfolio:
                 symbol = item.symbol
+                
+                # --- [Custom Metrics] Ticker Popularity ---
+                TICKER_POPULARITY_TOTAL.labels(ticker=symbol).inc()
+                # ------------------------------------------
+
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_frequency = getattr(item, 'dca_frequency', 'monthly_1')
 
@@ -698,17 +549,15 @@ class PortfolioService:
                 amounts[symbol] = total_investment
 
                 # 분할 매수 정보 저장
-                dca_info[symbol] = {
-                    'symbol': symbol,
-                    'investment_type': investment_type,
-                    'dca_frequency': dca_frequency,
-                    'dca_periods': dca_periods,
-                    'monthly_amount': per_period_amount,  # 회당 투자 금액
-                    'asset_type': asset_type,
-                    'executed_count': 0,  # 실행된 DCA 횟수 추적
-                    'last_dca_date': None,  # 마지막 DCA 실행 날짜 추적
-                    'original_nth_weekday': None  # 원본 "몇 번째 요일" 값 추적 (일관성 유지용)
-                }
+                dca_info[symbol] = DcaStrategyInfo(
+                    symbol=symbol,
+                    allocation=0.0, # Will be calculated if needed, or derived from amounts
+                    asset_type=asset_type,
+                    investment_type=investment_type,
+                    monthly_amount=per_period_amount,
+                    dca_frequency=dca_frequency,
+                    dca_periods=dca_periods
+                )
 
                 # 진짜 현금 자산 처리 (asset_type이 'cash'인 경우)
                 if asset_type == 'cash':
@@ -726,33 +575,13 @@ class PortfolioService:
                 # 로드할 종목 리스트에 추가
                 symbols_to_load.append(symbol)
 
-            # Phase 2: 모든 종목 데이터를 병렬로 로드 (N+1 query 최적화)
+            # Phase 2: 모든 종목 데이터를 병렬로 로드 (Data Loader 위임)
             if symbols_to_load:
-                logger.info(f"포트폴리오 데이터 병렬 로드 시작: {len(symbols_to_load)}개 종목")
-
-                # 병렬 로드 태스크 생성
-                load_tasks = [
-                    asyncio.to_thread(self.stock_repository.load_stock_data, symbol, request.start_date, request.end_date)
-                    for symbol in symbols_to_load
-                ]
-
-                # 병렬 실행
-                load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
-
-                # 결과 처리
-                for symbol, result in zip(symbols_to_load, load_results):
-                    if isinstance(result, Exception):
-                        logger.warning(f"종목 {symbol} 데이터 로드 실패: {result}")
-                        continue
-
-                    if result is None or result.empty:
-                        logger.warning(f"종목 {symbol}의 데이터가 없습니다.")
-                        continue
-
-                    portfolio_data[symbol] = result
-                    logger.info(f"종목 {symbol} 데이터 로드 완료: {len(result)} 행")
-
-                logger.info(f"포트폴리오 데이터 병렬 로드 완료: {len(portfolio_data)}/{len(symbols_to_load)}개 성공")
+                portfolio_data = await self.data_loader.load_stock_data_parallel(
+                    symbols_to_load=symbols_to_load,
+                    start_date=request.start_date,
+                    end_date=request.end_date
+                )
 
             # 총 투자 금액 계산
             total_amount = sum(amounts.values())
@@ -859,15 +688,15 @@ class PortfolioService:
             
             # 주식 수익률 추가 (중복 종목 지원)
             for unique_key, amount in amounts.items():
-                if unique_key.endswith('_CASH') or dca_info[unique_key].get('asset_type') == 'cash':
+                if unique_key.endswith('_CASH') or (unique_key in dca_info and dca_info[unique_key].asset_type == 'cash'):
                     continue
                     
-                symbol = dca_info[unique_key]['symbol']
+                symbol = dca_info[unique_key].symbol
                 
                 if symbol in portfolio_data:
                     df = portfolio_data[symbol]
                     if len(df) > 0:
-                        investment_type = dca_info[unique_key]['investment_type']
+                        investment_type = dca_info[unique_key].investment_type
                         weight = amount / total_amount
                         
                         if investment_type == 'lump_sum':
@@ -909,9 +738,9 @@ class PortfolioService:
                             
                         else:  # DCA
                             # 분할매수: DcaCalculator를 사용하여 수익률 계산
-                            dca_periods = dca_info[unique_key]['dca_periods']
-                            period_amount = dca_info[unique_key]['monthly_amount']  # 회당 투자 금액
-                            dca_frequency = dca_info[unique_key].get('dca_frequency', 'monthly_1')  # DCA 주기
+                            dca_periods = dca_info[unique_key].dca_periods
+                            period_amount = dca_info[unique_key].monthly_amount  # 회당 투자 금액
+                            dca_frequency = dca_info[unique_key].dca_frequency  # DCA 주기
 
                             total_shares, average_price, individual_return, dca_trade_log = DcaCalculator.calculate_dca_shares_and_return(
                                 df, period_amount, dca_periods, request.start_date, dca_frequency
@@ -963,7 +792,7 @@ class PortfolioService:
                     # unique_key 찾기 (symbol로 매칭)
                     unique_key = None
                     for key in dca_info.keys():
-                        if dca_info[key]['symbol'] == symbol:
+                        if dca_info[key].symbol == symbol:
                             unique_key = key
                             break
 
@@ -996,12 +825,12 @@ class PortfolioService:
                     },
                     'portfolio_composition': [
                         {
-                            'symbol': dca_info[unique_key]['symbol'],  # 실제 symbol 사용 (프론트엔드 호환)
+                            'symbol': dca_info[unique_key].symbol,  # 실제 symbol 사용 (프론트엔드 호환)
                             'weight': amount / total_amount,
                             'amount': amount,
-                            'investment_type': dca_info[unique_key]['investment_type'],
-                            'dca_periods': dca_info[unique_key]['dca_periods'] if dca_info[unique_key]['investment_type'] == 'dca' else None,
-                            'asset_type': dca_info[unique_key].get('asset_type', 'stock')
+                            'investment_type': dca_info[unique_key].investment_type,
+                            'dca_periods': dca_info[unique_key].dca_periods if dca_info[unique_key].investment_type == 'dca' else None,
+                            'asset_type': dca_info[unique_key].asset_type
                         }
                         for unique_key, amount in amounts.items()
                     ],
@@ -1046,9 +875,18 @@ class PortfolioService:
             
             logger.info(f"Buy & Hold 포트폴리오 백테스트 완료: 총 수익률 {statistics['Total_Return']:.2f}%")
             
+            # --- [Custom Metrics] Record Success ---
+            duration = time.time() - start_time
+            BACKTEST_PROCESSING_SECONDS.labels(strategy_type="buy_and_hold").observe(duration)
+            BACKTEST_EXECUTION_TOTAL.labels(strategy_type="buy_and_hold", status="success").inc()
+            # ---------------------------------------
+
             return recursive_serialize(result)
             
         except Exception as e:
+            # --- [Custom Metrics] Record Error ---
+            BACKTEST_EXECUTION_TOTAL.labels(strategy_type="buy_and_hold", status="error").inc()
+            # -------------------------------------
             logger.exception("Buy & Hold 포트폴리오 백테스트 실행 중 오류 발생")
             return {
                 'status': 'error',
@@ -1057,5 +895,5 @@ class PortfolioService:
             }
 
 
-# 전역 인스턴스 생성 (기존 패턴 유지)
-portfolio_service = PortfolioService()
+# 전역 인스턴스 생성
+portfolio_manager_service = PortfolioManagerService()

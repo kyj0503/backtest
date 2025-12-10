@@ -2,25 +2,24 @@
 
 포트폴리오 백테스트 실행 및 관련 데이터를 반환하는 FastAPI 엔드포인트입니다.
 """
+
 from fastapi import APIRouter, status
 import logging
 import asyncio
 from datetime import datetime
 
 from ....schemas.schemas import PortfolioBacktestRequest
-from ....services.portfolio_service import PortfolioService
-from ....services.yfinance_db import get_ticker_info_batch_from_db
+from ....services.portfolio_manager_service import portfolio_manager_service
+from ....repositories.stock_repository import get_stock_repository
 from ....services.unified_data_service import unified_data_service
 from ....services.news_service import news_service
 from ....core.exceptions import ValidationError
 from ..decorators import handle_portfolio_errors
 
-
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# 서비스 초기화
-portfolio_service = PortfolioService()
+# 서비스 초기화 (임포트됨)
 
 # 데이터 서비스에 뉴스 서비스 주입
 unified_data_service.news_service = news_service
@@ -42,9 +41,9 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     ]
     symbols = list(set(symbols))  # 중복 제거
 
-    # 종목 정보 조회 (상장일 확인용) - 배치 조회로 최적화 (N개 쿼리 → 1개 쿼리)
+    # 종목 정보 조회 (상장일 확인용) - 배치 조회로 최적화 (N+1 쿼리 → 1개 쿼리)
     ticker_info_dict = await asyncio.to_thread(
-        get_ticker_info_batch_from_db, symbols
+        get_stock_repository().get_tickers_info_batch, symbols
     )
 
     validation_errors = []
@@ -74,7 +73,7 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
         )
     
     # 2. 백테스트 실행 (포트폴리오 서비스 위임)
-    backtest_result = await portfolio_service.run_portfolio_backtest(request)
+    backtest_result = await portfolio_manager_service.run_portfolio_backtest(request)
     
     if backtest_result.get('status') != 'success':
         return backtest_result

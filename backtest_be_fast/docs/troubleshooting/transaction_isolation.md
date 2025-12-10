@@ -27,7 +27,7 @@
 
 ### 1. 코드 흐름
 
-`app/services/yfinance_db.py`의 `_load_ticker_data_internal()` 함수에서, 데이터 조회를 위한 **커넥션 A**가 열린 상태에서, 누락된 데이터를 저장하기 위해 `save_ticker_data` 함수가 내부적으로 **커넥션 B**를 열어 데이터를 저장하고 닫습니다. 그 후 다시 **커넥션 A**를 사용해 데이터를 조회하려고 할 때 문제가 발생합니다.
+`app/repositories/yfinance_repository.py`의 `_load_ticker_data_internal()` 함수에서, 데이터 조회를 위한 **커넥션 A**가 열린 상태에서, 누락된 데이터를 저장하기 위해 `save_ticker_data` 함수가 내부적으로 **커넥션 B**를 열어 데이터를 저장하고 닫습니다. 그 후 다시 **커넥션 A**를 사용해 데이터를 조회하려고 할 때 문제가 발생합니다.
 
 ### 2. 트랜잭션 격리 수준
 

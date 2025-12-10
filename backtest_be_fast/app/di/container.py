@@ -31,7 +31,7 @@ service_container.set_data_source(mock_data_source)
 ```
 DataSource (YFinanceDataSource)
     ↓
-BacktestEngine, PortfolioService
+BacktestEngine, PortfolioManagerService
     ↓
 API Endpoints
 ```
@@ -105,17 +105,17 @@ class ServiceContainer:
         # BacktestService는 상태를 유지하지 않으므로 매번 새로 생성
         return BacktestService()
 
-    # ==================== PortfolioService ====================
-    def get_portfolio_service(self):
+    # ==================== PortfolioManagerService ====================
+    def get_portfolio_manager_service(self):
         """포트폴리오 서비스 조회 (싱글톤)"""
         if self._portfolio_service is None:
-            from app.services.portfolio_service import PortfolioService
+            from app.services.portfolio_manager_service import PortfolioManagerService
 
-            self._portfolio_service = PortfolioService()
+            self._portfolio_service = PortfolioManagerService()
             logger.info("포트폴리오 서비스 초기화")
         return self._portfolio_service
 
-    def set_portfolio_service(self, service):
+    def set_portfolio_manager_service(self, service):
         """포트폴리오 서비스 설정 (테스트용)"""
         self._portfolio_service = service
         logger.info(f"포트폴리오 서비스 설정: {type(service).__name__}")

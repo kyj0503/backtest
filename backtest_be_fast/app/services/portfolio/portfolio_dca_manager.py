@@ -1,9 +1,3 @@
-"""DCA(Dollar Cost Averaging) 투자 관리
-
-초기 매수 및 주기적 DCA 투자 실행을 담당합니다.
-Nth Weekday 방식으로 DCA 일정을 관리합니다.
-"""
-
 import logging
 from typing import Dict, Tuple
 from datetime import datetime, date
@@ -11,6 +5,7 @@ import pandas as pd
 
 from app.schemas.schemas import FREQUENCY_MAP
 from app.services.rebalance_helper import get_next_nth_weekday, get_weekday_occurrence
+from app.domain.portfolio_domain import DcaStrategyInfo
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +18,7 @@ class PortfolioDcaManager:
         current_date: pd.Timestamp,
         stock_amounts: Dict[str, float],
         current_prices: Dict[str, float],
-        dca_info: Dict[str, Dict],
+        dca_info: Dict[str, DcaStrategyInfo],
         shares: Dict[str, float],
         commission: float
     ) -> Tuple[int, float]:
@@ -38,8 +33,8 @@ class PortfolioDcaManager:
         - current_date: 현재 시뮬레이션 날짜
         - stock_amounts: 종목별 투자 금액
         - current_prices: 종목별 USD 변환 가격
-        - dca_info: 종목 정보 (투자 방식, 월별 금액)
-        - shares: 종목별 보유 주식 수 (MODIFIED)
+        - dca_info: 종목 정보 (DcaStrategyInfo 모델)
+        - shares: 종목별 보유 주식 수
         - commission: 거래 수수료 (0.002 = 0.2%)
 
         **반환**:
@@ -50,9 +45,12 @@ class PortfolioDcaManager:
         daily_cash_inflow = 0.0
 
         for unique_key, amount in stock_amounts.items():
-            symbol = dca_info[unique_key]['symbol']
+            if unique_key not in dca_info:
+                continue
+
             info = dca_info[unique_key]
-            investment_type = info['investment_type']
+
+            investment_type = info.investment_type
 
             if unique_key not in current_prices:
                 continue
@@ -68,12 +66,12 @@ class PortfolioDcaManager:
                 logger.info(f"{current_date.date()}: {unique_key} 일시불 첫 투자 (금액: ${amount:,.2f}, 가격: ${price:.2f})")
             else:  # DCA
                 # DCA 첫 달 투자
-                monthly_amount = info['monthly_amount']
+                monthly_amount = info.monthly_amount
                 invest_amount = monthly_amount * (1 - commission)
                 shares[unique_key] = invest_amount / price
                 trades_executed += 1  # 첫 DCA 매수 거래
                 daily_cash_inflow += monthly_amount  # DCA 첫 투자 유입
-                logger.info(f"{current_date.date()}: {unique_key} DCA 첫 투자 (금액: ${monthly_amount:,.2f}, interval_weeks: {info.get('interval_weeks', '?')})")
+                logger.info(f"{current_date.date()}: {unique_key} DCA 첫 투자 (금액: ${monthly_amount:,.2f}, interval_weeks: {info.dca_frequency})")
 
         return trades_executed, daily_cash_inflow
 
@@ -83,7 +81,7 @@ class PortfolioDcaManager:
         prev_date: pd.Timestamp,
         stock_amounts: Dict[str, float],
         current_prices: Dict[str, float],
-        dca_info: Dict[str, Dict],
+        dca_info: Dict[str, DcaStrategyInfo],
         shares: Dict[str, float],
         commission: float,
         start_date_obj: datetime
@@ -101,8 +99,8 @@ class PortfolioDcaManager:
         - prev_date: 이전 시뮬레이션 날짜
         - stock_amounts: 종목별 투자 금액
         - current_prices: 종목별 USD 변환 가격
-        - dca_info: 종목 정보 (MODIFIED - executed_count, last_dca_date 업데이트)
-        - shares: 종목별 보유 주식 수 (MODIFIED)
+        - dca_info: 종목 정보 (DcaStrategyInfo 모델)
+        - shares: 종목별 보유 주식 수
         - commission: 거래 수수료
         - start_date_obj: 시뮬레이션 시작 날짜
 
@@ -119,11 +117,11 @@ class PortfolioDcaManager:
                 continue
 
             info = dca_info[symbol]
-            if info['investment_type'] != 'dca':
+            if info.investment_type != 'dca':
                 continue
 
             # Nth Weekday 기반 DCA 실행
-            dca_frequency = info['dca_frequency']
+            dca_frequency = info.dca_frequency
             period_info = FREQUENCY_MAP.get(dca_frequency)
 
             if period_info is None:
@@ -133,44 +131,49 @@ class PortfolioDcaManager:
             period_type, interval = period_info
 
             # 첫 실행 시 original_nth 값 저장
-            if info['original_nth_weekday'] is None and info.get('last_dca_date') is None:
-                info['original_nth_weekday'] = get_weekday_occurrence(start_date_obj)
-                logger.debug(f"{symbol}: 원본 Nth 값 설정 = {info['original_nth_weekday']}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
+            if info.original_nth_weekday is None and info.last_dca_date is None:
+                info.original_nth_weekday = get_weekday_occurrence(start_date_obj)
+                logger.debug(f"{symbol}: 원본 Nth 값 설정 = {info.original_nth_weekday}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
 
             # 다음 DCA 날짜 계산 (original_nth 유지)
-            reference_date = info.get('last_dca_date') or start_date_obj
-            original_nth = info.get('original_nth_weekday')
+            reference_date = info.last_dca_date or start_date_obj
+            original_nth = info.original_nth_weekday
             next_dca_date = get_next_nth_weekday(reference_date, period_type, interval, original_nth)
 
             # 현재 날짜가 DCA 실행일인지 확인 (경계 조건: current >= next AND prev < next)
-            if current_date >= next_dca_date and prev_date < next_dca_date:
+            # Compare using .date() to avoid TypeError
+            current_date_val = current_date.date() if isinstance(current_date, datetime) else current_date
+            prev_date_val = prev_date.date() if isinstance(prev_date, datetime) else prev_date
+            next_dca_date_val = next_dca_date.date() if isinstance(next_dca_date, datetime) else next_dca_date
+            
+            if current_date_val >= next_dca_date_val and prev_date_val < next_dca_date_val:
                 # 투자 횟수 확인
-                executed_count = info.get('executed_count', 0)
+                executed_count = info.executed_count
 
-                if executed_count < info['dca_periods']:
+                if executed_count < info.dca_periods:
                     if symbol in current_prices:
                         price = current_prices[symbol]
-                        period_amount = info['monthly_amount']  # 회당 투자 금액
+                        period_amount = info.monthly_amount  # 회당 투자 금액
                         invest_amount = period_amount * (1 - commission)
                         shares[symbol] += invest_amount / price
                         trades_executed += 1  # DCA 추가 매수 거래
                         daily_cash_inflow += period_amount  # DCA 추가 투자 유입 기록
 
                         # 실행 횟수 및 마지막 실행 날짜 업데이트
-                        info['executed_count'] = executed_count + 1
-                        info['last_dca_date'] = current_date
+                        info.executed_count = executed_count + 1
+                        info.last_dca_date = current_date_val # Use pre-converted value for consistency
 
                         # 다음 예정일 계산 (로그용)
                         next_scheduled = get_next_nth_weekday(current_date, period_type, interval, original_nth)
                         current_nth = get_weekday_occurrence(current_date)
                         logger.info(
                             f"{current_date.date()}: {symbol} DCA 추가 매수 실행! "
-                            f"(주기 {executed_count + 1}/{info['dca_periods']}, "
+                            f"(주기 {info.executed_count}/{info.dca_periods}, "
                             f"금액: ${period_amount:,.2f}, "
                             f"실행: {current_nth}번째 {['월','화','수','목','금','토','일'][current_date.weekday()]}요일, "
                             f"다음 예정: {next_scheduled.date()})"
                         )
                     else:
-                        logger.warning(f"{current_date.date()}: {symbol} DCA 매수 시점이지만 가격 데이터 없음 (주기 {executed_count + 1}/{info['dca_periods']})")
+                        logger.warning(f"{current_date.date()}: {symbol} DCA 매수 시점이지만 가격 데이터 없음 (주기 {executed_count + 1}/{info.dca_periods})")
 
         return trades_executed, daily_cash_inflow
