@@ -14,7 +14,6 @@ from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.rebalance_helper import RebalanceHelper, get_weekday_occurrence
 from app.utils.currency_converter import currency_converter
 from app.constants.data_loading import TradingThresholds
-from app.constants.data_loading import TradingThresholds
 from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
 
