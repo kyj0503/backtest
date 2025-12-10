@@ -34,7 +34,7 @@ class PortfolioState(BaseModel):
     기존의 state 딕셔너리를 대체합니다.
     """
     shares: Dict[str, float] = Field(default_factory=dict, description="종목별 보유 주식 수")
-    portfolio_values: List[Dict[str, Any]] = Field(default_factory=list, description="일별 포트폴리오 가치 기록")
+    portfolio_values: List[float] = Field(default_factory=list, description="일별 포트폴리오 가치 기록")
     daily_returns: List[float] = Field(default_factory=list, description="일별 수익률")
     
     prev_portfolio_value: float = Field(default=0.0, description="전일 포트폴리오 총 가치")

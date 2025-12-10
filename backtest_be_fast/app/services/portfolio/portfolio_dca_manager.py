@@ -161,7 +161,7 @@ class PortfolioDcaManager:
 
                         # 실행 횟수 및 마지막 실행 날짜 업데이트
                         info.executed_count = executed_count + 1
-                        info.last_dca_date = current_date.date() # Date casting for safety
+                        info.last_dca_date = current_date_val # Use pre-converted value for consistency
 
                         # 다음 예정일 계산 (로그용)
                         next_scheduled = get_next_nth_weekday(current_date, period_type, interval, original_nth)

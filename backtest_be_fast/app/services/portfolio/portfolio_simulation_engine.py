@@ -213,9 +213,6 @@ class PortfolioSimulationEngine:
 
         return current_prices, last_valid_exchange_rates
 
-    def calculate_daily_metrics_and_history(self, *args, **kwargs):
-        """Deprecated: Use PortfolioMetrics explicitly."""
-        raise NotImplementedError("Use PortfolioMetrics.calculate_daily_metrics_and_history instead.")
 
     async def execute_simulation(
         self,

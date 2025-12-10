@@ -42,6 +42,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# Prometheus Monitoring 설정 (Global Scope - 먼저 초기화)
+from prometheus_fastapi_instrumentator import Instrumentator
+
+instrumentator = Instrumentator()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """애플리케이션 라이프사이클 관리"""
@@ -81,9 +86,8 @@ app.add_middleware(
 # API 라우터 포함
 app.include_router(api_router, prefix=settings.api_v1_str)
 
-# Prometheus Monitoring 설정 (Global Scope)
-from prometheus_fastapi_instrumentator import Instrumentator
-instrumentator = Instrumentator().instrument(app)
+# Prometheus Monitoring Instrument (앱 생성 후 등록)
+instrumentator.instrument(app)
 
 
 @app.get("/", include_in_schema=False)
