@@ -11,9 +11,10 @@
 import asyncio
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, List, Optional
 from datetime import datetime, timedelta, date
 import logging
+import time
 
 from app.schemas.schemas import PortfolioBacktestRequest, FREQUENCY_MAP
 from app.schemas.requests import BacktestRequest
@@ -37,6 +38,11 @@ from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBAC
 from app.constants.data_loading import TradingThresholds
 from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
 from app.utils.currency_converter import currency_converter, CurrencyConverter
+from app.monitoring.custom_metrics import (
+    BACKTEST_EXECUTION_TOTAL,
+    TICKER_POPULARITY_TOTAL,
+    BACKTEST_PROCESSING_SECONDS
+)
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +199,11 @@ class PortfolioManagerService:
         각 종목에 동일한 전략을 적용하고 투자 금액으로 결합
         """
         try:
+            # --- [Custom Metrics] Start Timer ---
+            start_time = time.time()
+            strategy_label = str(request.strategy) if request.strategy else "unknown"
+            # ------------------------------------
+
             portfolio_results = {}
             individual_returns = {}
             total_portfolio_value = 0
@@ -208,6 +219,11 @@ class PortfolioManagerService:
             else:
                 raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             
+            # --- [Custom Metrics] Ticker Popularity ---
+            for item in request.portfolio:
+                TICKER_POPULARITY_TOTAL.labels(ticker=item.symbol).inc()
+            # ------------------------------------------
+
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
             logger.info(f"전략 기반 백테스트: {strategy_name}, 총 투자금액: ${total_amount:,.2f}")
             
@@ -433,9 +449,18 @@ class PortfolioManagerService:
             
             logger.info(f"전략 포트폴리오 백테스트 완료: 총 수익률 {portfolio_return:.2f}%")
             
+            # --- [Custom Metrics] Record Success ---
+            duration = time.time() - start_time
+            BACKTEST_PROCESSING_SECONDS.labels(strategy_type="strategy_portfolio").observe(duration)
+            BACKTEST_EXECUTION_TOTAL.labels(strategy_type="strategy_portfolio", status="success").inc()
+            # ---------------------------------------
+            
             return recursive_serialize(result)
             
         except Exception as e:
+            # --- [Custom Metrics] Record Error ---
+            BACKTEST_EXECUTION_TOTAL.labels(strategy_type="strategy_portfolio", status="error").inc()
+            # -------------------------------------
             logger.exception("전략 포트폴리오 백테스트 실행 중 오류 발생")
             return {
                 'status': 'error',
@@ -449,6 +474,10 @@ class PortfolioManagerService:
         현금(CASH)과 주식을 함께 처리, 분할 매수(DCA) 지원
         """
         try:
+            # --- [Custom Metrics] Start Timer ---
+            start_time = time.time()
+            # ------------------------------------
+
             # 각 종목의 데이터 수집 (중복 종목 지원)
             portfolio_data = {}
             amounts = {}  # 실제 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
@@ -472,6 +501,11 @@ class PortfolioManagerService:
 
             for item in request.portfolio:
                 symbol = item.symbol
+                
+                # --- [Custom Metrics] Ticker Popularity ---
+                TICKER_POPULARITY_TOTAL.labels(ticker=symbol).inc()
+                # ------------------------------------------
+
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_frequency = getattr(item, 'dca_frequency', 'monthly_1')
 
@@ -841,9 +875,18 @@ class PortfolioManagerService:
             
             logger.info(f"Buy & Hold 포트폴리오 백테스트 완료: 총 수익률 {statistics['Total_Return']:.2f}%")
             
+            # --- [Custom Metrics] Record Success ---
+            duration = time.time() - start_time
+            BACKTEST_PROCESSING_SECONDS.labels(strategy_type="buy_and_hold").observe(duration)
+            BACKTEST_EXECUTION_TOTAL.labels(strategy_type="buy_and_hold", status="success").inc()
+            # ---------------------------------------
+
             return recursive_serialize(result)
             
         except Exception as e:
+            # --- [Custom Metrics] Record Error ---
+            BACKTEST_EXECUTION_TOTAL.labels(strategy_type="buy_and_hold", status="error").inc()
+            # -------------------------------------
             logger.exception("Buy & Hold 포트폴리오 백테스트 실행 중 오류 발생")
             return {
                 'status': 'error',

@@ -287,6 +287,110 @@
             ],
             "title": "Memory Usage (Resident)",
             "type": "timeseries"
+        },
+        {
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 26
+            },
+            "id": 40,
+            "title": "Business Metrics (Custom)",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 27
+            },
+            "id": 42,
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "showLegend": true
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "sum(increase(backtest_execution_total[1h])) by (strategy_type, status)",
+                    "legendFormat": "{{strategy_type}} - {{status}}",
+                    "refId": "A"
+                }
+            ],
+            "title": "Backtest Executions (Last 1h)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 8,
+                "y": 27
+            },
+            "id": 44,
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "pieType": "donut"
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "topk(10, sum(increase(ticker_popularity_total[1h])) by (ticker))",
+                    "legendFormat": "{{ticker}}",
+                    "refId": "A"
+                }
+            ],
+            "title": "Top Popular Tickers (Last 1h)",
+            "type": "piechart"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 8,
+                "x": 16,
+                "y": 27
+            },
+            "id": 46,
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "expr": "histogram_quantile(0.95, sum(rate(backtest_processing_seconds_bucket[1h])) by (le, strategy_type))",
+                    "legendFormat": "p95 {{strategy_type}} Duration",
+                    "refId": "A"
+                }
+            ],
+            "title": "Backtest Duration (p95)",
+            "type": "timeseries"
         }
     ],
     "schemaVersion": 38,
