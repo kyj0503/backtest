@@ -230,8 +230,13 @@ class RebalanceHelper:
         # 다음 리밸런싱 날짜 계산 (Nth Weekday 방식, original_nth 유지)
         next_rebalance_date = get_next_nth_weekday(reference_date, period_type, interval, original_nth)
 
+        # 비교를 위해 모두 date 객체로 변환
+        curr_d = current_date.date() if isinstance(current_date, datetime) else current_date
+        prev_d = prev_date.date() if isinstance(prev_date, datetime) else prev_date
+        next_d = next_rebalance_date.date() if isinstance(next_rebalance_date, datetime) else next_rebalance_date
+
         # current_date가 next_rebalance_date에 도달했고, prev_date는 아직 도달하지 않았으면 True
-        return current_date >= next_rebalance_date and prev_date < next_rebalance_date
+        return curr_d >= next_d and prev_d < next_d
 
     @staticmethod
     def calculate_target_weights(
