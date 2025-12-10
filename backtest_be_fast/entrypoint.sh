@@ -18,5 +18,11 @@ if [ -d "$VENV_DIR" ]; then
   chown -R root:root "$VENV_DIR" || true
 fi
 
+# Clean up Prometheus multiprocess directory
+if [ -n "$PROMETHEUS_MULTIPROC_DIR" ]; then
+  echo "[entrypoint] Clearing Prometheus multiprocess directory: $PROMETHEUS_MULTIPROC_DIR"
+  rm -rf "$PROMETHEUS_MULTIPROC_DIR"/*
+fi
+
 echo "[entrypoint] Starting: $@"
 exec "$@"

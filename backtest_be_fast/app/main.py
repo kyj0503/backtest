@@ -43,9 +43,17 @@ logger = logging.getLogger(__name__)
 
 
 # Prometheus Monitoring 설정 (Global Scope - 먼저 초기화)
+# Prometheus Monitoring 설정 (Global Scope - 먼저 초기화)
 from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import CollectorRegistry, multiprocess
+import os
 
-instrumentator = Instrumentator()
+if "PROMETHEUS_MULTIPROC_DIR" in os.environ:
+    registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(registry)
+    instrumentator = Instrumentator(registry=registry)
+else:
+    instrumentator = Instrumentator()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

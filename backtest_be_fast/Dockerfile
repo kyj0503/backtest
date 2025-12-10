@@ -55,6 +55,10 @@ ENV IMAGE_NAME=backtest-backend
 # 포트 노출
 EXPOSE 8000
 
+# Prometheus Multiprocess Mode 설정
+ENV PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
+RUN mkdir -p ${PROMETHEUS_MULTIPROC_DIR} && chmod 777 ${PROMETHEUS_MULTIPROC_DIR}
+
 # 헬스체크 추가
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
