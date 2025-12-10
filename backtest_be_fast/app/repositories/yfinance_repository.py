@@ -74,8 +74,8 @@ class YFinanceRepository:
             if existing_row and existing_row[0]:
                 existing_json = json.loads(existing_row[0])
                 existing_split = existing_json.get('last_handled_split')
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.debug(f"Failed to fetch existing last_handled_split for {ticker}: {e}")
         
         # 기존 last_handled_split을 새 info에 추가 (덮어쓰지 않도록)
         if existing_split and 'last_handled_split' not in info:

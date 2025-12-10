@@ -141,7 +141,12 @@ class PortfolioDcaManager:
             next_dca_date = get_next_nth_weekday(reference_date, period_type, interval, original_nth)
 
             # 현재 날짜가 DCA 실행일인지 확인 (경계 조건: current >= next AND prev < next)
-            if current_date >= next_dca_date and prev_date < next_dca_date:
+            # Compare using .date() to avoid TypeError
+            current_date_val = current_date.date() if isinstance(current_date, datetime) else current_date
+            prev_date_val = prev_date.date() if isinstance(prev_date, datetime) else prev_date
+            next_dca_date_val = next_dca_date.date() if isinstance(next_dca_date, datetime) else next_dca_date
+            
+            if current_date_val >= next_dca_date_val and prev_date_val < next_dca_date_val:
                 # 투자 횟수 확인
                 executed_count = info.executed_count
 
