@@ -173,6 +173,74 @@ def update_split_metadata_batch(batch_size: int = 50, max_age_days: int = 7, for
                 # Rate limiting (초당 2개 종목) - 재수집 시에는 조금 더 쉬어줌
                 time.sleep(1.0 if 'change_marker' in locals() and change_marker else 0.5)
 
+                # [Smart Validation: Price Continuity Check]
+                # 메타데이터는 변경되지 않았더라도(이미 최신이라도),
+                # DB에 저장된 실제 가격 데이터가 "분할 전/후가 섞여있는지" 확인해야 함.
+                # 예: 넷플릭스(NFLX) 10:1 분할.
+                #     DB에 11월 11일(500불), 11월 17일 분할, 11월 22일(50불) 이렇게 섞여있으면
+                #     11월 16일(500불) -> 11월 17일(50불) 로 90% 폭락하는 대참사가 백테스트에서 발생.
+                # 따라서, "마지막 분할 날짜" 주변의 가격 연속성을 검사하여, 비정상적인 괴리가 있으면 재수집 트리거.
+
+                if last_split_date and not change_marker:  # 메타데이터 변경이 없었을 때만 검사 (변경됐으면 이미 위에서 재수집함)
+                    try:
+                        # 분할일(D)과 그 전 거래일(D-1)의 종가를 가져옴
+                        # (정확히 D, D-1이 휴일일 수 있으므로, split_date 이하의 날짜 중 최근 2개를 가져옴)
+                        check_query = text("""
+                            SELECT date, close 
+                            FROM daily_prices 
+                            WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)
+                              AND date <= :split_date
+                            ORDER BY date DESC
+                            LIMIT 2
+                        """)
+                        price_rows = conn.execute(check_query, {"t": ticker, "split_date": last_split_date}).fetchall()
+                        
+                        if len(price_rows) == 2:
+                            # d0: 분할일(또는 그 직전 거래일 중 더 최근), d1: 그 전 거래일
+                            d0_date, d0_close = price_rows[0]
+                            d1_date, d1_close = price_rows[1]
+                            
+                            if d0_close > 0:
+                                ratio = d1_close / d0_close
+                                
+                                # 분할 비율(split_ratio)과 비교?
+                                # 보통 주식 분할은 2:1, 10:1 등 가격이 낮아짐 -> ratio가 2.0, 10.0 등이 됨 (d1 > d0)
+                                # 만약 이미 보정된(Adjusted) 데이터라면 ratio는 1.0 근처여야 함 (하루만에 50% 폭락은 드무니까)
+                                # 따라서 ratio가 1.5 이상이면 "보정되지 않은 데이터가 섞여있음"으로 강력히 의심 가능.
+                                
+                                # 임계값: 1.8 (약 -45% 이상의 하락). 일반적인 시장 붕괴로도 -45%는 하루만에 잘 안일어남.
+                                if ratio > 1.8:
+                                    logger.warning(
+                                            f"  ⚠ {ticker}: 가격 불연속성 감지! (Date: {d1_date}->{d0_date}, Price: {d1_close}->{d0_close}, Ratio: {ratio:.2f}) "
+                                            f"분할 반영이 안 된 데이터가 섞여있습니다. 재수집합니다."
+                                    )
+                                    
+                                    # --- 재수집 로직 (위와 동일하므로 함수로 빼는게 좋겠지만 일단 중복 구현) ---
+                                    # 1. 기존 데이터 삭제
+                                    conn.execute(text("DELETE FROM daily_prices WHERE stock_id = (SELECT id FROM stocks WHERE ticker = :t)"), {"t": ticker})
+                                    conn.commit()
+                                    logger.info(f"  ✓ {ticker}: 오염된 가격 데이터 삭제 완료")
+                                    
+                                    # 2. 데이터 재수집
+                                    from app.utils.data_fetcher import data_fetcher
+                                    from app.repositories.yfinance_repository import YFinanceRepository
+                                    
+                                    repo = YFinanceRepository()
+                                    start_date = date.today() - timedelta(days=365*10)
+                                    end_date = date.today()
+                                    
+                                    logger.info(f"  ↻ {ticker}: 데이터 재수집 시작 ({start_date} ~ {end_date})...")
+                                    df_new = data_fetcher.fetch_stock_data(ticker, start_date, end_date, use_cache=False)
+                                    
+                                    if df_new is not None and not df_new.empty:
+                                        repo.save_ticker_data(ticker, df_new)
+                                        logger.info(f"  ✓ {ticker}: 재수집 및 저장 완료 ({len(df_new)}행)")
+                                    else:
+                                        logger.error(f"  ✗ {ticker}: 재수집 실패 (데이터 없음)")
+
+                    except Exception as e:
+                        logger.error(f"  ✗ {ticker}: 가격 연속성 검사 중 오류 - {e}")
+
             except Exception as e:
                 logger.error(f"  ✗ {ticker}: 업데이트 실패 - {e}")
                 error_count += 1
