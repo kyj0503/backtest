@@ -88,9 +88,14 @@ pipeline {
                     // Docker Registry 인증된 상태에서 배포 실행
                     docker.withRegistry("https://ghcr.io", 'github-token') {
                         sh """
+                            # Ensure deploy directory exists
+                            mkdir -p ${env.DEPLOY_PATH}
+
+                            # Copy artifacts to deploy path
+                            cp deploy.sh ${env.DEPLOY_PATH}/
+                            cp compose.yml ${env.DEPLOY_PATH}/
+
                             cd ${env.DEPLOY_PATH}
-                            git reset --hard HEAD
-                            git pull origin main
                             chmod +x deploy.sh
                             bash deploy.sh ${beImageName} ${feImageName}
                         """
