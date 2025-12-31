@@ -5,7 +5,7 @@ pydantic-settings==2.1.0
 # Monitoring
 prometheus-fastapi-instrumentator==6.0.0
 starlette==0.27.0
-backtesting==0.3.0
+backtesting==0.3.3
 bokeh==2.4.3
 yfinance==0.2.65
 requests==2.31.0
