@@ -36,7 +36,7 @@ class TestMacdRequirements:
         data = p1 + p2
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, MacdStrategy, cash=100000, commission=0, finalize_trades=True)
+        bt = Backtest(df, MacdStrategy, cash=100000, commission=0)
         stats = bt.run(fast_period=12, slow_period=26, signal_period=9)
         
         assert len(stats['_trades']) > 0, "MACD 골든크로스 매수"
@@ -56,7 +56,7 @@ class TestMacdRequirements:
         data = p0 + p1 + p2
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, MacdStrategy, cash=100000, commission=0, finalize_trades=True)
+        bt = Backtest(df, MacdStrategy, cash=100000, commission=0)
         stats = bt.run()
         
         trades = stats['_trades']

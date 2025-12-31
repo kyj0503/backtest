@@ -27,7 +27,7 @@ class TestBuyHoldRequirements:
         data = [100, 101, 102, 103, 104, 105, 106, 107]
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, BuyAndHoldStrategy, cash=100000, commission=0, finalize_trades=True)
+        bt = Backtest(df, BuyAndHoldStrategy, cash=100000, commission=0)
         stats = bt.run()
         
         trades = stats['_trades']
@@ -43,7 +43,7 @@ class TestBuyHoldRequirements:
         data = [100, 200, 50, 300, 20, 100, 150, 80]
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, BuyAndHoldStrategy, cash=100000, commission=0, finalize_trades=True)
+        bt = Backtest(df, BuyAndHoldStrategy, cash=100000, commission=0)
         stats = bt.run()
         
         trades = stats['_trades']
