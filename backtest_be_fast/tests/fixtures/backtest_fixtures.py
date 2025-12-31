@@ -33,7 +33,7 @@ class BacktestRequestFactory(factory.Factory):
     initial_capital = factory.LazyFunction(
         lambda: float(fake.pydecimal(left_digits=5, right_digits=2, positive=True))
     )
-    strategy = factory.Faker('random_element', elements=['buy_and_hold', 'sma_cross', 'rsi_strategy'])
+    strategy = factory.Faker('random_element', elements=['buy_hold_strategy', 'sma_strategy', 'rsi_strategy'])
     parameters = factory.Dict({})
 
 
@@ -64,7 +64,7 @@ class BacktestHistoryFactory(factory.Factory):
     id = factory.Sequence(lambda n: n + 1)
     user_id = factory.Faker('random_int', min=1, max=100)
     symbol = factory.Faker('random_element', elements=['AAPL', 'GOOGL', 'MSFT', 'TSLA'])
-    strategy = factory.Faker('random_element', elements=['buy_and_hold', 'sma_cross', 'rsi_strategy'])
+    strategy = factory.Faker('random_element', elements=['buy_hold_strategy', 'sma_strategy', 'rsi_strategy'])
     start_date = factory.LazyFunction(
         lambda: (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
     )
@@ -92,7 +92,7 @@ def create_backtest_request_data(
     start_date: str = None,
     end_date: str = None,
     initial_capital: float = 10000.0,
-    strategy: str = "buy_and_hold",
+    strategy: str = "buy_hold_strategy",
     parameters: Dict[str, Any] = None
 ) -> Dict[str, Any]:
     """백테스트 요청 데이터 생성"""

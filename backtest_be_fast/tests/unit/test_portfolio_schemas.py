@@ -74,7 +74,7 @@ class TestPortfolioBacktestRequest:
             "start_date": "2023-01-01",
             "end_date": "2024-01-01",
             "commission": 0.002,
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         request = PortfolioBacktestRequest(**data)
         assert len(request.portfolio) == 2
@@ -84,7 +84,7 @@ class TestPortfolioBacktestRequest:
             "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
             "start_date": "2024-01-01",
             "end_date": "2023-01-01",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError) as exc_info:
             PortfolioBacktestRequest(**data)
@@ -102,7 +102,7 @@ class TestPortfolioBacktestRequest:
             }],
             "start_date": "2023-01-01",
             "end_date": "2023-10-31",  # 약 10개월
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError) as exc_info:
             PortfolioBacktestRequest(**data)
@@ -119,7 +119,7 @@ class TestPortfolioBacktestRequest:
             }],
             "start_date": "2023-01-01",
             "end_date": "2025-01-01",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         request = PortfolioBacktestRequest(**data)
         assert request.portfolio[0].dca_frequency == 'monthly_1'
@@ -143,7 +143,7 @@ class TestPortfolioBacktestRequest:
             ],
             "start_date": "2023-01-01",
             "end_date": "2023-10-31",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError) as exc_info:
             PortfolioBacktestRequest(**data)
@@ -161,7 +161,7 @@ class TestPortfolioBacktestRequest:
             }],
             "start_date": "2023-01-01",
             "end_date": "2024-01-01", # 정확히 1년
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         request = PortfolioBacktestRequest(**data)
         assert request.portfolio[0].dca_frequency == 'monthly_12'
@@ -171,7 +171,7 @@ class TestPortfolioBacktestRequest:
             "portfolio": [],
             "start_date": "2023-01-01",
             "end_date": "2024-01-01",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError):
             PortfolioBacktestRequest(**data)
@@ -181,7 +181,7 @@ class TestPortfolioBacktestRequest:
             "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
             "start_date": "2023/01/01",
             "end_date": "2024-01-01",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError):
             PortfolioBacktestRequest(**data)

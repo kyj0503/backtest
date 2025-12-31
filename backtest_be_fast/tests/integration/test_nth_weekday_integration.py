@@ -29,7 +29,7 @@ def test_monthly_dca():
         "end_date": "2024-12-31",
         "commission": 0.002,
         "rebalance_frequency": "none",
-        "strategy": "buy_and_hold"
+        "strategy": "buy_hold_strategy"
     }
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
@@ -73,7 +73,7 @@ def test_quarterly_rebalancing():
         "end_date": "2024-12-31",
         "commission": 0.002,
         "rebalance_frequency": "monthly_3",  # 분기별
-        "strategy": "buy_and_hold"
+        "strategy": "buy_hold_strategy"
     }
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
@@ -114,7 +114,7 @@ def test_weekly_dca():
         "end_date": "2024-03-31",  # 3개월
         "commission": 0.001,
         "rebalance_frequency": "none",
-        "strategy": "buy_and_hold"
+        "strategy": "buy_hold_strategy"
     }
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
@@ -154,7 +154,7 @@ def test_biweekly_dca():
         "end_date": "2024-06-30",  # 6개월
         "commission": 0.001,
         "rebalance_frequency": "none",
-        "strategy": "buy_and_hold"
+        "strategy": "buy_hold_strategy"
     }
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
@@ -200,7 +200,7 @@ def test_combined_dca_and_rebalancing():
         "end_date": "2024-12-31",
         "commission": 0.002,
         "rebalance_frequency": "monthly_3",  # 분기별 리밸런싱
-        "strategy": "buy_and_hold"
+        "strategy": "buy_hold_strategy"
     }
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
@@ -241,7 +241,7 @@ def test_legacy_frequency_should_fail():
         "end_date": "2024-12-31",
         "commission": 0.002,
         "rebalance_frequency": "none",
-        "strategy": "buy_and_hold"
+        "strategy": "buy_hold_strategy"
     }
     
     response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
