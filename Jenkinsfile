@@ -5,7 +5,6 @@ pipeline {
         GHCR_OWNER = 'kyj0503'
         BE_IMAGE_NAME = 'backtest-be'
         FE_IMAGE_NAME = 'backtest-fe'
-        DEPLOY_PATH = '/opt/backtest'
     }
 
     stages {
@@ -16,8 +15,6 @@ pipeline {
                     echo "=== Git Information ==="
                     echo "GIT_BRANCH: ${env.GIT_BRANCH}"
                     echo "BRANCH_NAME: ${env.BRANCH_NAME}"
-                    sh 'git branch -a'
-                    sh 'git status'
                 }
             }
         }
@@ -34,7 +31,6 @@ pipeline {
             steps {
                 script {
                     def beImageName = "ghcr.io/${env.GHCR_OWNER}/${env.BE_IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    def beImageLatest = "ghcr.io/${env.GHCR_OWNER}/${env.BE_IMAGE_NAME}:latest"
                     echo "Building Backend image for main branch: ${beImageName}"
                     
                     docker.build(beImageName, './backtest_be_fast')
@@ -58,7 +54,6 @@ pipeline {
             steps {
                 script {
                     def feImageName = "ghcr.io/${env.GHCR_OWNER}/${env.FE_IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    def feImageLatest = "ghcr.io/${env.GHCR_OWNER}/${env.FE_IMAGE_NAME}:latest"
                     echo "Building Frontend image for main branch: ${feImageName}"
                     
                     docker.build(feImageName, './backtest_fe')
@@ -71,7 +66,8 @@ pipeline {
             }
         }
 
-        stage('Deploy to Production (Local)') {
+        // 배포는 home-server에서 담당
+        stage('Trigger Deploy') {
             when {
                 expression { 
                     return env.GIT_BRANCH == 'origin/main' || 
@@ -80,27 +76,7 @@ pipeline {
                 }
             }
             steps {
-                script {
-                    def beImageName = "ghcr.io/${env.GHCR_OWNER}/${env.BE_IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    def feImageName = "ghcr.io/${env.GHCR_OWNER}/${env.FE_IMAGE_NAME}:${env.BUILD_NUMBER}"
-                    echo "Deploying to local on-premise server"
-                    
-                    // Docker Registry 인증된 상태에서 배포 실행
-                    docker.withRegistry("https://ghcr.io", 'github-token') {
-                        sh """
-                            # Ensure deploy directory exists
-                            mkdir -p ${env.DEPLOY_PATH}
-
-                            # Copy artifacts to deploy path
-                            cp deploy.sh ${env.DEPLOY_PATH}/
-                            cp compose.yml ${env.DEPLOY_PATH}/
-
-                            cd ${env.DEPLOY_PATH}
-                            chmod +x deploy.sh
-                            bash deploy.sh ${beImageName} ${feImageName}
-                        """
-                    }
-                }
+                build job: 'home-server-deploy', wait: false, propagate: false
             }
         }
     }
@@ -108,6 +84,12 @@ pipeline {
     post {
         always {
             cleanWs()
+        }
+        success {
+            echo '✅ Build and Push completed successfully!'
+        }
+        failure {
+            echo '❌ Build failed!'
         }
     }
 }
