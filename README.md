@@ -189,11 +189,11 @@ docker compose -f compose.dev.yaml exec backtest-fe npm run test:ui
 echo $GITHUB_TOKEN | docker login ghcr.io -u kyj0503 --password-stdin
 
 # 2. Backend 이미지 빌드 및 Push
-docker build -t ghcr.io/kyj0503/backtest-be:latest ./backtest_be_fast
+docker build --platform linux/amd64 -t ghcr.io/kyj0503/backtest-be:latest ./backtest_be_fast
 docker push ghcr.io/kyj0503/backtest-be:latest
 
 # 3. Frontend 이미지 빌드 및 Push
-docker build -t ghcr.io/kyj0503/backtest-fe:latest ./backtest_fe
+docker build --platform linux/amd64 -t ghcr.io/kyj0503/backtest-fe:latest ./backtest_fe
 docker push ghcr.io/kyj0503/backtest-fe:latest
 ```
 
