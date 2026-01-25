@@ -18,3 +18,4 @@ python-dateutil>=2.8.2
 
 SQLAlchemy>=2.0
 pymysql>=1.0.2
+cryptography>=41.0.0
