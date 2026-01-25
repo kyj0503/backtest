@@ -34,6 +34,9 @@ pipeline {
                             # home-server의 설정 파일 사용
                             cp /home/ubuntu/source/home-server/config/backtest/.env .env
                             
+                            # 테스트 환경을 위한 DATABASE_HOST 오버라이드
+                            export DATABASE_HOST=localhost
+                            
                             python -m pytest tests/ -v --tb=short || echo "No tests found or tests skipped"
                         '''
                     }
