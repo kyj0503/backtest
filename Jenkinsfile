@@ -30,6 +30,10 @@ pipeline {
                             python3 -m venv venv
                             . venv/bin/activate
                             pip install -r requirements.txt -r requirements-test.txt
+                            
+                            # home-server의 설정 파일 사용
+                            cp /home/ubuntu/source/home-server/config/backtest/.env .env
+                            
                             python -m pytest tests/ -v --tb=short || echo "No tests found or tests skipped"
                         '''
                     }
