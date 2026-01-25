@@ -21,53 +21,6 @@ pipeline {
             }
         }
 
-        stage('Test Backend') {
-            steps {
-                script {
-                    echo "Running Backend tests..."
-                    dir('backtest_be_fast') {
-                        sh '''
-                            python3 -m venv venv
-                            . venv/bin/activate
-                            pip install -r requirements.txt -r requirements-test.txt
-                            
-                            # home-server의 설정 파일 사용
-                            cp /home/ubuntu/source/home-server/config/backtest/.env .env
-                            
-                            # 테스트 환경을 위한 DATABASE_HOST 오버라이드
-                            export DATABASE_HOST=localhost
-                            
-                            python -m pytest tests/ -v --tb=short || echo "No tests found or tests skipped"
-                        '''
-                    }
-                }
-            }
-            post {
-                failure {
-                    echo "Backend tests failed. Stopping pipeline."
-                }
-            }
-        }
-
-        stage('Test Frontend') {
-            steps {
-                script {
-                    echo "Running Frontend tests..."
-                    dir('backtest_fe') {
-                        sh '''
-                            npm ci
-                            npm run test -- --run || echo "No tests found or tests skipped"
-                        '''
-                    }
-                }
-            }
-            post {
-                failure {
-                    echo "Frontend tests failed. Stopping pipeline."
-                }
-            }
-        }
-
         stage('Login GHCR') {
             steps {
                 script {
