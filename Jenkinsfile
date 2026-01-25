@@ -86,9 +86,16 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        sleep 15
-                        curl -f https://backtest.yeonjae.kr/ || echo "Frontend health check pending..."
-                        curl -f https://backtest-be.yeonjae.kr/health || echo "Backend health check pending..."
+                        echo "Waiting for services to be ready..."
+                        for i in {1..4}; do
+                            echo "Health check attempt $i/4"
+                            if curl -f https://backtest-be.yeonjae.kr/health && curl -f https://backtest.yeonjae.kr; then
+                                echo "✅ Services are healthy!"
+                                exit 0
+                            fi
+                            sleep 5
+                        done
+                        echo "⚠️ Health check timed out, but continuing..."
                     '''
                 }
             }
