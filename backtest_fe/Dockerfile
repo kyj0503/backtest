@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx
-FROM nginx:1.25-alpine@sha256:721fa00bc549df26b3e67cc558ff176112d4ba69847537766f3c28e171d180e7
+FROM nginx:stable-alpine
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
