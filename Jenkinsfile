@@ -27,7 +27,7 @@ pipeline {
                     echo "Running Backend tests..."
                     dir('backtest_be_fast') {
                         sh '''
-                            python3 -m venv venv || true
+                            python3 -m venv venv
                             . venv/bin/activate
                             pip install -r requirements.txt -r requirements-test.txt
                             python -m pytest tests/ -v --tb=short || echo "No tests found or tests skipped"
