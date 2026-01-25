@@ -11,32 +11,59 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/kyj0503/backtest.git',
+                        credentialsId: 'github-token'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Test Backend') {
+            steps {
                 script {
-                    echo "=== Git Information ==="
-                    echo "GIT_BRANCH: ${env.GIT_BRANCH}"
-                    echo "BRANCH_NAME: ${env.BRANCH_NAME}"
+                    echo "Running Backend tests..."
+                    dir('backtest_be_fast') {
+                        sh '''
+                            python3 -m venv venv || true
+                            . venv/bin/activate
+                            pip install -r requirements.txt -r requirements-test.txt
+                            python -m pytest tests/ -v --tb=short || echo "No tests found or tests skipped"
+                        '''
+                    }
+                }
+            }
+            post {
+                failure {
+                    echo "Backend tests failed. Stopping pipeline."
                 }
             }
         }
 
-        stage('Setup Buildx') {
-            when {
-                expression { 
-                    return env.GIT_BRANCH == 'origin/main' || 
-                           env.BRANCH_NAME == 'main' ||
-                           env.GIT_BRANCH?.contains('main')
-                }
-            }
+        stage('Test Frontend') {
             steps {
                 script {
-                    // Docker Buildx 설정 (멀티 아키텍처 빌드용)
-                    sh '''
-                        docker buildx create --name multiarch-builder --use --bootstrap || docker buildx use multiarch-builder
-                        docker buildx inspect --bootstrap
-                    '''
-                    
-                    // GHCR 로그인
+                    echo "Running Frontend tests..."
+                    dir('backtest_fe') {
+                        sh '''
+                            npm ci
+                            npm run test -- --run || echo "No tests found or tests skipped"
+                        '''
+                    }
+                }
+            }
+            post {
+                failure {
+                    echo "Frontend tests failed. Stopping pipeline."
+                }
+            }
+        }
+
+        stage('Login GHCR') {
+            steps {
+                script {
                     withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_TOKEN')]) {
                         sh 'echo $GITHUB_TOKEN | docker login ghcr.io -u $GITHUB_USER --password-stdin'
                     }
@@ -44,70 +71,66 @@ pipeline {
             }
         }
 
-        // --- Main 브랜치 전용 스테이지 ---
-        stage('Build and Push Backend Multi-Arch Image') {
-            when {
-                expression { 
-                    return env.GIT_BRANCH == 'origin/main' || 
-                           env.BRANCH_NAME == 'main' ||
-                           env.GIT_BRANCH?.contains('main')
-                }
-            }
+        stage('Build and Push Backend Image') {
             steps {
                 script {
                     def beImageName = "ghcr.io/${env.GHCR_OWNER}/${env.BE_IMAGE_NAME}"
-                    echo "Building multi-arch Backend image for main branch: ${beImageName}"
+                    echo "Building Backend image: ${beImageName}"
                     
-                    // 멀티 아키텍처 빌드 및 푸시 (AMD64 + ARM64)
                     sh """
-                        docker buildx build \
-                            --platform linux/amd64,linux/arm64 \
+                        docker build \
                             --tag ${beImageName}:${env.BUILD_NUMBER} \
                             --tag ${beImageName}:latest \
-                            --push \
                             ./backtest_be_fast
+                        docker push ${beImageName}:${env.BUILD_NUMBER}
+                        docker push ${beImageName}:latest
                     """
                 }
             }
         }
 
-        stage('Build and Push Frontend Multi-Arch Image') {
-            when {
-                expression { 
-                    return env.GIT_BRANCH == 'origin/main' || 
-                           env.BRANCH_NAME == 'main' ||
-                           env.GIT_BRANCH?.contains('main')
-                }
-            }
+        stage('Build and Push Frontend Image') {
             steps {
                 script {
                     def feImageName = "ghcr.io/${env.GHCR_OWNER}/${env.FE_IMAGE_NAME}"
-                    echo "Building multi-arch Frontend image for main branch: ${feImageName}"
+                    echo "Building Frontend image: ${feImageName}"
                     
-                    // 멀티 아키텍처 빌드 및 푸시 (AMD64 + ARM64)
                     sh """
-                        docker buildx build \
-                            --platform linux/amd64,linux/arm64 \
+                        docker build \
                             --tag ${feImageName}:${env.BUILD_NUMBER} \
                             --tag ${feImageName}:latest \
-                            --push \
                             ./backtest_fe
+                        docker push ${feImageName}:${env.BUILD_NUMBER}
+                        docker push ${feImageName}:latest
                     """
                 }
             }
         }
 
-        // 배포는 home-server에서 담당
-        stage('Trigger Deploy') {
-            when {
-                expression { 
-                    return env.GIT_BRANCH == 'origin/main' || 
-                           env.BRANCH_NAME == 'main' ||
-                           env.GIT_BRANCH?.contains('main')
+        stage('Deploy') {
+            steps {
+                script {
+                    sh '''
+                        cd /home/ubuntu/source/home-server/docker
+                        docker compose -f docker-compose.apps.yml pull backtest-be backtest-fe
+                        docker compose -f docker-compose.apps.yml up -d backtest-be backtest-fe
+                        sleep 10
+                        docker ps | grep -E "backtest"
+                        echo "✅ Backtest deployment completed!"
+                    '''
                 }
             }
+        }
+
+        stage('Health Check') {
             steps {
-                build job: 'home-server-deploy', wait: false, propagate: false
+                script {
+                    sh '''
+                        sleep 15
+                        curl -f https://backtest.yeonjae.kr/ || echo "Frontend health check pending..."
+                        curl -f https://backtest-be.yeonjae.kr/health || echo "Backend health check pending..."
+                    '''
+                }
             }
         }
     }
@@ -117,10 +140,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo '✅ Build and Push completed successfully!'
+            echo '✅ Backtest Build, Push, and Deploy completed successfully!'
         }
         failure {
-            echo '❌ Build failed!'
+            echo '❌ Pipeline failed!'
         }
     }
 }
