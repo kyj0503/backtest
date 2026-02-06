@@ -15,7 +15,7 @@ from fastapi import HTTPException
 
 from app.schemas.requests import BacktestRequest
 from app.schemas.responses import BacktestResult
-from app.utils.data_fetcher import data_fetcher, InvalidSymbolError as DataFetcherInvalidSymbolError
+from app.utils.data_fetcher import data_fetcher
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
 from app.services.validation_service import validation_service
@@ -76,32 +76,26 @@ class BacktestEngine:
             )
             self.logger.debug("백테스트 객체 생성 완료")
             
-            try:
-                run_kwargs = self._build_run_kwargs(request)
-                # FIXED: Wrap synchronous bt.run() with asyncio.to_thread() (async/sync boundary)
-                result = await asyncio.to_thread(self._execute_backtest, bt, run_kwargs)
-                self.logger.info("백테스트 실행 완료")
-                self.logger.info(f"거래 수: {result['# Trades']}")
-                self.logger.info(f"수익률: {result.get('Return [%]', 0):.2f}%")
-                self.logger.info(f"Buy & Hold: {result.get('Buy & Hold Return [%]', 0):.2f}%")
-                
-                # 디버깅: 실제 stats 키들 출력
-                self.logger.debug("=== 백테스트 결과 키들 ===")
-                for key in result.index:
-                    self.logger.debug(f"  '{key}': {result.get(key)}")
-                self.logger.debug("========================")
-                
-                # 결과가 유효한지 확인
-                if result is not None and '# Trades' in result:
-                    return self._convert_result_to_response(result, request)
-                else:
-                    self.logger.warning(f"백테스트 결과가 유효하지 않음 ({request.ticker}), fallback 사용")
-                    raise Exception(f"백테스트 결과가 유효하지 않습니다: {request.ticker}")
-                    
-            except Exception as e:
-                self.logger.error(f"백테스트 실행 중 오류: {e}")
-                self.logger.info("Fallback 통계 생성 중...")
-                # 실제 주가 변동을 반영한 fallback 통계 생성
+            run_kwargs = self._build_run_kwargs(request)
+            # FIXED: Wrap synchronous bt.run() with asyncio.to_thread() (async/sync boundary)
+            result = await asyncio.to_thread(self._execute_backtest, bt, run_kwargs)
+            self.logger.info("백테스트 실행 완료")
+            self.logger.info(f"거래 수: {result['# Trades']}")
+            self.logger.info(f"수익률: {result.get('Return [%]', 0):.2f}%")
+            self.logger.info(f"Buy & Hold: {result.get('Buy & Hold Return [%]', 0):.2f}%")
+
+            # 디버깅: 실제 stats 키들 출력
+            self.logger.debug("=== 백테스트 결과 키들 ===")
+            for key in result.index:
+                self.logger.debug(f"  '{key}': {result.get(key)}")
+            self.logger.debug("========================")
+
+            # 결과가 유효한지 확인
+            if result is not None and '# Trades' in result:
+                return self._convert_result_to_response(result, request)
+            else:
+                # 데이터 부족 등으로 유효하지 않은 결과 → fallback
+                self.logger.warning(f"백테스트 결과가 유효하지 않음 ({request.ticker}), fallback 사용")
                 return self._create_fallback_result(data, request)
             
         except Exception as e:
@@ -120,12 +114,10 @@ class BacktestEngine:
                 # import 실패시 무시
                 pass
 
-            # data_fetcher에서 발생시키는 InvalidSymbolError는 422로 매핑
-            try:
-                if isinstance(e, DataFetcherInvalidSymbolError):
-                    raise HTTPException(status_code=422, detail=str(e))
-            except Exception:
-                pass
+            # InvalidSymbolError는 이미 HTTPException (422)이므로 그대로 재발생
+            from app.core.exceptions import InvalidSymbolError
+            if isinstance(e, InvalidSymbolError):
+                raise
 
             # 그 외 에러는 500으로 처리
             raise HTTPException(status_code=500, detail=f"백테스트 실행 실패: {str(e)}")
