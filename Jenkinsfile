@@ -74,7 +74,6 @@ pipeline {
                         cd /home/ubuntu/source/home-server/docker
                         docker compose -f docker-compose.apps.yml pull backtest-be backtest-fe
                         docker compose -f docker-compose.apps.yml up -d backtest-be backtest-fe
-                        docker exec nginx-gateway nginx -s reload
                         sleep 10
                         docker ps | grep -E "backtest"
                         echo "✅ Backtest deployment completed!"

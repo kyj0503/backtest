@@ -2,7 +2,7 @@
 
 - **발생일**: 2026-02-06
 - **영향 범위**: OCI 서버 전역 (nginx-gateway 뒤의 모든 서비스)
-- **상태**: Jenkinsfile 임시 해결 완료 / nginx-gateway 근본 수정 필요
+- **상태**: 미해결 — home-server 리포지토리에서 nginx-gateway 설정 수정 필요
 
 ## 증상
 
@@ -32,35 +32,28 @@ nginx-gateway 뒤의 **모든 서비스**가 재배포 시 동일한 문제 발�
 | jandi-band-py | jandi-band-py |
 | jandi-band | jandi-band |
 
-## 적용된 임시 해결
+## 수동 즉시 복구
 
-### 1. Jenkinsfile - 배포 후 nginx reload 추가
-
-```groovy
-// Deploy 스테이지에 추가됨
-docker exec nginx-gateway nginx -s reload
-```
-
-`nginx -s reload`는 nginx 프로세스를 재시작하지 않고 설정을 다시 로드하여
-DNS를 재resolve한다. 기존 연결(다른 서비스)이 끊기지 않는 안전한 방식.
-
-**한계**: backtest 배포 시에만 동작. 다른 서비스(jandi 등) 배포 파이프라인에도 동일하게 추가 필요.
-
-### 2. 수동 즉시 복구
+502 발생 시 아래 명령으로 복구 가능:
 
 ```bash
 docker exec nginx-gateway nginx -s reload
 ```
 
-## 근본 해결 (TODO)
+`nginx -s reload`는 프로세스 재시작 없이 설정을 다시 로드하여 DNS를 재resolve한다.
+기존 연결(다른 서비스)이 끊기지 않는 안전한 방식.
 
-nginx-gateway 설정에서 **동적 DNS resolution**을 활성화해야 한다.
-Docker 내장 DNS(`127.0.0.11`)를 resolver로 지정하고, `proxy_pass`에 변수를 사용하면
-nginx가 요청마다 DNS를 재resolve한다.
+## 해결 방법
 
-### 수정 방법
+이 문제는 인프라 레벨이므로 각 프로젝트 Jenkinsfile이 아닌 **home-server 리포지토리**에서 해결해야 한다.
+Jenkinsfile마다 `nginx -s reload`를 넣는 방식은 모든 프로젝트가 각각 알아서 추가해야 하므로 부적절.
 
-nginx-gateway 설정 파일 위치 (예상): OCI 서버의 `/home/ubuntu/source/home-server/` 내부
+nginx-gateway 설정에서 **동적 DNS resolution**을 활성화하면, 어떤 서비스를 재배포하든
+nginx가 자동으로 새 IP를 resolve하여 502가 발생하지 않는다.
+
+### 수정 대상
+
+OCI 서버 `home-server` 리포지토리 내 nginx-gateway 설정 파일
 
 **변경 전** (일반적인 패턴):
 ```nginx
