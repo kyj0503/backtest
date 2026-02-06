@@ -78,8 +78,9 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
     if backtest_result.get('status') != 'success':
         return backtest_result
     
-    # 3. 추가 데이터 수집 (데이터 서비스 위임)
-    unified_data = unified_data_service.collect_all_unified_data(
+    # 3. 추가 데이터 수집 (데이터 서비스 위임) — asyncio.to_thread로 이벤트 루프 블로킹 방지
+    unified_data = await asyncio.to_thread(
+        unified_data_service.collect_all_unified_data,
         symbols=symbols,
         start_date=request.start_date,
         end_date=request.end_date,

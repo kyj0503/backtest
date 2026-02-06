@@ -80,6 +80,83 @@ class PortfolioManagerService:
         
         logger.info("포트폴리오 서비스가 초기화되었습니다")
 
+    @staticmethod
+    def _calculate_weighted_stats(portfolio_results: Dict[str, Any]) -> Dict[str, float]:
+        """포트폴리오 결과에서 가중 평균 통계를 계산합니다."""
+        total_trades = sum(
+            r.get('strategy_stats', {}).get('total_trades', 0)
+            for r in portfolio_results.values()
+        )
+        weighted_win_rate = sum(
+            r['weight'] * r.get('strategy_stats', {}).get('win_rate_pct', 0)
+            for r in portfolio_results.values()
+        )
+        weighted_max_drawdown = sum(
+            r['weight'] * abs(r.get('strategy_stats', {}).get('max_drawdown_pct', 0))
+            for r in portfolio_results.values()
+        )
+        weighted_sharpe_ratio = sum(
+            r['weight'] * r.get('strategy_stats', {}).get('sharpe_ratio', 0)
+            for r in portfolio_results.values()
+        )
+        return {
+            'total_trades': total_trades,
+            'weighted_win_rate': weighted_win_rate,
+            'weighted_max_drawdown': weighted_max_drawdown,
+            'weighted_sharpe_ratio': weighted_sharpe_ratio,
+        }
+
+    @staticmethod
+    def _calculate_daily_return_stats(daily_returns: Dict[str, float]) -> Dict[str, float]:
+        """일별 수익률에서 연간 변동성, 프로핏 팩터 등을 계산합니다."""
+        returns_list = list(daily_returns.values())
+        daily_volatility = np.std(returns_list) if len(returns_list) > 1 else 0.0
+        annual_volatility = daily_volatility * np.sqrt(252)
+        positive_returns = [r for r in returns_list if r > 0]
+        negative_returns = [r for r in returns_list if r < 0]
+        total_gains = sum(positive_returns) if positive_returns else 0.0
+        total_losses = abs(sum(negative_returns)) if negative_returns else 0.0
+        profit_factor = total_gains / total_losses if total_losses > 0 else 0.0
+        return {
+            'annual_volatility': annual_volatility,
+            'profit_factor': profit_factor,
+            'positive_days': len(positive_returns),
+            'negative_days': len(negative_returns),
+        }
+
+    @staticmethod
+    def _format_individual_results_list(
+        individual_returns: Dict[str, Any],
+        portfolio_results: Dict[str, Any] = None,
+        mode: str = 'strategy'
+    ) -> List[Dict[str, Any]]:
+        """individual_returns를 테스트 호환 리스트로 변환합니다."""
+        results = []
+        for key, returns in individual_returns.items():
+            if mode == 'strategy':
+                results.append({
+                    'ticker': returns['symbol'],
+                    'final_equity': returns['final_value'],
+                    'total_return_pct': returns['return'],
+                    'sharpe_ratio': portfolio_results[key].get('strategy_stats', {}).get('sharpe_ratio', 0.0) if portfolio_results and key in portfolio_results else 0.0,
+                    'weight': returns['weight'],
+                    'amount': returns['amount'],
+                    'trades': returns.get('trades', 0),
+                    'win_rate': returns.get('win_rate', 0.0)
+                })
+            else:  # buy_hold
+                results.append({
+                    'ticker': returns['symbol'] if returns.get('symbol') else key,
+                    'final_equity': returns['amount'] + (returns['amount'] * returns['return'] / 100),
+                    'total_return_pct': returns['return'],
+                    'sharpe_ratio': 0.0,
+                    'weight': returns['weight'],
+                    'amount': returns['amount'],
+                    'trades': 1 if returns.get('symbol', '') != 'CASH' else 0,
+                    'win_rate': 100.0 if returns['return'] > 0 else 0.0
+                })
+        return results
+
     async def calculate_dca_portfolio_returns(
         self,
         portfolio_data: Dict[str, pd.DataFrame],
@@ -228,12 +305,13 @@ class PortfolioManagerService:
             logger.info(f"전략 기반 백테스트: {strategy_name}, 총 투자금액: ${total_amount:,.2f}")
             
             # 각 종목별로 전략 백테스트 실행
+            failed_symbols = []
             for idx, item in enumerate(request.portfolio):
                 symbol = item.symbol
                 # amount/weight 동시 지원
                 amount = amounts[symbol]
                 weight = amount / total_amount if total_amount > 0 else 0.0
-                
+
                 # 현금 처리 (수익률 0%, 전략 적용 안함)
                 if item.asset_type == 'cash':
                     logger.info(f"현금 자산 {symbol} 처리 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
@@ -320,68 +398,29 @@ class PortfolioManagerService:
                         
                 except Exception as e:
                     logger.error(f"종목 {symbol} 백테스트 오류: {str(e)}")
+                    failed_symbols.append({'symbol': symbol, 'error': str(e)})
                     continue
             
             if not portfolio_results:
                 raise ValueError("모든 종목의 백테스트가 실패했습니다.")
-            
+
             # 포트폴리오 전체 통계 계산
             portfolio_return = (total_portfolio_value / total_amount - 1) * 100
-            total_trades = sum(result.get('strategy_stats', {}).get('total_trades', 0) 
-                             for result in portfolio_results.values())
-            
-            # 가중 평균 승률 계산
-            weighted_win_rate = sum(
-                result['weight'] * result.get('strategy_stats', {}).get('win_rate_pct', 0)
-                for result in portfolio_results.values()
-            )
-            
-            # 가중 평균 최대 드로우다운 계산
-            weighted_max_drawdown = sum(
-                result['weight'] * abs(result.get('strategy_stats', {}).get('max_drawdown_pct', 0))
-                for result in portfolio_results.values()
-            )
-            
-            # 가중 평균 샤프 비율 계산
-            weighted_sharpe_ratio = sum(
-                result['weight'] * result.get('strategy_stats', {}).get('sharpe_ratio', 0)
-                for result in portfolio_results.values()
-            )
-            
-            # 가중 평균 프로핏 팩터 계산
-            weighted_profit_factor = sum(
-                result['weight'] * result.get('strategy_stats', {}).get('profit_factor', 1.0)
-                for result in portfolio_results.values()
-            )
+            weighted_stats = self._calculate_weighted_stats(portfolio_results)
 
             # 백테스트 기간 계산
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
             duration_days = (end_date_obj - start_date_obj).days
-
-            # 연간 수익률 계산
             annual_return = ((total_portfolio_value / total_amount) ** (365.25 / duration_days) - 1) * 100 if duration_days > 0 else 0
 
-            # 먼저 equity curve, daily returns, weight history 계산
+            # equity curve, daily returns, weight history 계산
             equity_curve, daily_returns, weight_history = await portfolio_calculator._calculate_realistic_equity_curve(
                 request, portfolio_results, total_amount
             )
 
-            # daily_returns로부터 연간 변동성 계산
-            returns_list = [v for v in daily_returns.values()]
-            daily_volatility = np.std(returns_list) if len(returns_list) > 1 else 0.0
-            annual_volatility = daily_volatility * np.sqrt(252)  # 연간 거래일 수로 연간화
-
-            # daily_returns로부터 프로핏 팩터 계산
-            positive_returns = [r for r in returns_list if r > 0]
-            negative_returns = [r for r in returns_list if r < 0]
-            total_gains = sum(positive_returns) if positive_returns else 0.0
-            total_losses = abs(sum(negative_returns)) if negative_returns else 0.0
-            actual_profit_factor = total_gains / total_losses if total_losses > 0 else 0.0
-
-            # Positive/Negative Days 계산
-            positive_days = len(positive_returns)
-            negative_days = len(negative_returns)
+            # daily_returns 기반 통계
+            dr_stats = self._calculate_daily_return_stats(daily_returns)
 
             # 포트폴리오 통계 (프론트엔드 호환)
             portfolio_statistics = {
@@ -390,36 +429,33 @@ class PortfolioManagerService:
                 'Duration': f'{duration_days} days',
                 'Initial_Value': total_amount,
                 'Final_Value': total_portfolio_value,
-                'Peak_Value': total_portfolio_value,  # 전략 기반에서는 최종값과 동일하게 가정
+                'Peak_Value': total_portfolio_value,
                 'Total_Return': portfolio_return,
                 'Annual_Return': annual_return,
-                'Annual_Volatility': annual_volatility,  # 실제 계산된 연간 변동성
-                'Sharpe_Ratio': weighted_sharpe_ratio,
-                'Max_Drawdown': -weighted_max_drawdown,  # 음수로 표시
-                'Avg_Drawdown': -weighted_max_drawdown / 2,  # 평균 드로우다운 추정
-                'Max_Consecutive_Gains': 0,  # 전략 기반에서는 계산 복잡
-                'Max_Consecutive_Losses': 0,  # 전략 기반에서는 계산 복잡
+                'Annual_Volatility': dr_stats['annual_volatility'],
+                'Sharpe_Ratio': weighted_stats['weighted_sharpe_ratio'],
+                'Max_Drawdown': -weighted_stats['weighted_max_drawdown'],
+                'Avg_Drawdown': -weighted_stats['weighted_max_drawdown'] / 2,
+                'Max_Consecutive_Gains': 0,
+                'Max_Consecutive_Losses': 0,
                 'Total_Trading_Days': duration_days,
-                'Total_Trades': total_trades,  # 전체 거래 횟수 추가
-                'Positive_Days': positive_days,  # 실제 계산된 값
-                'Negative_Days': negative_days,  # 실제 계산된 값
-                'Win_Rate': weighted_win_rate,
-                'Profit_Factor': actual_profit_factor  # 실제 계산된 프로핏 팩터
+                'Total_Trades': weighted_stats['total_trades'],
+                'Positive_Days': dr_stats['positive_days'],
+                'Negative_Days': dr_stats['negative_days'],
+                'Win_Rate': weighted_stats['weighted_win_rate'],
+                'Profit_Factor': dr_stats['profit_factor']
             }
 
-            # individual_results를 리스트 형태로 변환 (테스트 호환성)
-            individual_results_list = []
-            for symbol, returns in individual_returns.items():
-                individual_results_list.append({
-                    'ticker': returns['symbol'],
-                    'final_equity': returns['final_value'],
-                    'total_return_pct': returns['return'],
-                    'sharpe_ratio': portfolio_results[symbol].get('strategy_stats', {}).get('sharpe_ratio', 0.0),
-                    'weight': returns['weight'],
-                    'amount': returns['amount'],
-                    'trades': returns.get('trades', 0),
-                    'win_rate': returns.get('win_rate', 0.0)
-                })
+            individual_results_list = self._format_individual_results_list(
+                individual_returns, portfolio_results, mode='strategy'
+            )
+
+            # 실패 종목 경고 메시지 생성
+            warnings = []
+            if failed_symbols:
+                for fs in failed_symbols:
+                    warnings.append(f"종목 {fs['symbol']} 백테스트 실패: {fs['error']}")
+                logger.warning(f"실패한 종목 {len(failed_symbols)}개: {[fs['symbol'] for fs in failed_symbols]}")
 
             result = {
                 'status': 'success',
@@ -432,7 +468,7 @@ class PortfolioManagerService:
                         'total_return_pct': portfolio_return
                     },
                     'portfolio_composition': [
-                        {'symbol': result['symbol'], 
+                        {'symbol': result['symbol'],
                          'weight': result['weight'], 'amount': result['amount']}
                         for symbol, result in portfolio_results.items()
                     ],
@@ -443,10 +479,11 @@ class PortfolioManagerService:
                     'equity_curve': equity_curve,
                     'daily_returns': daily_returns,
                     'weight_history': weight_history,
-                    'rebalance_history': []  # 전략 포트폴리오는 리밸런싱 없음
+                    'rebalance_history': [],  # 전략 포트폴리오는 리밸런싱 없음
+                    'warnings': warnings,
                 }
             }
-            
+
             logger.info(f"전략 포트폴리오 백테스트 완료: 총 수익률 {portfolio_return:.2f}%")
             
             # --- [Custom Metrics] Record Success ---
@@ -764,19 +801,9 @@ class PortfolioManagerService:
                                 'trade_log': dca_trade_log
                             }
             
-            # individual_results를 리스트 형태로 변환 (테스트 호환성)
-            individual_results_list = []
-            for unique_key, returns in individual_returns.items():
-                individual_results_list.append({
-                    'ticker': returns['symbol'] if returns.get('symbol') else unique_key,
-                    'final_equity': returns['amount'] + (returns['amount'] * returns['return'] / 100),
-                    'total_return_pct': returns['return'],
-                    'sharpe_ratio': 0.0,  # Buy & Hold에서는 계산하지 않음
-                    'weight': returns['weight'],
-                    'amount': returns['amount'],
-                    'trades': 1 if returns.get('symbol', '') != 'CASH' else 0,
-                    'win_rate': 100.0 if returns['return'] > 0 else 0.0
-                })
+            individual_results_list = self._format_individual_results_list(
+                individual_returns, mode='buy_hold'
+            )
 
             # 리밸런싱 히스토리와 비중 변화 데이터 추출
             rebalance_history = portfolio_result.attrs.get('rebalance_history', [])

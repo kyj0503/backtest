@@ -9,17 +9,7 @@ import numpy as np
 from datetime import datetime, date
 import logging
 
-class DataNotFoundError(Exception):
-    """데이터를 찾을 수 없을 때 발생하는 예외"""
-    pass
-
-class InvalidSymbolError(Exception):
-    """잘못된 종목 심볼일 때 발생하는 예외"""
-    pass
-
-class YfinanceRateLimitError(Exception):
-    """Yahoo Finance API 제한에 도달했을 때 발생하는 예외"""
-    pass
+from app.core.exceptions import DataNotFoundError, InvalidSymbolError, YfinanceRateLimitError
 
 logger = logging.getLogger(__name__)
 
