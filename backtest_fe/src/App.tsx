@@ -1,27 +1,16 @@
-import { useEffect } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useTheme } from '@/shared/hooks/useTheme';
 import { Header, Footer, ErrorBoundary } from '@/shared/components';
-import HomePage from './pages/HomePage';
-import PortfolioPage from './pages/PortfolioPage';
 import { Toaster } from '@/shared/ui/sonner';
 import { TooltipProvider } from '@/shared/ui/tooltip';
 
+const HomePage = lazy(() => import('./pages/HomePage'));
+const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
+
 function App() {
-  // Initialize theme system
-  const { currentTheme, isDarkMode } = useTheme();
-
-  // Apply theme class to root element
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute('data-theme', currentTheme);
-
-    if (isDarkMode) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [currentTheme, isDarkMode]);
+  // Initialize theme system — useTheme hook handles all DOM updates (dark class, CSS variables)
+  useTheme();
 
   return (
     <ErrorBoundary>
@@ -30,13 +19,15 @@ function App() {
           <div className="App min-h-screen bg-background text-foreground theme-transition">
             <Header />
             <main>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/backtest" element={<PortfolioPage />} />
-                {/* Legacy route redirects */}
-                <Route path="/single-stock" element={<Navigate to="/backtest" replace />} />
-                <Route path="/portfolio" element={<Navigate to="/backtest" replace />} />
-              </Routes>
+              <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]" />}>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/backtest" element={<PortfolioPage />} />
+                  {/* Legacy route redirects */}
+                  <Route path="/single-stock" element={<Navigate to="/backtest" replace />} />
+                  <Route path="/portfolio" element={<Navigate to="/backtest" replace />} />
+                </Routes>
+              </Suspense>
             </main>
             <Footer />
             <Toaster richColors position="top-right" closeButton />
