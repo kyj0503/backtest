@@ -8,7 +8,7 @@ import StrategyForm from './StrategyForm';
 import CommissionForm from './CommissionForm';
 import PortfolioForm from './PortfolioForm';
 import { useBacktestForm } from '../hooks/useBacktestForm';
-import { useFormValidation } from '@/shared/hooks/useFormValidation';
+import { useFormValidation } from '../hooks/useFormValidation';
 import { Button } from '@/shared/ui/button';
 import { FormSection } from '@/shared/components';
 import {
