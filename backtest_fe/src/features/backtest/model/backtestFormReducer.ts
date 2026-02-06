@@ -1,6 +1,6 @@
 import { ASSET_TYPES } from './strategyConfig';
 import { calculateDcaPeriods } from '../utils/calculateDcaPeriods';
-import { BacktestFormState, BacktestFormAction, Stock } from './types/backtest-form-types';
+import { BacktestFormState, BacktestFormAction, Stock, initialBacktestFormState, getDefaultDates } from './types/backtest-form-types';
 
 export function backtestFormReducer(state: BacktestFormState, action: BacktestFormAction): BacktestFormState {
   // 비중 기반 모드에서 amount 자동 계산 (DCA 고려)
@@ -298,32 +298,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
       };
 
     case 'RESET_FORM':
-      return {
-        portfolio: [{
-          symbol: '',
-          amount: 10000,
-          investmentType: 'lump_sum',
-          dcaFrequency: 'monthly_1'
-        }],
-        dates: {
-          startDate: '2023-01-01',
-          endDate: '2024-12-31'
-        },
-        strategy: {
-          selectedStrategy: 'buy_hold_strategy',
-          strategyParams: {}
-        },
-        settings: {
-          rebalanceFrequency: 'monthly_1',
-          commission: 0.2
-        },
-        ui: {
-          errors: [],
-          isLoading: false
-        },
-        portfolioInputMode: 'amount',
-        totalInvestment: 10000
-      };
+      return { ...initialBacktestFormState, dates: getDefaultDates() };
 
     default:
       return state;
