@@ -17,6 +17,7 @@ services:
       - .env
     environment:
       - DEBUG=true
+      - WATCHFILES_FORCE_POLLING=false
     volumes:
       - ./backtest_be_fast:/app
       - backtest_be_fast_venv:/opt/venv
@@ -26,7 +27,7 @@ services:
     # 런타임에 venv 의존성 동기화 후 서버 시작 (이미지와 볼륨의 동기화 보장)
     command: >
       sh -c "pip install -r requirements.txt &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --limit-concurrency 100 --backlog 200"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --limit-concurrency 100 --backlog 200"
   mysql:
     image: mysql:8.0
     container_name: backtest-mysql-dev
