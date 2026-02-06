@@ -19,20 +19,8 @@ import React, { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs';
 import StockSymbolSelector from './StockSymbolSelector';
 import { CARD_STYLES, SPACING } from '@/shared/styles/design-tokens';
-
-interface VolatilityEvent {
-  date: string;
-  daily_return: number;
-  close_price: number;
-  event_type: string;
-}
-
-interface NewsItem {
-  title: string;
-  description: string;
-  link: string;
-  pubDate: string;
-}
+import { NewsItem } from '../../model/types/backtest-result-types';
+import { VolatilityEvent } from '../../model/types/volatility-news-types';
 
 interface UnifiedInfoSectionProps {
   volatilityEvents: { [symbol: string]: VolatilityEvent[] };

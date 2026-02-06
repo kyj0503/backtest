@@ -103,6 +103,7 @@ export interface NewsItem {
   description: string;
   pubDate: string;
   originallink?: string;
+  company?: string;
 }
 
 export interface RebalanceTrade {

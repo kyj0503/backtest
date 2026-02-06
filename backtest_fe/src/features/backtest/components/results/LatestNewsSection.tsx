@@ -13,13 +13,7 @@ import React, { useState, useMemo } from 'react';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import StockSymbolSelector from './StockSymbolSelector';
 import { CARD_STYLES, HEADING_STYLES, TEXT_STYLES, SPACING } from '@/shared/styles/design-tokens';
-
-interface NewsItem {
-  title: string;
-  description: string;
-  link: string;
-  pubDate: string;
-}
+import { NewsItem } from '../../model/types/backtest-result-types';
 
 interface LatestNewsSectionProps {
   latestNews: { [symbol: string]: NewsItem[] };

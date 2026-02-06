@@ -1,4 +1,7 @@
 // API 타입 정의 - 통합 및 확장
+import { NewsItem } from './backtest-result-types';
+
+export type { NewsItem };
 
 // 전략 파라미터 값 타입
 export type StrategyParamValue = string | number | boolean;
@@ -190,14 +193,6 @@ export interface StrategyParameter {
 }
 
 // 뉴스 관련 타입
-export interface NewsItem {
-  title: string;
-  link: string;
-  description: string;
-  pubDate: string;
-  originallink?: string;
-}
-
 export interface NewsResponse {
   lastBuildDate: string;
   total: number;
