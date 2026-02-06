@@ -3,7 +3,7 @@
  * 백엔드 응답을 차트 컴포넌트에서 사용할 수 있는 형식으로 변환
  */
 
-import { EquityPoint, TradeMarker, OhlcPoint, ChartData, PortfolioData } from '../model/types/backtest-result-types';
+import { EquityPoint, TradeMarker, OhlcPoint, ChartData, PortfolioData, BenchmarkPoint, StrategyStats, TradeLog } from '../model/types/backtest-result-types';
 import { formatChartDate } from '@/shared/lib/utils/dateUtils';
 
 // ============================================
@@ -64,7 +64,7 @@ export const transformPortfolioEquityData = (
  * 단일 종목 equity 데이터를 EquityPoint 배열로 변환
  */
 export const transformSingleEquityData = (
-  equityData: any[]
+  equityData: EquityPoint[]
 ): EquityPoint[] => {
   return equityData.map(point => ({
     date: point.date,
@@ -78,7 +78,7 @@ export const transformSingleEquityData = (
  * 거래 마커 데이터를 TradeMarker 배열로 변환
  */
 export const transformTradeMarkers = (
-  tradeMarkers: any[]
+  tradeMarkers: TradeMarker[]
 ): TradeMarker[] => {
   return tradeMarkers.map(marker => ({
     ...marker,
@@ -90,7 +90,7 @@ export const transformTradeMarkers = (
  * OHLC 데이터를 OhlcPoint 배열로 변환
  */
 export const transformOhlcData = (
-  ohlcData: any[]
+  ohlcData: OhlcPoint[]
 ): OhlcPoint[] => {
   return ohlcData.map(point => ({
     ...point,
@@ -101,12 +101,12 @@ export const transformOhlcData = (
 /**
  * 벤치마크 데이터에 일일 수익률 계산 추가
  */
-export const withBenchmarkReturn = (points: any[]): any[] => {
+export const withBenchmarkReturn = (points: BenchmarkPoint[]): (BenchmarkPoint & { return_pct: number })[] => {
   return points?.map((point, index) => {
     if (index === 0) {
       return { ...point, return_pct: 0 };
     }
-    const prev = points[index - 1];
+    const prev = points[index - 1]!;
     const returnPct = ((point.close - prev.close) / prev.close) * 100;
     return { ...point, return_pct: returnPct };
   }) ?? [];
@@ -116,9 +116,9 @@ export const withBenchmarkReturn = (points: any[]): any[] => {
  * stock_data를 배열 형식으로 변환
  */
 export const transformStockData = (
-  stockData: Record<string, any>,
+  stockData: Record<string, Array<{ date: string; price: number; volume: number }>>,
   ticker?: string
-): Array<{ symbol: string; data: any[] }> => {
+): Array<{ symbol: string; data: Array<{ date: string; price: number; volume: number }> }> => {
   if (!stockData) return [];
 
   if (ticker && stockData[ticker]) {
@@ -135,9 +135,9 @@ export const transformStockData = (
  * strategy_details에서 trade_log 추출 (symbol별)
  */
 export const extractTradeLogs = (
-  strategyDetails?: Record<string, any>
-): Record<string, any[]> => {
-  const logs: Record<string, any[]> = {};
+  strategyDetails?: Record<string, StrategyStats>
+): Record<string, TradeLog[]> => {
+  const logs: Record<string, TradeLog[]> = {};
 
   if (!strategyDetails) return logs;
 
@@ -157,7 +157,7 @@ export const extractTradeLogs = (
 export const extractBenchmarkData = (
   data: ChartData | PortfolioData,
   benchmarkType: 'sp500' | 'nasdaq'
-): any[] => {
+): BenchmarkPoint[] => {
   const chartBenchmark = (data as ChartData)[`${benchmarkType}_benchmark`];
   const portfolioBenchmark = (data as PortfolioData)[`${benchmarkType}_benchmark`];
   return chartBenchmark ?? portfolioBenchmark ?? [];
