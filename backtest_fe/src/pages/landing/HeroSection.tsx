@@ -41,8 +41,11 @@ export const HeroSection: React.FC = () => {
           <div className="mt-8 sm:mt-12 px-2">
             <img
               src="/images/landing/backtest-main.png"
-              alt="백테스트 플랫폼 메인 화면"
+              alt="백테스트 플랫폼 메인 화면 — 포트폴리오 수익률 차트와 전략 설정 화면"
               className="w-full max-w-6xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+              fetchPriority="high"
+              width={1200}
+              height={675}
             />
           </div>
         </div>
