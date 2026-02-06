@@ -3,6 +3,7 @@
 주가, 환율, 벤치마크, 뉴스 등 백테스트 관련 데이터를 한 번에 수집합니다.
 병렬 요청으로 응답 시간을 최적화하고, 개별 실패 시에도 나머지 데이터를 반환합니다.
 """
+import asyncio
 import logging
 import pandas as pd
 from typing import List, Dict, Any
