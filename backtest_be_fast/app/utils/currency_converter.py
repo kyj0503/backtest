@@ -196,25 +196,28 @@ class CurrencyConverter:
             original_close_min = data['Close'].min()
             original_close_max = data['Close'].max()
 
-            # 각 행에 대해 환율 적용
-            converted_count = 0
-            for idx in converted_data.index:
-                # 타임존 제거 (환율 데이터 인덱스와 매칭)
-                idx_no_tz = self._remove_timezone(pd.DatetimeIndex([idx]))[0]
+            # 벡터화된 환율 변환 (행 단위 루프 대신 pandas 연산)
+            # 1. 가격 데이터 인덱스의 타임존 제거
+            price_index_no_tz = self._remove_timezone(converted_data.index)
 
-                # 환율 데이터에서 해당 날짜의 환율 가져오기
-                if idx_no_tz in exchange_data.index and pd.notna(exchange_data.loc[idx_no_tz, 'Close']):
-                    exchange_rate = exchange_data.loc[idx_no_tz, 'Close']
+            # 2. 환율 데이터를 가격 인덱스에 맞게 정렬 (이미 reindex됨)
+            exchange_rates_aligned = exchange_data['Close'].reindex(price_index_no_tz)
 
-                    # 통화별 변환 비율 계산
-                    multiplier = self.get_conversion_multiplier(currency, exchange_rate)
+            # 3. 통화별 변환 비율 계산 (벡터 연산)
+            if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
+                multipliers = exchange_rates_aligned
+            else:
+                multipliers = 1.0 / exchange_rates_aligned.where(exchange_rates_aligned > 0, 1.0)
 
-                    # OHLC 컬럼 변환
-                    for col in ['Open', 'High', 'Low', 'Close']:
-                        if col in converted_data.columns:
-                            converted_data.loc[idx, col] *= multiplier
+            # 4. NaN이 아닌 행만 변환
+            valid_mask = multipliers.notna()
+            converted_count = int(valid_mask.sum())
 
-                    converted_count += 1
+            # 5. multipliers를 원래 인덱스에 매핑하여 OHLC 컬럼에 적용
+            multipliers.index = converted_data.index
+            for col in ['Open', 'High', 'Low', 'Close']:
+                if col in converted_data.columns:
+                    converted_data.loc[valid_mask.values, col] *= multipliers[valid_mask].values
 
             # 변환 후 가격 범위
             converted_close_min = converted_data['Close'].min()
