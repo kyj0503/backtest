@@ -87,9 +87,9 @@ pipeline {
                 script {
                     sh '''
                         echo "Waiting for services to be ready..."
-                        for i in {1..4}; do
-                            echo "Health check attempt $i/4"
-                            if curl -f https://backtest-be.yeonjae.kr/health && curl -f https://backtest.yeonjae.kr; then
+                        for i in 1 2 3 4 5 6; do
+                            echo "Health check attempt $i/6"
+                            if curl -sf https://backtest-be.yeonjae.kr/health && curl -sf https://backtest.yeonjae.kr; then
                                 echo "✅ Services are healthy!"
                                 exit 0
                             fi
