@@ -5,6 +5,7 @@ pipeline {
         GHCR_OWNER = 'kyj0503'
         BE_IMAGE_NAME = 'backtest-be'
         FE_IMAGE_NAME = 'backtest-fe'
+        DOCKER_BUILDKIT = '1'
     }
 
     stages {
@@ -72,7 +73,7 @@ pipeline {
                     sh '''
                         cd /opt/home-server/docker
                         docker compose -f docker-compose.apps.yml pull backtest-be backtest-fe
-                        docker compose -f docker-compose.apps.yml up -d backtest-be backtest-fe
+                        docker compose -f docker-compose.apps.yml up -d --no-deps backtest-be backtest-fe
                         sleep 10
                         docker ps | grep -E "backtest"
                         echo "✅ Backtest deployment completed!"

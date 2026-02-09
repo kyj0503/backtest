@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Stage 1: Build the React application
 FROM node:20.19.0-alpine AS build
 
@@ -6,8 +7,9 @@ WORKDIR /app
 # Copy only package manifests first to leverage Docker layer caching
 COPY package*.json ./
 
-# Install dependencies in CI-friendly mode when lockfile exists, otherwise fall back to npm install
-RUN if [ -f package-lock.json ]; then \
+# Install dependencies (npm 캐시 마운트로 재다운로드 방지)
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f package-lock.json ]; then \
 			npm ci --no-audit --prefer-offline --no-fund; \
 		else \
 			npm install --no-audit --prefer-offline --no-fund; \

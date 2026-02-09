@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Python 3.11 슬림 이미지 사용
 FROM python:3.11-slim
 
@@ -30,13 +31,14 @@ ENV PATH="${VENV_DIR}/bin:$PATH"
 RUN curl -Ls https://astral.sh/uv/install.sh | sh \
     && cp /root/.local/bin/uv /usr/local/bin/uv || true
 
-# requirements 설치 (venv 내부 pip 사용)
-RUN pip install --no-cache-dir -r requirements.txt
+# requirements 설치 (pip 캐시 마운트로 재다운로드 방지)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
-# 테스트 의존성 설치 (requirements-test.txt)
-# 주의: 운영 배포 시에는 이 부분이 포함되지 않도록 멀티 스테이지 빌드 사용 권장
+# 테스트 의존성 설치
 COPY requirements-test.txt .
-RUN pip install --no-cache-dir -r requirements-test.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements-test.txt
 
 # 애플리케이션 코드 복사
 COPY app ./app
