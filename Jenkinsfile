@@ -74,7 +74,7 @@ pipeline {
                         cd /opt/home-server/docker
                         docker compose -f docker-compose.apps.yml pull backtest-be backtest-fe
                         docker compose -f docker-compose.apps.yml up -d --no-deps backtest-be backtest-fe
-                        sleep 10
+                        sleep 20
                         docker ps | grep -E "backtest"
                         echo "✅ Backtest deployment completed!"
                     '''
@@ -87,10 +87,19 @@ pipeline {
                 script {
                     sh '''
                         echo "Waiting for services to be ready..."
-                        for i in 1 2 3 4 5 6; do
-                            echo "Health check attempt $i/6"
-                            if curl -sf https://backtest-be.yeonjae.kr/health && curl -sf https://backtest.yeonjae.kr; then
-                                echo "✅ Services are healthy!"
+                        for i in 1 2 3 4 5 6 7 8 9 10; do
+                            echo "Health check attempt $i/10"
+                            BE_OK=false
+                            FE_OK=false
+                            if curl -sf https://backtest-be.yeonjae.kr/health > /dev/null 2>&1; then
+                                BE_OK=true
+                            fi
+                            if curl -sf https://backtest.yeonjae.kr > /dev/null 2>&1; then
+                                FE_OK=true
+                            fi
+                            echo "  BE=$BE_OK, FE=$FE_OK"
+                            if [ "$BE_OK" = true ] && [ "$FE_OK" = true ]; then
+                                echo "✅ All services are healthy!"
                                 exit 0
                             fi
                             sleep 5
