@@ -5,7 +5,6 @@ pipeline {
         GHCR_OWNER = 'kyj0503'
         BE_IMAGE_NAME = 'backtest-be'
         FE_IMAGE_NAME = 'backtest-fe'
-        DOCKER_BUILDKIT = '1'
     }
 
     stages {
