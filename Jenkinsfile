@@ -72,8 +72,8 @@ pipeline {
                 script {
                     sh '''
                         cd /opt/home-server/docker
-                        docker compose -f docker-compose.apps.yml pull backtest-be backtest-fe
-                        docker compose -f docker-compose.apps.yml up -d --no-deps backtest-be backtest-fe
+                        docker compose -f docker-compose.yml -f docker-compose.prod.yml pull backtest-be backtest-fe
+                        docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps backtest-be backtest-fe
                         sleep 20
                         docker ps | grep -E "backtest"
                         echo "✅ Backtest deployment completed!"
