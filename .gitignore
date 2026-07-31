@@ -13,3 +13,9 @@ node_modules/
 
 .vscode/launch.json
 .vscode/settings.json
+
+# IDE
+.idea/
+
+# macOS
+.DS_Store
