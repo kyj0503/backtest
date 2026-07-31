@@ -1,15 +1,17 @@
 import React, { useMemo, memo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
-import { WeightHistoryPoint } from '../../model/types/backtest-result-types';
+import { RebalanceEvent, WeightHistoryPoint } from '../../model/types/backtest-result-types';
 import { getStockDisplayName } from '../../model/strategyConfig';
 import { TEXT_STYLES } from '@/shared/styles/design-tokens';
 import { useRenderPerformance } from '@/shared/components';
 
-interface RebalanceEvent {
+/**
+ * 스택 영역 차트의 한 행: date + 심볼별 비중(%).
+ * 리밸런싱 날짜만 추가된 행은 모든 심볼이 null이다 (connectNulls로 선이 이어짐).
+ */
+interface WeightChartRow {
   date: string;
-  trades: Array<any>;
-  weights_before: Record<string, number>;
-  weights_after: Record<string, number>;
+  [symbol: string]: string | number | null;
 }
 
 interface WeightHistoryChartProps {
@@ -57,7 +59,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
   // 차트 데이터 (샘플링은 useChartData에서 처리됨)
   const chartData = useMemo(() => {
     return weightHistory.map(point => {
-      const dataPoint: Record<string, any> = {
+      const dataPoint: WeightChartRow = {
         date: point.date,
       };
       symbols.forEach(symbol => {
@@ -80,7 +82,7 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
     const rebalanceDatesToAdd = rebalanceHistory
       .filter(event => !existingDates.has(event.date))
       .map(event => {
-        const nullPoint: Record<string, any> = {
+        const nullPoint: WeightChartRow = {
           date: event.date,
         };
         // 모든 심볼에 대해 null 값 설정
