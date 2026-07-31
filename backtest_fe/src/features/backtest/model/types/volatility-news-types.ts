@@ -11,13 +11,6 @@ export interface VolatilityEvent {
   event_type: string;
 }
 
-export interface StockVolatilityNewsProps {
-  symbols: string[];
-  startDate: string;
-  endDate: string;
-  className?: string;
-}
-
 // 티커 심볼을 한국어 기업명으로 매핑 (백엔드와 동일한 매핑 사용)
 export const TICKER_TO_COMPANY_NAME: { [key: string]: string } = {
   // 미국 주요 종목

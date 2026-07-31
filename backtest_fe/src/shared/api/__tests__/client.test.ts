@@ -1,7 +1,7 @@
 /**
  * apiClient 경로 합성 회귀 테스트
  *
- * 서비스 레이어(backtestService.ts, backtestApi.ts)는 axios에 전체 경로
+ * 서비스 레이어(backtestService.ts)는 axios에 전체 경로
  * (`/api/v1/...`)를 그대로 넘긴다. 이때 VITE_API_BASE_URL이 `/api`로 설정되어
  * 있으면 baseURL과 경로가 겹쳐 `/api/api/v1/backtest`가 만들어지고,
  * vite 프록시(`/api/v1/backtest`)에 매칭되지 않아 404가 난다.
