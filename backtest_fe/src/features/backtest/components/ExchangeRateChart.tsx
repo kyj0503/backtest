@@ -105,7 +105,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
             tickFormatter={(value: number) => `₩${value.toFixed(0)}`}
           />
           <Tooltip
-            formatter={(value: number) => [`₩${value.toFixed(2)}`, '환율']}
+            formatter={(value: unknown) => [`₩${Number(value).toFixed(2)}`, '환율']}
             labelFormatter={(label: any) => `날짜: ${label}`}
           />
           <Line

@@ -252,12 +252,13 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                 />
                 <Tooltip
                   labelFormatter={(label: any) => `날짜: ${label}`}
-                  formatter={(value: any, name: string) => {
+                  formatter={(value: any, name: unknown) => {
                     if (!value) return null;
-                    if (name === 'price') return [formatPrice(value), '주가'];
-                    if (name === 'buySignal') return [formatPrice(value), '매수'];
-                    if (name === 'sellSignal') return [formatPrice(value), '매도'];
-                    return [value, name];
+                    const key = String(name);
+                    if (key === 'price') return [formatPrice(value), '주가'];
+                    if (key === 'buySignal') return [formatPrice(value), '매수'];
+                    if (key === 'sellSignal') return [formatPrice(value), '매도'];
+                    return [value, key];
                   }}
                 />
                 {/* 주가 라인 */}

@@ -60,7 +60,8 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
   return (
     <ResponsiveContainer width="100%" height={400} debounce={300}>
       <ComposedChart data={processedData} margin={{ ...CHART_CONFIG.margin, bottom: xAxisProps.height }} syncId="equityChart">
-        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+        {/* recharts v3: CartesianGrid의 yAxisId가 YAxis와 일치해야 가로 그리드가 눈금에 맞춰 그려진다. */}
+        <CartesianGrid strokeDasharray="3 3" opacity={0.3} yAxisId="return" />
         <XAxis 
           dataKey="date" 
           tick={{ fontSize: 11 }}

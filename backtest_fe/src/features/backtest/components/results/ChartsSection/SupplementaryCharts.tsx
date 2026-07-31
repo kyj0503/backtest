@@ -81,8 +81,8 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
                   tickFormatter={(value: number) => formatKRW(value)}
                 />
                 <Tooltip
-                  formatter={(value: number) => [formatKRW(value, 2), '환율']}
-                  labelFormatter={(label: string) => `날짜: ${label}`}
+                  formatter={(value: unknown) => [formatKRW(Number(value), 2), '환율']}
+                  labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
                 />
                 <Line 
                   type="monotone" 

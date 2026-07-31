@@ -119,7 +119,8 @@ const OHLCChart: React.FC<OHLCChartProps> = memo(({ data, indicators, trades }) 
     <div>
       <ResponsiveContainer width="100%" height={400} debounce={300}>
         <ComposedChart data={mergedData} margin={chartConfig.margin} syncId="ohlcChart">
-          <CartesianGrid strokeDasharray="3 3" opacity={chartConfig.opacity.grid} />
+          {/* recharts v3: CartesianGrid의 yAxisId가 YAxis와 일치해야 가로 그리드가 눈금에 맞춰 그려진다. */}
+          <CartesianGrid strokeDasharray="3 3" opacity={chartConfig.opacity.grid} yAxisId="price" />
           <XAxis dataKey="date" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
           <YAxis yAxisId="price" orientation="right" />
           <YAxis yAxisId="volume" orientation="left" />

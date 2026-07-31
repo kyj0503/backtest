@@ -130,8 +130,11 @@ const WeightHistoryChart: React.FC<WeightHistoryChartProps> = memo(({
           domain={[0, 100]}
         />
         <Tooltip
-          formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, symbolDisplayNames[name] || name]}
-          labelFormatter={(label: string) => `날짜: ${label}`}
+          formatter={(value: unknown, name: unknown) => {
+            const key = String(name);
+            return [`${Number(value).toFixed(2)}%`, symbolDisplayNames[key] || key];
+          }}
+          labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
           contentStyle={{
             backgroundColor: 'rgba(255, 255, 255, 0.95)',
             border: '1px solid #ccc',

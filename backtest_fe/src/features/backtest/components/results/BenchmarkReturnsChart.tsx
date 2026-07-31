@@ -130,15 +130,16 @@ export const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(
             tick={{ fontSize: 13 }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => {
+            formatter={(value: unknown, name: unknown) => {
               const labels: Record<string, string> = {
                 portfolio: '내 포트폴리오',
                 sp500: 'S&P 500',
                 nasdaq: 'NASDAQ',
               };
-              return [`${value.toFixed(2)}%`, labels[name] || name];
+              const key = String(name);
+              return [`${Number(value).toFixed(2)}%`, labels[key] || key];
             }}
-            labelFormatter={(label: string) => `날짜: ${label}`}
+            labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
             contentStyle={{
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               border: '1px solid #ccc',
