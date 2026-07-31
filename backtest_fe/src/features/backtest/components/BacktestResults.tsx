@@ -48,7 +48,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
 
   if (!data) {
     return (
-      <div className="mx-auto w-full lg:max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-sm p-8 sm:p-16 text-center shadow-lg">
+      <div className="mx-auto w-full lg:max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-xs p-8 sm:p-16 text-center shadow-lg">
         <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-yellow-100 shadow-md">
           <AlertCircle className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-600" />
         </div>
@@ -60,7 +60,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
 
   if (isPortfolio && (!('portfolio_composition' in data) || !data.portfolio_composition)) {
     return (
-      <div className="mx-auto w-full lg:max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-sm p-8 sm:p-16 text-center shadow-lg">
+      <div className="mx-auto w-full lg:max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-xs p-8 sm:p-16 text-center shadow-lg">
         <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-yellow-100 shadow-md">
           <AlertCircle className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-600" />
         </div>

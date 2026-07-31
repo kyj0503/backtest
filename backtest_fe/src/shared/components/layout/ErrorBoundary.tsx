@@ -91,7 +91,7 @@ class ErrorBoundary extends Component<Props, State> {
 
       // 기본 에러 UI
       return (
-        <div className="container mx-auto px-4 mt-5">
+        <div className="app-container mx-auto px-4 mt-5">
           <div className="flex justify-center">
             <div className="w-full max-w-2xl">
               <Alert variant="destructive">

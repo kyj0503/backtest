@@ -4,7 +4,7 @@ import { TrendingUp, Activity } from 'lucide-react';
 export const KeyFeaturesSection: React.FC = () => {
   return (
     <section className="py-16 sm:py-24 bg-muted/30">
-      <div className="container mx-auto px-4 sm:px-6 lg:max-w-6xl">
+      <div className="app-container mx-auto px-4 sm:px-6 lg:max-w-6xl">
         <div className="space-y-10 sm:space-y-16">
           <div className="text-center space-y-3 sm:space-y-4 px-4">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">주요 기능</h2>
@@ -12,7 +12,7 @@ export const KeyFeaturesSection: React.FC = () => {
 
           <div className="space-y-6 sm:space-y-8 px-4">
             <div className="flex items-start gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl border border-border/50 bg-background hover:bg-muted/30 transition-colors">
-              <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="space-y-1 sm:space-y-2">
@@ -24,7 +24,7 @@ export const KeyFeaturesSection: React.FC = () => {
             </div>
 
             <div className="flex items-start gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl border border-border/50 bg-background hover:bg-muted/30 transition-colors">
-              <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="space-y-1 sm:space-y-2">
@@ -36,7 +36,7 @@ export const KeyFeaturesSection: React.FC = () => {
             </div>
 
             <div className="flex items-start gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl border border-border/50 bg-background hover:bg-muted/30 transition-colors">
-              <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </div>
               <div className="space-y-1 sm:space-y-2">

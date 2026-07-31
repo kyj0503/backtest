@@ -23,7 +23,7 @@ const PortfolioPage: React.FC = () => {
 
         {/* Loading State */}
         {loading && (
-          <Card className="border-primary/30 bg-primary/5 backdrop-blur-sm">
+          <Card className="border-primary/30 bg-primary/5 backdrop-blur-xs">
             <CardContent className="text-center py-12 sm:py-20">
               <div className="relative inline-block mb-4 sm:mb-6">
                 <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse"></div>
@@ -71,7 +71,7 @@ const PortfolioPage: React.FC = () => {
 
         {/* Initial State Guide */}
         {!results && !loading && !error && (
-          <Card className="border-dashed border-2 border-muted-foreground/30 bg-muted/20 backdrop-blur-sm">
+          <Card className="border-dashed border-2 border-muted-foreground/30 bg-muted/20 backdrop-blur-xs">
             <CardContent className="text-center py-12 sm:py-20 px-4">
               <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 sm:mb-8 flex items-center justify-center bg-primary/15 rounded-2xl shadow-sm">
                 <Briefcase className="text-primary h-8 w-8 sm:h-10 sm:w-10" />
