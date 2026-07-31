@@ -15,11 +15,9 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: true,
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    // Vitest 4: poolOptions 제거됨. singleFork: true === maxWorkers: 1 + isolate: false
+    maxWorkers: 1,
+    isolate: false,
     sequence: {
       concurrent: false,
     },
