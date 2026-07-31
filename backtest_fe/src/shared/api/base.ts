@@ -1,5 +1,5 @@
 export const getApiBaseUrl = (): string => {
-  const envBase = (import.meta as any)?.env?.VITE_API_BASE_URL;
+  const envBase = import.meta.env?.VITE_API_BASE_URL;
   if (typeof envBase === 'string' && envBase.length > 0) {
     return envBase.replace(/\/$/, '');
   }

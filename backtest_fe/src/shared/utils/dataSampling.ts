@@ -57,7 +57,7 @@ function calculateYearDuration(startDate: string | Date, endDate: string | Date)
  * @param data 원본 일간 데이터 (가격, equity, value 등)
  * @returns 매 7번째 데이터 포인트만 포함된 배열
  */
-function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
+function aggregateToWeekly<T extends { date: string }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
 
   const weekly: T[] = [];
@@ -261,7 +261,7 @@ function getNextMonthNthWeekday(currentDate: Date, originalNth: number): Date {
  * @param data 원본 일간 데이터 (가격, equity, value 등)
  * @returns 실제 달력 월 기준으로 샘플링된 배열
  */
-function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
+function aggregateToMonthly<T extends { date: string }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
 
   const monthly: T[] = [];
@@ -363,7 +363,7 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
  * @param endDate 백테스트 종료일
  * @returns 집계된 데이터 및 메타 정보
  */
-export function smartSampleByPeriod<T extends { date: string; [key: string]: any }>(
+export function smartSampleByPeriod<T extends { date: string }>(
   data: T[],
   startDate?: string | Date,
   endDate?: string | Date
@@ -556,7 +556,7 @@ export function filterRebalanceMarkers<T extends { date?: string; timestamp?: st
  * @param aggregationType 'daily' | 'weekly' | 'monthly'
  * @returns 집계된 수익률 데이터
  */
-export function aggregateReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+export function aggregateReturns<T extends { date: string; return_pct: number }>(
   dailyReturns: T[],
   aggregationType: 'daily' | 'weekly' | 'monthly'
 ): T[] {
@@ -581,7 +581,7 @@ export function aggregateReturns<T extends { date: string; return_pct: number; [
  * @param dailyReturns 일간 수익률 배열
  * @returns 7일 단위로 집계된 복리 수익률
  */
-function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+function aggregateWeeklyReturns<T extends { date: string; return_pct: number }>(
   dailyReturns: T[]
 ): T[] {
   if (!dailyReturns || dailyReturns.length === 0) return [];
@@ -625,7 +625,7 @@ function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [k
  * @param dailyReturns 일간 수익률 배열
  * @returns 실제 달력 월 단위로 집계된 복리 수익률
  */
-function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+function aggregateMonthlyReturns<T extends { date: string; return_pct: number }>(
   dailyReturns: T[]
 ): T[] {
   if (!dailyReturns || dailyReturns.length === 0) return [];

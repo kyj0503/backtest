@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 export const CTASection: React.FC = () => {
   return (
     <section className="py-16 sm:py-24 bg-gradient-to-b from-primary/5 to-background">
-      <div className="container mx-auto px-4 sm:px-6 lg:max-w-3xl text-center space-y-6 sm:space-y-8">
+      <div className="app-container mx-auto px-4 sm:px-6 lg:max-w-3xl text-center space-y-6 sm:space-y-8">
         <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold px-4">
           지금 바로 시작해보세요
         </h2>

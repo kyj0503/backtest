@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 export const HeroSection: React.FC = () => {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-background via-background to-primary/5 pt-12 sm:pt-20 pb-20 sm:pb-32">
-      <div className="container mx-auto px-4 sm:px-6 lg:max-w-5xl">
+      <div className="app-container mx-auto px-4 sm:px-6 lg:max-w-5xl">
         <div className="text-center space-y-6 sm:space-y-8">
           <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium border border-primary/20">
             <Activity className="w-3 h-3 sm:w-4 sm:h-4" />

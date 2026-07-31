@@ -19,23 +19,35 @@ import LatestNewsSection from '../LatestNewsSection';
 import RebalanceHistoryTable from '../RebalanceHistoryTable';
 import WeightHistoryChart from '../WeightHistoryChart';
 import { formatDateShort, formatKRW } from '../../../utils';
+import type {
+  ExchangeRatePoint,
+  ExchangeRateStats,
+  NewsItem,
+  RebalanceEvent,
+  TickerInfo,
+  VolatilityEvent,
+  WeightHistoryPoint,
+} from '../../../model/types';
+// 포트폴리오 구성 종목({ symbol, weight })은 결과 타입 쪽 Stock을 사용한다.
+// (폼 쪽 Stock과 이름이 겹치므로 모듈 경로로 직접 import)
+import type { Stock } from '../../../model/types/backtest-result-types';
 
 interface SupplementaryChartsProps {
   // 환율 데이터
-  exchangeRates: any[];
-  exchangeStats: any;
+  exchangeRates: ExchangeRatePoint[];
+  exchangeStats: ExchangeRateStats | undefined;
 
   // 급등락/뉴스 데이터
-  volatilityEvents: Record<string, any[]>;
-  latestNews: Record<string, any[]>;
+  volatilityEvents: Record<string, VolatilityEvent[]>;
+  latestNews: Record<string, NewsItem[]>;
   hasVolatilityEvents: boolean;
   hasNews: boolean;
-  tickerInfo: Record<string, any>;
+  tickerInfo: Record<string, TickerInfo>;
 
   // 리밸런싱 데이터 (포트폴리오만)
-  rebalanceHistory: any[];
-  weightHistory: any[];
-  portfolioComposition?: any[];
+  rebalanceHistory: RebalanceEvent[];
+  weightHistory: WeightHistoryPoint[];
+  portfolioComposition?: Stock[];
 }
 
 export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
@@ -61,7 +73,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
   // 환율 Y축 domain 계산 메모이제이션 (매 렌더링마다 재계산 방지)
   const exchangeRateDomain = useMemo(() => {
     if (!hasExchangeRates) return [0, 100];
-    const rates = exchangeRates.map((d: any) => d.rate);
+    const rates = exchangeRates.map((d) => d.rate);
     return [Math.min(...rates), Math.max(...rates)];
   }, [exchangeRates, hasExchangeRates]);
 
@@ -81,8 +93,8 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
                   tickFormatter={(value: number) => formatKRW(value)}
                 />
                 <Tooltip
-                  formatter={(value: number) => [formatKRW(value, 2), '환율']}
-                  labelFormatter={(label: string) => `날짜: ${label}`}
+                  formatter={(value: unknown) => [formatKRW(Number(value), 2), '환율']}
+                  labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
                 />
                 <Line 
                   type="monotone" 
@@ -101,7 +113,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
                 <div className="text-center">
                   <div className="text-xs text-muted-foreground mb-1">시작점</div>
                   <div className="text-sm font-semibold text-foreground">
-                    {formatKRW(exchangeStats.start_point?.rate, 2)}
+                    {exchangeStats.start_point ? formatKRW(exchangeStats.start_point.rate, 2) : '-'}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {exchangeStats.start_point?.date
@@ -112,7 +124,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
                 <div className="text-center">
                   <div className="text-xs text-muted-foreground mb-1">종료점</div>
                   <div className="text-sm font-semibold text-foreground">
-                    {formatKRW(exchangeStats.end_point?.rate, 2)}
+                    {exchangeStats.end_point ? formatKRW(exchangeStats.end_point.rate, 2) : '-'}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {exchangeStats.end_point?.date
@@ -123,7 +135,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
                 <div className="text-center">
                   <div className="text-xs text-muted-foreground mb-1">최고점</div>
                   <div className="text-sm font-semibold text-green-600">
-                    {formatKRW(exchangeStats.high_point?.rate, 2)}
+                    {exchangeStats.high_point ? formatKRW(exchangeStats.high_point.rate, 2) : '-'}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {exchangeStats.high_point?.date
@@ -134,7 +146,7 @@ export const SupplementaryCharts: React.FC<SupplementaryChartsProps> = memo(({
                 <div className="text-center">
                   <div className="text-xs text-muted-foreground mb-1">최저점</div>
                   <div className="text-sm font-semibold text-red-600">
-                    {formatKRW(exchangeStats.low_point?.rate, 2)}
+                    {exchangeStats.low_point ? formatKRW(exchangeStats.low_point.rate, 2) : '-'}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {exchangeStats.low_point?.date

@@ -12,33 +12,12 @@ import {
   ReferenceLine
 } from 'recharts';
 import { CustomTooltip } from './shared';
-
-interface OHLCData {
-  date: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  [key: string]: string | number;
-}
-
-interface Indicator {
-  name: string;
-  color: string;
-  data?: Array<{ date: string; value: number }>;
-}
-
-interface Trade {
-  date: string;
-  type: 'entry' | 'exit';
-  price?: number;
-}
+import type { IndicatorData, OhlcPoint, TradeMarker } from '../model/types';
 
 interface OHLCChartProps {
-  data: OHLCData[];
-  indicators: Indicator[];
-  trades: Trade[];
+  data: OhlcPoint[];
+  indicators: IndicatorData[];
+  trades: TradeMarker[];
 }
 
 const OHLCChart: React.FC<OHLCChartProps> = memo(({ data, indicators, trades }) => {
@@ -50,7 +29,7 @@ const OHLCChart: React.FC<OHLCChartProps> = memo(({ data, indicators, trades }) 
   // 데이터 병합 로직 메모이제이션
   const mergedData = useMemo(() => {
     return safeData.map(ohlc => {
-      const point: Record<string, string | number> = {
+      const point: Record<string, unknown> = {
         ...ohlc,
         open: Number(ohlc.open) || 0,
         high: Number(ohlc.high) || 0,
@@ -119,7 +98,8 @@ const OHLCChart: React.FC<OHLCChartProps> = memo(({ data, indicators, trades }) 
     <div>
       <ResponsiveContainer width="100%" height={400} debounce={300}>
         <ComposedChart data={mergedData} margin={chartConfig.margin} syncId="ohlcChart">
-          <CartesianGrid strokeDasharray="3 3" opacity={chartConfig.opacity.grid} />
+          {/* recharts v3: CartesianGrid의 yAxisId가 YAxis와 일치해야 가로 그리드가 눈금에 맞춰 그려진다. */}
+          <CartesianGrid strokeDasharray="3 3" opacity={chartConfig.opacity.grid} yAxisId="price" />
           <XAxis dataKey="date" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
           <YAxis yAxisId="price" orientation="right" />
           <YAxis yAxisId="volume" orientation="left" />

@@ -62,7 +62,7 @@ const VolatilityTable: React.FC<VolatilityTableProps> = ({ selectedStock, events
                 <button
                   onClick={() => onNewsClick(event.date, event)}
                   disabled={newsDisabled}
-                  className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
+                  className={`inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded transition-colors focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-primary ${
                     newsDisabled
                       ? 'cursor-not-allowed bg-muted text-muted-foreground'
                       : 'text-primary bg-accent hover:bg-accent/80'

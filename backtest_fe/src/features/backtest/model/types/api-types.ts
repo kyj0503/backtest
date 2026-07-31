@@ -192,42 +192,6 @@ export interface StrategyParameter {
   required?: boolean;
 }
 
-// 뉴스 관련 타입
-export interface NewsResponse {
-  lastBuildDate: string;
-  total: number;
-  start: number;
-  display: number;
-  items: NewsItem[];
-}
-
-// 변동성 데이터 타입
-export interface VolatilityData {
-  symbol: string;
-  period: string;
-  volatility: number;
-  price_change: number;
-  volume_change: number;
-  last_updated: string;
-}
-
-// 환율 데이터 타입
-export interface ExchangeRateData {
-  date: string;
-  usd_krw: number;
-  change_rate: number;
-  trend: 'up' | 'down' | 'stable';
-}
-
-// 시스템 정보 타입
-export interface SystemInfo {
-  version: string;
-  environment: string;
-  last_updated: string;
-  database_status: 'connected' | 'disconnected';
-  api_status: 'healthy' | 'degraded' | 'down';
-}
-
 // HTTP 메서드 타입
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -246,11 +210,3 @@ export interface UnifiedBacktestResult extends Partial<ChartDataResponse>, Parti
   api_version?: 'unified' | 'legacy';
 }
 
-// API 엔드포인트 타입
-export type ApiEndpoint = 
-  | '/api/v1/backtest'  // 통합 백테스트 엔드포인트
-  | '/api/v1/strategies'
-  | '/api/v1/naver-news/search'
-  | '/api/v1/yfinance/exchange-rate'
-  | '/api/v1/system/info'
-  | '/api/v1/optimize/run'; 

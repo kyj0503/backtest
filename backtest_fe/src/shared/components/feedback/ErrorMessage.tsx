@@ -87,7 +87,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     >
       <div className="flex">
         {showIcon && (
-          <div className="flex-shrink-0">
+          <div className="shrink-0">
             <IconComponent 
               className={`w-5 h-5 ${config.iconClass}`}
               aria-hidden="true"
@@ -114,7 +114,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
                 type="button"
                 onClick={onClose}
                 className={`
-                  inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2
+                  inline-flex rounded-md p-1.5 focus:outline-hidden focus:ring-2 focus:ring-offset-2
                   hover:bg-muted/20
                   ${config.iconClass}
                 `}

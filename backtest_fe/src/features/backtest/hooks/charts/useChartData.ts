@@ -23,7 +23,7 @@
 import { useMemo } from 'react';
 import {
   ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint,
-  TickerInfo, BenchmarkPoint, ExchangeRatePoint,
+  TickerInfo, BenchmarkSeriesPoint, ExchangeRatePoint, ExchangeRateStats,
   VolatilityEvent, NewsItem, RebalanceEvent, WeightHistoryPoint,
   TradeLog, StockDataItem,
 } from '../../model/types';
@@ -93,14 +93,14 @@ export interface UseChartDataReturn {
   singleOhlcData: OhlcPoint[];
 
   // 벤치마크 데이터
-  sp500Benchmark: (BenchmarkPoint & { return_pct?: number })[];
-  nasdaqBenchmark: (BenchmarkPoint & { return_pct?: number })[];
-  sp500BenchmarkWithReturn: (BenchmarkPoint & { return_pct?: number })[];
-  nasdaqBenchmarkWithReturn: (BenchmarkPoint & { return_pct?: number })[];
+  sp500Benchmark: BenchmarkSeriesPoint[];
+  nasdaqBenchmark: BenchmarkSeriesPoint[];
+  sp500BenchmarkWithReturn: BenchmarkSeriesPoint[];
+  nasdaqBenchmarkWithReturn: BenchmarkSeriesPoint[];
 
   // 환율 데이터
   exchangeRates: ExchangeRatePoint[];
-  exchangeStats: unknown;
+  exchangeStats: ExchangeRateStats | undefined;
 
   // 급등락/뉴스 데이터
   volatilityEvents: Record<string, VolatilityEvent[]>;
@@ -336,7 +336,7 @@ export const useChartData = (
   }, [chartData?.ohlc_data, startDate, endDate]);
 
   // 벤치마크 데이터 (스마트 샘플링 + 수익률 복리 집계)
-  const sp500Benchmark = useMemo<(BenchmarkPoint & { return_pct?: number })[]>(() => {
+  const sp500Benchmark = useMemo<BenchmarkSeriesPoint[]>(() => {
     const rawData = extractBenchmarkData(data, 'sp500');
     if (!startDate || !endDate || rawData.length === 0) {
       return rawData;
@@ -351,7 +351,7 @@ export const useChartData = (
     // 주간/월간 집계: 수익률의 날짜에 맞춰 데이터 재구성
     const dailyReturnsArray = rawData.map(point => ({
       date: point.date,
-      return_pct: (point as BenchmarkPoint & { return_pct?: number }).return_pct ?? 0,
+      return_pct: (point as BenchmarkSeriesPoint).return_pct ?? 0,
     }));
 
     const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
@@ -375,7 +375,7 @@ export const useChartData = (
     });
   }, [data, startDate, endDate, aggregationType]);
 
-  const nasdaqBenchmark = useMemo<(BenchmarkPoint & { return_pct?: number })[]>(() => {
+  const nasdaqBenchmark = useMemo<BenchmarkSeriesPoint[]>(() => {
     const rawData = extractBenchmarkData(data, 'nasdaq');
     if (!startDate || !endDate || rawData.length === 0) {
       return rawData;
@@ -390,7 +390,7 @@ export const useChartData = (
     // 주간/월간 집계: 수익률의 날짜에 맞춰 데이터 재구성
     const dailyReturnsArray = rawData.map(point => ({
       date: point.date,
-      return_pct: (point as BenchmarkPoint & { return_pct?: number }).return_pct ?? 0,
+      return_pct: (point as BenchmarkSeriesPoint).return_pct ?? 0,
     }));
 
     const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
@@ -431,8 +431,8 @@ export const useChartData = (
     return rawData;
   }, [portfolioData, data, startDate, endDate]);
 
-  const exchangeStats = useMemo<unknown>(() => {
-    return 'exchange_stats' in data ? (data as Record<string, unknown>).exchange_stats : undefined;
+  const exchangeStats = useMemo<ExchangeRateStats | undefined>(() => {
+    return 'exchange_stats' in data ? data.exchange_stats : undefined;
   }, [data]);
 
   // 급등락 이벤트

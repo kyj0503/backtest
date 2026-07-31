@@ -8,12 +8,28 @@
  */
 import React, { useState, useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import type { LegendPayload } from 'recharts';
 import { useRenderPerformance } from '@/shared/components';
+import type { BenchmarkSeriesPoint, EquityPoint } from '../../model/types';
 
 interface BenchmarkIndexChartProps {
-  sp500Data: any[];
-  nasdaqData: any[];
-  portfolioEquityData: any[];  // 포트폴리오 equity curve 데이터
+  sp500Data: BenchmarkSeriesPoint[];
+  nasdaqData: BenchmarkSeriesPoint[];
+  portfolioEquityData: EquityPoint[];  // 포트폴리오 equity curve 데이터
+}
+
+/** 시작점을 100으로 맞춘 정규화 시계열 포인트 */
+interface NormalizedPoint {
+  date: string;
+  normalized: number;
+}
+
+/** 포트폴리오/지수 세 계열을 날짜로 병합한 차트 행 */
+interface MergedBenchmarkRow {
+  date: string;
+  portfolio?: number;
+  sp500?: number;
+  nasdaq?: number;
 }
 
 const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
@@ -32,14 +48,17 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   });
 
   // 데이터를 시작점 100으로 normalize하는 함수 (샘플링은 useChartData에서 처리됨)
-  const normalizeData = (data: any[], valueKey: string) => {
+  const normalizeData = <T extends { date: string }>(
+    data: T[],
+    valueKey: keyof T & string
+  ): NormalizedPoint[] => {
     if (!data || data.length === 0) return [];
-    const startValue = data[0][valueKey];
+    const startValue = Number(data[0]?.[valueKey]);
     if (!startValue || startValue === 0) return [];
 
-    return data.map((point: any) => ({
+    return data.map((point) => ({
       date: point.date,
-      normalized: (point[valueKey] / startValue) * 100,
+      normalized: (Number(point[valueKey]) / startValue) * 100,
     }));
   };
 
@@ -105,7 +124,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
 
   // 세 데이터를 날짜별로 병합
   const mergedData = useMemo(() => {
-    const dataMap = new Map<string, any>();
+    const dataMap = new Map<string, MergedBenchmarkRow>();
 
     // 포트폴리오 데이터 추가
     normalizedPortfolio.forEach(p => {
@@ -139,7 +158,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   const yAxisDomain = useMemo(() => {
     if (mergedData.length === 0) return ['auto', 'auto'];
 
-    let allValues: number[] = [];
+    const allValues: number[] = [];
     
     mergedData.forEach(item => {
       if (visibleLines.portfolio && item.portfolio !== undefined) {
@@ -168,7 +187,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  const handleLegendClick = useCallback((data: any) => {
+  const handleLegendClick = useCallback((data: LegendPayload) => {
     const dataKey = data.dataKey;
     if (dataKey && typeof dataKey === 'string') {
       setVisibleLines(prev => ({
@@ -202,15 +221,16 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
             tick={{ fontSize: 13 }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => {
+            formatter={(value: unknown, name: unknown) => {
               const labels: Record<string, string> = {
                 portfolio: '내 포트폴리오',
                 sp500: 'S&P 500',
                 nasdaq: 'NASDAQ',
               };
-              return [value.toFixed(2), labels[name] || name];
+              const key = String(name);
+              return [Number(value).toFixed(2), labels[key] || key];
             }}
-            labelFormatter={(label: string) => `날짜: ${label}`}
+            labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
             contentStyle={{
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               border: '1px solid #ccc',
