@@ -131,6 +131,10 @@ npm run test:e2e
 ## Docker 환경에서 실행
 
 ```bash
+# 0. 환경변수 설정 (저장소 루트의 .env를 compose가 참조)
+cp .env.example .env
+# .env 파일 수정 (네이버 API 키 등)
+
 # 1. 개발용 컨테이너 빌드 및 실행
 docker compose -f compose.dev.yaml up -d --build
 
