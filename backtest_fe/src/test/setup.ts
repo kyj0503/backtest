@@ -30,16 +30,46 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// happy-dom은 window.alert/confirm/prompt를 구현하지 않는다.
+// Vitest 4의 vi.spyOn()은 대상이 실제 함수여야 하므로 no-op 스텁을 등록한다.
+Object.defineProperty(window, 'alert', {
+  writable: true,
+  configurable: true,
+  value: function alert() {},
+})
+Object.defineProperty(window, 'confirm', {
+  writable: true,
+  configurable: true,
+  value: function confirm() {
+    return true
+  },
+})
+Object.defineProperty(window, 'prompt', {
+  writable: true,
+  configurable: true,
+  value: function prompt() {
+    return null
+  },
+})
+
 // IntersectionObserver 모킹
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+// Vitest 4부터 vi.fn()에 화살표 함수를 넘기면 `new`로 호출할 수 없으므로 class로 정의한다.
+class MockIntersectionObserver {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+  takeRecords = vi.fn(() => [])
+  root: Element | null = null
+  rootMargin = ''
+  thresholds: ReadonlyArray<number> = []
+}
+global.IntersectionObserver =
+  MockIntersectionObserver as unknown as typeof IntersectionObserver
 
 // ResizeObserver 모킹
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+class MockResizeObserver {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver

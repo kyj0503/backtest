@@ -39,6 +39,13 @@ services:
       - .env
     environment:
       - MYSQL_DATABASE=stock_data_cache
+      # mysql 이미지는 root 비밀번호가 없으면 기동 자체가 실패한다.
+      # .env에 MYSQL_* 키가 없어도 뜨도록 로컬 개발용 기본값을 둔다.
+      # (.env 파일 자체는 env_file 지시자 때문에 반드시 존재해야 한다)
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-localroot123}
+      # DATABASE_USER/DATABASE_PASSWORD와 반드시 일치해야 BE가 접속할 수 있다.
+      - MYSQL_USER=${MYSQL_USER:-appuser}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-appuser123}
     volumes:
       - backtest_mysql_data:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro

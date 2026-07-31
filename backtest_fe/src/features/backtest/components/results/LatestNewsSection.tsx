@@ -35,7 +35,7 @@ const formatNewsDate = (pubDate: string): string => {
     const day = date.getDate();
     
     return `${year}년 ${month}월 ${day}일`;
-  } catch (error) {
+  } catch {
     return pubDate; // 에러 발생 시 원본 반환
   }
 };
