@@ -13,7 +13,7 @@ export const withPerformanceMonitor = <P extends object>(
   componentName: string
 ) => {
   return React.memo((props: P) => {
-    const renderStartTime = useRef<number>();
+    const renderStartTime = useRef<number | undefined>(undefined);
     const renderCount = useRef<number>(0);
 
     useEffect(() => {
@@ -101,7 +101,7 @@ export const useMemoryMonitor = (componentName: string) => {
  * 렌더링 성능 측정 훅
  */
 export const useRenderPerformance = (componentName: string) => {
-  const renderStartTime = useRef<number>();
+  const renderStartTime = useRef<number | undefined>(undefined);
   const renderCount = useRef<number>(0);
 
   useEffect(() => {

@@ -51,7 +51,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           // React 관련 라이브러리 분리
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // React 19에서는 진입점이 react-dom/client 이므로 명시하지 않으면
+          // react-dom 본체가 vendor 청크에 잡히지 않고 index로 흘러들어간다.
+          'react-vendor': ['react', 'react-dom', 'react-dom/client', 'react-router-dom'],
           // 차트 라이브러리 분리
           'chart-vendor': ['recharts'],
           // 아이콘 라이브러리 분리
