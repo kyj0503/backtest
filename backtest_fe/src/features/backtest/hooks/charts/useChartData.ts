@@ -23,7 +23,7 @@
 import { useMemo } from 'react';
 import {
   ChartData, PortfolioData, EquityPoint, TradeMarker, OhlcPoint,
-  TickerInfo, BenchmarkPoint, ExchangeRatePoint,
+  TickerInfo, BenchmarkPoint, ExchangeRatePoint, ExchangeRateStats,
   VolatilityEvent, NewsItem, RebalanceEvent, WeightHistoryPoint,
   TradeLog, StockDataItem,
 } from '../../model/types';
@@ -100,7 +100,7 @@ export interface UseChartDataReturn {
 
   // 환율 데이터
   exchangeRates: ExchangeRatePoint[];
-  exchangeStats: unknown;
+  exchangeStats: ExchangeRateStats | undefined;
 
   // 급등락/뉴스 데이터
   volatilityEvents: Record<string, VolatilityEvent[]>;
@@ -431,8 +431,8 @@ export const useChartData = (
     return rawData;
   }, [portfolioData, data, startDate, endDate]);
 
-  const exchangeStats = useMemo<unknown>(() => {
-    return 'exchange_stats' in data ? (data as Record<string, unknown>).exchange_stats : undefined;
+  const exchangeStats = useMemo<ExchangeRateStats | undefined>(() => {
+    return 'exchange_stats' in data ? data.exchange_stats : undefined;
   }, [data]);
 
   // 급등락 이벤트

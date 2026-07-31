@@ -3,13 +3,13 @@ import { useTheme } from '@/shared/hooks/useTheme';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { ThemeName } from '@/shared/types/theme';
+import { ThemeDefinition, ThemeName } from '@/shared/types/theme';
 
 interface ThemePreviewProps {
   themeName: ThemeName;
   isActive: boolean;
   onClick: () => void;
-  theme: any;
+  theme: ThemeDefinition;
 }
 
 const ThemePreview: React.FC<ThemePreviewProps> = ({ isActive, onClick, theme }) => {

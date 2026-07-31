@@ -20,15 +20,15 @@ import { Loader2 } from 'lucide-react';
 import { LazyStockPriceChart } from '../../lazy/LazyChartComponents';
 import { ChartLoading } from '@/shared/components';
 import { ResultBlock } from '../../shared';
-import { EquityPoint, PortfolioData } from '../../../model/types';
+import { EquityPoint, PortfolioData, StockDataItem, TickerInfo, TradeLog } from '../../../model/types';
 import { formatCurrency, formatDateShort } from '../../../utils';
 
 interface PortfolioChartsProps {
   portfolioData: PortfolioData;
   portfolioEquityData: EquityPoint[];
-  stocksData: Array<{ symbol: string; data: any[] }>;
-  tickerInfo: Record<string, any>;
-  tradeLogs: Record<string, any[]>;
+  stocksData: StockDataItem[];
+  tickerInfo: Record<string, TickerInfo>;
+  tradeLogs: Record<string, TradeLog[]>;
   loadingStockData?: boolean;
   aggregationType?: 'daily' | 'weekly' | 'monthly';
 }

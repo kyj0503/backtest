@@ -7,13 +7,16 @@ import React, { memo } from 'react';
 import BenchmarkIndexChart from '../BenchmarkIndexChart';
 import BenchmarkReturnsChart from '../BenchmarkReturnsChart';
 import { ResultBlock } from '../../shared';
-import { EquityPoint } from '../../../model/types';
+import { BenchmarkPoint, EquityPoint } from '../../../model/types';
+
+// useChartData가 벤치마크 시계열에 기간 수익률(return_pct)을 덧붙여 내려준다.
+type BenchmarkSeriesPoint = BenchmarkPoint & { return_pct?: number };
 
 interface BenchmarkSectionProps {
-  sp500Benchmark: any[];
-  nasdaqBenchmark: any[];
-  sp500BenchmarkWithReturn: any[];
-  nasdaqBenchmarkWithReturn: any[];
+  sp500Benchmark: BenchmarkSeriesPoint[];
+  nasdaqBenchmark: BenchmarkSeriesPoint[];
+  sp500BenchmarkWithReturn: BenchmarkSeriesPoint[];
+  nasdaqBenchmarkWithReturn: BenchmarkSeriesPoint[];
   equityDataForBenchmark: EquityPoint[];
   aggregationType?: 'daily' | 'weekly' | 'monthly';
 }

@@ -80,9 +80,10 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
         if (responseData?.detail) {
           if (Array.isArray(responseData.detail)) {
             // Pydantic validation errors
-            errorMessages = responseData.detail.map((err: any) => {
-              if (err.msg) {
-                return err.msg;
+            // FastAPI/Pydantic 422 응답: [{ loc, msg, type }, ...]
+            errorMessages = responseData.detail.map((err: unknown) => {
+              if (typeof err === 'object' && err !== null && 'msg' in err && err.msg) {
+                return String(err.msg);
               }
               return JSON.stringify(err);
             });

@@ -78,8 +78,8 @@ export const useMemoryMonitor = (componentName: string) => {
     if (process.env.NODE_ENV !== 'development') return;
 
     const checkMemory = () => {
-      if ('memory' in performance) {
-        const memory = (performance as any).memory;
+      const memory = performance.memory;
+      if (memory) {
         console.log(`💾 [Memory] ${componentName}:`, {
           used: `${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`,
           total: `${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`,

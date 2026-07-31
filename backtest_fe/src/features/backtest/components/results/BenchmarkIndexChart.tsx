@@ -139,7 +139,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   const yAxisDomain = useMemo(() => {
     if (mergedData.length === 0) return ['auto', 'auto'];
 
-    let allValues: number[] = [];
+    const allValues: number[] = [];
     
     mergedData.forEach(item => {
       if (visibleLines.portfolio && item.portfolio !== undefined) {

@@ -25,6 +25,16 @@ interface TradeLog {
   ReturnPct?: number;
 }
 
+// 주가 데이터에 매매 신호를 merge한 차트 데이터 포인트
+// buySignal/sellSignal은 해당 날짜에 신호가 없으면 undefined (recharts가 점을 건너뜀)
+interface StockChartPoint {
+  date: string;
+  price: number;
+  volume?: number;
+  buySignal?: number;
+  sellSignal?: number;
+}
+
 interface StockPriceChartProps {
   stocksData: StockData[];
   tickerInfo?: { [symbol: string]: TickerInfo };
@@ -102,7 +112,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
   const selectedStockData = stocksData.find(stock => stock.symbol === selectedSymbol);
 
   // 선택된 종목의 매매 신호를 주가 데이터에 merge
-  const chartDataWithSignals = useMemo(() => {
+  const chartDataWithSignals = useMemo<StockChartPoint[]>(() => {
     if (!selectedStockData) return [];
 
     const logs = tradeLogs[selectedSymbol];
@@ -116,7 +126,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
 
     logs.forEach((trade) => {
       // 실제 거래 날짜 추출
-      let tradeDates: string[] = [];
+      const tradeDates: string[] = [];
 
       if (trade.Type) {
         // Type 필드가 있으면 (리밸런싱, DCA 등)
@@ -162,7 +172,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
   // Y축 도메인 계산 (메모이제이션)
   const yAxisDomain = useMemo<[number, number]>(() => {
     const prices = chartDataWithSignals
-      .map((d: any) => d.price)
+      .map((d) => d.price)
       .filter((price): price is number => typeof price === 'number' && !isNaN(price));
     
     if (prices.length === 0) return [0, 100];
@@ -251,14 +261,15 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
                   domain={yAxisDomain}
                 />
                 <Tooltip
-                  labelFormatter={(label: any) => `날짜: ${label}`}
-                  formatter={(value: any, name: unknown) => {
+                  labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
+                  formatter={(value: unknown, name: unknown) => {
                     if (!value) return null;
                     const key = String(name);
-                    if (key === 'price') return [formatPrice(value), '주가'];
-                    if (key === 'buySignal') return [formatPrice(value), '매수'];
-                    if (key === 'sellSignal') return [formatPrice(value), '매도'];
-                    return [value, key];
+                    const price = Number(value);
+                    if (key === 'price') return [formatPrice(price), '주가'];
+                    if (key === 'buySignal') return [formatPrice(price), '매수'];
+                    if (key === 'sellSignal') return [formatPrice(price), '매도'];
+                    return [String(value), key];
                   }}
                 />
                 {/* 주가 라인 */}

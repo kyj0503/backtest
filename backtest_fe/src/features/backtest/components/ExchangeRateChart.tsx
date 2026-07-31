@@ -94,7 +94,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
           <XAxis
             dataKey="date"
             tick={{ fontSize: 12 }}
-            tickFormatter={(value: any) => {
+            tickFormatter={(value: string) => {
               const date = new Date(value);
               return `${date.getMonth() + 1}/${date.getDate()}`;
             }}
@@ -106,7 +106,7 @@ const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
           />
           <Tooltip
             formatter={(value: unknown) => [`₩${Number(value).toFixed(2)}`, '환율']}
-            labelFormatter={(label: any) => `날짜: ${label}`}
+            labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
           />
           <Line
             type="monotone"

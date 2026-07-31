@@ -31,9 +31,33 @@ const formatChartDate = (dateString: string, format: 'short' | 'long' = 'short')
 }
 
 /**
+ * 정규화 전 OHLC 항목. 가격/거래량 필드는 API/CSV에서 문자열·null·NaN 등
+ * 무엇이든 들어올 수 있어 unknown으로 두고 Number()로 강제 변환한다.
+ */
+interface RawOhlcItem {
+  date: string
+  open?: unknown
+  high?: unknown
+  low?: unknown
+  close?: unknown
+  volume?: unknown
+}
+
+interface NormalizedOhlcItem {
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+/**
  * OHLC 데이터 배열을 정규화
  */
-const normalizeOhlcData = (data: any[]): any[] => {
+const normalizeOhlcData = (
+  data: readonly RawOhlcItem[] | null | undefined
+): NormalizedOhlcItem[] => {
   if (!data || data.length === 0) return []
   
   return data.map(item => ({
@@ -49,7 +73,9 @@ const normalizeOhlcData = (data: any[]): any[] => {
 /**
  * 가격 범위 계산
  */
-const getPriceRange = (data: any[]): { min: number; max: number } => {
+const getPriceRange = (
+  data: readonly { high: number; low: number }[] | null | undefined
+): { min: number; max: number } => {
   if (!data || data.length === 0) {
     return { min: 0, max: 0 }
   }
@@ -135,8 +161,8 @@ describe('chartUtils', () => {
     })
 
     it('null/undefined를 처리한다', () => {
-      expect(normalizeOhlcData(null as any)).toEqual([])
-      expect(normalizeOhlcData(undefined as any)).toEqual([])
+      expect(normalizeOhlcData(null)).toEqual([])
+      expect(normalizeOhlcData(undefined)).toEqual([])
     })
 
     it('유효하지 않은 숫자를 0으로 변환한다', () => {
@@ -174,8 +200,8 @@ describe('chartUtils', () => {
     })
 
     it('null/undefined를 처리한다', () => {
-      expect(getPriceRange(null as any)).toEqual({ min: 0, max: 0 })
-      expect(getPriceRange(undefined as any)).toEqual({ min: 0, max: 0 })
+      expect(getPriceRange(null)).toEqual({ min: 0, max: 0 })
+      expect(getPriceRange(undefined)).toEqual({ min: 0, max: 0 })
     })
   })
 

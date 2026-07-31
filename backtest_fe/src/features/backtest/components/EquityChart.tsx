@@ -1,17 +1,12 @@
 import React, { memo, useMemo } from 'react';
 import { ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Line, Area, ReferenceLine } from 'recharts';
+import type { TextAnchor } from 'recharts';
 import { CustomTooltip } from './shared';
 import { useRenderPerformance } from '@/shared/components';
-
-interface EquityChartData {
-  date: string;
-  return_pct: number;
-  drawdown_pct: number;
-  [key: string]: string | number;
-}
+import type { EquityPoint } from '../model/types';
 
 interface EquityChartProps {
-  data: EquityChartData[];
+  data: EquityPoint[];
 }
 
 // 차트 설정 상수 (컴포넌트 외부로 이동하여 재생성 방지)
@@ -49,10 +44,11 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
   // 반응형 X축 설정
   const xAxisProps = useMemo(() => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    const textAnchor: TextAnchor = isMobile ? 'end' : 'middle';
     return {
       interval: getXAxisInterval(processedData.length, typeof window !== 'undefined' ? window.innerWidth : 1024),
       angle: isMobile ? -45 : 0,
-      textAnchor: isMobile ? 'end' : 'middle',
+      textAnchor,
       height: isMobile ? 60 : 30,
     };
   }, [processedData.length]);
@@ -67,7 +63,7 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
           tick={{ fontSize: 11 }}
           interval={xAxisProps.interval}
           angle={xAxisProps.angle}
-          textAnchor={xAxisProps.textAnchor as any}
+          textAnchor={xAxisProps.textAnchor}
         />
         <YAxis yAxisId="return" orientation="left" />
         <YAxis yAxisId="drawdown" orientation="right" />

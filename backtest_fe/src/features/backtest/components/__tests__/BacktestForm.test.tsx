@@ -11,8 +11,16 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@/test/utils'
 import userEvent from '@testing-library/user-event'
 
+// FormData.get()이 반환하는 원본 값 그대로 전달된다 (string | File | null)
+interface MockBacktestFormData {
+  symbol: FormDataEntryValue | null
+  startDate: FormDataEntryValue | null
+  endDate: FormDataEntryValue | null
+  strategy: FormDataEntryValue | null
+}
+
 // Mock BacktestForm 컴포넌트 (실제 구현은 복잡하므로 간단한 버전으로 테스트)
-const MockBacktestForm = ({ onSubmit }: { onSubmit: (data: any) => void }) => {
+const MockBacktestForm = ({ onSubmit }: { onSubmit: (data: MockBacktestFormData) => void }) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
