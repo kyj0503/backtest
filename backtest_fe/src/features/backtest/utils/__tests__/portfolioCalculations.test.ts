@@ -3,19 +3,18 @@ import {
   getDcaAdjustedTotal,
   getDcaAmountFromWeight,
 } from '../portfolioCalculations';
-import { getDcaWeeks } from '../../model/strategyConfig';
+import { calculateDcaPeriods } from '../calculateDcaPeriods';
 import type { DcaFrequency } from '../../model/strategyConfig';
 
 describe('portfolioCalculations', () => {
-  // 테스트 날짜: 39주 (279일)
-  // 2025-01-01 ~ 2025-10-07 = 279일 = 39주
+  // 테스트 기간: 2025-01-01 ~ 2025-10-07 = 279일
   const startDate = '2025-01-01';
   const endDate = '2025-10-07';
 
-  // DCA 횟수 계산:
-  // - weekly_4: 39주 / 4주 = 9, +1 = 10회
-  // - weekly_8: 39주 / 8주 = 4, +1 = 5회
-  // - weekly_12: 39주 / 12주 = 3, +1 = 4회
+  // DCA 횟수 계산 (calculateDcaPeriods: floor(기간일수 / 주기일수) + 1, weekly=7일/monthly=30일 근사):
+  // - monthly_1 (30일): 279 / 30 = 9, +1 = 10회
+  // - monthly_2 (60일): 279 / 60 = 4, +1 = 5회
+  // - monthly_3 (90일): 279 / 90 = 3, +1 = 4회
 
   describe('getDcaAdjustedTotal', () => {
     it('should calculate DCA-adjusted total correctly', () => {
@@ -27,7 +26,7 @@ describe('portfolioCalculations', () => {
         {
           amount: 10000,
           investmentType: 'dca',
-          dcaFrequency: 'weekly_4',
+          dcaFrequency: 'monthly_1',
         },
         {
           amount: 10000,
@@ -37,7 +36,7 @@ describe('portfolioCalculations', () => {
 
       const total = getDcaAdjustedTotal(portfolio, startDate, endDate);
 
-      // 39주 / 4주 = 9, +1 = 10회 DCA
+      // 279일 / 30일 = 9, +1 = 10회 DCA
       // AAPL DCA: 10,000 × 10 = 100,000
       // GOOGL lump_sum: 10,000 × 1 = 10,000
       // 총액: 110,000
@@ -97,7 +96,7 @@ describe('portfolioCalculations', () => {
         {
           amount: 10000,
           investmentType: 'dca',
-          dcaFrequency: 'weekly_4',
+          dcaFrequency: 'monthly_1',
         },
         {
           amount: 10000,
@@ -120,12 +119,12 @@ describe('portfolioCalculations', () => {
   describe('getDcaAmountFromWeight', () => {
     it('should calculate DCA per-period amount from weight', () => {
       // 총 $20,000, AAPL 60% = $12,000
-      // 39주 / 4주 = 9, +1 = 10회 DCA
+      // 279일 / 30일 = 9, +1 = 10회 DCA
       // 회당 금액 = 12,000 / 10 = 1,200
       const amount = getDcaAmountFromWeight(
         60,
         20000,
-        'weekly_4',
+        'monthly_1',
         startDate,
         endDate
       );
@@ -139,40 +138,40 @@ describe('portfolioCalculations', () => {
       const amount = getDcaAmountFromWeight(
         40,
         20000,
-        'weekly_4',
+        'monthly_1',
         startDate,
         endDate
       );
 
       // GOOGL 40% = $8,000
-      // DCA로 계산: 8,000 / 10 = 800
+      // DCA로 계산: 8,000 / 10회 = 800
       expect(amount).toBe(800);
     });
 
     it('should handle different DCA frequencies', () => {
-      // 8주 주기: 39주 / 8주 = 4, +1 = 5회
-      const amount_8weeks = getDcaAmountFromWeight(
+      // 2개월 주기(60일): 279 / 60 = 4, +1 = 5회
+      const amount_2months = getDcaAmountFromWeight(
         60,
         20000,
-        'weekly_8',
+        'monthly_2',
         startDate,
         endDate
       );
 
-      // 12주 주기: 39주 / 12주 = 3, +1 = 4회
-      const amount_12weeks = getDcaAmountFromWeight(
+      // 3개월 주기(90일): 279 / 90 = 3, +1 = 4회
+      const amount_3months = getDcaAmountFromWeight(
         60,
         20000,
-        'weekly_12',
+        'monthly_3',
         startDate,
         endDate
       );
 
       // 12,000 / 5 = 2,400
-      expect(amount_8weeks).toBe(2400);
+      expect(amount_2months).toBe(2400);
 
       // 12,000 / 4 = 3,000
-      expect(amount_12weeks).toBe(3000);
+      expect(amount_3months).toBe(3000);
     });
 
     it('should return same amount when no dates provided', () => {
@@ -180,27 +179,30 @@ describe('portfolioCalculations', () => {
       const amount = getDcaAmountFromWeight(
         50,
         20000,
-        'weekly_4'
+        'monthly_1'
       );
 
       expect(amount).toBe(10000); // 50% of 20,000
     });
   });
 
-  describe('getDcaWeeks', () => {
-    it('should return correct weeks for each frequency', () => {
-      expect(getDcaWeeks('weekly_1')).toBe(1);
-      expect(getDcaWeeks('weekly_2')).toBe(2);
-      expect(getDcaWeeks('weekly_4')).toBe(4);
-      expect(getDcaWeeks('weekly_8')).toBe(8);
-      expect(getDcaWeeks('weekly_12')).toBe(12);
-      expect(getDcaWeeks('weekly_24')).toBe(24);
-      expect(getDcaWeeks('weekly_48')).toBe(48);
+  describe('calculateDcaPeriods', () => {
+    it('should return correct period count for each frequency', () => {
+      // 기간 279일 기준, floor(279 / 주기일수) + 1 (첫 투자 포함)
+      expect(calculateDcaPeriods(startDate, endDate, 'weekly_1')).toBe(40); // 7일: 39 + 1
+      expect(calculateDcaPeriods(startDate, endDate, 'weekly_2')).toBe(20); // 14일: 19 + 1
+      expect(calculateDcaPeriods(startDate, endDate, 'monthly_1')).toBe(10); // 30일: 9 + 1
+      expect(calculateDcaPeriods(startDate, endDate, 'monthly_2')).toBe(5); // 60일: 4 + 1
+      expect(calculateDcaPeriods(startDate, endDate, 'monthly_3')).toBe(4); // 90일: 3 + 1
+      expect(calculateDcaPeriods(startDate, endDate, 'monthly_6')).toBe(2); // 180일: 1 + 1
+      expect(calculateDcaPeriods(startDate, endDate, 'monthly_12')).toBe(1); // 360일: 0 + 1
     });
 
-    it('should default to 1 week for unknown frequency', () => {
-      // getDcaWeeks는 DcaFrequency 타입으로 제한되므로 존재하는 빈도만 테스트
-      expect(getDcaWeeks('weekly_1')).toBe(1);
+    it('should return at least 1 period when the range is shorter than one interval', () => {
+      // 기간이 주기보다 짧아도 첫 투자는 발생하므로 최소 1회
+      expect(calculateDcaPeriods('2025-01-01', '2025-01-05', 'monthly_1')).toBe(1);
+      // 시작일 = 종료일인 경우에도 최소 1회 (Math.max(1, ...))
+      expect(calculateDcaPeriods('2025-01-01', '2025-01-01', 'weekly_1')).toBe(1);
     });
   });
 
@@ -215,7 +217,7 @@ describe('portfolioCalculations', () => {
         {
           amount: 10000,
           investmentType: 'dca',
-          dcaFrequency: 'weekly_4',
+          dcaFrequency: 'monthly_1',
         },
         {
           amount: 10000,
@@ -249,7 +251,7 @@ describe('portfolioCalculations', () => {
       const aapl_amount = getDcaAmountFromWeight(
         aapl_weight,
         totalInvestment,
-        'weekly_4',
+        'monthly_1',
         startDate,
         endDate
       );
@@ -257,12 +259,12 @@ describe('portfolioCalculations', () => {
       const googl_amount = getDcaAmountFromWeight(
         googl_weight,
         totalInvestment,
-        'weekly_4',
+        'monthly_1',
         startDate,
         endDate
       );
 
-      // 39주 / 4주 = 9, +1 = 10회
+      // 279일 / 30일 = 9, +1 = 10회
       // AAPL: 60% × $20,000 = $12,000 / 10회 = $1,200
       // GOOGL: 40% × $20,000 = $8,000 / 10회 = $800
       expect(aapl_amount).toBe(1200);
