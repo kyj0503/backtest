@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { getDcaPeriodInfo } from '../src/features/backtest/model/constants/dcaConfig';
+import { DcaFrequency, getDcaPeriodInfo } from '../constants/dcaConfig';
+import { Stock } from '../types/backtest-form-types';
 
 // DCA 주기를 근사 일수로 변환하는 헬퍼 함수
-const getDcaApproxDays = (frequency: string): number => {
-  const { type, interval } = getDcaPeriodInfo(frequency as any);
+const getDcaApproxDays = (frequency: DcaFrequency): number => {
+  const { type, interval } = getDcaPeriodInfo(frequency);
   if (type === 'weekly') {
     return interval * 7;
   } else if (type === 'monthly') {
@@ -13,7 +14,7 @@ const getDcaApproxDays = (frequency: string): number => {
 };
 
 // reducer의 recalcAmountsByWeight 함수 복사
-const recalcAmountsByWeight = (portfolio: any[], totalInvestment: number, startDate?: string, endDate?: string) => {
+const recalcAmountsByWeight = (portfolio: Stock[], totalInvestment: number, startDate?: string, endDate?: string) => {
   if (!startDate || !endDate || totalInvestment === 0) {
     // 날짜 정보 없으면 기본 계산
     return portfolio.map(s =>
@@ -43,12 +44,12 @@ const recalcAmountsByWeight = (portfolio: any[], totalInvestment: number, startD
   weightIndices.forEach((index, pos) => {
     const s = portfolio[index];
     const isLastWeightItem = pos === weightIndices.length - 1;
-    const totalAmountForStock = (s.weight / 100) * totalInvestment;
+    const totalAmountForStock = ((s.weight ?? 0) / 100) * totalInvestment;
 
     if (isLastWeightItem) {
       // 마지막 weight 항목: 오차 보정 (totalInvestment - 이전까지 누적)
       const correctedTotalAmount = totalInvestment - accumulatedTotal;
-      
+
       if (s.investmentType === 'dca') {
         const intervalDays = getDcaApproxDays(s.dcaFrequency || 'monthly_1');
         const dcaPeriods = Math.max(1, Math.floor(days / intervalDays) + 1);
@@ -84,7 +85,7 @@ const recalcAmountsByWeight = (portfolio: any[], totalInvestment: number, startD
 
 describe('recalcAmountsByWeight', () => {
   it('should calculate correct DCA amounts for 50/50 portfolio with $10,000', () => {
-    const portfolio = [
+    const portfolio: Stock[] = [
       {
         symbol: 'AAPL',
         amount: 0,
@@ -104,23 +105,23 @@ describe('recalcAmountsByWeight', () => {
     ];
 
     const result = recalcAmountsByWeight(portfolio, 10000, '2025-01-01', '2025-10-31');
-    
+
     console.log('Portfolio after recalc:', result);
-    
+
     // AAPL: $5,000 / 11 periods = $454.55 → $454
     // GOOGL: ($10,000 - $4,994) / 11 = $455
     expect(result[0].amount).toBeGreaterThan(0);
     expect(result[1].amount).toBeGreaterThan(0);
-    
+
     // 검증: 각 종목의 총 투자액 계산
     const aapl_total = result[0].amount * 11;  // 회당 금액 × 11 periods
     const googl_total = result[1].amount * 11; // 회당 금액 × 11 periods
     const combined_total = aapl_total + googl_total;
-    
+
     console.log(`AAPL: $${result[0].amount}/period × 11 = $${aapl_total}`);
     console.log(`GOOGL: $${result[1].amount}/period × 11 = $${googl_total}`);
     console.log(`Total: $${combined_total}`);
-    
+
     // 총 투자액이 $10,000 근처여야 함 (±5%)
     expect(combined_total).toBeGreaterThanOrEqual(9500);
     expect(combined_total).toBeLessThanOrEqual(10500);

@@ -40,10 +40,6 @@ export default defineConfig(({ mode }) => ({
         target: FASTAPI_TARGET,
         changeOrigin: true,
       },
-      '/api/v1/naver-news': {
-        target: FASTAPI_TARGET,
-        changeOrigin: true,
-      },
     }
   },
   build: {
