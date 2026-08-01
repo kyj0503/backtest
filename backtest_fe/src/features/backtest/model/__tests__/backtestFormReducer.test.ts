@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, assert } from 'vitest'
 import { backtestFormReducer, backtestFormHelpers } from '../backtestFormReducer'
 import { initialBacktestFormState, type BacktestFormState } from '../types/backtest-form-types'
 import { ASSET_TYPES } from '../strategyConfig'
@@ -31,10 +31,16 @@ describe('backtestFormReducer', () => {
       payload: 'weight',
     })
 
-    expect(nextState.portfolio[0].weight).toBe(60)
-    expect(nextState.portfolio[1].weight).toBe(40)
-    expect(nextState.portfolio[0].amount).toBe(6000)
-    expect(nextState.portfolio[1].amount).toBe(4000)
+    expect(nextState.portfolio).toHaveLength(2)
+    const [aapl, msft] = nextState.portfolio
+    assert.isDefined(aapl)
+    assert.isDefined(msft)
+    expect(aapl.symbol).toBe('AAPL')
+    expect(msft.symbol).toBe('MSFT')
+    expect(aapl.weight).toBe(60)
+    expect(msft.weight).toBe(40)
+    expect(aapl.amount).toBe(6000)
+    expect(msft.amount).toBe(4000)
     expect(nextState.portfolioInputMode).toBe('weight')
   })
 
@@ -67,8 +73,14 @@ describe('backtestFormReducer', () => {
     })
 
     expect(nextState.totalInvestment).toBe(20000)
-    expect(nextState.portfolio[0].amount).toBe(12000)
-    expect(nextState.portfolio[1].amount).toBe(8000)
+    expect(nextState.portfolio).toHaveLength(2)
+    const [aapl, msft] = nextState.portfolio
+    assert.isDefined(aapl)
+    assert.isDefined(msft)
+    expect(aapl.symbol).toBe('AAPL')
+    expect(msft.symbol).toBe('MSFT')
+    expect(aapl.amount).toBe(12000)
+    expect(msft.amount).toBe(8000)
   })
 
   it('clears weight when updating amounts directly in amount mode', () => {
@@ -90,8 +102,12 @@ describe('backtestFormReducer', () => {
       payload: { index: 0, field: 'amount', value: 15000 },
     })
 
-    expect(updated.portfolio[0].amount).toBe(15000)
-    expect(updated.portfolio[0].weight).toBeUndefined()
+    expect(updated.portfolio).toHaveLength(1)
+    const [updatedStock] = updated.portfolio
+    assert.isDefined(updatedStock)
+    expect(updatedStock.symbol).toBe('AAPL')
+    expect(updatedStock.amount).toBe(15000)
+    expect(updatedStock.weight).toBeUndefined()
   })
 })
 

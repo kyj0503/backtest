@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, assert } from 'vitest';
 import {
   getDcaAdjustedTotal,
   getDcaAmountFromWeight,
@@ -226,8 +226,12 @@ describe('portfolioCalculations', () => {
       ];
 
       const total = getDcaAdjustedTotal(portfolio, startDate, endDate);
-      const aapl_weight = (portfolio[0].amount / total) * 100;
-      const googl_weight = (portfolio[1].amount / total) * 100;
+      expect(portfolio).toHaveLength(2);
+      const [dcaEntry, lumpSumEntry] = portfolio;
+      assert.isDefined(dcaEntry);
+      assert.isDefined(lumpSumEntry);
+      const aapl_weight = (dcaEntry.amount / total) * 100;
+      const googl_weight = (lumpSumEntry.amount / total) * 100;
 
       // 총액: 110,000
       // AAPL: 10,000 / 110,000 = 9.09%

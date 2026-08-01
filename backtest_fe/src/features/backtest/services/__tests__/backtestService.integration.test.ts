@@ -68,7 +68,7 @@ describe('BacktestService (integration)', () => {
     }
 
     server.use(
-      http.post(`${TEST_BASE_URL}/api/v1/backtest`, async ({ request }) => {
+      http.post<never, BacktestRequest>(`${TEST_BASE_URL}/api/v1/backtest`, async ({ request }) => {
         capturedBody = await request.json()
         return HttpResponse.json(mockResponse)
       })

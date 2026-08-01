@@ -89,6 +89,7 @@
     "lint:fix": "eslint . --fix",
     "preview": "vite preview --host",
     "type-check": "tsc --noEmit -p tsconfig.build.json",
+    "type-check:test": "tsc --noEmit -p tsconfig.test.json",
     "clean": "rm -rf dist node_modules/.vite",
     "test": "vitest",
     "test:run": "vitest run",

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, assert } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useBacktestForm } from '../useBacktestForm'
 
@@ -41,8 +41,13 @@ describe('useBacktestForm', () => {
     })
 
     expect(result.current.state.portfolioInputMode).toBe('weight')
-    expect(result.current.state.portfolio[0].amount).toBe(10000)
-    expect(result.current.state.portfolio[1].amount).toBe(10000)
+    expect(result.current.state.portfolio).toHaveLength(2)
+    const [first, second] = result.current.state.portfolio
+    assert.isDefined(first)
+    assert.isDefined(second)
+    expect(second.symbol).toBe('MSFT')
+    expect(first.amount).toBe(10000)
+    expect(second.amount).toBe(10000)
     expect(result.current.helpers.getTotalAmount()).toBe(20000)
   })
 

@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    /* vitest.config.ts sets `globals: true`, so describe/it/expect/vi are ambient. */
+    /* vite.config.ts / vitest.config.ts use `process` and `__dirname` -> node types. */
+    "types": ["vitest/globals", "node", "@testing-library/jest-dom"]
+  },
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/__tests__/**/*.ts",
+    "src/**/__tests__/**/*.tsx",
+    "src/test/**/*.ts",
+    "src/test/**/*.tsx",
+    "src/vite-env.d.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
+  "references": []
+}
