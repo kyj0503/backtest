@@ -28,10 +28,6 @@ ENV VENV_DIR=/opt/venv
 RUN python3 -m venv ${VENV_DIR}
 ENV PATH="${VENV_DIR}/bin:$PATH"
 
-# (옵션) uv 설치: keep for compatibility, but use pip in venv
-RUN curl -Ls https://astral.sh/uv/install.sh | sh \
-    && cp /root/.local/bin/uv /usr/local/bin/uv || true
-
 # requirements 설치 (pip 캐시 마운트로 재다운로드 방지)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt

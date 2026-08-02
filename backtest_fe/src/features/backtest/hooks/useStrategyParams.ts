@@ -21,6 +21,27 @@ export interface UseStrategyParamsReturn {
   getParamLabel: (key: string) => string;
 }
 
+const PARAM_LABEL_MAP: Record<string, string> = {
+  'short_window': '단기 이동평균 기간',
+  'long_window': '장기 이동평균 기간',
+  'rsi_period': 'RSI 기간',
+  'rsi_oversold': 'RSI 과매도 기준',
+  'rsi_overbought': 'RSI 과매수 기준',
+  'bb_period': '볼린저 밴드 기간',
+  'bb_std': '볼린저 밴드 표준편차',
+  'macd_fast': 'MACD 빠른 기간',
+  'macd_slow': 'MACD 느린 기간',
+  'macd_signal': 'MACD 신호선 기간',
+  'fast_window': '단기 EMA 기간',
+  'slow_window': '장기 EMA 기간'
+};
+
+// 컴포넌트 상태/props에 의존하지 않는 순수 함수이므로 모듈 스코프로 분리한다.
+// (훅 내부에 두면 useCallback 의존성 배열에 매번 추가해야 함)
+const getParamLabel = (key: string): string => {
+  return PARAM_LABEL_MAP[key] || key;
+};
+
 export const useStrategyParams = (): UseStrategyParamsReturn => {
   const getStrategyConfig = useCallback((strategy: string) => {
     return STRATEGY_CONFIGS[strategy as keyof typeof STRATEGY_CONFIGS];
@@ -88,25 +109,6 @@ export const useStrategyParams = (): UseStrategyParamsReturn => {
 
     return errors;
   }, [getStrategyConfig]);
-
-  const getParamLabel = useCallback((key: string): string => {
-    const labelMap: Record<string, string> = {
-      'short_window': '단기 이동평균 기간',
-      'long_window': '장기 이동평균 기간',
-      'rsi_period': 'RSI 기간',
-      'rsi_oversold': 'RSI 과매도 기준',
-      'rsi_overbought': 'RSI 과매수 기준',
-      'bb_period': '볼린저 밴드 기간',
-      'bb_std': '볼린저 밴드 표준편차',
-      'macd_fast': 'MACD 빠른 기간',
-      'macd_slow': 'MACD 느린 기간',
-      'macd_signal': 'MACD 신호선 기간',
-      'fast_window': '단기 EMA 기간',
-      'slow_window': '장기 EMA 기간'
-    };
-    
-    return labelMap[key] || key;
-  }, []);
 
   return {
     getStrategyConfig,

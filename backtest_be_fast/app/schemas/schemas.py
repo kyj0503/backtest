@@ -57,6 +57,7 @@ import numpy as np
 import re
 
 from ..core.config import settings
+from .requests import StrategyType
 
 # DCA/리밸런싱 주기 프리셋 (Nth Weekday 방식)
 # 값: (주기 타입, 간격) - 예: ('weekly', 1) = 매주, ('monthly', 1) = 매월
@@ -147,7 +148,7 @@ class PortfolioBacktestRequest(BaseModel):
     end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
     commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
     rebalance_frequency: str = Field("monthly_1", description="리밸런싱 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12, none)")
-    strategy: str = Field("buy_and_hold", description="전략명")
+    strategy: str = Field("buy_hold_strategy", description="전략명")
     strategy_params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="전략 파라미터")
     
     @field_validator('portfolio')
@@ -192,6 +193,19 @@ class PortfolioBacktestRequest(BaseModel):
                 raise ValueError('총 투자 금액은 0보다 커야 합니다.')
         return v
     
+    @field_validator('strategy')
+    @classmethod
+    def validate_strategy(cls, v):
+        """
+        전략명 검증 (FastAPI 조기 검증용)
+
+        Note: StrategyType Enum에 정의되지 않은 값은 거부함 (P2-03)
+        """
+        valid_strategies = {s.value for s in StrategyType}
+        if v not in valid_strategies:
+            raise ValueError(f'유효하지 않은 전략입니다: {v}. 허용된 값: {", ".join(sorted(valid_strategies))}')
+        return v
+
     @field_validator('start_date', 'end_date')
     @classmethod
     def validate_date_format(cls, v):

@@ -10,6 +10,7 @@
 import pytest
 from pydantic import ValidationError
 from app.schemas.schemas import PortfolioStock, PortfolioBacktestRequest
+from app.schemas.requests import StrategyType
 
 class TestPortfolioStock:
     """포트폴리오 종목 모델 테스트"""
@@ -185,3 +186,35 @@ class TestPortfolioBacktestRequest:
         }
         with pytest.raises(ValidationError):
             PortfolioBacktestRequest(**data)
+
+    def test_default_strategy_is_valid_strategy_type(self):
+        """strategy 미입력 시 기본값이 StrategyType의 유효한 값이어야 함 (P2-03)"""
+        data = {
+            "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
+            "start_date": "2023-01-01",
+            "end_date": "2024-01-01",
+        }
+        request = PortfolioBacktestRequest(**data)
+        assert request.strategy in {s.value for s in StrategyType}
+
+    def test_invalid_strategy_raises_error(self):
+        """StrategyType에 없는 임의의 strategy 값은 ValidationError 발생 (P2-03)"""
+        data = {
+            "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
+            "start_date": "2023-01-01",
+            "end_date": "2024-01-01",
+            "strategy": "nonsense_strategy",
+        }
+        with pytest.raises(ValidationError):
+            PortfolioBacktestRequest(**data)
+
+    def test_sma_strategy_still_accepted(self):
+        """sma_strategy와 같은 유효한 StrategyType 값은 계속 허용됨 (P2-03)"""
+        data = {
+            "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
+            "start_date": "2023-01-01",
+            "end_date": "2024-01-01",
+            "strategy": "sma_strategy",
+        }
+        request = PortfolioBacktestRequest(**data)
+        assert request.strategy == "sma_strategy"

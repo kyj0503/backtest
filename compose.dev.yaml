@@ -34,7 +34,8 @@ services:
     networks:
       - backtest-net
     ports:
-      - "3306:3306"
+      # 커밋된 기본 비밀번호 폴백과의 조합 노출을 막기 위해 루프백으로 제한
+      - "127.0.0.1:3306:3306"
     env_file:
       - .env
     environment:

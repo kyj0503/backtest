@@ -60,13 +60,13 @@ def _sma_helper(values, n):
 class SmaCrossStrategy(PositionSizingMixin, Strategy):
     """이동평균 교차 전략 (단기선이 장기선을 상향/하향 돌파 시 매매)"""
 
-    sma_short = 10
-    sma_long = 20
+    short_window = 10
+    long_window = 20
     position_size = 0.95
 
     def init(self):
-        self.sma1 = self.I(_sma_helper, self.data.Close, self.sma_short)
-        self.sma2 = self.I(_sma_helper, self.data.Close, self.sma_long)
+        self.sma1 = self.I(_sma_helper, self.data.Close, self.short_window)
+        self.sma2 = self.I(_sma_helper, self.data.Close, self.long_window)
 
     def next(self):
         if not self.position:
