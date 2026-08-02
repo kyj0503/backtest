@@ -59,6 +59,29 @@ COPY pytest.ini ./
 
 RUN pytest tests/unit -q
 
+# audit: 의존성 취약점 감사 (CI 전용)
+#
+# test와 마찬가지로 최종 이미지의 의존 경로 밖이라 `docker build`(타깃 미지정)
+# 로는 실행되지 않는다. CI가 `--target audit`으로 호출한다. 락 파일만 있으면
+# 되므로 builder가 아니라 클린 slim에서 시작한다 (네이티브 컴파일 불필요).
+#
+# 바인드 마운트(-v)가 아니라 빌드 컨텍스트로 파일을 받는 이유: Jenkins가
+# 컨테이너 안에서 호스트 Docker 데몬에 붙어 sibling 컨테이너를 띄우는 구조라
+# -v의 소스 경로가 호스트 기준으로 해석되어 파일을 찾지 못한다.
+FROM python:3.11-slim AS audit
+
+WORKDIR /app
+COPY requirements.lock.txt .
+
+# 업그레이드로 고칠 수 없고 이 앱에서 도달 불가능한 취약점 ID (공백 구분).
+# 근거와 재검토 조건은 scripts/audit-deps.sh에 적혀 있다.
+ARG PIP_AUDIT_IGNORE=""
+
+RUN pip install -q pip-audit && \
+    ignore_args=""; \
+    for vuln in $PIP_AUDIT_IGNORE; do ignore_args="$ignore_args --ignore-vuln $vuln"; done; \
+    pip-audit -r requirements.lock.txt $ignore_args
+
 # runtime: 실제 배포 이미지 (마지막 스테이지 = 기본 빌드 타깃)
 #
 # builder의 컴파일러/헤더, test의 pytest 등 테스트 의존성은 여기 포함되지 않는다.

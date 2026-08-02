@@ -33,7 +33,31 @@ RUN npm run type-check
 RUN npm run type-check:test
 RUN npm run test:run
 
-# Stage 3: Build the React application
+# Stage 3: 의존성 취약점 감사 (CI 전용)
+#
+# test 스테이지와 마찬가지로 최종 이미지의 의존 경로 밖이라 `docker build`
+# (타깃 미지정)로는 실행되지 않는다. CI가 `--target audit`으로 호출한다.
+#
+# 바인드 마운트(-v)가 아니라 빌드 컨텍스트로 파일을 받는 이유: Jenkins가
+# 컨테이너 안에서 호스트 Docker 데몬에 붙어 sibling 컨테이너를 띄우는 구조라,
+# -v의 소스 경로가 "Jenkins 컨테이너 안의 경로"가 아니라 "호스트 경로"로
+# 해석되어 파일을 찾지 못한다. 빌드 컨텍스트는 데몬으로 스트리밍되므로
+# 그 문제가 없다 (Quality Gate가 동작하는 것과 같은 이유).
+FROM deps AS audit
+
+# npm audit는 어드바이저리 단위 allowlist를 지원하지 않으므로 JSON을 걸러낸다.
+COPY scripts/npm-audit-filter.js /filter.js
+
+# 업그레이드로 고칠 수 없고 이 앱에서 도달 불가능한 어드바이저리 ID 목록.
+# 근거와 재검토 조건은 scripts/audit-deps.sh에 적혀 있다.
+ARG NPM_AUDIT_ALLOWLIST=""
+
+# npm audit는 취약점이 있으면 비정상 종료하므로 `|| true`로 JSON을 확보한 뒤
+# 필터가 판단한다. 필터가 종료 코드를 결정한다.
+RUN npm audit --audit-level=high --json > /tmp/audit.json 2>/dev/null || true; \
+    node /filter.js /tmp/audit.json "$NPM_AUDIT_ALLOWLIST"
+
+# Stage 4: Build the React application
 FROM deps AS build
 
 # Copy rest of sources
