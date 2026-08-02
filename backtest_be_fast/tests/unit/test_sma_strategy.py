@@ -23,9 +23,9 @@ class TestSmaRequirements:
     @pytest.fixture
     def standard_setup(self):
         return {
-            'sma_short': 5,
-            'sma_long': 10,
-            'cash': 100000 
+            'short_window': 5,
+            'long_window': 10,
+            'cash': 100000
         }
 
     # ============================================================================
@@ -52,13 +52,13 @@ class TestSmaRequirements:
 
         # Run with short=5, long=10
         bt = Backtest(df, SmaCrossStrategy, cash=standard_setup['cash'], commission=0)
-        stats = bt.run(sma_short=5, sma_long=10)
-        
+        stats = bt.run(short_window=5, long_window=10)
+
         trades = stats['_trades']
-        
+
         # Debugging
         # print("Trades:", trades)
-        
+
         assert len(trades) > 0, "골든크로스에서 매수가 발생해야 함"
         # Entry should be Buy
         assert trades.iloc[0]['Size'] > 0
@@ -75,10 +75,10 @@ class TestSmaRequirements:
         df = self.create_fixture_data(data)
         
         bt = Backtest(df, SmaCrossStrategy, cash=standard_setup['cash'], commission=0)
-        stats = bt.run(sma_short=5, sma_long=10)
-        
+        stats = bt.run(short_window=5, long_window=10)
+
         trades = stats['_trades']
-        
+
         # Should buy at start if conditions allow (wait, SmaCrossStrategy ONLY buys on Crossover)
         # If it's pure uptrend, Short is always > Long?
         # Initialization: SMA5 needs 5 days, SMA10 needs 10 days.
