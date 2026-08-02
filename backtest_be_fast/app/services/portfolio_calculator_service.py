@@ -157,6 +157,8 @@ class PortfolioCalculator:
         daily_returns = {}
         weight_history = []
         prev_portfolio_value = total_amount
+        # 종목별로 "마지막으로 관측된" equity 값을 추적 (진짜 forward fill을 위함)
+        last_seen_equity: Dict[str, float] = {}
 
         for i, date_str in enumerate(date_range):
             portfolio_value = 0
@@ -171,12 +173,15 @@ class PortfolioCalculator:
                     # 전략 실행 결과의 equity curve 사용
                     if date_str in equity_curve_dict:
                         symbol_equity = equity_curve_dict[date_str]
-                    elif i == 0:
-                        # 첫날에 데이터가 없으면 초기 투자금
-                        symbol_equity = result.get('amount', 0)
+                        last_seen_equity[symbol] = symbol_equity
+                    elif symbol in last_seen_equity:
+                        # 중간에 데이터가 없으면 해당 종목의 마지막 관측값을 유지
+                        # (true forward fill; 백테스트 종료 시점 값인 final_value를
+                        # 써서는 안 됨 - 중간 날짜에 미래 값이 새어 들어가 스파이크가 생김)
+                        symbol_equity = last_seen_equity[symbol]
                     else:
-                        # 중간에 데이터가 없으면 마지막 값 사용 (forward fill)
-                        symbol_equity = result.get('final_value', result.get('amount', 0))
+                        # 아직 한 번도 관측되지 않음 (첫 관측 이전) -> 초기 투자금
+                        symbol_equity = result.get('amount', 0)
                 else:
                     # equity curve가 없는 종목 (예: 현금)
                     symbol_equity = result.get('amount', 0)

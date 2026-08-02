@@ -73,11 +73,10 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
         )
     
     # 2. 백테스트 실행 (포트폴리오 서비스 위임)
+    # 실패는 예외로 전파되어 @handle_portfolio_errors가 처리하므로,
+    # 이 지점에 도달했다면 항상 성공 결과다.
     backtest_result = await portfolio_manager_service.run_portfolio_backtest(request)
-    
-    if backtest_result.get('status') != 'success':
-        return backtest_result
-    
+
     # 3. 추가 데이터 수집 (데이터 서비스 위임) — asyncio.to_thread로 이벤트 루프 블로킹 방지
     unified_data = await asyncio.to_thread(
         unified_data_service.collect_all_unified_data,
