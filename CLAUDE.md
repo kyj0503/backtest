@@ -77,6 +77,7 @@ Always verify changes in Docker containers (`docker compose exec`) before declar
 - **FE:** Vitest + React Testing Library. Playwright E2E exists (`backtest_fe/playwright.config.ts`, one smoke spec) and needs the dev stack running — it is deliberately NOT in the Docker CI gate (no browser, no live backend there).
 - **Current baseline:** BE 358 unit tests + 12 integration, FE 179 tests — all green. Any failure is a regression, not pre-existing noise.
 - **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
+- **Coverage (2026-08-03):** BE 71.6%, FE 47.8% statements. Core financial modules are 82-98%; the remaining gaps are `data_fetcher` (41%), the `app/validators/` package (23-32%), and `currency_converter` (57%). The validators look dead but are reached via `backtest_engine.py` → `validation_service` — do not delete them.
 
 ## CI
 
