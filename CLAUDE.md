@@ -11,6 +11,16 @@
 docker compose -f compose.dev.yaml up -d --build
 docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit -v
 docker compose -f compose.dev.yaml exec backtest-fe npm test
+
+# FE quality checks (all four run in CI)
+docker compose -f compose.dev.yaml exec backtest-fe npm run lint
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # prod code
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # test code
+docker compose -f compose.dev.yaml exec backtest-fe npm run test:run
+
+# Reproduce the CI gate exactly (same as Jenkins 'Quality Gate' stage)
+docker build --target test ./backtest_fe
+docker build --target test ./backtest_be_fast
 ```
 
 ## Architecture
@@ -37,6 +47,14 @@ docker compose -f compose.dev.yaml exec backtest-fe npm test
 
 6. **`cachetools>=5.3.0`** required in BE (TTLCache for data_repository).
 
+7. **`VITE_API_BASE_URL` must be empty.** The service layer passes full paths (`/api/v1/...`) to axios, so a `/api` base yields `/api/api/v1/backtest` and 404s. `client.ts` has a defensive interceptor that strips the duplicate, but that is a safety net — do not rely on it by setting a base.
+
+8. **Tailwind 4, CSS-first config.** There is no `tailwind.config.js`; config lives in `src/index.css`. Do NOT move theme color literals into `@theme` — `useTheme` injects them at runtime via `root.style.setProperty()`, and baking them in kills theme switching. Dark mode is `@custom-variant dark (&:is(.dark *))`. Use `.app-container`, not `.container` (v4 emits its own with different max-widths).
+
+9. **Never set `isolate: false` in `vitest.config.ts`.** All test files would share one happy-dom environment, and vitest reorders files by cached durations, so the suite becomes flaky — the same commit alternated between `113 passed` and `3 failed`.
+
+10. **FE build must pin `NODE_ENV=production`.** `Dockerfile.dev` sets `NODE_ENV=development`, which leaks into `docker compose exec ... npm run build` and makes vite bundle the React dev build. The `build` scripts set it explicitly; keep it when editing them.
+
 ## Sub-Agent Usage
 
 - **`Explore`** for broad codebase research (where does X live, how is Y wired)
@@ -49,6 +67,14 @@ Always verify changes in Docker containers (`docker compose exec`) before declar
 
 - **BE markers:** `@pytest.mark.unit` (no DB), `@pytest.mark.integration` (DB), `@pytest.mark.external` (real API)
 - **FE:** Vitest + React Testing Library; Playwright for E2E
+- **Current baseline:** BE 141 unit tests, FE 113 tests — both fully green. Any failure is a regression, not pre-existing noise.
+- **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
+
+## CI
+
+`Jenkinsfile` runs a `Quality Gate` stage (FE and BE in parallel) before building images. Each Dockerfile has a `test` stage that CI invokes with `--target test`; those stages are outside the final image's dependency chain, so a plain `docker build` does not run them and produces the same artifacts as before.
+
+The gate blocks **deployment**, not merging — the pipeline checks out `*/main` and the repo uses no branch protection or GitHub checks.
 
 ## Commit Convention
 

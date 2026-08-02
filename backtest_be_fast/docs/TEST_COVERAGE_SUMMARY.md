@@ -4,7 +4,9 @@
 
 Comprehensive unit tests have been created for the following backend modules, following pytest best practices with `@pytest.mark.unit` and `@pytest.mark.asyncio` markers. All external I/O (yfinance, DB) is mocked.
 
-**Total Tests Created: 59**
+**Total Tests Created: 59** (이 문서가 다루는 4개 모듈 기준)
+
+> 현재 `tests/unit` 전체는 **141건**입니다. 이 문서는 아래 4개 모듈에 한정된 보고서이며, 전체 목록은 [UNIT_TEST_QUICK_REFERENCE.md](./UNIT_TEST_QUICK_REFERENCE.md)를 참고하십시오.
 **Test Files: 4**
 **All Tests: PASSING ✅**
 
@@ -44,7 +46,7 @@ Tests the core `BacktestEngine` that wraps backtesting.py library.
 
 ---
 
-### 2. tests/unit/test_currency_converter.py (18 tests)
+### 2. tests/unit/test_currency_converter.py (19 tests)
 
 Tests the `CurrencyConverter` for multi-currency support (13 currencies including USD, KRW, JPY, EUR, GBP).
 
@@ -65,7 +67,7 @@ Tests the `CurrencyConverter` for multi-currency support (13 currencies includin
   - `test_unsupported_currency_returns_data_unchanged` - Unsupported currency logs warning, returns original
   - `test_conversion_error_returns_original_data` - Network errors return original data
 
-- **TestLoadAndPrepareExchangeRates** (4 tests)
+- **TestLoadAndPrepareExchangeRates** (5 tests)
   - `test_usd_raises_valueerror` - USD raises ValueError (no conversion needed)
   - `test_unsupported_currency_raises_valueerror` - Unsupported currency raises ValueError
   - `test_successful_load_returns_dataframe` - Successful load returns DataFrame with 'Close' column
@@ -84,7 +86,7 @@ Tests the `CurrencyConverter` for multi-currency support (13 currencies includin
 
 ---
 
-### 3. tests/unit/test_data_repository.py (17 tests)
+### 3. tests/unit/test_data_repository.py (14 tests)
 
 Tests the `YfinanceDataRepository` with 3-tier caching: memory (TTLCache) → DB → yfinance.
 
@@ -122,7 +124,7 @@ Tests the `YfinanceDataRepository` with 3-tier caching: memory (TTLCache) → DB
 
 ---
 
-### 4. tests/unit/test_portfolio_manager_helpers.py (14 tests)
+### 4. tests/unit/test_portfolio_manager_helpers.py (16 tests)
 
 Tests static helper methods in `PortfolioManagerService` (pure functions, no I/O).
 
@@ -140,7 +142,7 @@ Tests static helper methods in `PortfolioManagerService` (pure functions, no I/O
   - `test_calculate_daily_return_stats_single_return` - Single return edge case (volatility = 0)
   - `test_calculate_daily_return_stats_with_zeros` - Zero returns don't count as positive/negative
 
-- **TestFormatIndividualResultsList** (5 tests)
+- **TestFormatIndividualResultsList** (7 tests)
   - `test_format_strategy_mode_returns_correct_structure` - Correct format for 'strategy' mode
   - `test_format_buy_hold_mode_returns_correct_structure` - Correct format for 'buy_hold' mode
   - `test_format_buy_hold_mode_with_negative_return` - Negative return handled correctly
@@ -161,13 +163,13 @@ Tests static helper methods in `PortfolioManagerService` (pure functions, no I/O
 
 ### Run All New Tests:
 ```bash
-source venv/bin/activate
-cd /home/coontec/source/backtest/backtest_be_fast
-python -m pytest tests/unit/test_backtest_engine.py \
-                 tests/unit/test_currency_converter.py \
-                 tests/unit/test_data_repository.py \
-                 tests/unit/test_portfolio_manager_helpers.py \
-                 -v --tb=short
+# 저장소 루트에서 (이 프로젝트는 Docker로 실행됩니다)
+docker compose -f compose.dev.yaml exec backtest-be-fast \
+  pytest tests/unit/test_backtest_engine.py \
+         tests/unit/test_currency_converter.py \
+         tests/unit/test_data_repository.py \
+         tests/unit/test_portfolio_manager_helpers.py \
+         -v --tb=short
 ```
 
 ### Results:
@@ -246,7 +248,7 @@ python -m pytest tests/unit/test_backtest_engine.py \
 ## Key Testing Principles Applied
 
 1. **Unit Testing Best Practices**
-   - Tests are fast (<0.5s total for 59 tests)
+   - Tests are fast (<0.5s total for these 59 tests; 전체 141건도 0.5초 내)
    - Tests are isolated (no shared state)
    - Tests are deterministic (no random data)
    - Each test has a single responsibility
@@ -287,6 +289,6 @@ python -m pytest tests/unit/test_backtest_engine.py \
 
 ## Summary
 
-All 59 unit tests pass successfully, covering critical backend modules with comprehensive test scenarios including happy paths, error handling, and edge cases. Tests follow pytest best practices with proper markers, fixtures, and mocking strategies. The test suite runs fast (0.39s) and provides confidence in code quality without external dependencies.
+이 문서가 다루는 4개 모듈의 59건은 모두 통과합니다. `tests/unit` 전체 **141건**도 모두 통과하며, CI의 `Quality Gate` 스테이지(`docker build --target test ./backtest_be_fast`)가 이를 강제합니다. 실패가 보이면 회귀입니다.
 
 **Status: ✅ COMPLETE AND PASSING**
