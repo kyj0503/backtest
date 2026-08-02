@@ -439,18 +439,18 @@ export function sampleData<T>(data: T[], maxPoints: number = 500): T[] {
 
   // 첫 번째 포인트는 항상 포함
   const firstItem = data[0];
-  if (firstItem) sampled.push(firstItem);
+  if (firstItem !== undefined) sampled.push(firstItem);
 
   // 균등 간격으로 샘플링
   for (let i = step; i < data.length - 1; i += step) {
     const item = data[i];
-    if (item) sampled.push(item);
+    if (item !== undefined) sampled.push(item);
   }
 
   // 마지막 포인트는 항상 포함 (종료 값 보존)
   if (data.length > 1) {
     const lastItem = data[data.length - 1];
-    if (lastItem) sampled.push(lastItem);
+    if (lastItem !== undefined) sampled.push(lastItem);
   }
 
   return sampled;
@@ -505,7 +505,7 @@ export function adaptiveSampleData<T>(
 
   // 마지막 포인트 추가
   const lastItem = data[data.length - 1];
-  if (lastItem) sampled.push(lastItem);
+  if (lastItem !== undefined) sampled.push(lastItem);
 
   // 여전히 포인트가 부족하면 균등 샘플링으로 보완
   if (sampled.length < maxPoints * 0.5) {

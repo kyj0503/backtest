@@ -18,7 +18,7 @@
 - [x] ESLint **경고 0개**, 예산 `--max-warnings 0` / 타입 검사(prod·test) 통과
 - [x] CI 품질 게이트 양쪽 재현 통과 (`docker build --target test`: BE 358 / FE 179)
 - [x] E2E **1개** (Playwright config + 스모크 spec, dev 스택 대상 실제 통과 확인)
-- [ ] 커버리지 재측정 필요 (테스트가 141 → 358로 늘어 이전 ~42% 수치는 무의미). 이전: BE 전체 ~42%(Codex 측정) — 단, 포트폴리오 시뮬레이션 스택은 0%; FE 라인 22.62%/구문 21.8%(coverage-final 2026-08-02) — 차트 파이프라인 0%
+- [x] 커버리지 재측정 (2026-08-03): **BE 71.55%** (분석 시점 ~42%), 핵심 금융 모듈은 82~98% — `portfolio_metrics` 98.6%, `portfolio_rebalancer` 95.0%, `portfolio_calculator_service` 97.0%, `portfolio_simulation_engine` 82.7%. **FE 구문 47.79% / 라인 48.9%** (분석 시점 21.8% / 22.62%). 남은 저커버리지: `data_fetcher` 41%, validators 23~32%(죽은 코드가 아니라 `backtest_engine.py:45`를 통해 살아 있는 경로 — 커버리지 공백), `currency_converter` 57%
 
 ---
 
@@ -118,12 +118,12 @@
 - [x] **P1-16 [be]** ✅ 2026-08-03 수정 (`app/utils/metrics_math.py`의 `VOLATILITY_EPSILON` 기반 가드로 양쪽 구현 통일. 실측 4.57e14 → 0.0) — Sharpe Ratio가 3.57e17로 폭발 — `annual_volatility > 0` 가드가 부동소수점 노이즈에 취약하다. 동일한 값 10개 이상의 `Series.std()`가 정확한 0이 아니라 ~1e-18을 반환할 수 있어, 가드를 통과한 뒤 나눗셈에서 천문학적 값이 나온다. 가격이 전혀 변하지 않는 포트폴리오(현금 100% 등)에서 재현. 조치: 절대 허용오차 기반 비교(`> 1e-12` 등)로 교체.
 - [x] **P1-17 [be]** ✅ 2026-08-03 수정 (단일 포인트에서 `std()` NaN을 0.0으로 정규화) — 단일 데이터 포인트 백테스트에서 `Annual_Volatility`가 raw `NaN`으로 응답에 유출 — Sharpe는 `NaN > 0`이 False라 우연히 0으로 안전하지만, 변동성 자체는 NaN이 그대로 나간다. 조치: NaN 방어 후 0.0 또는 명시적 null.
 - [x] **P1-18 [be]** ✅ 2026-08-03 수정 (`_is_tradeable_price`로 0·음수·NaN 가격 체결 차단, 경고 로그 후 건너뜀) — 가격 0이면 `ZeroDivisionError`, 음수면 조용히 음수 주식 수 — `PortfolioDcaManager`가 가격 유효성을 검사하지 않는다. 데이터 품질 이슈가 크래시나 무의미한 포지션으로 이어진다. 조치: 매수 전 `price > 0` 검증, 위반 시 건너뛰고 경고 수집.
-- [ ] **P3-31 [fe]** `dataSampling.sampleData`의 truthy 검사(`if (firstItem)`)가 `0` 같은 정상 falsy 값을 버린다 — 현재 미사용 코드라 영향 없음. 삭제하거나 `!= null` 비교로 교체.
+- [x] **P3-31 [fe]** ✅ 2026-08-03 수정 (`!== undefined` 비교로 교체, 4곳). 참고: "미사용"이라던 초기 판단은 틀렸다 — `adaptiveSampling`이 폴백으로 `sampleData`를 호출하므로 살아 있는 경로였다.
 
 ## ⚠️ 이번 작업으로 바뀐 사용자 노출 동작 (제품 확인 필요)
 
 - [ ] **백테스트 최소 기간 30일 제약 신설** — P2-04(검증 통합)의 "최소 기간 검증 부재"를 메우면서 `MIN_BACKTEST_PERIOD_DAYS = 30`을 도입했다. 30일 미만 요청은 이제 422로 거부된다. 30일 미만 백테스트는 연환산 지표(Sharpe·CAGR)가 무의미해지므로 방어 가능한 규칙이지만, **기존에 되던 요청이 거부되는 변경**이므로 제품 관점 확인이 필요하다. 값이 과하면 조정할 것. 위치는 스키마가 아닌 엔드포인트 — DCA/시뮬레이션 내부를 3~14일 구간으로 검증하는 기존 단위 테스트가 스키마 레벨 하한과 충돌하기 때문(HTTP 요청 정책 vs 데이터 형태 검증의 분리로도 설명 가능).
-- [ ] **백테스트 동시 실행 8건·타임아웃 60초 제약 신설** — P2-16. 초과 요청은 큐잉되고, 총 소요(대기+실행)가 60초를 넘으면 504를 반환한다. `MAX_CONCURRENT_BACKTESTS`/`BACKTEST_TIMEOUT_SECONDS` 환경변수로 조정 가능하나 `Settings`가 아닌 모듈 상수라 일관성이 떨어진다 — `config.py`로 옮길 것. 실사용 부하 기준 튜닝 필요.
+- [ ] **백테스트 동시 실행 8건·타임아웃 60초 제약 신설** — P2-16. 초과 요청은 큐잉되고, 총 소요(대기+실행)가 60초를 넘으면 504를 반환한다. `Settings`(`min_backtest_period_days`/`max_concurrent_backtests`/`backtest_timeout_seconds`)로 통합해 환경변수로 조정 가능하다(2026-08-03). **실사용 부하 기준 튜닝은 여전히 필요** — 현재 값은 관측 없이 정한 보수적 초기값이다.
 - [ ] **Prometheus 티커 라벨 상한 200개** — 201번째부터는 `other`로 합산된다. LRU가 없는 first-N-seen 방식이라, 초반에 무작위 티커가 슬롯을 채우면 이후 실제 인기 티커가 전부 `other`로 묶인다. 카디널리티 폭증은 막았으나 메트릭 품질은 저하 가능 — 필요하면 주기적 리셋이나 사전 화이트리스트로 개선.
 
 ## ⚠️ 저장소 밖 필수 후속 조치 (운영)
@@ -152,7 +152,7 @@
 - [x] **P3-16 [fe]** ✅ 2026-08-02 수정 — 다크모드 하드코딩 팔레트 — `ChartsSection/index.tsx:84`, `BacktestResults.tsx:52,64`, `ErrorBoundary.tsx:136`, `PortfolioForm.tsx:71` → `dark:` 변형으로.
 - [x] **P3-17 [fe]** ✅ 2026-08-02 수정 — 숫자 입력 인체공학 — `parseFloat||0`으로 비울 수 없음, `strategy_params` 문자열 전송(BE가 캐스팅). 조치: 입력 중 문자열 유지, 제출 시 숫자.
 - [x] **P3-18 [fe]** ✅ 2026-08-02 수정 — FE 소소 — `alert()`→toast, `CustomTooltip` 본문 내 정의, `EquityPoint`를 `number|null`로.
-- [ ] **P3-30 [be]** 죽은 코드 2차 정리 후보 (P3-19 작업 중 발견, 보수적으로 미제거) — `BacktestService.validate_backtest_request`/`get_available_strategies`/`validate_strategy_params`(제거된 3개 메서드와 동일한 무호출 근거), `app/interfaces/data_source.py`의 `YFinanceDataSource`(유일한 생성 지점이 삭제된 DI 컨테이너였음), `app/utils/type_converters.py`의 삭제된 `chart_data_service` 참조 docstring. 조치: 각각 grep으로 재확인 후 제거.
+- [x] **P3-30 [be]** ✅ 2026-08-03 정리 — `BacktestService`의 무호출 위임 메서드 3개와 그로 인해 고아가 된 속성·임포트 제거, `app/interfaces/` 패키지 전체 삭제(`YFinanceDataSource`의 유일한 생성 지점이 삭제된 DI 컨테이너였음). **validators 3개는 삭제하지 않았다** — 커버리지가 23~32%로 낮아 죽은 코드처럼 보이지만, `backtest_engine.py:45` → `validation_service` → `BacktestValidator` 경로로 실제 호출된다(확인함). 라우트 수 7→7 불변.
 - [x] **P3-19 [be]** ✅ 2026-08-03 수정 (**2,210줄 순삭제** — DI 패키지, `chart_data_service`+indicators 7개, `handle_backtest_errors`, `BuyAndHoldStrategy`, `spread`/`benchmark_ticker` 필드, 죽은 벤치마크 블록. 라우트 수 7→7 불변, 그룹별 삭제 후 매번 스위트 확인. buy&hold가 레지스트리에서 빠져 생긴 함정은 `test_strategy_registry_coverage.py`로 가드) — BE 죽은 코드 ~2,000줄 — 라이브 라우트는 3개뿐: `chart_data_service.py`(497), `indicators/*`(~840), `di/container.py`(210), `handle_backtest_errors`, `BuyAndHoldStrategy`, `spread`/`benchmark_ticker` 필드 등. 죽은 벤치마크 블록(`backtest_engine.py:337-376`)에 잠재 버그 2개 — 되살리려면 수정 먼저.
 - [x] **P3-20 [be]** ✅ 2026-08-02 수정 — 오류 처리 잔손질 — 자기 무력화 re-raise(`backtest_engine.py:109-120`), ValidationError 400 정의 vs 422 재포장+"400:" 누출(`decorators.py:148-152`), TTLCache TOCTOU(`data_repository.py:56-58`).
 - [x] **P3-21 [be]** ✅ 2026-08-02 수정 — 가공 폴백 통계 제거 — `Win Rate 50%` 몽키패치(`backtest_service.py:25-70`), `create_fallback_stats`의 비연환산 변동성+`Win 100%` — 200 성공으로 서빙됨.
@@ -181,10 +181,13 @@
 
 ## 변경 시 공통 완료 기준 (Codex)
 
-- [ ] 수정 전 실패를 재현하는 테스트가 존재한다
-- [ ] BE 단위 테스트·FE 테스트·타입 검사·린트·프로덕션 빌드 전부 통과
-- [ ] API 계약/사용자 동작 변경 시 문서 동반 갱신
-- [ ] 배포 구성 변경은 readiness·프록시 스모크로 검증
+> 아래는 백로그 항목이 아니라 **모든 변경에 매번 적용하는 기준**이다.
+> 체크박스로 두면 "완료되지 않은 일감"처럼 보이므로 목록으로 둔다.
+
+- 수정 전 실패를 재현하는 테스트가 존재한다
+- BE 단위 테스트·FE 테스트·타입 검사·린트·프로덕션 빌드 전부 통과
+- API 계약/사용자 동작 변경 시 문서 동반 갱신
+- 배포 구성 변경은 readiness·프록시 스모크로 검증
 
 ```bash
 docker compose -f compose.dev.yaml exec -T backtest-be-fast pytest tests/unit -q
