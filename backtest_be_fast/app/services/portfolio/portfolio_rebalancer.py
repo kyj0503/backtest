@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Iterable, Set, Tuple
 from app.domain.portfolio_domain import DcaStrategyInfo
 
 logger = logging.getLogger(__name__)
@@ -12,6 +12,29 @@ logger = logging.getLogger(__name__)
 
 class PortfolioRebalancer:
     """포트폴리오 리밸런싱 관리 클래스"""
+
+    @staticmethod
+    def _colliding_symbols(
+        unique_keys: Iterable[str],
+        dca_info: Dict[str, DcaStrategyInfo]
+    ) -> Set[str]:
+        """
+        [P3-29] 주어진 unique_key 집합 중, 표시 심볼(symbol)이 2개 이상의
+        unique_key에서 공유되는 심볼 집합을 찾는다.
+
+        예: 이름이 같은 현금 항목을 두 개 추가하면(스키마가 현금은 이름 중복
+        검증에서 제외) 'CASH__cash_1'과 'CASH__cash_2'가 둘 다 symbol='CASH'를
+        가리킨다 -- 이 경우 {'CASH'}가 반환된다. 주식은 unique_key가 항상
+        symbol과 동일하므로(portfolio_manager_service.py) 실제로는 충돌이
+        생기지 않는다.
+        """
+        symbol_counts: Dict[str, int] = {}
+        for unique_key in unique_keys:
+            if unique_key not in dca_info:
+                continue
+            symbol = dca_info[unique_key].symbol
+            symbol_counts[symbol] = symbol_counts.get(symbol, 0) + 1
+        return {symbol for symbol, count in symbol_counts.items() if count > 1}
 
     def calculate_adjusted_weights(
         self,
@@ -146,15 +169,29 @@ class PortfolioRebalancer:
                 'updated_available_cash': available_cash
             }
 
+        # [P3-29] weights_before/weights_after의 리포트 키: 심볼이 겹치지
+        # 않는 한(실무에서 거의 항상 그렇다) 기존처럼 표시 심볼을 그대로 쓴다.
+        # 같은 심볼을 가리키는 unique_key가 둘 이상이면(예: 이름이 같은 현금
+        # 항목을 여러 개 추가한 경우) 그 심볼들만 unique_key로 폴백해 서로
+        # 다른 항목이 이 리포트 딕셔너리 안에서 충돌해 사라지지 않도록 한다.
+        # (total_portfolio_value, individual_returns 등은 원래부터 unique_key
+        # 기반이라 이 충돌의 영향을 받지 않았다 -- 이건 리포트 표시만의 문제다.)
+        report_participant_keys = set(shares.keys()) | set(cash_holdings.keys())
+        colliding_symbols = self._colliding_symbols(report_participant_keys, dca_info)
+
+        def _report_key(unique_key: str) -> str:
+            symbol = dca_info[unique_key].symbol
+            return unique_key if symbol in colliding_symbols else symbol
+
         # 리밸런싱 전 비중 계산 (현금 포함)
         weights_before = {}
         for unique_key in shares.keys():
             if unique_key in current_prices:
                 current_value = shares[unique_key] * current_prices[unique_key]
-                weights_before[dca_info[unique_key].symbol] = current_value / total_portfolio_value
+                weights_before[_report_key(unique_key)] = current_value / total_portfolio_value
         # 현금 비중 추가
         for unique_key in cash_holdings.keys():
-            weights_before[dca_info[unique_key].symbol] = cash_holdings[unique_key] / total_portfolio_value
+            weights_before[_report_key(unique_key)] = cash_holdings[unique_key] / total_portfolio_value
 
         # 상장폐지 종목은 거래 없이 보유만 유지되므로, 재분배 대상 풀(pool)에서
         # 그 가치를 제외해야 한다. 그렇지 않으면 total_portfolio_value(상장폐지
@@ -303,10 +340,11 @@ class PortfolioRebalancer:
         for unique_key in updated_shares.keys():
             if unique_key in current_prices:
                 new_value = updated_shares[unique_key] * current_prices[unique_key]
-                weights_after[dca_info[unique_key].symbol] = new_value / new_total_portfolio_value
-        # 현금 비중 추가
+                weights_after[_report_key(unique_key)] = new_value / new_total_portfolio_value
+        # 현금 비중 추가 (weights_before와 동일한 collision 판정을 재사용해
+        # 같은 unique_key가 before/after에서 항상 같은 리포트 키로 나오게 한다)
         for unique_key in updated_cash_holdings.keys():
-            weights_after[dca_info[unique_key].symbol] = updated_cash_holdings[unique_key] / new_total_portfolio_value
+            weights_after[_report_key(unique_key)] = updated_cash_holdings[unique_key] / new_total_portfolio_value
 
         # 리밸런싱 거래 상세 로깅
         if rebalance_trades:
