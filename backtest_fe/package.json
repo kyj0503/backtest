@@ -83,7 +83,7 @@
   },
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc -p tsconfig.build.json && vite build",
+    "build": "tsc -p tsconfig.build.json && NODE_ENV=production vite build",
     "build:analyze": "tsc -p tsconfig.build.json && vite build --mode analyze",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix",
