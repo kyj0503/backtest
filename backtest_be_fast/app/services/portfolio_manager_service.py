@@ -45,8 +45,8 @@ from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
 from app.utils.currency_converter import currency_converter, CurrencyConverter
 from app.monitoring.custom_metrics import (
     BACKTEST_EXECUTION_TOTAL,
-    TICKER_POPULARITY_TOTAL,
-    BACKTEST_PROCESSING_SECONDS
+    BACKTEST_PROCESSING_SECONDS,
+    record_ticker_popularity,
 )
 
 logger = logging.getLogger(__name__)
@@ -336,9 +336,12 @@ class PortfolioManagerService:
             else:
                 raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             
-            # --- [Custom Metrics] Ticker Popularity ---
+            # --- [Custom Metrics] Ticker Popularity (카디널리티 상한, P2-15) ---
+            # 현금(asset_type='cash')은 "티커"가 아니므로 집계 대상에서 제외한다
+            # -- 커스텀 현금 이름(예: "예금")이 라벨로 새어나가는 것도 막는다.
             for item in request.portfolio:
-                TICKER_POPULARITY_TOTAL.labels(ticker=item.symbol).inc()
+                if item.asset_type != 'cash':
+                    record_ticker_popularity(item.symbol)
             # ------------------------------------------
 
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
@@ -585,9 +588,12 @@ class PortfolioManagerService:
 
             for item in request.portfolio:
                 symbol = item.symbol
-                
-                # --- [Custom Metrics] Ticker Popularity ---
-                TICKER_POPULARITY_TOTAL.labels(ticker=symbol).inc()
+
+                # --- [Custom Metrics] Ticker Popularity (카디널리티 상한, P2-15) ---
+                # 현금(asset_type='cash')은 "티커"가 아니므로 집계 대상에서 제외한다
+                # -- 커스텀 현금 이름(예: "예금")이 라벨로 새어나가는 것도 막는다.
+                if item.asset_type != 'cash':
+                    record_ticker_popularity(symbol)
                 # ------------------------------------------
 
                 investment_type = getattr(item, 'investment_type', 'lump_sum')

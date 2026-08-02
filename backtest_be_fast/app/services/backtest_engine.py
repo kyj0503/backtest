@@ -8,7 +8,6 @@ from datetime import datetime, timedelta, date
 from typing import Dict, Any, Optional, List, Type
 from uuid import uuid4
 import pandas as pd
-import numpy as np
 
 from backtesting import Backtest, Strategy
 from fastapi import HTTPException
@@ -76,9 +75,8 @@ class BacktestEngine:
             )
             self.logger.debug("백테스트 객체 생성 완료")
             
-            run_kwargs = self._build_run_kwargs(request)
             # FIXED: Wrap synchronous bt.run() with asyncio.to_thread() (async/sync boundary)
-            result = await asyncio.to_thread(self._execute_backtest, bt, run_kwargs)
+            result = await asyncio.to_thread(self._execute_backtest, bt)
             self.logger.info("백테스트 실행 완료")
             self.logger.info(f"거래 수: {result['# Trades']}")
             self.logger.info(f"수익률: {result.get('Return [%]', 0):.2f}%")
@@ -190,26 +188,9 @@ class BacktestEngine:
         configured_name = f"{base_strategy.__name__}Configured_{uuid4().hex[:8]}"
         return type(configured_name, (base_strategy,), overrides)
 
-    def _build_run_kwargs(self, request: BacktestRequest) -> Dict[str, Any]:
-        """Backtest.run 호출 시 사용할 부가 인자 구성"""
-        run_kwargs: Dict[str, Any] = {}
-        if request.spread and request.spread > 0:
-            run_kwargs["spread"] = request.spread
-        return run_kwargs
-
-    def _execute_backtest(self, bt: Backtest, run_kwargs: Dict[str, Any]) -> pd.Series:
-        """Backtest 실행 래퍼 (옵션 인자 호환성 처리)"""
-        try:
-            if run_kwargs:
-                return bt.run(**run_kwargs)
-            return bt.run()
-        except TypeError as error:
-            # 일부 backtesting 버전은 spread 매개변수를 지원하지 않음
-            if "spread" in run_kwargs and "spread" in str(error):
-                self.logger.warning("Backtest.run spread 인자 미지원 - spread 제외 후 재시도")
-                safe_kwargs = {k: v for k, v in run_kwargs.items() if k != "spread"}
-                return bt.run(**safe_kwargs) if safe_kwargs else bt.run()
-            raise
+    def _execute_backtest(self, bt: Backtest) -> pd.Series:
+        """Backtest 실행 래퍼"""
+        return bt.run()
 
     def _create_fallback_result(self, data: pd.DataFrame, request: BacktestRequest) -> BacktestResult:
         """실제 데이터 기반의 fallback 결과 생성"""
@@ -327,46 +308,16 @@ class BacktestEngine:
                     self.logger.warning(f"equity curve 변환 실패: {e}")
                     equity_curve_dict = None
 
-            if getattr(request, 'benchmark_ticker', None):
-                try:
-                    self.logger.info(f"벤치마크 데이터 로딩 중: {request.benchmark_ticker}")
-                    benchmark = self.data_fetcher.fetch_stock_data(
-                        ticker=request.benchmark_ticker,
-                        start_date=start_date,
-                        end_date=end_date
-                    )
-                    if (
-                        benchmark is not None and not benchmark.empty
-                        and isinstance(equity_curve_df, pd.DataFrame) and not equity_curve_df.empty
-                    ):
-                        self.logger.debug(
-                            f"벤치마크 데이터 로드 완료: {len(benchmark)} 포인트, "
-                            f"전략 equity curve: {len(equity_curve_df)} 포인트"
-                        )
-                        strat_returns = equity_curve_df['Equity'].pct_change().dropna()
-                        bench_returns = benchmark['Close'].pct_change().dropna()
-                        strat_returns, bench_returns = strat_returns.align(bench_returns, join='inner')
-                        if len(strat_returns) > 1 and bench_returns.var() != 0:
-                            cov_matrix = np.cov(strat_returns, bench_returns)
-                            cov = cov_matrix[0][1]
-                            var_bench = bench_returns.var()
-                            if var_bench != 0:
-                                beta_value = cov / var_bench
-                                mean_strat = strat_returns.mean()
-                                mean_bench = bench_returns.mean()
-                                alpha_pct = (mean_strat - beta_value * mean_bench) * 100
-                                beta_value = float(beta_value)
-                                alpha_pct = float(alpha_pct)
-                                self.logger.info(
-                                    f"Alpha/Beta 계산 완료: Alpha={alpha_pct:.2f}%, Beta={beta_value:.3f} "
-                                    f"(전략 평균 수익률={mean_strat*100:.3f}%, 벤치마크 평균 수익률={mean_bench*100:.3f}%)"
-                                )
-                        else:
-                            self.logger.warning("Alpha/Beta 계산 불가: 데이터 포인트 부족 또는 벤치마크 분산 0")
-                    else:
-                        self.logger.warning(f"벤치마크 데이터 없음 또는 equity curve 없음")
-                except Exception as e:
-                    self.logger.warning(f"Alpha/Beta 계산 실패: {e}")
+            # 참고(P3-19): 여기에는 과거 request.benchmark_ticker가 설정된 경우
+            # Alpha/Beta를 계산하는 벤치마크 비교 블록이 있었다. BacktestRequest에
+            # benchmark_ticker 필드 자체가 없어(schemas/requests.py) 어떤 라이브 호출도
+            # 이 필드를 채울 수 없었으므로 도달 불가능한 죽은 코드였다. 게다가 되살릴
+            # 경우 두 가지 잠재 버그가 있었다: (1) 동기 self.data_fetcher.fetch_stock_data()
+            # 호출을 asyncio.to_thread 없이 이 async 경로에서 직접 호출해 이벤트 루프를
+            # 블로킹했고, (2) equity_curve_df의 tz-aware 인덱스와 fetch_stock_data가
+            # 반환하는 tz-naive 인덱스를 정렬 없이 비교해 pct_change/align 결과가 어긋날
+            # 수 있었다. 벤치마크 비교 기능이 필요해지면 두 버그를 모두 고친 뒤
+            # 새로 구현해야 한다. alpha_pct/beta는 항상 None으로 응답에 포함된다.
 
             return BacktestResult(
                 ticker=request.ticker,

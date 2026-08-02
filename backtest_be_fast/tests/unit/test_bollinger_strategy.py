@@ -7,6 +7,9 @@ import numpy as np
 from backtesting import Backtest
 from app.strategies.strategies import BollingerBandsStrategy
 
+pytestmark = pytest.mark.unit
+
+
 class TestBollingerBandsRequirements:
     """
     [REQ-BB-01 ~ REQ-BB-09] 볼린저 밴드 전략 요구사항 검증

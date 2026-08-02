@@ -67,6 +67,32 @@ pipeline {
             }
         }
 
+        stage('Dependency Audit') {
+            steps {
+                script {
+                    // P3-14: lock 파일만 대상으로 취약점을 조회한다. 실제 설치
+                    // (node_modules/venv) 없이 검사되므로 deps/builder 스테이지의
+                    // 네이티브 컴파일을 다시 거치지 않는다 — 각각 수 초.
+                    //
+                    // `|| true`로 감싸지 않았다: high 이상이 나오면 배포를 막는다.
+                    // 다만 업그레이드로 고칠 수 없고 이 앱에서 도달 불가능한 건은
+                    // scripts/audit-deps.sh의 예외 목록에서 근거와 함께 통과시킨다.
+                    // 고칠 수 없는 취약점으로 게이트가 영구히 빨간불이면 사람이
+                    // 게이트를 꺼버리고, 그러면 고칠 수 있는 새 취약점까지 놓친다.
+                    // 예외 목록에 없는 high 이상은 그대로 실패한다 (빈 예외 목록으로
+                    // 실제 종료코드 1을 확인함).
+                    parallel(
+                        'Frontend (npm audit)': {
+                            sh './scripts/audit-deps.sh fe'
+                        },
+                        'Backend (pip-audit)': {
+                            sh './scripts/audit-deps.sh be'
+                        }
+                    )
+                }
+            }
+        }
+
         stage('Login GHCR') {
             steps {
                 script {

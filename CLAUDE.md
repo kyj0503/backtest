@@ -74,13 +74,13 @@ Always verify changes in Docker containers (`docker compose exec`) before declar
 ## Testing
 
 - **BE markers:** `@pytest.mark.unit` (no DB), `@pytest.mark.integration` (DB), `@pytest.mark.external` (real API)
-- **FE:** Vitest + React Testing Library; Playwright for E2E
-- **Current baseline:** BE 263 unit tests + 16 integration, FE 114 tests — all green. Any failure is a regression, not pre-existing noise.
+- **FE:** Vitest + React Testing Library. Playwright E2E exists (`backtest_fe/playwright.config.ts`, one smoke spec) and needs the dev stack running — it is deliberately NOT in the Docker CI gate (no browser, no live backend there).
+- **Current baseline:** BE 358 unit tests + 12 integration, FE 179 tests — all green. Any failure is a regression, not pre-existing noise.
 - **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
 
 ## CI
 
-`Jenkinsfile` runs a `Quality Gate` stage (FE and BE in parallel) before building images. Each Dockerfile has a `test` stage that CI invokes with `--target test`; those stages are outside the final image's dependency chain, so a plain `docker build` does not run them and produces the same artifacts as before.
+`Jenkinsfile` runs a `Quality Gate` stage (FE and BE in parallel) and a `Dependency Audit` stage before building images. The audit blocks deployment on high-severity findings; unfixable-and-unreachable advisories are allowlisted with a documented reason in `scripts/audit-deps.sh` — emptying that allowlist makes the gate fail, which is how you verify it still can. Each Dockerfile has a `test` stage that CI invokes with `--target test`; those stages are outside the final image's dependency chain, so a plain `docker build` does not run them and produces the same artifacts as before.
 
 The gate blocks **deployment**, not merging — the pipeline checks out `*/main` and the repo uses no branch protection or GitHub checks.
 

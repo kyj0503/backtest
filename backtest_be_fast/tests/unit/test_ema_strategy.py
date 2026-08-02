@@ -7,6 +7,9 @@ import numpy as np
 from backtesting import Backtest
 from app.strategies.strategies import EmaStrategy
 
+pytestmark = pytest.mark.unit
+
+
 class TestEmaRequirements:
 
     def create_fixture_data(self, price_pattern: list) -> pd.DataFrame:

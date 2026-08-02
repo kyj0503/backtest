@@ -7,6 +7,8 @@ import pytest
 from datetime import datetime
 from app.services.rebalance_helper import get_nth_weekday_of_month, get_next_nth_weekday, get_weekday_occurrence
 
+pytestmark = pytest.mark.unit
+
 
 class TestEdgeCases:
     """엣지 케이스: N번째 요일이 없는 경우"""

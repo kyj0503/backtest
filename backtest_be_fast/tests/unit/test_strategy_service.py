@@ -14,7 +14,6 @@
 import pytest
 from app.services.strategy_service import StrategyService
 from app.strategies.strategies import (
-    BuyAndHoldStrategy,
     SmaCrossStrategy,
     RsiStrategy,
     BollingerBandsStrategy,
@@ -29,20 +28,6 @@ class TestStrategyService:
     def setup_method(self):
         """각 테스트 전 실행: 서비스 인스턴스 생성"""
         self.service = StrategyService()
-    
-    # Given: 매수 후 보유 전략 요청
-    # When: 전략 클래스 반환
-    # Then: BuyAndHoldStrategy 클래스 반환
-    def test_buy_hold_strategy_class(self):
-        """매수 후 보유 전략 클래스 반환 검증"""
-        # Given
-        strategy_name = "buy_hold_strategy"
-        
-        # When
-        strategy_class = self.service.get_strategy_class(strategy_name)
-        
-        # Then
-        assert strategy_class == BuyAndHoldStrategy
     
     # Given: SMA 전략 요청
     # When: 전략 클래스 반환
@@ -135,19 +120,19 @@ class TestStrategyService:
     
     # Given: 전략 서비스
     # When: 모든 전략 목록 조회
-    # Then: 6개 전략 반환
+    # Then: 5개 전략 반환 (Buy & Hold는 시뮬레이터 경로에서 처리되어
+    #       STRATEGIES 레지스트리에 포함되지 않음)
     def test_get_all_strategies(self):
         """모든 전략 목록 조회 검증"""
         # When
         strategies = self.service.get_all_strategies()
-        
+
         # Then
-        assert len(strategies) == 6
+        assert len(strategies) == 5
         assert "sma_strategy" in strategies
         assert "rsi_strategy" in strategies
         assert "bollinger_strategy" in strategies
         assert "macd_strategy" in strategies
-        assert "buy_hold_strategy" in strategies
         assert "ema_strategy" in strategies
     
     # Given: 특정 전략명

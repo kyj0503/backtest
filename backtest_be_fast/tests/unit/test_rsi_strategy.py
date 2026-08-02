@@ -7,6 +7,9 @@ import numpy as np
 from backtesting import Backtest
 from app.strategies.strategies import RsiStrategy
 
+pytestmark = pytest.mark.unit
+
+
 class TestRsiRequirements:
 
     def create_fixture_data(self, price_pattern: list) -> pd.DataFrame:

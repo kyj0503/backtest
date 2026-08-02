@@ -12,6 +12,9 @@ from pydantic import ValidationError
 from app.schemas.schemas import PortfolioStock, PortfolioBacktestRequest
 from app.schemas.requests import StrategyType
 
+pytestmark = pytest.mark.unit
+
+
 class TestPortfolioStock:
     """포트폴리오 종목 모델 테스트"""
     

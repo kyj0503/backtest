@@ -8,6 +8,7 @@ from typing import Dict, Any, Tuple
 from datetime import datetime
 import pandas as pd
 from app.domain.portfolio_domain import DcaStrategyInfo
+from app.utils.metrics_math import annualized_volatility, safe_sharpe_ratio
 
 logger = logging.getLogger(__name__)
 
@@ -125,11 +126,11 @@ class PortfolioMetrics:
 
         # 변동성 및 샤프 비율
         daily_returns = portfolio_returns['Daily_Return']
-        annual_volatility = daily_returns.std() * np.sqrt(252) * 100
+        annual_volatility = annualized_volatility(daily_returns)
         annual_return = ((final_value ** (365.25 / duration)) - 1) * 100 if duration > 0 else 0
 
         # 무위험 수익률을 0으로 가정한 샤프 비율
-        sharpe_ratio = (annual_return / annual_volatility) if annual_volatility > 0 else 0
+        sharpe_ratio = safe_sharpe_ratio(annual_return, annual_volatility)
 
         # 최대 연속 상승/하락일
         daily_changes = daily_returns > 0

@@ -12,13 +12,13 @@
 - BE 단위 테스트 141개 / FE 단위 테스트 113개 통과, FE 타입 검사·프로덕션 빌드·`pip check` 통과
 - ESLint 경고 정확히 3개(허용 한도 `--max-warnings 3`과 동일 — 사실상 예산 소진)
 
-**전체 배치 완료 후 (2026-08-02, 실측)**
-- [x] BE 단위 테스트 **263개** + 통합 **16개** 통과 (분석 시점 141 → 263)
-- [x] FE 단위 테스트 **114개** 통과 (죽은 테스트 32개 제거, 신규 34개 추가)
+**전체 배치 완료 후 (2026-08-03, 실측)**
+- [x] BE 단위 테스트 **358개** + 통합 **12개** 통과 (분석 시점 141 → 358)
+- [x] FE 단위 테스트 **179개** 통과
 - [x] ESLint **경고 0개**, 예산 `--max-warnings 0` / 타입 검사(prod·test) 통과
-- [x] CI 품질 게이트 양쪽 재현 통과 (`docker build --target test`: BE 263 / FE 114)
-- [ ] 실제 E2E 0개 (Playwright 설정 자체가 부재)
-- [ ] 커버리지: BE 전체 ~42%(Codex 측정) — 단, 포트폴리오 시뮬레이션 스택은 0%; FE 라인 22.62%/구문 21.8%(coverage-final 2026-08-02) — 차트 파이프라인 0%
+- [x] CI 품질 게이트 양쪽 재현 통과 (`docker build --target test`: BE 358 / FE 179)
+- [x] E2E **1개** (Playwright config + 스모크 spec, dev 스택 대상 실제 통과 확인)
+- [ ] 커버리지 재측정 필요 (테스트가 141 → 358로 늘어 이전 ~42% 수치는 무의미). 이전: BE 전체 ~42%(Codex 측정) — 단, 포트폴리오 시뮬레이션 스택은 0%; FE 라인 22.62%/구문 21.8%(coverage-final 2026-08-02) — 차트 파이프라인 0%
 
 ---
 
@@ -44,8 +44,8 @@
 ### 배포·테스트 신뢰성
 
 - [x] **P1-11 [infra]** ✅ 2026-08-02 수정 (10회 실패 시 `exit 1`로 파이프라인 실패. 롤백·readiness 분리는 미착수 — 별도 항목으로 남김) 〔교차〕 Jenkins `Health Check` 스테이지가 실패할 수 없는 구조 — 10회 실패해도 echo 후 exit 0(`Jenkinsfile:110-130`) → 배포 실패가 초록불. 조치: 루프 소진 시 `exit 1`, 직전 `${BUILD_NUMBER}` 태그 롤백(이미지는 이미 태그별 푸시됨), liveness/readiness 분리 검토(Codex).
-- [ ] **P1-12 [test]** 〔교차〕 포트폴리오 시뮬레이션 스택(~1,300줄) 단위 테스트 신설 — 어떤 테스트도 임포트하지 않음: `portfolio_simulation_engine.py`(492줄), `portfolio_rebalancer.py`(309), `portfolio_dca_manager.py`(179), `portfolio_metrics.py`(198), `dca_calculator.py`, `portfolio_calculator_service.py`. **바로 이 모듈들에서 P1-03~P1-10이 확인됨 — 버그 수정의 회귀망으로 최우선.** 소형 결정적 가격 DataFrame으로 DCA 수량·리밸런스 거래·지표 검증부터.
-- [ ] **P1-13 [test]** "골든 마스터"가 상태 문자열만 비교 — 유일한 실질 단언이 `assert result['status'] == expected['status']`(`tests/e2e/test_golden_master.py:117-127`, 직접 확인), 기대 파일 부재 시 현재 출력으로 자동 생성. 조치: `result['data']`를 수치 허용오차로 비교, 부재 시 생성 대신 실패. (P1 금융 버그 수정 후 골든 파일 재생성 필요 — 수정과 순서 조율)
+- [x] **P1-12 [test]** ✅ 2026-08-03 (portfolio_metrics 22 + daily 7, 시뮬레이션 엣지 7, DCA 매니저 7, dca_calculator 5, fallback 3 — 손으로 도출한 기댓값으로 검증. 작성 중 프로덕션 버그 6건 발견 → P1-16~18로 수정) — 〔교차〕 포트폴리오 시뮬레이션 스택(~1,300줄) 단위 테스트 신설 — 어떤 테스트도 임포트하지 않음: `portfolio_simulation_engine.py`(492줄), `portfolio_rebalancer.py`(309), `portfolio_dca_manager.py`(179), `portfolio_metrics.py`(198), `dca_calculator.py`, `portfolio_calculator_service.py`. **바로 이 모듈들에서 P1-03~P1-10이 확인됨 — 버그 수정의 회귀망으로 최우선.** 소형 결정적 가격 DataFrame으로 DCA 수량·리밸런스 거래·지표 검증부터.
+- [x] **P1-13 [test]** ✅ 2026-08-03 (상태 문자열 비교 → `data` 재귀 깊은 비교, 기대 파일 부재 시 자동 생성 대신 실패. 재생성은 `REGENERATE_GOLDEN_MASTER=1` 명시 필요) — "골든 마스터"가 상태 문자열만 비교 — 유일한 실질 단언이 `assert result['status'] == expected['status']`(`tests/e2e/test_golden_master.py:117-127`, 직접 확인), 기대 파일 부재 시 현재 출력으로 자동 생성. 조치: `result['data']`를 수치 허용오차로 비교, 부재 시 생성 대신 실패. (P1 금융 버그 수정 후 골든 파일 재생성 필요 — 수정과 순서 조율)
 - [x] **P1-14 [test/fe]** ✅ 2026-08-02 수정 (사본 테스트·죽은 모듈·barrel 참조 일괄 삭제 — 저장소 유일 FSD 위반도 함께 해소) `chartUtils.test.ts`(22개, FE 스위트의 19%)가 파일 내 복사본을 테스트 — vitest 외 임포트 없음(`src/lib/__tests__/chartUtils.test.ts:10-15`). 대응 "실제" 모듈 `shared/lib/utils/chartUtils.ts`(332줄)도 임포터 0의 죽은 파일 + 저장소 유일의 FSD 위반(`shared`→`features` 임포트, `:5`). 조치: 사본 테스트·죽은 모듈·barrel 참조 일괄 삭제, 테스트 투자는 살아 있는 파이프라인(P2-35)으로. (삭제 시 FE 기준선 113 → 91로 갱신: CLAUDE.md 반영)
 
 ---
@@ -57,20 +57,20 @@
 - [x] **P2-01 [be]** ✅ 2026-08-02 수정 (asyncio.to_thread 오프로드 — 검증: 시뮬레이션 도중 다른 코루틴 0회 스케줄되던 것 해소) — CPU-bound 시뮬레이션이 이벤트 루프 점유 — `async def execute_simulation`에 await 0개, 10년×N종목 pandas 루프가 루프 스레드에서 실행(`portfolio_simulation_engine.py:256-492`; `_calculate_realistic_equity_curve` 동일). 조치: `asyncio.to_thread` 오프로드.
 - [x] **P2-02 [be]** ✅ 2026-08-02 수정 (환율 실패 시 예외 발생 — KRW 50,500 단위가 USD로 취급되던 폴백 제거, 이를 고정하던 기존 테스트 2개 교체) — 환율 로드 실패 시 무변환 가격이 조용히 USD 계산에 유입 — `except: return data`(`currency_converter.py:234-236`; `portfolio_simulation_engine.py:209-215` 동일). KRW 70,000원대 가격이 USD initial_cash와 섞여 성공으로 반환. 테스트가 이 동작을 고정 중(`test_currency_converter.py:151-168`). 조치(제품 결정): 변환 필수 시 실패 처리, 최소한 응답 warning.
 - [x] **P2-03 [be]** ✅ 2026-08-02 수정 (기본값 `buy_hold_strategy` + StrategyType 멤버십 `field_validator` 추가 — 이제 임의 문자열도 422로 거부. 테스트 3개) 〔교차〕 스키마 기본 전략값이 무효한 `"buy_and_hold"` — `schemas.py:150`(직접 확인). 전략 생략 시 `!= "buy_hold_strategy"` 분기로 전략 경로 → 종목별 enum 검증 전멸 → "모든 종목 실패" 200 에러. 조치: `StrategyType` enum + 기본 `buy_hold_strategy`.
-- [ ] **P2-04 [be]** 〔교차〕 포트폴리오 검증 통합 — `portfolio_validator.py`(233줄) 임포트 0 → 미래 날짜/최소 기간/`rebalance_frequency` 멤버십 검증 부재(자유 문자열, 미지 값은 `rebalance_helper.py:217-220`이 조용히 리밸런싱 비활성화; 미래 end_date는 P1-07 분모 부풀리기로 직결). **+ 현금 이름 필드 검증 순서 버그(직접 확인)**: `symbol`(75행)이 `asset_type`(80행)보다 먼저 검증돼 `info.data`에 asset_type 부재 → 항상 'stock' 폴백 → 현금 유연 분기(`schemas.py:106-110`)는 죽은 코드, 한글 현금 심볼은 422(FE가 'CASH'를 보내 가려짐; endpoint의 `'현금'` 필터와 모순). 조치: enum/Literal화(전략·자산·투자방식·주기), 필드 순서 의존 검증을 model-level validator로, validator 연결 또는 스키마 이동 + 테스트.
+- [x] **P2-04 [be]** ✅ 2026-08-03 (임포터 0이던 `PortfolioValidator` 삭제, 필드 순서 의존 검증을 model_validator로 전환 — 한글 현금명이 422로 거부되던 죽은 분기 복구. rebalance_frequency 멤버십·미래 종료일·최소 기간 검증 추가) — 〔교차〕 포트폴리오 검증 통합 — `portfolio_validator.py`(233줄) 임포트 0 → 미래 날짜/최소 기간/`rebalance_frequency` 멤버십 검증 부재(자유 문자열, 미지 값은 `rebalance_helper.py:217-220`이 조용히 리밸런싱 비활성화; 미래 end_date는 P1-07 분모 부풀리기로 직결). **+ 현금 이름 필드 검증 순서 버그(직접 확인)**: `symbol`(75행)이 `asset_type`(80행)보다 먼저 검증돼 `info.data`에 asset_type 부재 → 항상 'stock' 폴백 → 현금 유연 분기(`schemas.py:106-110`)는 죽은 코드, 한글 현금 심볼은 422(FE가 'CASH'를 보내 가려짐; endpoint의 `'현금'` 필터와 모순). 조치: enum/Literal화(전략·자산·투자방식·주기), 필드 순서 의존 검증을 model-level validator로, validator 연결 또는 스키마 이동 + 테스트.
 - [x] **P2-05 [be]** ✅ 2026-08-02 수정 (검증 실패 시 `ValidationError`로 요청 거부, 오류 메시지에 문제 파라미터 명시. RED로 `rsi_period=0`이 그대로 적용되던 것 확인 후 수정, 테스트 4개) — 파라미터 검증 실패 시 원본 값 강행 — raise 시 경고 후 raw params 적용(`backtest_engine.py:175-181`, 직접 확인) → min/max 캡 우회(`rsi_period: 0` → `ewm(alpha=1/0)` 크래시). 조치: 검증 실패는 요청 거부.
 - [x] **P2-06 [be]** ⏸ 미착수 (다음 라운드) — buy&hold 데이터 로드 실패 종목 무경고 드랍 — 자본은 분모 잔류로 수익률 과소보고, 전략 경로와 달리 warnings 필드 없음(`portfolio_data_loader.py:52-59`). 조치: warnings 통일 또는 실패 처리.
-- [ ] **P2-07 [be]** 현금 중복 항목 총액/비중 불일치 — 중복 검증 현금 면제(`schemas.py:166`) + `amounts[symbol]` 덮어쓰기·`cash_amount` 누적(`portfolio_manager_service.py:586,602`) → "CASH" 500+300 → 총액 300, 표시 800. 조치: 유니크 키 또는 사전 합산.
-- [ ] **P2-08 [be]** 전략 포트폴리오 통계가 근사치를 실측처럼 — 상관 무시 가중평균 Sharpe, 개별 MDD 가중평균, `Avg_Drawdown = MDD/2`(창작), `Peak_Value`=최종값, `Trading_Days`=달력일(`portfolio_manager_service.py:432-438`). 조치: 이미 계산되는 통합 equity curve 기반 실측치로.
-- [ ] **P2-09 [be]** 현금 자산 판별을 심볼 문자열로 — `not in ['CASH', '현금']`(`backtest.py:37-41`, 직접 확인) → 이름이 "예금"류면 티커 조회+yfinance+재시도 유발. 조치: `asset_type == 'cash'` 기준.
+- [x] **P2-07 [be]** ✅ 2026-08-02 수정 (현금 항목마다 유니크 키 부여 — 1000+500+300 입력에 Initial_Value 1300·비중 합 1.38이던 것 정정) — 현금 중복 항목 총액/비중 불일치 — 중복 검증 현금 면제(`schemas.py:166`) + `amounts[symbol]` 덮어쓰기·`cash_amount` 누적(`portfolio_manager_service.py:586,602`) → "CASH" 500+300 → 총액 300, 표시 800. 조치: 유니크 키 또는 사전 합산.
+- [x] **P2-08 [be]** ✅ 2026-08-02 수정 (`_calculate_true_portfolio_stats`로 통합 equity curve에서 실측 — MDD −20%→실제 −10%, Sharpe 2.0→실제 0.0, Peak_Value·거래일 수 정정) — 전략 포트폴리오 통계가 근사치를 실측처럼 — 상관 무시 가중평균 Sharpe, 개별 MDD 가중평균, `Avg_Drawdown = MDD/2`(창작), `Peak_Value`=최종값, `Trading_Days`=달력일(`portfolio_manager_service.py:432-438`). 조치: 이미 계산되는 통합 equity curve 기반 실측치로.
+- [x] **P2-09 [be]** ✅ 2026-08-03 (`asset_type == "cash"` 기준으로 판별 — 커스텀 이름 현금이 티커 조회·yfinance 재시도로 흘러가던 것 차단) — 현금 자산 판별을 심볼 문자열로 — `not in ['CASH', '현금']`(`backtest.py:37-41`, 직접 확인) → 이름이 "예금"류면 티커 조회+yfinance+재시도 유발. 조치: `asset_type == 'cash'` 기준.
 - [x] **P2-10 [be]** ✅ 2026-08-02 수정 (트랜잭션 열기 전 fetch 완료 — 가짜 엔진으로 커넥션 개방 중 fetch 여부 직접 검증) — DB 트랜잭션 쥔 채 yfinance 호출 — `engine.begin()`/`connect()` 안에서 외부 fetch(`yfinance_repository.py:61-68,279-289`) → 풀/락 점유. 조치: fetch 후 트랜잭션.
 - [x] **P2-11 [be]** ✅ 2026-08-02 수정 (빈 결과는 재시도 없이 즉시 `DataNotFoundError`(404) — 내부 로더 호출 1회·sleep 0회 단언으로 ~6초 지연 제거 검증, 진짜 예외의 백오프 재시도는 유지. 테스트 5개) — 빈 조회 결과 3회 재시도 — 영구 조건을 2s+4s 백오프 후 bare ValueError → 500(`yfinance_repository.py:221-243`; 404가 맞음). 조치: 즉시 `DataNotFoundError`.
 - [x] **P2-12 [be]** ✅ 2026-08-02 수정 (가격 이력 1회 로드 공유 + 5개 분기 병렬화, 5종목 기준 2.0초 → 0.35초) — 〔교차〕 `unified_data_service` 순차 + 이중 로드 — docstring "병렬"이지만 순차, 종목당 가격 이력 2회 로드(`unified_data_service.py:4,79-90,155-169`). 조치: gather 병렬화 + 로드 공유, 동일 데이터 동시 요청 single-flight 검토(Codex).
-- [ ] **P2-13 [be]** 한 응답에 DCA 실행 모델 2개 + DCA×기술전략 계약 부재 — 표시용 `DcaCalculator`(수수료 무시)와 시뮬레이션(스킵+수수료)이 불일치(`dca_calculator.py:73-99` vs `portfolio_dca_manager.py:149-177`). **+ 기술전략 경로는 `investment_type=dca`를 조용히 무시하고 일시금 실행**(종목별 `BacktestRequest`에 DCA 필드 자체가 없음 — 구조 확인, Codex 교차). UI에서 숨긴 옵션의 stale 상태가 payload에 남을 가능성도 점검(Codex, 미검증). 조치: 실행 모델 단일화, 미지원 조합은 422 + UI 차단.
-- [ ] **P2-14 [be]** 〔Codex, 구조 타당성 확인〕 평가 가격과 거래 가능 가격 분리 — 합집합 날짜에 ffill한 가격을 평가·거래·상장폐지 감지에 모두 사용 → 타 시장 휴장일에 stale price로 체결 가능, 상장폐지 감지 왜곡(P1-06/P1-08의 구조적 원인). 조치: 평가용 ffill 가격과 거래가능 마스크 분리, DCA/리밸런싱은 거래가능일에만 체결, 상장폐지는 원본 마지막 관측일 기준. KR/US 혼합·휴장·상장폐지 fixture 필수.
-- [ ] **P2-15 [be]** 〔Codex, 코드 확인〕 Prometheus 라벨에 사용자 입력 ticker 직접 사용 — `TICKER_POPULARITY_TOTAL.labels(ticker=item.symbol).inc()`(`portfolio_manager_service.py:300-301`, 정의 `custom_metrics.py:11`) — 검증 전 시점 + 무한 카디널리티(시계열 폭증). 조치: 화이트리스트/정규화 후 라벨링 또는 라벨 제거.
+- [x] **P2-13 [be]** ✅ 2026-08-03 (`DcaCalculator`가 `PortfolioDcaManager`에 위임 — 갭+5% 수수료 케이스에서 표시값 +5.0% vs 실제 −0.27%로 부호까지 뒤집혀 있던 것 해소) — 한 응답에 DCA 실행 모델 2개 + DCA×기술전략 계약 부재 — 표시용 `DcaCalculator`(수수료 무시)와 시뮬레이션(스킵+수수료)이 불일치(`dca_calculator.py:73-99` vs `portfolio_dca_manager.py:149-177`). **+ 기술전략 경로는 `investment_type=dca`를 조용히 무시하고 일시금 실행**(종목별 `BacktestRequest`에 DCA 필드 자체가 없음 — 구조 확인, Codex 교차). UI에서 숨긴 옵션의 stale 상태가 payload에 남을 가능성도 점검(Codex, 미검증). 조치: 실행 모델 단일화, 미지원 조합은 422 + UI 차단.
+- [x] **P2-14 [be]** ✅ 2026-08-03 (평가용 ffill 가격과 당일 실관측 마스크 분리 — 미관측일 체결·상장폐지 미감지 해소. 56일간 데이터 없는 종목이 `delisted_stocks`에 안 잡히고 정지 가격에 체결되던 것 확인 후 수정) — 〔Codex, 구조 타당성 확인〕 평가 가격과 거래 가능 가격 분리 — 합집합 날짜에 ffill한 가격을 평가·거래·상장폐지 감지에 모두 사용 → 타 시장 휴장일에 stale price로 체결 가능, 상장폐지 감지 왜곡(P1-06/P1-08의 구조적 원인). 조치: 평가용 ffill 가격과 거래가능 마스크 분리, DCA/리밸런싱은 거래가능일에만 체결, 상장폐지는 원본 마지막 관측일 기준. KR/US 혼합·휴장·상장폐지 fixture 필수.
+- [x] **P2-15 [be]** ✅ 2026-08-03 (알려진 티커 200개 + `other` 버킷으로 카디널리티 상한, 현금은 메트릭에서 제외) — 〔Codex, 코드 확인〕 Prometheus 라벨에 사용자 입력 ticker 직접 사용 — `TICKER_POPULARITY_TOTAL.labels(ticker=item.symbol).inc()`(`portfolio_manager_service.py:300-301`, 정의 `custom_metrics.py:11`) — 검증 전 시점 + 무한 카디널리티(시계열 폭증). 조치: 화이트리스트/정규화 후 라벨링 또는 라벨 제거.
 - [x] **P2-44 [be]** ✅ 2026-08-02 수정 (stdlib HTMLParser로 교체, 의존성 추가 없음) — 뉴스 서버측 정화 정상화 — `news_service.py:35-38`의 `re.compile('<.*?>')`는 닫는 `>`가 없는 태그를 통과시킴. FE가 텍스트 렌더로 바뀌어 XSS는 차단됐지만(P1-01), 서버가 반환하는 데이터 자체는 여전히 마크업 잔재를 포함할 수 있고 다른 소비자(향후 API 클라이언트)에는 방어가 없음. 조치: 정규식 대신 `html.unescape` + `bleach`/`html.parser` 기반 태그 제거로 교체 + 미종료 태그 테스트.
-- [ ] **P2-16 [be]** 〔Codex, 미검증〕 고비용 요청 한도 부재 — 백테스트 요청 동시 실행 한도·시간 제한·크기 제한 없음. 조치: 한도 도입, 필요 시 작업 큐+상태 조회 전환 검토.
+- [x] **P2-16 [be]** ✅ 2026-08-03 (동시 실행 세마포어 + 총 소요시간 상한, 초과 시 504) — 〔Codex, 미검증〕 고비용 요청 한도 부재 — 백테스트 요청 동시 실행 한도·시간 제한·크기 제한 없음. 조치: 한도 도입, 필요 시 작업 큐+상태 조회 전환 검토.
 
 ### 인프라 / CI / DB
 
@@ -98,12 +98,12 @@
 
 ### 테스트 / CI 게이트
 
-- [ ] **P2-35 [test]** FE 차트 데이터 파이프라인 테스트 — 커버리지 0%: `useChartData.ts`(506줄), `chartDataTransform.ts`(177줄), `dataSampling.ts`(736줄, src 최대). 조치: 순수 함수부터 픽스처 테스트(빈 입력/단일 포인트/NaN/비정렬).
-- [ ] **P2-36 [test]** 〔교차〕 수수료 경로 테스트 — 엔진 테스트는 `_execute_backtest` mock, 전략 테스트 전부 `commission=0` → "0.3.3 진입 시 수수료" 동작 무고정. 조치: commission>0 실백테스트 1건 + P1-05 회귀.
-- [ ] **P2-37 [test]** 메인 엔드포인트 스모크를 CI로 — `POST /api/v1/backtest`+`@handle_portfolio_errors`가 CI 미실행 경로. 조치: mock 저장소 + TestClient를 `tests/unit`으로 승격. 상태코드·응답 스키마 계약 검증 포함(Codex).
-- [ ] **P2-38 [test]** 〔교차〕 E2E 결정 — Playwright 의존성·스크립트는 있는데 config 부재, 유일 spec은 100% 주석(0개 실행 가능). 조치: config + 스모크 spec(`입력→실행→결과/오류`) 작성 후 CI 연결, 또는 전면 제거 + CLAUDE.md 정정.
-- [ ] **P2-39 [test]** `tests/unit/test_chart_data_service.py:387-401` — 본문 `pass`인 placeholder가 CI에서 항상 초록불. `chart_data_service.py` 자체가 도달 불가(P3-19) — 모듈 거취와 함께 처리.
-- [ ] **P2-40 [test]** `test_nth_weekday_integration.py` — 마커 없음 + print만(단언 없음). 조치: `@pytest.mark.integration` + 기대 거래 수 단언.
+- [x] **P2-35 [test]** ✅ 2026-08-03 (chartDataTransform 30, dataSampling 23, useChartData 12 — 빈 입력·단일 포인트·NaN·비정렬·중복 날짜 포함) — FE 차트 데이터 파이프라인 테스트 — 커버리지 0%: `useChartData.ts`(506줄), `chartDataTransform.ts`(177줄), `dataSampling.ts`(736줄, src 최대). 조치: 순수 함수부터 픽스처 테스트(빈 입력/단일 포인트/NaN/비정렬).
+- [x] **P2-36 [test]** ✅ 2026-08-03 (P1-05 수정 시 회귀 테스트 포함, DCA 매니저 수수료 경계 테스트 추가) — 〔교차〕 수수료 경로 테스트 — 엔진 테스트는 `_execute_backtest` mock, 전략 테스트 전부 `commission=0` → "0.3.3 진입 시 수수료" 동작 무고정. 조치: commission>0 실백테스트 1건 + P1-05 회귀.
+- [x] **P2-37 [test]** ✅ 2026-08-03 (mock 저장소 + TestClient 스모크를 tests/unit으로 승격 — CI 게이트가 엔드포인트를 커버) — 메인 엔드포인트 스모크를 CI로 — `POST /api/v1/backtest`+`@handle_portfolio_errors`가 CI 미실행 경로. 조치: mock 저장소 + TestClient를 `tests/unit`으로 승격. 상태코드·응답 스키마 계약 검증 포함(Codex).
+- [x] **P2-38 [test]** ✅ 2026-08-03 (playwright.config.ts + 스모크 spec 1개, dev 스택 대상으로 실제 2회 통과 확인. Docker CI 게이트에는 넣지 않음 — 브라우저·백엔드가 없음) — 〔교차〕 E2E 결정 — Playwright 의존성·스크립트는 있는데 config 부재, 유일 spec은 100% 주석(0개 실행 가능). 조치: config + 스모크 spec(`입력→실행→결과/오류`) 작성 후 CI 연결, 또는 전면 제거 + CLAUDE.md 정정.
+- [x] **P2-39 [test]** ✅ 2026-08-03 (`chart_data_service` 자체가 죽은 코드로 삭제되어 테스트 파일 동반 삭제) — `tests/unit/test_chart_data_service.py:387-401` — 본문 `pass`인 placeholder가 CI에서 항상 초록불. `chart_data_service.py` 자체가 도달 불가(P3-19) — 모듈 거취와 함께 처리.
+- [x] **P2-40 [test]** ✅ 2026-08-03 (integration 마커 부여, print를 실제 단언으로 전환, 라이브 서버 의존 제거) — `test_nth_weekday_integration.py` — 마커 없음 + print만(단언 없음). 조치: `@pytest.mark.integration` + 기대 거래 수 단언.
 
 ### 문서 (개발자를 잘못된 코드로 유도)
 
@@ -113,6 +113,19 @@
 
 ---
 
+## P1 (신규) — 커버리지 작업 중 발견된 실버그
+
+- [x] **P1-16 [be]** ✅ 2026-08-03 수정 (`app/utils/metrics_math.py`의 `VOLATILITY_EPSILON` 기반 가드로 양쪽 구현 통일. 실측 4.57e14 → 0.0) — Sharpe Ratio가 3.57e17로 폭발 — `annual_volatility > 0` 가드가 부동소수점 노이즈에 취약하다. 동일한 값 10개 이상의 `Series.std()`가 정확한 0이 아니라 ~1e-18을 반환할 수 있어, 가드를 통과한 뒤 나눗셈에서 천문학적 값이 나온다. 가격이 전혀 변하지 않는 포트폴리오(현금 100% 등)에서 재현. 조치: 절대 허용오차 기반 비교(`> 1e-12` 등)로 교체.
+- [x] **P1-17 [be]** ✅ 2026-08-03 수정 (단일 포인트에서 `std()` NaN을 0.0으로 정규화) — 단일 데이터 포인트 백테스트에서 `Annual_Volatility`가 raw `NaN`으로 응답에 유출 — Sharpe는 `NaN > 0`이 False라 우연히 0으로 안전하지만, 변동성 자체는 NaN이 그대로 나간다. 조치: NaN 방어 후 0.0 또는 명시적 null.
+- [x] **P1-18 [be]** ✅ 2026-08-03 수정 (`_is_tradeable_price`로 0·음수·NaN 가격 체결 차단, 경고 로그 후 건너뜀) — 가격 0이면 `ZeroDivisionError`, 음수면 조용히 음수 주식 수 — `PortfolioDcaManager`가 가격 유효성을 검사하지 않는다. 데이터 품질 이슈가 크래시나 무의미한 포지션으로 이어진다. 조치: 매수 전 `price > 0` 검증, 위반 시 건너뛰고 경고 수집.
+- [ ] **P3-31 [fe]** `dataSampling.sampleData`의 truthy 검사(`if (firstItem)`)가 `0` 같은 정상 falsy 값을 버린다 — 현재 미사용 코드라 영향 없음. 삭제하거나 `!= null` 비교로 교체.
+
+## ⚠️ 이번 작업으로 바뀐 사용자 노출 동작 (제품 확인 필요)
+
+- [ ] **백테스트 최소 기간 30일 제약 신설** — P2-04(검증 통합)의 "최소 기간 검증 부재"를 메우면서 `MIN_BACKTEST_PERIOD_DAYS = 30`을 도입했다. 30일 미만 요청은 이제 422로 거부된다. 30일 미만 백테스트는 연환산 지표(Sharpe·CAGR)가 무의미해지므로 방어 가능한 규칙이지만, **기존에 되던 요청이 거부되는 변경**이므로 제품 관점 확인이 필요하다. 값이 과하면 조정할 것. 위치는 스키마가 아닌 엔드포인트 — DCA/시뮬레이션 내부를 3~14일 구간으로 검증하는 기존 단위 테스트가 스키마 레벨 하한과 충돌하기 때문(HTTP 요청 정책 vs 데이터 형태 검증의 분리로도 설명 가능).
+- [ ] **백테스트 동시 실행 8건·타임아웃 60초 제약 신설** — P2-16. 초과 요청은 큐잉되고, 총 소요(대기+실행)가 60초를 넘으면 504를 반환한다. `MAX_CONCURRENT_BACKTESTS`/`BACKTEST_TIMEOUT_SECONDS` 환경변수로 조정 가능하나 `Settings`가 아닌 모듈 상수라 일관성이 떨어진다 — `config.py`로 옮길 것. 실사용 부하 기준 튜닝 필요.
+- [ ] **Prometheus 티커 라벨 상한 200개** — 201번째부터는 `other`로 합산된다. LRU가 없는 first-N-seen 방식이라, 초반에 무작위 티커가 슬롯을 채우면 이후 실제 인기 티커가 전부 `other`로 묶인다. 카디널리티 폭증은 막았으나 메트릭 품질은 저하 가능 — 필요하면 주기적 리셋이나 사전 화이트리스트로 개선.
+
 ## ⚠️ 저장소 밖 필수 후속 조치 (운영)
 
 - [ ] **`/opt/home-server/scripts/deploy-app.sh`가 두 번째 인자(이미지 태그)를 받도록 갱신** — P2-26으로 Jenkinsfile이 `deploy-app.sh backtest-be ${BUILD_NUMBER}` 형태로 태그를 넘기게 바뀌었다. 스크립트가 여분 인자를 무시하면 무해하지만, 인자 개수를 엄격히 검사하면 **배포가 깨진다**. 저장소에서 확인 불가능하므로 스테이징에서 먼저 검증할 것. 갱신 전까지는 여전히 `:latest`를 추적하므로 롤백 지점이 없다.
@@ -121,33 +134,34 @@
 
 ## P3 — 여유 있을 때 (정리·폴리시)
 
-- [ ] **P3-01 [test]** 유닛 마커 규율 — `tests/unit/` 16개 중 10개에 `@pytest.mark.unit` 부재, bare `pytest`는 integration/e2e까지 수집. 조치: `pytestmark` 추가 + `addopts` 기본 제외.
+- [x] **P3-01 [test]** ✅ 2026-08-03 (마커 누락 파일에 `pytestmark` 추가, `addopts`에 기본 제외 — bare `pytest`가 362 통과 + 13 제외로 정상 동작) — 유닛 마커 규율 — `tests/unit/` 16개 중 10개에 `@pytest.mark.unit` 부재, bare `pytest`는 integration/e2e까지 수집. 조치: `pytestmark` 추가 + `addopts` 기본 제외.
 - [x] **P3-02 [test]** ✅ 2026-08-02 수정 (실제 함수 export해 공유, DCA 분기 커버리지 추가) — `recalcAmountsByWeight` 사본 테스트 — reducer 내부 클로저의 70줄 사본을 테스트 중. 조치: export 순수 함수로 추출해 공유.
-- [ ] **P3-03 [test]** 테스트 위생 — `pytest.ini:41-61` coverage 설정은 읽히지 않는 위치(`.coveragerc`로); `tests/fixtures/*_fixtures.py` 임포터 0; MSW `onUnhandledRequest: 'warn'`→`'error'`; `TradeSignalsChart.test.tsx` 스모크 단언.
+- [x] **P3-03 [test]** ✅ 2026-08-03 (coverage 설정을 `.coveragerc`로 이동, 죽은 픽스처 2개 삭제) — 테스트 위생 — `pytest.ini:41-61` coverage 설정은 읽히지 않는 위치(`.coveragerc`로); `tests/fixtures/*_fixtures.py` 임포터 0; MSW `onUnhandledRequest: 'warn'`→`'error'`; `TradeSignalsChart.test.tsx` 스모크 단언.
 - [x] **P3-04 [infra]** ✅ 2026-08-02 수정 — FE nginx 이미지 HEALTHCHECK 추가(conf에 `/health` 이미 존재).
 - [x] **P3-05 [infra]** ✅ 2026-08-02 수정 (node:22-alpine, nginx 고정 버전) — 베이스 이미지 수명 — `node:20.19.0-alpine` EOL → 22; `nginx:stable-alpine` 부동 태그 고정(운영 이미지는 digest 고정 검토, Codex).
 - [x] **P3-06 [infra]** ✅ 2026-08-02 수정 (`/app/requirements.txt`로 경로 교정, `|| true` 제거 — P2-18/20과 함께 처리) — `entrypoint.sh:10-13` 죽은 복구 경로 — `/requirements.txt`(실제 `/app/requirements.txt`) + `|| true`. 조치: 경로 수정, `|| true` 제거.
 - [x] **P3-07 [infra]** ✅ 2026-08-02 수정 (restart 정책·리소스 상한·npm ci) — compose 정리 — dev-prod FE 태그 충돌(`backtest-fe:dev`), mysql 서비스 부재로 dev 스택에 암묵 의존, restart 정책·리소스 제한 부재(17-worker BE), FE `Dockerfile.dev` `npm install`→`npm ci`.
 - [x] **P3-08 [infra]** ✅ 2026-08-02 부분 수정 (timeout·docker logout 적용, junit 아카이빙은 게이트 약화 위험으로 보류) — Jenkinsfile 위생 — 파이프라인 timeout 부재, junit 아카이빙 없음, `docker logout` 없음.
-- [ ] **P3-09 [db]** `stock_news` UNIQUE/FK 부재 — 중복 방지가 앱 delete-then-insert 의존(`schema.sql:78-92`). 조치: `UNIQUE (ticker, news_date, link(255))` 류.
-- [ ] **P3-10 [db]** 중복 인덱스 3개 제거 — `stocks.idx_ticker`, `daily_prices.idx_stock_date_desc`, `stock_news.idx_ticker`(`schema.sql:41,69,88`) — 쓰기 증폭만.
+- [x] **P3-09 [db]** ✅ 2026-08-03 (`uq_ticker_date_link` UNIQUE 추가 — 중복 삽입이 1062로 거부됨을 실제 확인. FK는 뉴스/가격 저장이 독립 트랜잭션이라 미추가) — `stock_news` UNIQUE/FK 부재 — 중복 방지가 앱 delete-then-insert 의존(`schema.sql:78-92`). 조치: `UNIQUE (ticker, news_date, link(255))` 류.
+- [x] **P3-10 [db]** ✅ 2026-08-03 (중복 인덱스 3개 제거 — schema.sql과 Alembic 양쪽, `EXPLAIN`으로 Backward index scan 확인해 회귀 없음 검증) — 중복 인덱스 3개 제거 — `stocks.idx_ticker`, `daily_prices.idx_stock_date_desc`, `stock_news.idx_ticker`(`schema.sql:41,69,88`) — 쓰기 증폭만.
 - [x] **P3-11 [fe]** ✅ 2026-08-02 수정 — 메타데이터·의존성 정리 — `"license": "MIT"` vs 저장소 AGPL-3.0, placeholder repo URL, `@types/node`가 dependencies에, **미사용 `jsdom`(happy-dom 사용 중)·`patch-package`(patches/ 부재인데 postinstall 실행) 제거(Codex, 직접 확인)**.
 - [x] **P3-12 [be]** ✅ 2026-08-02 수정 — `config.py:90` 죽은 `secret_key` 기본값 제거.
 - [x] **P3-13 [infra]** ✅ 2026-08-02 수정 — nginx gzip + 해시된 `/assets/` 장기 Cache-Control.
-- [ ] **P3-14 [ci]** CI 선택 도입 — BE integration 테스트, 이미지 스캔, 의존성 감사, 커버리지 리포팅(핵심 모듈 우선 기준, Codex), SBOM.
+- [x] **P3-14 [ci]** ✅ 2026-08-03 (npm audit + pip-audit 차단 스테이지. 업그레이드 불가·도달 불가 건은 `scripts/audit-deps.sh` 예외 목록에서 근거와 함께 통과 — 빈 예외 목록으로 종료코드 1 확인해 "실패 가능한 게이트"임을 검증. trivy·커버리지는 근거와 함께 보류) — CI 선택 도입 — BE integration 테스트, 이미지 스캔, 의존성 감사, 커버리지 리포팅(핵심 모듈 우선 기준, Codex), SBOM.
 - [x] **P3-15 [fe]** ✅ 2026-08-02 부분 수정 (모듈 9개 삭제. 도달 불가 단일 종목 차트 서브트리는 제품 결정 필요로 보류) — FE 죽은 코드 정리 — ~~`useAsync`~~(✅ P2-34에서 삭제), ~~`NewsModal`/`UnifiedInfoSection`~~(✅ P1-01에서 삭제), 잔여: `useForm`/`use-mobile`, `useStrategies`+중복 상수, `ErrorMessage`/`LoadingSpinner` 미사용 export, `PerformanceMonitor` 미사용부, 미호출 `validateParams`, `getErrorTitle`, `shared/types/index.ts`의 고아 `AsyncState<T>`(useAsync 삭제로 발생), **도달불가 단일 종목 차트 서브트리 전체**(제품 결정 필요), 미호출 `Toaster`+`next-themes`.
 - [x] **P3-16 [fe]** ✅ 2026-08-02 수정 — 다크모드 하드코딩 팔레트 — `ChartsSection/index.tsx:84`, `BacktestResults.tsx:52,64`, `ErrorBoundary.tsx:136`, `PortfolioForm.tsx:71` → `dark:` 변형으로.
 - [x] **P3-17 [fe]** ✅ 2026-08-02 수정 — 숫자 입력 인체공학 — `parseFloat||0`으로 비울 수 없음, `strategy_params` 문자열 전송(BE가 캐스팅). 조치: 입력 중 문자열 유지, 제출 시 숫자.
 - [x] **P3-18 [fe]** ✅ 2026-08-02 수정 — FE 소소 — `alert()`→toast, `CustomTooltip` 본문 내 정의, `EquityPoint`를 `number|null`로.
-- [ ] **P3-19 [be]** BE 죽은 코드 ~2,000줄 — 라이브 라우트는 3개뿐: `chart_data_service.py`(497), `indicators/*`(~840), `di/container.py`(210), `handle_backtest_errors`, `BuyAndHoldStrategy`, `spread`/`benchmark_ticker` 필드 등. 죽은 벤치마크 블록(`backtest_engine.py:337-376`)에 잠재 버그 2개 — 되살리려면 수정 먼저.
+- [ ] **P3-30 [be]** 죽은 코드 2차 정리 후보 (P3-19 작업 중 발견, 보수적으로 미제거) — `BacktestService.validate_backtest_request`/`get_available_strategies`/`validate_strategy_params`(제거된 3개 메서드와 동일한 무호출 근거), `app/interfaces/data_source.py`의 `YFinanceDataSource`(유일한 생성 지점이 삭제된 DI 컨테이너였음), `app/utils/type_converters.py`의 삭제된 `chart_data_service` 참조 docstring. 조치: 각각 grep으로 재확인 후 제거.
+- [x] **P3-19 [be]** ✅ 2026-08-03 수정 (**2,210줄 순삭제** — DI 패키지, `chart_data_service`+indicators 7개, `handle_backtest_errors`, `BuyAndHoldStrategy`, `spread`/`benchmark_ticker` 필드, 죽은 벤치마크 블록. 라우트 수 7→7 불변, 그룹별 삭제 후 매번 스위트 확인. buy&hold가 레지스트리에서 빠져 생긴 함정은 `test_strategy_registry_coverage.py`로 가드) — BE 죽은 코드 ~2,000줄 — 라이브 라우트는 3개뿐: `chart_data_service.py`(497), `indicators/*`(~840), `di/container.py`(210), `handle_backtest_errors`, `BuyAndHoldStrategy`, `spread`/`benchmark_ticker` 필드 등. 죽은 벤치마크 블록(`backtest_engine.py:337-376`)에 잠재 버그 2개 — 되살리려면 수정 먼저.
 - [x] **P3-20 [be]** ✅ 2026-08-02 수정 — 오류 처리 잔손질 — 자기 무력화 re-raise(`backtest_engine.py:109-120`), ValidationError 400 정의 vs 422 재포장+"400:" 누출(`decorators.py:148-152`), TTLCache TOCTOU(`data_repository.py:56-58`).
 - [x] **P3-21 [be]** ✅ 2026-08-02 수정 — 가공 폴백 통계 제거 — `Win Rate 50%` 몽키패치(`backtest_service.py:25-70`), `create_fallback_stats`의 비연환산 변동성+`Win 100%` — 200 성공으로 서빙됨.
 - [x] **P3-27 [be]** ✅ 2026-08-02 수정 (수수료를 거래 가능 자산에서만 차감) — 수수료 비례 축소가 상장폐지 종목 주식 수까지 감소시킴 — `portfolio_rebalancer.py`의 `scale_factor` 블록이 `new_shares` 전체에 적용되어, 거래 불가여야 할 상장폐지 보유 수량이 리밸런싱마다 미세하게 줄어든다. P1-06 수정으로 총액 불변식은 성립하므로 급하지 않지만, 모델링상 수수료는 현금/거래가능 자산에서 차감되는 것이 옳다. 조치: 수수료를 거래가능 풀에서만 차감하도록 변경 + 수수료>0에서도 상장폐지 주식 수 불변을 단언하는 테스트 추가(현재 `test_delisted_position_share_count_unchanged`는 commission=0 전제).
 - [x] **P3-28 [be]** ✅ 2026-08-02 도달 불가 증명 (cash_holdings가 dca_info에서 파생되므로 미매칭 불가 — 불변식 테스트 3개로 고정, 코드 변경 없음) — `available_cash`에 대응하는 `cash` 타입 `dca_info` 항목이 없으면 리밸런싱 후 해당 현금이 유실됨 — P1-06 작업 중 발견된 선재 이슈(테스트 픽스처는 이 조건을 회피). 조치: 미매칭 현금을 보존하거나 명시적으로 거부.
 - [x] **P1-15 [be]** ✅ 2026-08-02 수정 — **변동성이 항상 0으로 보고되던 버그**. `backtesting==0.3.3`은 연환산 변동성을 `'Volatility (Ann.) [%]'`로 내보내는데 `backtest_engine.py:383`이 존재하지 않는 `'Volatility [%]'`를 읽고 `.get` 기본값 0.0을 반환했다. RED로 실측 50.37% 대신 0.0이 나오는 것 확인 후 수정. 라이브러리가 실제로 쓰는 키 이름을 고정하는 테스트 포함(업그레이드 시 조용한 0.0 재발 방지). P3-20 작업 중 발견.
-- [ ] **P3-29 [be]** 리밸런싱 감사 dict가 표시용 symbol로 키를 잡음 — `portfolio_rebalancer.execute_rebalancing_trades`의 `weights_before`/`weights_after`가 `unique_key`가 아닌 `dca_info[...].symbol`로 키를 만들어, 동명 현금 항목이 여러 개면 리밸런싱 리포트에서 충돌한다. P2-07(현금 중복)을 유니크 키 방식으로 수정하면서 발견. 총액·비중·individual_returns는 이미 정합하므로 리포트 표시만의 문제. 조치: 해당 dict도 unique_key 기반으로 전환.
+- [x] **P3-29 [be]** ✅ 2026-08-03 (충돌 인지 키잉 — 일반적인 경우 표시 심볼 유지, 동명 현금이 둘 이상일 때만 unique_key로 폴백) — 리밸런싱 감사 dict가 표시용 symbol로 키를 잡음 — `portfolio_rebalancer.execute_rebalancing_trades`의 `weights_before`/`weights_after`가 `unique_key`가 아닌 `dca_info[...].symbol`로 키를 만들어, 동명 현금 항목이 여러 개면 리밸런싱 리포트에서 충돌한다. P2-07(현금 중복)을 유니크 키 방식으로 수정하면서 발견. 총액·비중·individual_returns는 이미 정합하므로 리포트 표시만의 문제. 조치: 해당 dict도 unique_key 기반으로 전환.
 - [x] **P3-22 [be]** ✅ 2026-08-02 수정 (블록리스트 정확 매칭·다운로드 전 검증, DB 접속 정보 print 제거) — BE 소소 — 블록리스트 substring 매치(`ZZZ.TO` 오차단)+다운로드 후 검증(`data_fetcher.py:182-196`), USD-quote 리스트 3중 하드코딩, `portfolio_metrics.py` 중복+매일 재인스턴스화, `database_config.py` print+root 폴백, 캐시 반환 DataFrame 방어적 copy 검토(Codex, 미검증).
-- [ ] **P3-23 [fe]** 〔Codex〕 번들 측정 기반 최적화 — chart vendor chunk ~427KB의 초기 필요성 측정, 결과 차트의 실행 후 로드 검토(현재 이미 lazy — 실측으로 검증).
+- [x] **P3-23 [fe]** ✅ 2026-08-03 (측정 결과 chart-vendor 청크가 차트 없는 홈 화면에서도 modulepreload되고 있었음 — vite manualChunks 항목 제거로 해소, 재측정으로 확인) — 〔Codex〕 번들 측정 기반 최적화 — chart vendor chunk ~427KB의 초기 필요성 측정, 결과 차트의 실행 후 로드 검토(현재 이미 lazy — 실측으로 검증).
 - [x] **P3-24 [docs]** ✅ 2026-08-02 수정 (실제 conftest·flat 구조 기준 재작성) — BE 테스트 문서 3종 재작성 — `execution.md`(가짜 디렉터리·테스트명), `fixtures.md`(가짜 픽스처·엔드포인트), `async.md`(가짜 파일·픽스처). 실제 conftest 기준으로.
 - [x] **P3-25 [docs]** ✅ 2026-08-02 수정 — FE docs 스테일 — 존재하지 않는 훅 4종 서술(`chart_performance.md`/`data_sampling.md`), 삭제된 `api/` 레이어(`README.md:122,133` 등), `refactoring-plan.md` 아카이브.
 - [x] **P3-26 [docs]** ✅ 2026-08-02 수정 — 문서 소소 — 깨진 링크(`stock_split.md`), `../CLAUDE.md` 경로, "Test Count: 59" 자기모순, `.env.example`의 `DATABASE_NAME=backtest`(실제 `stock_data_cache`), `backtestApi.ts` 잔재, README 죽은 예시, `BACKEND_CORS_ORIGINS` no-op, 루트 docs/ 인덱스 누락.

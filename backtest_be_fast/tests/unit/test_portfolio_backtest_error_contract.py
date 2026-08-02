@@ -25,7 +25,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.core.exceptions import DataNotFoundError, ValidationError
+from app.core.exceptions import DataNotFoundError, ValidationError, YfinanceRateLimitError
 
 pytestmark = pytest.mark.unit
 
@@ -140,6 +140,23 @@ class TestPortfolioBacktestErrorContract:
             f"body={response.text}"
         )
         assert "AAPL" in response.text
+
+    def test_rate_limit_error_returns_429_with_retry_after(self):
+        """YfinanceRateLimitError는 app/core/exceptions.py에 정의된 자신의
+        상태 코드(429)로 그대로 전파되어야 하며, Retry-After 헤더도 함께
+        내려가야 한다. handle_portfolio_errors의 docstring이 문서화하는
+        '422/404/429/500 매핑' 중 429는 이 파일에서 지금까지 검증되지
+        않았던 마지막 매핑이다 (P2-37)."""
+        with _patch_deep_data_load(YfinanceRateLimitError(30)):
+            response = client.post("/api/v1/backtest", json=VALID_PAYLOAD)
+
+        assert response.status_code == 429, (
+            f"YfinanceRateLimitError가 429로 전파되지 않음: {response.status_code}, "
+            f"body={response.text}"
+        )
+        assert response.headers.get("Retry-After") == "30", (
+            f"Retry-After 헤더가 누락되거나 값이 다름: {response.headers.get('Retry-After')!r}"
+        )
 
     def test_success_path_still_returns_200_with_unchanged_shape(self):
         """회귀 방지: 성공 응답의 형태(status='success' + data)는 이번 수정으로

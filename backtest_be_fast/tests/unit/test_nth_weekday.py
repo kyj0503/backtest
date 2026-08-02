@@ -7,6 +7,8 @@ import pytest
 from datetime import datetime
 from app.services.rebalance_helper import get_nth_weekday_of_month, get_next_nth_weekday
 
+pytestmark = pytest.mark.unit
+
 
 class TestNthWeekdayOfMonth:
     """get_nth_weekday_of_month 함수 테스트"""

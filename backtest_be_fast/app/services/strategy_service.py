@@ -13,8 +13,7 @@ from app.strategies.strategies import (
     RsiStrategy,
     BollingerBandsStrategy,
     MacdStrategy,
-    EmaStrategy,
-    BuyAndHoldStrategy
+    EmaStrategy
 )
 
 
@@ -145,13 +144,6 @@ STRATEGIES: Dict[str, Dict[str, Any]] = {
             }
         },
         'constraints': ['fast_window < slow_window']
-    },
-    'buy_hold_strategy': {
-        'class': BuyAndHoldStrategy,
-        'name': 'Buy and Hold Strategy',
-        'description': '매수 후 보유 전략',
-        'parameters': {},
-        'constraints': []
     }
 }
 

@@ -7,7 +7,6 @@ from .strategies import (
     BollingerBandsStrategy,
     MacdStrategy,
     EmaStrategy,
-    BuyAndHoldStrategy,
     PositionSizingMixin
 )
 
@@ -17,6 +16,5 @@ __all__ = [
     'BollingerBandsStrategy',
     'MacdStrategy',
     'EmaStrategy',
-    'BuyAndHoldStrategy',
     'PositionSizingMixin'
 ]
