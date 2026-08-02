@@ -262,15 +262,34 @@ class PortfolioRebalancer:
                 new_shares[unique_key] = target_value / price
 
         # 수수료만큼 전체적으로 비례 축소
-        if total_portfolio_value > total_commission_cost:
-            scale_factor = (total_portfolio_value - total_commission_cost) / total_portfolio_value
-            updated_shares = {k: v * scale_factor for k, v in new_shares.items()}
-            updated_cash_holdings = {k: v * scale_factor for k, v in new_cash_holdings.items()}
-            updated_available_cash = sum(updated_cash_holdings.values())
+        # [P3-27] 상장폐지 종목은 거래가 불가능하므로 보유 주식 수가 리밸런싱으로
+        # 절대 변하면 안 된다. total_commission_cost는 거래 가능 자산(주식 매매)
+        # 에서만 발생한다 -- 상장폐지 종목은 위에서 target_value/commission 계산
+        # 전에 continue로 건너뛰어 commission_cost에 전혀 기여하지 않는다. 따라서
+        # 수수료도 거래 가능 자산 풀(거래 가능 주식 + 현금)에서만 차감해야 한다.
+        # 상장폐지 종목까지 포함한 total_portfolio_value를 축소 기준으로 쓰면,
+        # 매 리밸런싱마다 상장폐지 종목의 보유 주식 수가 (작지만 0이 아닌 만큼)
+        # 계속 줄어드는 오류가 생긴다.
+        tradeable_value = sum(
+            new_shares[k] * current_prices[k]
+            for k in new_shares.keys()
+            if k not in delisted_stocks and k in current_prices
+        ) + sum(new_cash_holdings.values())
+
+        if tradeable_value > total_commission_cost and tradeable_value > 0:
+            scale_factor = (tradeable_value - total_commission_cost) / tradeable_value
         else:
-            updated_shares = new_shares
-            updated_cash_holdings = new_cash_holdings
-            updated_available_cash = sum(updated_cash_holdings.values())
+            # 수수료가 거래 가능 자산 가치를 넘어서거나(비정상적으로 큰 수수료)
+            # 거래 가능 자산이 아예 없는 경우(전량 상장폐지 + 현금 없음) -- 기존
+            # 코드와 동일하게 축소 없이 그대로 둔다 (음수/0-나눗셈 방지).
+            scale_factor = 1.0
+
+        updated_shares = {
+            k: (v if k in delisted_stocks else v * scale_factor)
+            for k, v in new_shares.items()
+        }
+        updated_cash_holdings = {k: v * scale_factor for k, v in new_cash_holdings.items()}
+        updated_available_cash = sum(updated_cash_holdings.values())
 
         # 리밸런싱 후 비중 계산 (현금 포함)
         weights_after = {}

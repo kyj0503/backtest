@@ -218,9 +218,12 @@ class TestDelistedStockRebalancingInvariant:
         assert result['commission_cost'] > 0
         assert post_total == pytest.approx(pre_total - result['commission_cost'], rel=1e-9)
 
-        # 상장폐지 종목도 수수료 비례 축소 계수가 다른 자산과 동일하게 적용되어야 함
-        expected_scale = (pre_total - result['commission_cost']) / pre_total
-        assert result['updated_shares']['B'] == pytest.approx(shares['B'] * expected_scale)
+        # [P3-27 fix] 상장폐지 종목(B)은 거래가 불가능하므로 수수료 비례 축소가
+        # 적용되면 안 된다 -- 보유 주식 수는 정확히 그대로 유지되어야 한다.
+        # (수정 전에는 다른 거래 가능 자산과 동일한 축소 계수가 잘못 적용되어
+        # 매 리밸런싱마다 보유 주식 수가 조금씩 줄어들었다. 상세 수치 증거는
+        # test_rebalancer_commission_delisted_shares.py 참고.)
+        assert result['updated_shares']['B'] == pytest.approx(shares['B'])
 
     def test_all_stocks_delisted_no_trades_no_inflation_no_crash(self):
         """모든 종목이 상장폐지된 경우 거래 없이 그대로 유지되고 예외가 없어야 한다."""

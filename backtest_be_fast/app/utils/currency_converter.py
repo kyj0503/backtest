@@ -232,8 +232,16 @@ class CurrencyConverter:
             return converted_data
 
         except Exception as e:
-            logger.error(f"통화 변환 중 오류: {e}, 원본 데이터 사용")
-            return data
+            # [P2-02] 환율 데이터를 로드/적용하지 못했다고 원본(비USD) 가격을
+            # 그대로 반환하면 안 된다. 호출자는 이 반환값이 이미 USD로 변환된
+            # 것으로 취급하므로, 예를 들어 KRW 7만원대 가격이 $70,000짜리
+            # 자산으로 둔갑한 채 "성공"으로 보고되는 조용한 오염이 발생한다.
+            # 변환이 필요한데(비USD) 실패했다면 명시적으로 실패를 알린다.
+            logger.error(f"{ticker} ({currency}) 통화 변환 실패: {e}")
+            raise ValueError(
+                f"{ticker} 가격을 {currency}에서 USD로 변환할 수 없습니다 "
+                f"(환율 데이터 조회/적용 실패): {e}"
+            ) from e
 
     async def load_multiple_exchange_rates(
         self,
