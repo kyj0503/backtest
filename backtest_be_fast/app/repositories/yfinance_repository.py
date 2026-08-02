@@ -59,15 +59,29 @@ class YFinanceRepository:
             raise last_error
         raise RuntimeError(f"DB Operation failed after {max_retries} attempts, but no exception was captured.")
 
-    def _save_stock_metadata(self, conn, ticker: str) -> int:
-        """stocks 테이블에 메타데이터 저장 (Upsert)"""
-        # ensure stock exists
-        info = {}
+    def _fetch_ticker_info_safe(self, ticker: str) -> dict:
+        """
+        외부 API(yfinance)에서 티커 정보를 조회합니다.
+
+        DB 트랜잭션/커넥션을 점유하지 않은 상태에서 호출해야 합니다 (P2-10).
+        느린 Yahoo 응답이 커넥션 풀의 커넥션과 트랜잭션 락을 오래 붙잡는 것을
+        막기 위함입니다.
+        """
         try:
-            info = self.data_fetcher.fetch_ticker_info(ticker)
+            return self.data_fetcher.fetch_ticker_info(ticker)
         except Exception:
             self.logger.warning(f"{ticker} info 조회 실패/누락, 기본값으로 진행")
-        
+            return {}
+
+    def _save_stock_metadata(self, conn, ticker: str, info: dict) -> int:
+        """stocks 테이블에 메타데이터 저장 (Upsert)
+
+        info는 트랜잭션을 열기 전에 _fetch_ticker_info_safe()로 미리 조회되어
+        전달됩니다 (네트워크 호출을 트랜잭션 밖으로 빼기 위함, P2-10).
+        """
+        # 호출자(및 재시도 시 재사용되는 값)와 상태를 공유하지 않도록 방어적으로 복사
+        info = dict(info) if info else {}
+
         # DB에서 기존 last_handled_split 보존
         existing_split = None
         try:
@@ -191,12 +205,18 @@ class YFinanceRepository:
 
     def save_ticker_data(self, ticker: str, df: pd.DataFrame) -> int:
         """stocks 테이블에 티커 등록 및 daily_prices에 행을 upsert 합니다."""
+        # 외부 API(yfinance) 호출은 트랜잭션을 열기 전에 미리 수행한다 (P2-10).
+        # _retry_on_deadlock이 _transactional_save를 여러 번 재시도할 수 있는데,
+        # 네트워크 조회가 트랜잭션 안에 있으면 재시도마다 커넥션/락을 잡은 채
+        # 느린 외부 응답을 기다리게 된다. 여기서 한 번만 조회해 재사용한다.
+        info = self._fetch_ticker_info_safe(ticker)
+
         def _transactional_save():
             engine = self._get_engine()
             with engine.begin() as conn:  # Context manager handles commit/rollback automatically
-                # 1. Metadata 저장
-                stock_id = self._save_stock_metadata(conn, ticker)
-                
+                # 1. Metadata 저장 (네트워크 조회 없이 DB 쓰기만 수행)
+                stock_id = self._save_stock_metadata(conn, ticker, info)
+
                 # 2. Price 저장
                 saved_count = self._save_daily_prices(conn, stock_id, df)
                 return saved_count
@@ -276,40 +296,45 @@ class YFinanceRepository:
         }
         try:
             ticker = ticker.upper()
+            # 커넥션은 SELECT 하나만 수행하고 즉시 반환한다 (P2-10). 상장일이
+            # 없어 Yahoo Finance를 조회해야 하는 경우, 그 네트워크 호출과 후속
+            # UPDATE(_update_ticker_info)는 아래에서 이 커넥션을 닫은 뒤 별도로
+            # 수행한다 - 느린 외부 응답 동안 DB 커넥션을 붙잡지 않기 위함이다.
             with engine.connect() as conn:
                 row = conn.execute(
                     text("SELECT id, info_json FROM stocks WHERE ticker = :t"),
                     {"t": ticker}
                 ).fetchone()
 
-                if row and row[1]:
-                    try:
-                        stock_id = row[0]
-                        info = json.loads(row[1])
+            if row and row[1]:
+                try:
+                    stock_id = row[0]
+                    info = json.loads(row[1])
 
-                        # 상장일이 없으면 Yahoo Finance에서 가져와 업데이트
-                        if not info.get('first_trade_date'):
-                            self.logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
-                            try:
-                                fresh_info = self.data_fetcher.fetch_ticker_info(ticker)
-                                if fresh_info.get('first_trade_date'):
-                                    info['first_trade_date'] = fresh_info['first_trade_date']
-                                    self._update_ticker_info(ticker, stock_id, info)
-                                    self.logger.info(f"{ticker}: 상장일 업데이트 완료 - {info['first_trade_date']}")
-                            except Exception as e:
-                                self.logger.warning(f"{ticker}: 상장일 조회 실패 - {e}")
+                    # 상장일이 없으면 Yahoo Finance에서 가져와 업데이트
+                    # (DB 커넥션이 열려있지 않은 상태에서 네트워크 호출)
+                    if not info.get('first_trade_date'):
+                        self.logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
+                        try:
+                            fresh_info = self.data_fetcher.fetch_ticker_info(ticker)
+                            if fresh_info.get('first_trade_date'):
+                                info['first_trade_date'] = fresh_info['first_trade_date']
+                                self._update_ticker_info(ticker, stock_id, info)
+                                self.logger.info(f"{ticker}: 상장일 업데이트 완료 - {info['first_trade_date']}")
+                        except Exception as e:
+                            self.logger.warning(f"{ticker}: 상장일 조회 실패 - {e}")
 
-                        return {
-                            'symbol': ticker,
-                            'currency': info.get('currency', 'USD'),
-                            'company_name': info.get('company_name', ticker),
-                            'exchange': info.get('exchange', 'Unknown'),
-                            'first_trade_date': info.get('first_trade_date', None)
-                        }
-                    except Exception as e:
-                        self.logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
+                    return {
+                        'symbol': ticker,
+                        'currency': info.get('currency', 'USD'),
+                        'company_name': info.get('company_name', ticker),
+                        'exchange': info.get('exchange', 'Unknown'),
+                        'first_trade_date': info.get('first_trade_date', None)
+                    }
+                except Exception as e:
+                    self.logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
 
-                return default_info
+            return default_info
         except Exception as e:
             self.logger.error(f"티커 정보 조회 실패: {ticker} - {e}")
             return default_info
