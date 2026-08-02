@@ -77,4 +77,20 @@ describe('apiClient URL 합성', () => {
     // '/apiv2/...'는 '/api'로 시작하지만 경로 구분자가 달라 잘라내면 안 된다.
     expect(await resolveUrl('/api', '/apiv2/backtest')).toBe('/api/apiv2/backtest')
   })
+
+  it('타임아웃이 설정되어 있고 프로덕션 nginx의 proxy_read_timeout(180s)보다 길다 (P2-30)', async () => {
+    // nginx.conf / nginx.prod.conf의 proxy_read_timeout 180s보다 조금 더
+    // 길게 잡아, 프로덕션에서는 nginx의 504(실제 HTTP 응답)가 먼저 발생하고
+    // axios 타임아웃은 dev 프록시(타임아웃 없음)나 nginx 자체가 응답하지
+    // 못하는 경우의 최후 안전망 역할만 하도록 한다. 정지된 연결이 폼을
+    // 영구히 막지 않도록 무한대는 아니어야 한다.
+    vi.resetModules()
+    const { apiClient, BACKTEST_REQUEST_TIMEOUT_MS } = await import('../client')
+    const NGINX_PROXY_READ_TIMEOUT_MS = 180_000
+
+    expect(apiClient.defaults.timeout).toBe(BACKTEST_REQUEST_TIMEOUT_MS)
+    expect(apiClient.defaults.timeout).toBeGreaterThan(NGINX_PROXY_READ_TIMEOUT_MS)
+    // 며칠씩 걸리는 정도의 값을 실수로 넣지 않았는지 확인 (여전히 유한하고 합리적인 상한).
+    expect(apiClient.defaults.timeout).toBeLessThan(10 * 60 * 1000)
+  })
 })

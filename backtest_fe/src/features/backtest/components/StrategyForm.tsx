@@ -78,7 +78,11 @@ const StrategyForm: React.FC<StrategyFormProps> = ({
                 label={param.description || key}
                 type="number"
                 value={displayValue}
-                onChange={(value) => updateStrategyParam(key, value.toString())}
+                // FormField는 number 타입일 때 유효한 유한수로 파싱될 때만
+                // onChange를 호출하므로 value는 이미 number다. 여기서
+                // .toString()으로 다시 문자열화하면 strategy_params가
+                // {"short_window": "15"}처럼 문자열로 제출된다(P3-17).
+                onChange={(value) => updateStrategyParam(key, value)}
                 min={param.min}
                 max={param.max}
                 step={param.step}
