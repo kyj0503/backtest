@@ -71,7 +71,7 @@ Always verify changes in Docker containers (`docker compose exec`) before declar
 
 - **BE markers:** `@pytest.mark.unit` (no DB), `@pytest.mark.integration` (DB), `@pytest.mark.external` (real API)
 - **FE:** Vitest + React Testing Library; Playwright for E2E
-- **Current baseline:** BE 180 unit tests + 10 integration, FE 112 tests — all green. Any failure is a regression, not pre-existing noise.
+- **Current baseline:** BE 189 unit tests + 10 integration, FE 112 tests — all green. Any failure is a regression, not pre-existing noise.
 - **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
 
 ## CI

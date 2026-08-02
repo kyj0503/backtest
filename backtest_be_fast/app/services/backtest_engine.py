@@ -161,24 +161,24 @@ class BacktestEngine:
         if not params:
             return base_strategy
 
-        sanitized_params: Dict[str, Any] = {}
         try:
             validated = self.strategy_service.validate_strategy_params(
                 strategy_name,
                 params,
             )
-            sanitized_params = {
-                key: validated[key]
-                for key in params.keys()
-                if key in validated
-            }
         except ValueError as exc:
             self.logger.warning(
-                "전략 파라미터 검증 경고(%s): %s - 원본 값 사용",
+                "전략 파라미터 검증 실패(%s): %s",
                 strategy_name,
                 exc,
             )
-            sanitized_params = params
+            raise ValidationError(str(exc)) from exc
+
+        sanitized_params: Dict[str, Any] = {
+            key: validated[key]
+            for key in params.keys()
+            if key in validated
+        }
 
         overrides = {
             key: value
