@@ -26,7 +26,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 의존성 설치 (uv 기반 유지)
-COPY requirements.txt .
+# P2-22: requirements.txt(사람이 편집하는 범위 지정 입력)가 아니라
+# requirements.lock.txt(완전 고정본)를 설치한다 — CI가 매번 다른 버전을
+# 해석해 "로컬은 되는데 CI는 깨지는" 드리프트를 막는다. requirements.txt는
+# 락 파일을 재생성할 때 쓰는 입력으로만 남는다.
+COPY requirements.lock.txt .
 # VENV 위치를 소스 밖(/opt/venv)에 두어 바인드 마운트로 덮어지지 않게 함
 ENV VENV_DIR=/opt/venv
 RUN python3 -m venv ${VENV_DIR}
@@ -34,7 +38,7 @@ ENV PATH="${VENV_DIR}/bin:$PATH"
 
 # requirements 설치 (pip 캐시 마운트로 재다운로드 방지)
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt
+    pip install -r requirements.lock.txt
 
 # 품질 게이트
 #
@@ -45,9 +49,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # DB가 필요 없는 unit 마커만 돌린다 (tests/integration은 MySQL을 요구).
 FROM builder AS test
 
-COPY requirements-test.txt .
+COPY requirements-test.lock.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements-test.txt
+    pip install -r requirements-test.lock.txt
 
 COPY app ./app
 COPY tests ./tests

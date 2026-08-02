@@ -47,14 +47,11 @@
     -   **적용**: 컴포넌트에 `prop`으로 전달되는 모든 이벤트 핸들러 함수를 `useCallback`으로 감쌌습니다.
     -   **설명**: `React.memo`를 효과적으로 사용하려면 `prop`으로 전달되는 함수가 매 렌더링마다 새로 생성되지 않아야 합니다. `useCallback`은 의존성이 변경되지 않는 한 함수를 재생성하지 않아, 자식 컴포넌트의 불필요한 리렌더링을 방지합니다.
 
-### 3. 훅 분리 및 책임 최소화
+### 3. `useChartData` 훅: 데이터 변환 책임 집중
 
--   **목표**: 거대했던 `useChartData` 훅의 책임을 분리하여 관심사를 분리하고 리렌더링 범위를 축소.
--   **리팩토링**:
-    -   `useChartData` → `useBacktestResult`로 변경: 순수하게 백테스트 결과 데이터와 상태만 관리하도록 책임을 축소.
-    -   `useChartInteractions`: 차트의 상호작용(줌, 패닝, 툴팁 등)과 관련된 상태 및 핸들러를 별도의 훅으로 분리.
-    -   `usePerformanceStats`: 통계 계산 로직을 분리.
--   **효과**: 각 훅은 독립적인 상태와 로직을 가지므로, 하나의 상태 변경이 다른 부분에 영향을 주지 않게 되었습니다. 예를 들어, 차트 툴팁의 위치가 변경되어도 통계 계산 로직은 재실행되지 않습니다.
+-   **현재 상태**: `features/backtest/hooks/charts/useChartData.ts`(약 500줄)가 차트용 데이터 변환을 전담합니다. `useBacktestResult`/`useChartInteractions`/`usePerformanceStats`처럼 여러 훅으로 쪼개는 리팩토링은 계획되었을 수 있지만 **적용되지 않았습니다** — `charts/` 디렉토리에는 `useChartData.ts` 하나만 있습니다.
+-   **책임 범위**: 백테스트 결과(`ChartData`/`PortfolioData`)를 받아 `transformPortfolioEquityData`/`transformSingleEquityData`/`transformTradeMarkers`/`transformOhlcData` 등으로 변환하고, `shared/utils/dataSampling.ts`의 `smartSampleByPeriod`/`aggregateReturns`로 다운샘플링까지 한 훅 안에서 처리합니다.
+-   **리렌더링 관리**: 훅을 여러 개로 쪼개는 대신, 훅 내부에서 `useMemo`로 각 변환 단계를 메모이제이션하는 방식으로 불필요한 재계산을 억제합니다.
 
 ### 4. 데이터 다운샘플링
 

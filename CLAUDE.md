@@ -29,7 +29,7 @@ docker build --target test ./backtest_be_fast
 
 **FE (Feature-Sliced Design):** `shared` ← `features` ← `pages` (no reverse imports). State: React hooks (`useState`/`useReducer`) + localStorage — there is no Zustand or other global-state library in this codebase despite what some older docs claim. UI: shadcn/ui + Tailwind + Recharts.
 
-**DB schema:** see `database/schema.sql`
+**DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through Alembic (`backtest_be_fast/alembic/`). An existing DB created from schema.sql needs `alembic stamp head` before its first migration.
 
 **API:** POST `/api/v1/backtest` — main endpoint. Errors: `@handle_portfolio_errors` decorator.
 
@@ -51,6 +51,10 @@ docker build --target test ./backtest_be_fast
 
 6. **`cachetools>=5.3.0`** required in BE (TTLCache for data_repository).
 
+13. **BE deps install from `requirements.lock.txt`**, not `requirements.txt`. The latter is the human-edited input; regenerate the lock when you change it, or CI installs versions nobody tested.
+
+14. **`apiClient` pins `adapter: 'fetch'`.** Reverting to the default xhr adapter breaks the timeout/cancellation tests — happy-dom + MSW do not faithfully implement XHR timeout/abort. Real browsers do, so this is a test-environment constraint, not a production one.
+
 7. **`VITE_API_BASE_URL` must be empty.** The service layer passes full paths (`/api/v1/...`) to axios, so a `/api` base yields `/api/api/v1/backtest` and 404s. `client.ts` has a defensive interceptor that strips the duplicate, but that is a safety net — do not rely on it by setting a base.
 
 8. **Tailwind 4, CSS-first config.** There is no `tailwind.config.js`; config lives in `src/index.css`. Do NOT move theme color literals into `@theme` — `useTheme` injects them at runtime via `root.style.setProperty()`, and baking them in kills theme switching. Dark mode is `@custom-variant dark (&:is(.dark *))`. Use `.app-container`, not `.container` (v4 emits its own with different max-widths).
@@ -71,7 +75,7 @@ Always verify changes in Docker containers (`docker compose exec`) before declar
 
 - **BE markers:** `@pytest.mark.unit` (no DB), `@pytest.mark.integration` (DB), `@pytest.mark.external` (real API)
 - **FE:** Vitest + React Testing Library; Playwright for E2E
-- **Current baseline:** BE 189 unit tests + 10 integration, FE 112 tests — all green. Any failure is a regression, not pre-existing noise.
+- **Current baseline:** BE 263 unit tests + 16 integration, FE 114 tests — all green. Any failure is a regression, not pre-existing noise.
 - **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
 
 ## CI

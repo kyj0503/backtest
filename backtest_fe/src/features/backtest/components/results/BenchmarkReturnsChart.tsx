@@ -49,7 +49,10 @@ export const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(
     // 포트폴리오 수익률 추가 (배열 형태로 받음)
     if (portfolioEquityData && portfolioEquityData.length > 0) {
       portfolioEquityData.forEach(point => {
-        if (point.return_pct !== undefined) {
+        // EquityPoint.return_pct는 리밸런싱 마커 포인트에서 null일 수 있다
+        // (PortfolioCharts.tsx 참고). 이 차트에서는 그런 포인트를 표시하지
+        // 않으므로 null/undefined 모두 건너뛴다.
+        if (point.return_pct !== undefined && point.return_pct !== null) {
           dataMap.set(point.date, {
             date: point.date,
             portfolio: point.return_pct,

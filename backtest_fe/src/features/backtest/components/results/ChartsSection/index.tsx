@@ -81,8 +81,8 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     <div className="space-y-6">
       {/* 샘플링 경고 표시 */}
       {samplingWarning && (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">{samplingWarning}</p>
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-600 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">{samplingWarning}</p>
         </div>
       )}
 

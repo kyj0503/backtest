@@ -26,6 +26,37 @@ interface TradeSignalsChartProps {
   trades: TradeMarker[];
 }
 
+// 툴팁 커스텀 렌더러
+// 컴포넌트 본문 안에 정의하면 렌더링마다 재생성되어 recharts의 얕은 비교(memo)
+// 이점이 사라지므로 모듈 스코프로 분리한다.
+interface TradeSignalTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: { date: string; price: number; type: string; quantity: number; pnl_pct?: number } }>;
+}
+
+const CustomTooltip = ({ active, payload }: TradeSignalTooltipProps) => {
+  if (!active || !payload || payload.length === 0 || !payload[0]) return null;
+
+  const data = payload[0].payload;
+  return (
+    <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg">
+      <p className="font-semibold text-sm mb-1">{data.date}</p>
+      <p className="text-sm">
+        <span className={data.type === '매수' ? 'text-green-600' : 'text-red-600'}>
+          {data.type} 신호
+        </span>
+      </p>
+      <p className="text-sm">가격: ${formatPrice(data.price)}</p>
+      <p className="text-sm">수량: {(data.quantity || 0).toFixed(2)}</p>
+      {data.pnl_pct !== undefined && data.pnl_pct !== null && (
+        <p className={`text-sm font-semibold ${data.pnl_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          수익률: {data.pnl_pct.toFixed(2)}%
+        </p>
+      )}
+    </div>
+  );
+};
+
 const TradeSignalsChart: React.FC<TradeSignalsChartProps> = memo(({ trades }) => {
   // 매수 신호와 매도 신호 분리
   const { entrySignals, exitSignals } = useMemo(() => {
@@ -57,35 +88,6 @@ const TradeSignalsChart: React.FC<TradeSignalsChartProps> = memo(({ trades }) =>
   const formatDateTick = (value: string) => {
     const date = new Date(value);
     return `${date.getMonth() + 1}/${date.getDate()}`;
-  };
-
-  // 툴팁 커스텀 렌더러
-  interface TooltipProps {
-    active?: boolean;
-    payload?: Array<{ payload: { date: string; price: number; type: string; quantity: number; pnl_pct?: number } }>;
-  }
-
-  const CustomTooltip = ({ active, payload }: TooltipProps) => {
-    if (!active || !payload || payload.length === 0 || !payload[0]) return null;
-
-    const data = payload[0].payload;
-    return (
-      <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg">
-        <p className="font-semibold text-sm mb-1">{data.date}</p>
-        <p className="text-sm">
-          <span className={data.type === '매수' ? 'text-green-600' : 'text-red-600'}>
-            {data.type} 신호
-          </span>
-        </p>
-        <p className="text-sm">가격: ${formatPrice(data.price)}</p>
-        <p className="text-sm">수량: {(data.quantity || 0).toFixed(2)}</p>
-        {data.pnl_pct !== undefined && data.pnl_pct !== null && (
-          <p className={`text-sm font-semibold ${data.pnl_pct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            수익률: {data.pnl_pct.toFixed(2)}%
-          </p>
-        )}
-      </div>
-    );
   };
 
   if (trades.length === 0) {

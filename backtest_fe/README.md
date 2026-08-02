@@ -77,10 +77,11 @@ npm run test:ui       # UI 모드
 
 #### `src/shared/lib/utils/`
 **역할**: 범용 유틸리티 함수
-- chartUtils.ts (차트 데이터 변환)
 - dateUtils.ts (날짜 포맷팅)
 - formatters.ts (숫자, 통화 포맷)
 - numberUtils.ts (숫자 계산)
+
+(차트 데이터 변환은 `features/backtest/hooks/charts/useChartData.ts`와 `shared/utils/dataSampling.ts`가 담당합니다. 과거 있었던 `chartUtils.ts`는 삭제되었습니다.)
 
 **사용 시기**: 여러 feature에서 재사용 가능한 순수 함수
 
@@ -117,20 +118,20 @@ import { Button } from '../../../shared/ui/button';
 ## 아키텍처 원칙
 
 ### 1. Feature-First Architecture
-각 feature는 독립적인 모듈로 관리:
+각 feature는 독립적인 모듈로 관리 (feature 전용 `api/` 계층은 없음 — API 호출은 `services/`가 `shared/api/client.ts`의 axios 인스턴스를 직접 사용):
 ```
 features/backtest/
-├── api/          # API 호출 계층
 ├── components/   # UI 컴포넌트
+├── constants/    # Feature 전용 상수
 ├── hooks/        # 비즈니스 로직 훅
-├── model/        # 상태 관리 + 타입
-├── services/     # 비즈니스 로직
+├── model/        # useReducer 상태 + 타입
+├── services/     # API 호출 및 응답 가공 (backtestService.ts 등)
 └── utils/        # Feature 전용 유틸
 ```
 
 ### 2. 명확한 계층 분리
 ```
-API → Service → Hooks → Components
+shared/api (axios) → Service → Hooks → Components
 ```
 
 ### 3. 높은 응집도, 낮은 결합도
@@ -144,7 +145,7 @@ API → Service → Hooks → Components
 
 ### 테스트 작성 위치
 ```
-src/features/backtest/components/BacktestForm.tsx
+src/features/backtest/components/PortfolioBacktestForm.tsx
 src/features/backtest/components/__tests__/BacktestForm.test.tsx
 ```
 
@@ -157,10 +158,10 @@ npm run test:ui           # UI 모드
 ```
 
 ### 현재 테스트 통계
-- **테스트 파일**: 16개
-- **테스트 케이스**: 113개
+- **테스트 파일**: 17개
+- **테스트 케이스**: 112개
 - **통과율**: 100%
-- **커버리지**: 21.81% statements / 22.62% lines
+- **커버리지**: `npm run test:coverage`로 직접 확인하세요 (테스트 파일/케이스 수가 자주 바뀌어 커버리지 수치를 여기 고정해 두지 않습니다).
 
 ### 테스트 격리에 관한 주의
 
@@ -180,8 +181,8 @@ npm run test:ui           # UI 모드
 ### Shared
 - `shared/components/` - 공통 컴포넌트 (12 files, 테스트 제외)
 - `shared/ui/` - shadcn/ui 컴포넌트 (16 files)
-- `shared/hooks/` - 공통 훅 (3 files: useAsync, useForm, useTheme)
-- `shared/lib/utils/` - 범용 유틸리티 (5 files)
+- `shared/hooks/` - 공통 훅 (1 file: useTheme)
+- `shared/lib/utils/` - 범용 유틸리티 (dateUtils, formatters, numberUtils + index)
 
 ---
 

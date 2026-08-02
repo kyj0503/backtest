@@ -11,63 +11,47 @@
 
 ## 샘플링 규칙
 
-데이터 집계 단위는 백테스트 기간(시작일과 종료일 사이의 총 일수)을 기준으로 다음과 같이 결정됩니다.
+실제 구현(`shared/utils/dataSampling.ts`의 `smartSampleByPeriod`)은 총 일수가 아니라 **기간을 연 단위로 환산한 값**(`(종료일 - 시작일) / 1000 / 60 / 60 / 24 / 365.25`)을 기준으로 판단합니다. 아래 "총 일수" 열은 참고용 근사치입니다(2년 ≈ 730일, 5년 ≈ 1825일).
 
-| 기간 (총 일수) | 집계 단위 | 예상 데이터 포인트 수 (최대) | 설명 |
-| :--- | :--- | :--- | :--- |
-| 1일 ~ 730일 (약 2년) | **일별 (Daily)** | ~500 | 단기 분석에 필요한 모든 상세 데이터를 표시합니다. |
-| 731일 ~ 1825일 (약 5년) | **주별 (Weekly)** | ~260 | 중기 추세 파악에 적합합니다. |
-| 1826일 이상 (5년 초과) | **월별 (Monthly)** | 기간에 따라 변동 | 장기적인 자산 변화 추세를 명확하게 보여줍니다. |
+| 기간 (연 단위) | 집계 단위 | 설명 |
+| :--- | :--- | :--- |
+| 2일 미만 | 원본 그대로 + 경고 | "백테스트 기간은 최소 2일 이상이어야 합니다." 경고와 함께 원본 데이터를 그대로 반환합니다. |
+| 2일 ~ 2년 | **일별 (Daily)** | 원본 데이터를 그대로 사용합니다. |
+| 2년 초과 ~ 5년 | **주별 (Weekly)** | 배열 인덱스 기준 매 7번째 데이터 포인트를 선택하는 단순 샘플링입니다 (실제 달력 주와 일치하지 않을 수 있습니다). |
+| 5년 초과 | **월별 (Monthly)** | 실제 달력 월(月) 기준으로 집계합니다. 10년을 초과하면 "10년 초과 백테스트는 월간 데이터로 표시됩니다." 경고가 추가됩니다. |
 
--   **주별 데이터 집계 방식**:
-    -   해당 주의 마지막 날짜(보통 금요일)의 데이터를 해당 주를 대표하는 데이터 포인트로 사용합니다.
-    -   시가(Open)는 주의 첫날 시가, 고가(High)는 주간 최고가, 저가(Low)는 주간 최저가, 종가(Close)는 주의 마지막 날 종가를 사용합니다.
--   **월별 데이터 집계 방식**:
-    -   해당 월의 마지막 날 데이터를 해당 월을 대표하는 데이터 포인트로 사용합니다.
-    -   시/고/저/종가 집계 방식은 주별과 동일한 원리를 따릅니다.
+-   **가격/자산가치(equity) 데이터**: 위 표의 규칙을 그대로 따르는 `smartSampleByPeriod()`가 처리합니다. 주별 집계는 매 7번째 항목을 선택하는 단순 샘플링이고, 월별 집계는 실제 달력 월의 마지막 데이터를 선택합니다.
+-   **수익률(%, `return_pct`) 데이터**: 위와 다른 함수인 `aggregateReturns()`를 사용합니다. 일별 수익률을 단순히 마지막 값만 취하면 틀린 결과가 나오므로(예: +5%, -5%가 반복되면 마지막 값만으로는 누적 효과가 사라짐), 구간 내 일별 수익률을 **복리로 합성**해 주간/월간 수익률을 계산합니다.
 
 ## 구현
 
-샘플링 로직은 프론트엔드에서 백엔드로부터 원본 데이터를 수신한 후, 차트 렌더링 직전에 `useMemo` 훅 내부에서 수행됩니다.
+샘플링 로직은 프론트엔드에서 백엔드로부터 원본 데이터를 수신한 후, 차트 렌더링 직전에 `features/backtest/hooks/charts/useChartData.ts` 훅 내부의 `useMemo`에서 수행됩니다. (`useBacktestResult`라는 이름의 훅이나 `useBacktestResultStore`라는 전역 스토어는 존재하지 않습니다 — 이 코드베이스에 전역 상태 스토어 자체가 없습니다.)
 
 ```typescript
-// /src/features/backtest/hooks/useBacktestResult.ts
+// src/features/backtest/hooks/charts/useChartData.ts (구조를 단순화한 예시)
+import { smartSampleByPeriod, aggregateReturns } from '@/shared/utils/dataSampling';
 
-const useBacktestResult = () => {
-  const { backtestResult } = useBacktestResultStore();
+export const useChartData = (/* backtestResult, startDate, endDate, ... */): UseChartDataReturn => {
+  // 가격/자산가치 데이터: smartSampleByPeriod가 기간에 따라 daily/weekly/monthly 자동 선택
+  const sampledEquity = useMemo(() => {
+    const { data, aggregationType, warning } = smartSampleByPeriod(
+      equityPoints, startDate, endDate
+    );
+    return { data, aggregationType, warning };
+  }, [equityPoints, startDate, endDate]);
 
-  const sampledData = useMemo(() => {
-    if (!backtestResult?._equity_curve) return [];
+  // 수익률(%) 데이터: 복리 집계가 필요하므로 별도 함수 사용
+  const sampledReturns = useMemo(
+    () => aggregateReturns(dailyReturnPoints, sampledEquity.aggregationType),
+    [dailyReturnPoints, sampledEquity.aggregationType]
+  );
 
-    const equityData = backtestResult._equity_curve.Equity;
-    const dates = backtestResult._equity_curve.index;
-
-    const totalDays = calculateDaysBetween(dates[0], dates[dates.length - 1]);
-
-    let samplingUnit: 'daily' | 'weekly' | 'monthly' = 'daily';
-    if (totalDays > 1825) {
-      samplingUnit = 'monthly';
-    } else if (totalDays > 730) {
-      samplingUnit = 'weekly';
-    }
-
-    switch (samplingUnit) {
-      case 'weekly':
-        return aggregateToWeekly(dates, equityData);
-      case 'monthly':
-        return aggregateToMonthly(dates, equityData);
-      default:
-        // 일별 데이터는 그대로 반환
-        return dates.map((date, i) => ({ date, value: equityData[i] }));
-    }
-  }, [backtestResult]); // backtestResult가 변경될 때만 재계산
-
-  return { sampledData };
-};
+  // ... 이하 트레이드 마커, OHLC 등 다른 변환 로직과 함께 반환
+}
 ```
 
--   `calculateDaysBetween`: 두 날짜 사이의 총 일수를 계산하는 유틸리티 함수입니다.
--   `aggregateToWeekly` / `aggregateToMonthly`: 일별 데이터를 각각 주별, 월별 데이터로 집계하는 순수 함수입니다. 이 함수들은 데이터 배열을 순회하며 각 기간의 마지막 데이터를 선택하여 새로운 배열을 만듭니다.
+-   `smartSampleByPeriod(data, startDate, endDate)`: 가격/자산가치 계열 데이터를 기간에 따라 자동으로 daily/weekly/monthly로 집계하고, 실제 적용된 `aggregationType`과 (필요 시) 경고 메시지를 함께 반환합니다.
+-   `aggregateReturns(data, aggregationType)`: 수익률(%) 계열 데이터를 복리로 집계합니다. 내부적으로 주간은 `aggregateWeeklyReturns`, 월간은 `aggregateMonthlyReturns`를 호출합니다.
 
 ## 장점 및 효과
 

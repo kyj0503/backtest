@@ -9,10 +9,6 @@ export interface LoadingState {
   error: string | null;
 }
 
-export interface AsyncState<T> extends LoadingState {
-  data: T | null;
-}
-
 // 폼 관련 공통 타입
 export interface FormState<T> {
   data: T;

@@ -51,6 +51,9 @@ class DataFetcher:
             ticker = ticker.upper()
             logger.info(f"Yahoo Finance에서 데이터 다운로드: {ticker}")
 
+            # 티커 형식 검증은 네트워크 다운로드 이전에 수행한다 (불필요한 다운로드 방지).
+            self._validate_ticker_symbol(ticker)
+
             # 날짜를 문자열로 변환 (yfinance 호환성)
             start_str = start_date.strftime('%Y-%m-%d')
             end_str = (end_date + pd.Timedelta(days=1)).strftime('%Y-%m-%d')  # 종료일 포함
@@ -161,6 +164,38 @@ class DataFetcher:
 
         return data
 
+    def _validate_ticker_symbol(self, ticker: str) -> None:
+        """
+        티커 심볼 형식을 검증한다. 네트워크 다운로드 이전에 호출되어야 한다
+        (불필요한 다운로드를 막기 위해 — 이전에는 _validate_and_clean_data() 안에
+        있어 _fetch_with_retries() 이후, 즉 다운로드 시도 이후에야 검증되었다).
+
+        Args:
+            ticker: 검증할 티커 심볼 (대문자 정규화되어 있다고 가정)
+
+        Raises:
+            InvalidSymbolError: 무효한 티커 형식인 경우
+        """
+        # 알려진 무효/placeholder 티커 목록. 부분 문자열 포함이 아닌 정확한 일치로
+        # 비교한다 — 이전에는 `pattern in ticker.upper()`(부분 문자열 포함) 방식이라
+        # 블록 토큰 'ZZZ'를 부분 문자열로 포함하는 합법적인 실제 티커(예: 캐나다
+        # 토론토 증권거래소 접미사가 붙은 'ZZZ.TO')까지 오차단했다.
+        invalid_tickers = {
+            'INVALID', 'NONEXISTENT', 'NOTFOUND', 'TEST', 'FAKE',
+            'XXX', 'YYY', 'ZZZ'
+        }
+
+        # 숫자로만 구성되거나 무효 목록과 정확히 일치하는 경우 (특수 심볼 허용: ^, =)
+        if (ticker.isdigit() or
+            ticker.upper() in invalid_tickers or
+            len(ticker) > 15):  # 길이 제한 완화
+            raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 좁목 심볼입니다.")
+
+        # 허용된 문자 확인: 영문, 숫자, ^, =, -, .
+        allowed_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789^=-.')
+        if not all(c in allowed_chars for c in ticker.upper()):
+            raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 종목 심볼입니다.")
+
     def _validate_and_clean_data(self, data: pd.DataFrame, ticker: str, start_str: str, end_str: str) -> pd.DataFrame:
         """
         데이터 검증 및 정리.
@@ -175,26 +210,8 @@ class DataFetcher:
             정리된 DataFrame
 
         Raises:
-            InvalidSymbolError: 무효한 티커인 경우
             DataNotFoundError: 데이터 검증 실패
         """
-        # 무효한 티커 패턴 체크
-        invalid_patterns = [
-            'INVALID', 'NONEXISTENT', 'NOTFOUND', 'TEST', 'FAKE',
-            'XXX', 'YYY', 'ZZZ'
-        ]
-
-        # 숫자로만 구성되거나 무효한 패턴이 포함된 경우 (특수 심볼 허용: ^, =)
-        if (ticker.isdigit() or
-            any(pattern in ticker.upper() for pattern in invalid_patterns) or
-            len(ticker) > 15):  # 길이 제한 완화
-            raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 좁목 심볼입니다.")
-        
-        # 허용된 문자 확인: 영문, 숫자, ^, =, -, .
-        allowed_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789^=-.')
-        if not all(c in allowed_chars for c in ticker.upper()):
-            raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 종목 심볼입니다.")
-
         # 데이터가 너무 적은 경우 체크
         if len(data) < 2:
             raise DataNotFoundError(f"'{ticker}' 종목의 데이터가 부족합니다. ({len(data)}개 레코드)")

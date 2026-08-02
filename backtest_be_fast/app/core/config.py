@@ -85,10 +85,7 @@ class Settings(BaseSettings):
     
     # 로깅 설정
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
-    
-    # 보안 설정
-    secret_key: str = Field(default="your-secret-key-here", env="SECRET_KEY")
-    
+
     # 외부 API 설정
     yahoo_finance_timeout: int = 30
     exchange_rate_ticker: str = "KRW=X"  # 원달러 환율 티커

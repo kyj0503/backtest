@@ -12,7 +12,7 @@
 API 요청
     |
     v
-서비스 계층 (`backtest_service`, `portfolio_service`)
+서비스 계층 (`backtest_service`, `PortfolioManagerService`)
     |  1. 입력값 검증
     |  2. 데이터 로드 요청
     |
@@ -70,13 +70,13 @@ API 요청
   - `backtesting.py`가 반환하는 결과를 `BacktestResult` 스키마에 맞춰 표준화된 JSON 객체로 변환합니다.
   - 거래 로그, 일별 자산 가치 등을 추출하고 가공합니다.
 
-### 2. `PortfolioService`: 포트폴리오 로직
+### 2. `PortfolioManagerService`: 포트폴리오 로직
 
-`app/services/portfolio_service.py`는 여러 자산을 조합하는 포트폴리오 백테스트의 핵심 로직을 담고 있습니다.
+`app/services/portfolio_manager_service.py`의 `PortfolioManagerService`는 여러 자산을 조합하는 포트폴리오 백테스트의 핵심 로직을 담고 있습니다. 데이터 로딩·DCA·리밸런싱·성과 집계 등 세부 책임은 `app/services/portfolio/` 패키지(`portfolio_data_loader.py`, `portfolio_dca_manager.py`, `portfolio_rebalancer.py`, `portfolio_simulation_engine.py`, `portfolio_metrics.py`)로 분리되어 있고, `PortfolioManagerService`가 이들을 조합해 호출합니다.
 
 - **Buy & Hold 시뮬레이션**:
   - 포트폴리오의 투자 전략이 'Buy & Hold'인 경우, `backtesting.py`를 사용하지 않고 자체적으로 수익률을 계산합니다.
-  - `calculate_dca_portfolio_returns` 메서드가 이 역할을 수행하며, 다음과 같은 복잡한 로직을 처리합니다.
+  - `calculate_dca_portfolio_returns` 메서드(`PortfolioManagerService`)가 이 역할을 수행하며, 다음과 같은 복잡한 로직을 처리합니다.
     - **DCA (분할 매수)**: 정해진 주기(매주, 매월 등)와 횟수에 따라 자동으로 추가 매수를 시뮬레이션합니다.
     - **리밸런싱**: 정해진 주기마다 각 자산의 비중이 목표 비중을 유지하도록 매매를 시뮬레이션합니다.
     - **상장 폐지 감지**: 특정 기간 이상 가격 데이터가 없으면 해당 종목을 상장 폐지로 간주하고, 리밸런싱 시 비중을 동적으로 재계산합니다.
@@ -87,4 +87,4 @@ API 요청
 
 ## 결론
 
-본 시스템은 `backtesting.py`를 순수한 계산 엔진으로 활용하면서, 그 앞단에 `BacktestEngine`과 `PortfolioService`라는 강력한 래퍼를 두어 데이터 준비, 통화 변환, 복잡한 포트폴리오 전략(DCA, 리밸런싱) 등 실제 서비스에 필요한 기능들을 구현한 아키텍처를 가집니다. 이를 통해 라이브러리의 한계를 극복하고 유연하고 확장 가능한 백테스팅 환경을 구축했습니다.
+본 시스템은 `backtesting.py`를 순수한 계산 엔진으로 활용하면서, 그 앞단에 `BacktestEngine`과 `PortfolioManagerService`라는 강력한 래퍼를 두어 데이터 준비, 통화 변환, 복잡한 포트폴리오 전략(DCA, 리밸런싱) 등 실제 서비스에 필요한 기능들을 구현한 아키텍처를 가집니다. 이를 통해 라이브러리의 한계를 극복하고 유연하고 확장 가능한 백테스팅 환경을 구축했습니다.

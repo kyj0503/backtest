@@ -17,7 +17,6 @@ export interface UseStrategyParamsReturn {
   getDefaultParams: (strategy: string) => Record<string, number>;
   getStrategyParams: (strategy: string, currentParams: Record<string, StrategyParamValue>) => StrategyParam[];
   updateParam: (currentParams: Record<string, StrategyParamValue>, key: string, value: string) => Record<string, StrategyParamValue>;
-  validateParams: (strategy: string, params: Record<string, StrategyParamValue>) => string[];
   getParamLabel: (key: string) => string;
 }
 
@@ -82,40 +81,11 @@ export const useStrategyParams = (): UseStrategyParamsReturn => {
     };
   }, []);
 
-  const validateParams = useCallback((strategy: string, params: Record<string, StrategyParamValue>): string[] => {
-    const config = getStrategyConfig(strategy);
-    const errors: string[] = [];
-
-    if (!config || !config.parameters) return errors;
-
-    Object.entries(config.parameters).forEach(([key, param]: [string, StrategyParameter]) => {
-      const value = params[key];
-
-      if (value === undefined || value === null || value === '') {
-        errors.push(`${getParamLabel(key)} 값을 입력해주세요.`);
-        return;
-      }
-
-      const numValue = Number(value);
-      if (isNaN(numValue)) {
-        errors.push(`${getParamLabel(key)}는 숫자여야 합니다.`);
-        return;
-      }
-
-      if (numValue < param.min || numValue > param.max) {
-        errors.push(`${getParamLabel(key)}는 ${param.min} ~ ${param.max} 사이여야 합니다.`);
-      }
-    });
-
-    return errors;
-  }, [getStrategyConfig]);
-
   return {
     getStrategyConfig,
     getDefaultParams,
     getStrategyParams,
     updateParam,
-    validateParams,
     getParamLabel
   };
 };

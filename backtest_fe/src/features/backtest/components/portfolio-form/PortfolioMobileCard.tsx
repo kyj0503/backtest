@@ -79,6 +79,7 @@ export const PortfolioMobileCard: React.FC<PortfolioMobileCardProps> = ({
               placeholder="현금 자산 이름 입력 (예: USD, KRW)"
               maxLength={20}
               className="w-full bg-accent/50"
+              aria-label={`${index + 1}번째 현금 자산 이름`}
             />
           ) : (
             <>
@@ -92,7 +93,7 @@ export const PortfolioMobileCard: React.FC<PortfolioMobileCardProps> = ({
                   }
                 }}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" aria-label={`${index + 1}번째 종목 선택`}>
                   <SelectValue placeholder="종목 선택" />
                 </SelectTrigger>
                 <SelectContent position="popper" sideOffset={5}>
@@ -116,6 +117,7 @@ export const PortfolioMobileCard: React.FC<PortfolioMobileCardProps> = ({
                   maxLength={10}
                   className="w-full mt-2"
                   autoComplete="off"
+                  aria-label={`${index + 1}번째 종목 심볼`}
                 />
               )}
             </>
@@ -135,6 +137,7 @@ export const PortfolioMobileCard: React.FC<PortfolioMobileCardProps> = ({
               step="100"
               disabled={portfolioInputMode === 'weight'}
               className="w-full"
+              aria-label={`${index + 1}번째 종목 투자 금액`}
             />
           </div>
           <div className="space-y-2">
@@ -145,7 +148,7 @@ export const PortfolioMobileCard: React.FC<PortfolioMobileCardProps> = ({
               value={stock.assetType || ASSET_TYPES.STOCK}
               onValueChange={(value) => updateStock(index, 'assetType', value)}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full" aria-label={`${index + 1}번째 자산 타입`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -164,7 +167,7 @@ export const PortfolioMobileCard: React.FC<PortfolioMobileCardProps> = ({
             value={stock.investmentType}
             onValueChange={(value) => updateStock(index, 'investmentType', value)}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full" aria-label={`${index + 1}번째 투자 방식`}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -178,7 +181,7 @@ export const PortfolioMobileCard: React.FC<PortfolioMobileCardProps> = ({
                 value={stock.dcaFrequency || 'monthly_1'}
                 onValueChange={(value) => updateStock(index, 'dcaFrequency', value)}
               >
-                <SelectTrigger className="w-full mt-2">
+                <SelectTrigger className="w-full mt-2" aria-label={`${index + 1}번째 DCA 투자 주기`}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -210,6 +213,7 @@ export const PortfolioMobileCard: React.FC<PortfolioMobileCardProps> = ({
                 max="100"
                 step="0.1"
                 className="w-20 h-8 px-2 text-sm text-right"
+                aria-label={`${index + 1}번째 종목 비중`}
               />
             ) : (
               <Badge variant="secondary" className="text-sm font-semibold">

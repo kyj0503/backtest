@@ -24,6 +24,8 @@ export const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({
   startDate,
   endDate,
 }) => {
+  // Label을 Input과 프로그램적으로 연결하기 위한 id (P2-32).
+  const totalInvestmentInputId = React.useId();
   const dcaAdjustedTotal = getDcaAdjustedTotal(portfolio, startDate, endDate);
 
   if (portfolioInputMode === 'weight') {
@@ -38,12 +40,13 @@ export const PortfolioSummary: React.FC<PortfolioSummaryProps> = ({
         <CardContent className="p-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
+              <Label htmlFor={totalInvestmentInputId} className="text-sm font-semibold text-muted-foreground whitespace-nowrap">
                 <FinancialTermTooltip term="투자 금액">
                   전체 투자금액($)
                 </FinancialTermTooltip>
               </Label>
               <Input
+                id={totalInvestmentInputId}
                 type="number"
                 min={1}
                 step={0.01}

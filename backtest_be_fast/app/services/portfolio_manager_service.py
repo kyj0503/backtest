@@ -130,6 +130,45 @@ class PortfolioManagerService:
         }
 
     @staticmethod
+    def _calculate_true_portfolio_stats(
+        equity_curve: Dict[str, float],
+        daily_returns: Dict[str, float],
+        total_amount: float
+    ) -> Dict[str, Any]:
+        """집계된 포트폴리오 equity curve에서 실제 포트폴리오 지표를 계산합니다 (P2-08).
+
+        개별 종목 지표의 가중평균(예: Sharpe, MDD)은 종목 간 상관관계와 하락 시점의
+        차이를 무시하므로 포트폴리오 전체의 진짜 지표가 아니다. 예를 들어 두 종목이
+        서로 다른 날짜에 하락하면 포트폴리오 MDD는 각 종목 MDD의 가중평균보다
+        완만해야 하는데, 가중평균 방식은 이를 반영하지 못한다.
+
+        buy&hold 경로가 이미 같은 목적으로 사용하는
+        portfolio_calculator.calculate_portfolio_statistics()를 그대로 재사용해
+        두 경로의 지표 산출 방식을 일치시킨다.
+
+        Args:
+            equity_curve: 날짜별 포트폴리오 총 가치(달러). 이미 종목별 실제
+                equity curve를 합산해 만들어진 값
+                (_calculate_realistic_equity_curve의 결과)
+            daily_returns: 날짜별 포트폴리오 일간 수익률(퍼센트 단위, 예: 2.5 = 2.5%)
+            total_amount: 초기 총 투자금 (정규화 기준)
+
+        Returns:
+            portfolio_calculator.calculate_portfolio_statistics()와 동일한 키를 가진
+            딕셔너리 (Sharpe_Ratio, Max_Drawdown, Avg_Drawdown, Peak_Value,
+            Total_Trading_Days 등 포함)
+        """
+        dates_sorted = sorted(equity_curve.keys())
+        equity_df = pd.DataFrame(
+            {
+                'Portfolio_Value': [equity_curve[d] / total_amount for d in dates_sorted],
+                'Daily_Return': [daily_returns.get(d, 0.0) / 100.0 for d in dates_sorted],
+            },
+            index=pd.to_datetime(dates_sorted)
+        )
+        return portfolio_calculator.calculate_portfolio_statistics(equity_df, total_amount)
+
+    @staticmethod
     def _format_individual_results_list(
         individual_returns: Dict[str, Any],
         portfolio_results: Dict[str, Any] = None,
@@ -424,6 +463,13 @@ class PortfolioManagerService:
             # daily_returns 기반 통계
             dr_stats = self._calculate_daily_return_stats(daily_returns)
 
+            # 집계된 equity curve에서 실제 포트폴리오 지표(Sharpe/MDD/AvgDD/Peak/
+            # 거래일수)를 계산한다. 종목별 지표의 가중평균은 상관관계와 하락 시점
+            # 차이를 무시하므로 포트폴리오 전체의 진짜 지표가 아니다 (P2-08).
+            true_portfolio_stats = self._calculate_true_portfolio_stats(
+                equity_curve, daily_returns, total_amount
+            )
+
             # 포트폴리오 통계 (프론트엔드 호환)
             portfolio_statistics = {
                 'Start': request.start_date,
@@ -431,16 +477,16 @@ class PortfolioManagerService:
                 'Duration': f'{duration_days} days',
                 'Initial_Value': total_amount,
                 'Final_Value': total_portfolio_value,
-                'Peak_Value': total_portfolio_value,
+                'Peak_Value': true_portfolio_stats['Peak_Value'],
                 'Total_Return': portfolio_return,
                 'Annual_Return': annual_return,
                 'Annual_Volatility': dr_stats['annual_volatility'],
-                'Sharpe_Ratio': weighted_stats['weighted_sharpe_ratio'],
-                'Max_Drawdown': -weighted_stats['weighted_max_drawdown'],
-                'Avg_Drawdown': -weighted_stats['weighted_max_drawdown'] / 2,
+                'Sharpe_Ratio': true_portfolio_stats['Sharpe_Ratio'],
+                'Max_Drawdown': true_portfolio_stats['Max_Drawdown'],
+                'Avg_Drawdown': true_portfolio_stats['Avg_Drawdown'],
                 'Max_Consecutive_Gains': 0,
                 'Max_Consecutive_Losses': 0,
-                'Total_Trading_Days': duration_days,
+                'Total_Trading_Days': true_portfolio_stats['Total_Trading_Days'],
                 'Total_Trades': weighted_stats['total_trades'],
                 'Positive_Days': dr_stats['positive_days'],
                 'Negative_Days': dr_stats['negative_days'],
@@ -535,6 +581,7 @@ class PortfolioManagerService:
 
             # Phase 1: 먼저 모든 종목의 투자 타입을 확인하고 dca_info 설정
             symbols_to_load = []  # 데이터를 로드할 종목 리스트
+            cash_entry_counter = 0  # 현금 항목은 심볼 중복이 허용되므로 고유 키가 필요하다 (P2-07)
 
             for item in request.portfolio:
                 symbol = item.symbol
@@ -574,8 +621,21 @@ class PortfolioManagerService:
                 if item.amount is not None:
                     per_period_amount = item.amount  # 입력한 금액 = 회당 투자 금액
                 elif item.weight is not None:
-                    # weight 모드는 나중에 처리
-                    per_period_amount = 0
+                    # weight 모드: STRATEGY 경로(run_strategy_portfolio_backtest)와
+                    # 동일하게 100 단위 기준으로 총 투자금액을 환산해 두 경로가 같은
+                    # 규칙을 따르도록 일치시킨다 (수정 전에는 여기서 0으로 고정되어
+                    # total_investment/total_amount가 모두 0이 되고, 시뮬레이션의
+                    # 정규화 단계에서 0으로 나누기가 발생해 스키마상 유효한 요청도
+                    # 크래시했다 - P1-04).
+                    # DCA의 경우 이 환산된 총액을 dca_periods로 나눠 회당 금액을
+                    # 구해야, 아래에서 재계산하는
+                    # "total_investment = per_period_amount * dca_periods"가
+                    # 원래 환산된 총액과 다시 일치한다.
+                    weight_based_total = 100.0 * (item.weight / 100.0)
+                    per_period_amount = (
+                        weight_based_total / dca_periods if investment_type == 'dca'
+                        else weight_based_total
+                    )
                 else:
                     raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight를 입력해야 합니다.')
 
@@ -587,10 +647,26 @@ class PortfolioManagerService:
                     # 일시불: 회당 금액 = 총 금액
                     total_investment = per_period_amount
 
-                amounts[symbol] = total_investment
+                # 고유 키 생성: 현금 자산은 schemas.py의 validate_portfolio가 중복
+                # 검증에서 의도적으로 제외하므로(같은 이름의 현금을 여러 개 추가할
+                # 수 있음) symbol을 그대로 키로 쓰면 amounts/dca_info에서 먼저 들어온
+                # 항목이 나중 항목에 덮어써진다. 그 결과 total_amount(=
+                # sum(amounts.values()))가 실제 현금 총액보다 작아지고, 별도로
+                # 누적되는 cash_amount와 어긋나 individual_returns['CASH']의 weight가
+                # 100%를 넘어서는 등 수치가 불일치했다 (P2-07). 주식 심볼은 스키마가
+                # 이미 중복을 거부하므로 그대로 symbol을 키로 사용해도 안전하고, 이후
+                # 코드가 unique_key로 symbol을 역참조(dca_info[unique_key].symbol)하는
+                # 구조와도 맞는다.
+                if asset_type == 'cash':
+                    cash_entry_counter += 1
+                    unique_key = f"{symbol}__cash_{cash_entry_counter}"
+                else:
+                    unique_key = symbol
+
+                amounts[unique_key] = total_investment
 
                 # 분할 매수 정보 저장
-                dca_info[symbol] = DcaStrategyInfo(
+                dca_info[unique_key] = DcaStrategyInfo(
                     symbol=symbol,
                     allocation=0.0, # Will be calculated if needed, or derived from amounts
                     asset_type=asset_type,

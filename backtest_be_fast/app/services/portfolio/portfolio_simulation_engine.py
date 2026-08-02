@@ -4,6 +4,7 @@
 매일의 시장 데이터(가격, 환율)를 처리하고 DCA 매수, 리밸런싱, 상장폐지 등의 핵심 로직을 실행합니다.
 """
 
+import asyncio
 import logging
 from typing import Dict, Tuple
 from datetime import datetime, date
@@ -208,11 +209,16 @@ class PortfolioSimulationEngine:
                      
                      price_series = price_series * multipliers
             elif currency != 'USD':
-                # [Copilot Suggestion] 지원하지 않는 통화 경고 로그 복원
-                # (USD가 아닌데 exchange_rates에 없는 경우)
-                self.logger.warning(
-                    f"{symbol} ({unique_key}) 지원하지 않는 통화 '{currency}' 또는 환율 데이터 누락. "
-                    f"변환 없이 원본 가격 사용."
+                # [P2-02] 환율 데이터가 없다고 원본(비USD) 가격을 그대로 흘려보내면
+                # 안 된다 -- 이후 시뮬레이션이 이 가격을 USD 현금과 그대로 합산해,
+                # 예컨대 KRW 7만원대 가격이 $70,000짜리 자산으로 둔갑한 채 "성공"으로
+                # 보고되는 조용한 오염이 발생한다 (기존에는 경고 로그만 남기고 계속
+                # 진행했음). 지원하지 않는 통화이거나 환율 데이터 로딩이 실패한
+                # 경우이므로 명시적으로 실패를 알린다.
+                raise ValueError(
+                    f"{symbol} ({unique_key}) 통화 '{currency}'의 환율 데이터가 없어 "
+                    f"USD로 변환할 수 없습니다 (지원하지 않는 통화이거나 환율 데이터 "
+                    f"로딩 실패). 변환되지 않은 원본 가격으로 백테스트를 진행할 수 없습니다."
                 )
             
             aligned_prices[unique_key] = price_series
@@ -272,7 +278,7 @@ class PortfolioSimulationEngine:
     ) -> pd.DataFrame:
         """
         전체 시뮬레이션 루프를 실행합니다.
-        
+
         Args:
             date_range: 시뮬레이션 날짜 범위
             start_date_obj: 시작 날짜 객체
@@ -287,9 +293,57 @@ class PortfolioSimulationEngine:
             exchange_rates_by_currency: 환율 데이터
             rebalance_frequency: 리밸런싱 주기
             commission: 수수료율
-            
+
         Returns:
             시뮬레이션 결과 DataFrame
+
+        Note:
+            [P2-01] 이 메서드 자체는 순수 CPU-bound 동기 작업(최대 10년 x N종목의
+            pandas/pydantic 연산)이며 내부에 await가 없다. async def인데 await가
+            전혀 없으면 실행되는 동안 이벤트 루프 전체를 독점해 다른 요청 처리가
+            멈춘다. 그래서 실제 작업은 _execute_simulation_sync에 그대로 두고,
+            여기서는 asyncio.to_thread로 워커 스레드에 위임만 한다 (공개 시그니처는
+            그대로 유지되므로 호출자는 변경할 필요가 없다).
+        """
+        return await asyncio.to_thread(
+            self._execute_simulation_sync,
+            date_range,
+            start_date_obj,
+            end_date_obj,
+            stock_amounts,
+            amounts,
+            cash_amount,
+            total_amount,
+            portfolio_data,
+            dca_info,
+            ticker_currencies,
+            exchange_rates_by_currency,
+            rebalance_frequency,
+            commission,
+        )
+
+    def _execute_simulation_sync(
+        self,
+        date_range: pd.DatetimeIndex,
+        start_date_obj: datetime,
+        end_date_obj: datetime,
+        stock_amounts: Dict[str, float],
+        amounts: Dict[str, float],
+        cash_amount: float,
+        total_amount: float,
+        portfolio_data: Dict[str, pd.DataFrame],
+        dca_info: Dict[str, DcaStrategyInfo],
+        ticker_currencies: Dict[str, str],
+        exchange_rates_by_currency: Dict[str, Dict[date, float]],
+        rebalance_frequency: str,
+        commission: float
+    ) -> pd.DataFrame:
+        """
+        execute_simulation의 실제 동기 구현체.
+
+        [P2-01] execute_simulation(async 공개 API)이 asyncio.to_thread를 통해
+        워커 스레드에서 이 메서드를 실행한다. 순수 동기 함수이므로 여기서는
+        이벤트 루프가 필요한 어떤 작업(await 등)도 수행해서는 안 된다.
         """
         # 1. 상태 초기화
         state = self.initialize_portfolio_state(

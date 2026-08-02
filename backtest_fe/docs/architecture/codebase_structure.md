@@ -24,14 +24,15 @@ src/
 ### 2. `features`
 
 -   **역할**: 애플리케이션의 핵심 기능 덩어리입니다. 각 기능은 독립적으로 존재하며, 관련된 모든 코드(API, UI, 상태, 훅 등)를 포함합니다.
--   **구조**: `features/backtest` 디렉토리가 대표적인 예시입니다.
+-   **구조**: `features/backtest` 디렉토리가 대표적인 예시입니다. (`api/` 하위 디렉토리는 없습니다 — API 호출은 `services/backtestService.ts`가 `shared/api/client.ts`의 axios 인스턴스를 사용해 직접 수행합니다.)
     ```
     features/backtest/
-    ├── api/              # 백테스트 관련 API 호출 함수
     ├── components/       # 이 기능에서만 사용하는 UI 컴포넌트
+    ├── constants/        # 이 기능 전용 상수
     ├── hooks/            # 이 기능의 비즈니스 로직을 담은 커스텀 훅
-    ├── model/            # 상태 관리(Zustand, Reducer), 타입, 상수
-    └── services/         # API 응답을 가공하는 등의 서비스 로직
+    ├── model/            # useReducer 기반 상태(backtestFormReducer 등), 타입, 상수
+    ├── services/         # API 호출 및 응답 가공 (backtestService.ts, reportGenerator.ts)
+    └── utils/            # 이 기능 전용 순수 함수 유틸
     ```
 -   **장점**:
     -   **높은 응집도**: 백테스트와 관련된 모든 코드가 한곳에 모여 있어 파악이 쉽습니다.
@@ -46,7 +47,7 @@ src/
     shared/
     ├── api/              # 공통 API 클라이언트 설정 (axios 인스턴스 등)
     ├── components/       # 여러 곳에서 재사용되는 범용 컴포넌트 (버튼, 폼, 레이아웃 등)
-    ├── hooks/            # 범용 커스텀 훅 (useTheme, useLocalStorage 등)
+    ├── hooks/            # 범용 커스텀 훅 (현재는 useTheme 하나뿐입니다)
     ├── lib/              # 외부 라이브러리 래퍼 또는 핵심 유틸리티 (shadcn의 cn 함수 등)
     ├── ui/               # shadcn/ui로 자동 생성된 원자적 UI 컴포넌트
     └── utils/            # 순수 함수 유틸리티 (날짜 포맷팅, 숫자 계산 등)
@@ -78,7 +79,7 @@ src/
 -   **React**: UI 라이브러리
 -   **TypeScript**: 정적 타입 시스템
 -   **React Router**: 클라이언트 사이드 라우팅
--   **Zustand**: 전역 상태 관리
+-   **(전역 상태 관리 라이브러리 없음)**: Zustand/Redux 등은 쓰지 않습니다. 여러 컴포넌트가 공유하는 상태는 커스텀 훅 + localStorage로, 지역 상태는 `useState`/`useReducer`로 관리합니다 (`state_management.md` 참고)
 -   **shadcn/ui & Tailwind CSS**: UI 컴포넌트 및 스타일링
 -   **Recharts**: 데이터 시각화 및 차트 라이브러리
 -   **Vitest & React Testing Library**: 단위 및 컴포넌트 테스트

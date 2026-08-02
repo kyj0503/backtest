@@ -2,6 +2,7 @@
 
 포트폴리오 통계(샤프 비율, 최대 낙폭 등) 및 Equity Curve를 계산합니다.
 """
+import asyncio
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, Tuple
@@ -127,7 +128,21 @@ class PortfolioCalculator:
 
         Returns:
             Tuple[equity_curve, daily_returns, weight_history]
+
+        Note:
+            [P2-01] 순수 CPU-bound 동기 작업(날짜별 순회 + 합산)이며 내부에
+            await가 없다. async def인데 await가 없으면 실행되는 동안 이벤트
+            루프를 독점해 다른 요청 처리가 멈춘다. 실제 작업은
+            _calculate_realistic_equity_curve_sync에 두고 asyncio.to_thread로
+            워커 스레드에 위임한다 (공개 시그니처는 그대로 유지).
         """
+        return await asyncio.to_thread(
+            self._calculate_realistic_equity_curve_sync, request, portfolio_results, total_amount
+        )
+
+    def _calculate_realistic_equity_curve_sync(self, request: PortfolioBacktestRequest,
+                                            portfolio_results: Dict, total_amount: float) -> Tuple[Dict, Dict, list]:
+        """_calculate_realistic_equity_curve의 실제 동기 구현체 (asyncio.to_thread로 실행됨)."""
         # 각 종목의 equity curve 수집
         equity_curves_by_symbol = {}
         all_dates = set()
@@ -148,8 +163,10 @@ class PortfolioCalculator:
 
         if not all_dates:
             # equity curve가 하나도 없으면 fallback
+            # (동기 워커 스레드 내부이므로 async 버전을 await할 수 없다 -- 동기
+            # 구현체를 직접 호출한다)
             logger.warning("모든 종목의 equity curve가 없음, fallback 사용")
-            return await self._fallback_equity_curve(request, portfolio_results, total_amount)
+            return self._fallback_equity_curve_sync(request, portfolio_results, total_amount)
 
         date_range = sorted(all_dates)
 
@@ -225,7 +242,19 @@ class PortfolioCalculator:
 
         Returns:
             Tuple[equity_curve, daily_returns, weight_history]
+
+        Note:
+            [P2-01] 이 메서드도 동일하게 순수 동기 작업이라 asyncio.to_thread로
+            위임한다. 공개 async 시그니처는 유지되므로(다른 곳에서 await로
+            호출해도 안전) 외부 호출자에는 영향이 없다.
         """
+        return await asyncio.to_thread(
+            self._fallback_equity_curve_sync, request, portfolio_results, total_amount
+        )
+
+    def _fallback_equity_curve_sync(self, request: PortfolioBacktestRequest,
+                                 portfolio_results: Dict, total_amount: float) -> Tuple[Dict, Dict, list]:
+        """_fallback_equity_curve의 실제 동기 구현체 (asyncio.to_thread로 실행됨)."""
         start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
         end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
         date_range = pd.date_range(start=start_date_obj, end=end_date_obj, freq='D')

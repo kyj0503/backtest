@@ -149,23 +149,28 @@ class TestConvertDataframeToUsd:
         pd.testing.assert_frame_equal(result, sample_krw_data)
 
     @pytest.mark.asyncio
-    async def test_conversion_error_returns_original_data(
+    async def test_conversion_error_raises_instead_of_returning_unconverted_data(
         self, converter, sample_krw_data
     ):
-        """Test that conversion errors are caught and original data returned"""
+        """[P2-02] 환율 로딩이 실패해도 원본(KRW) 데이터를 조용히 그대로
+        반환해서는 안 된다. USD로 변환되지 않은 원화 크기의 가격이 성공한
+        것처럼 호출자에게 전달되면 하류 계산(예: USD 현금과의 합산)이 조용히
+        오염되므로, 예외를 발생시켜 실패를 명시적으로 알려야 한다.
+
+        (구 계약: 원본 데이터를 그대로 반환하는 test_conversion_error_returns_
+        original_data -- 이 테스트가 그 계약을 대체한다.)
+        """
         converter.stock_repository.get_ticker_info.return_value = {'currency': 'KRW'}
 
         # Force error in exchange rate loading
         with patch.object(converter, 'load_and_prepare_exchange_rates', side_effect=Exception("Network error")):
-            result = await converter.convert_dataframe_to_usd(
-                ticker='005930.KS',
-                data=sample_krw_data.copy(),
-                start_date='2023-01-01',
-                end_date='2023-01-10'
-            )
-
-        # Should return original data
-        pd.testing.assert_frame_equal(result, sample_krw_data)
+            with pytest.raises(ValueError, match="KRW"):
+                await converter.convert_dataframe_to_usd(
+                    ticker='005930.KS',
+                    data=sample_krw_data.copy(),
+                    start_date='2023-01-01',
+                    end_date='2023-01-10'
+                )
 
 
 @pytest.mark.unit
@@ -277,8 +282,10 @@ class TestCurrencyConverterEdgeCases:
         return converter
 
     @pytest.mark.asyncio
-    async def test_empty_exchange_data_in_conversion(self, converter):
-        """Test handling of empty exchange data during conversion"""
+    async def test_empty_exchange_data_in_conversion_raises(self, converter):
+        """[P2-02] 환율 데이터가 비어 있어 로딩이 실패하면(load_and_prepare_
+        exchange_rates가 ValueError를 던지는 경우) 원본 데이터로 조용히
+        폴백하지 않고 예외를 발생시켜야 한다."""
         converter.stock_repository.get_ticker_info = Mock(return_value={'currency': 'KRW'})
 
         data = pd.DataFrame({
@@ -291,15 +298,13 @@ class TestCurrencyConverterEdgeCases:
 
         # Mock empty exchange data
         with patch.object(converter, 'load_and_prepare_exchange_rates', side_effect=ValueError("No data")):
-            result = await converter.convert_dataframe_to_usd(
-                ticker='TEST',
-                data=data.copy(),
-                start_date='2023-01-01',
-                end_date='2023-01-01'
-            )
-
-        # Should return original data on error
-        pd.testing.assert_frame_equal(result, data)
+            with pytest.raises(ValueError):
+                await converter.convert_dataframe_to_usd(
+                    ticker='TEST',
+                    data=data.copy(),
+                    start_date='2023-01-01',
+                    end_date='2023-01-01'
+                )
 
     def test_zero_exchange_rate_edge_case(self):
         """Test that zero exchange rate is handled safely"""

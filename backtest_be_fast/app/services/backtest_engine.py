@@ -90,33 +90,26 @@ class BacktestEngine:
                 self.logger.debug(f"  '{key}': {result.get(key)}")
             self.logger.debug("========================")
 
-            # 결과가 유효한지 확인
-            if result is not None and '# Trades' in result:
-                return self._convert_result_to_response(result, request)
-            else:
-                # 데이터 부족 등으로 유효하지 않은 결과 → fallback
-                self.logger.warning(f"백테스트 결과가 유효하지 않음 ({request.ticker}), fallback 사용")
-                return self._create_fallback_result(data, request)
-            
+            # 참고: 위 83행의 `result['# Trades']`가 이미 이 키를 무조건 역참조한다.
+            # 그 키가 없다면(또는 result가 None이라면) 83행에서 먼저 KeyError/TypeError가
+            # 발생해 이 지점에 도달하기 전에 아래 except 블록으로 빠진다. 즉 이 시점에
+            # 도달했다면 '# Trades' in result는 항상 참이다. 과거에는 이 사실이 없는
+            # 것처럼 "무효한 결과" 분기를 두고 실제로 실행된 거래가 없는데도
+            # `_create_fallback_result()`로 Win Rate 100%/거래 1건 같은 조작된 통계를
+            # HTTP 200 성공으로 반환했다(P3-21). 그 분기는 도달 불가능한 죽은 코드였다.
+            return self._convert_result_to_response(result, request)
+
         except Exception as e:
             self.logger.error(f"백테스트 전체 프로세스 오류: {e}")
 
             # 이미 HTTPException으로 만들어진 예외는 그대로 재발생시켜 호출자(엔드포인트)에서
-            # 적절한 상태코드를 처리할 수 있도록 한다.
+            # 적절한 상태코드를 처리할 수 있도록 한다. ValidationError와
+            # InvalidSymbolError는 모두 HTTPException의 서브클래스이므로 이 분기에서
+            # 이미 처리된다 (별도의 isinstance 분기가 필요 없다 — 과거에는 아래에
+            # 도달 불가능한 ValidationError/InvalidSymbolError 전용 분기가 있었는데,
+            # 그중 ValidationError 분기는 `try: raise e / except Exception: pass`로
+            # 자기 자신이 던진 예외를 즉시 삼켜버리는 자기 무력화 버그까지 있었다).
             if isinstance(e, HTTPException):
-                raise
-
-            # custom ValidationError는 그대로 재발생시키도록 허용
-            try:
-                if isinstance(e, ValidationError):
-                    raise e
-            except Exception:
-                # import 실패시 무시
-                pass
-
-            # InvalidSymbolError는 이미 HTTPException (422)이므로 그대로 재발생
-            from app.core.exceptions import InvalidSymbolError
-            if isinstance(e, InvalidSymbolError):
                 raise
 
             # 그 외 에러는 500으로 처리
@@ -387,7 +380,12 @@ class BacktestEngine:
                 annualized_return_pct=safe_float(stats.get('Return (Ann.) [%]', 0.0)),
                 buy_and_hold_return_pct=safe_float(stats.get('Buy & Hold Return [%]', 0.0)),
                 cagr_pct=safe_float(stats.get('Return (Ann.) [%]', 0.0)),  # CAGR은 연간 수익률과 동일
-                volatility_pct=safe_float(stats.get('Volatility [%]', 0.0)),
+                # backtesting.py 0.3.3은 연환산 변동성을 'Volatility (Ann.) [%]'로
+                # 내보낸다. 과거에는 존재하지 않는 'Volatility [%]'를 읽어
+                # .get 기본값 때문에 항상 0.0이 보고됐다.
+                volatility_pct=safe_float(
+                    stats.get('Volatility (Ann.) [%]', stats.get('Volatility [%]', 0.0))
+                ),
                 sharpe_ratio=safe_float(stats.get('Sharpe Ratio', 0.0)),
                 sortino_ratio=safe_float(stats.get('Sortino Ratio', 0.0)),
                 calmar_ratio=safe_float(stats.get('Calmar Ratio', 0.0)),
@@ -410,7 +408,15 @@ class BacktestEngine:
             )
         except Exception as e:
             self.logger.error(f"결과 변환 실패: {str(e)}")
-            return self._create_fallback_result(pd.DataFrame(), request)
+            # 이전에는 여기서 _create_fallback_result(pd.DataFrame(), request)를 호출해
+            # 완전히 조작된(전부 0인) 결과를 HTTP 200 성공으로 반환했다(P3-21). 실제
+            # 백테스트는 성공했는데 결과를 응답 스키마로 변환하는 과정에서만 실패한
+            # 것이므로, 실패를 성공으로 위장하지 않고 그대로 실패로 표면화한다 —
+            # run_backtest()의 예외 처리기가 이를 500으로 매핑한다.
+            raise HTTPException(
+                status_code=500,
+                detail=f"백테스트 결과 변환에 실패했습니다: {request.ticker}"
+            ) from e
 
 
 # 글로벌 인스턴스
