@@ -128,7 +128,7 @@
 
 ## ⚠️ 저장소 밖 필수 후속 조치 (운영)
 
-- [ ] **`/opt/home-server/scripts/deploy-app.sh`가 두 번째 인자(이미지 태그)를 받도록 갱신** — P2-26으로 Jenkinsfile이 `deploy-app.sh backtest-be ${BUILD_NUMBER}` 형태로 태그를 넘기게 바뀌었다. 스크립트가 여분 인자를 무시하면 무해하지만, 인자 개수를 엄격히 검사하면 **배포가 깨진다**. 저장소에서 확인 불가능하므로 스테이징에서 먼저 검증할 것. 갱신 전까지는 여전히 `:latest`를 추적하므로 롤백 지점이 없다.
+- [ ] **`/opt/home-server/scripts/deploy-app.sh`가 두 번째 인자(이미지 태그)를 실제로 사용하도록 갱신** — 빌드 #21에서 실측 확인됨(2026-08-03). Jenkinsfile이 `deploy-app.sh backtest-be 21`로 태그를 넘기는데, 스크립트는 **인자를 거부하지 않지만(배포 안 깨짐 ✅) 무시하고 `ghcr.io/kyj0503/backtest-be:latest`를 pull한다(목표 미달성 ❌)**. 로그 근거: `Image ghcr.io/kyj0503/backtest-be:latest Pulling`. 따라서 P2-26의 취지인 불변 태그 배포·롤백 지점은 아직 확보되지 않았다. 조치: 스크립트가 `$2`를 받아 해당 태그를 pull/기동하도록 수정(이미지는 이미 `:${BUILD_NUMBER}`로 GHCR에 푸시되어 있으므로 저장소 쪽 준비는 끝났다).
 - [ ] **MySQL 8.4 실기동 확인** — compose 이미지 태그는 8.4로 올렸고 throwaway 컨테이너에서 `schema.sql` 초기화를 검증했지만, 기존 dev 볼륨(8.0 데이터 디렉터리)으로 8.4를 띄우는 것은 검증하지 못했다. 재시작 시 데이터 디렉터리 업그레이드가 필요할 수 있음.
 - [ ] **Alembic 초기 마이그레이션과 기존 라이브 DB 정합** — 새 DB에서는 검증됐으나, 이미 `schema.sql`로 만들어진 기존 DB에는 `alembic stamp head`로 baseline을 찍어야 한다.
 
@@ -161,7 +161,7 @@
 - [x] **P1-15 [be]** ✅ 2026-08-02 수정 — **변동성이 항상 0으로 보고되던 버그**. `backtesting==0.3.3`은 연환산 변동성을 `'Volatility (Ann.) [%]'`로 내보내는데 `backtest_engine.py:383`이 존재하지 않는 `'Volatility [%]'`를 읽고 `.get` 기본값 0.0을 반환했다. RED로 실측 50.37% 대신 0.0이 나오는 것 확인 후 수정. 라이브러리가 실제로 쓰는 키 이름을 고정하는 테스트 포함(업그레이드 시 조용한 0.0 재발 방지). P3-20 작업 중 발견.
 - [x] **P3-29 [be]** ✅ 2026-08-03 (충돌 인지 키잉 — 일반적인 경우 표시 심볼 유지, 동명 현금이 둘 이상일 때만 unique_key로 폴백) — 리밸런싱 감사 dict가 표시용 symbol로 키를 잡음 — `portfolio_rebalancer.execute_rebalancing_trades`의 `weights_before`/`weights_after`가 `unique_key`가 아닌 `dca_info[...].symbol`로 키를 만들어, 동명 현금 항목이 여러 개면 리밸런싱 리포트에서 충돌한다. P2-07(현금 중복)을 유니크 키 방식으로 수정하면서 발견. 총액·비중·individual_returns는 이미 정합하므로 리포트 표시만의 문제. 조치: 해당 dict도 unique_key 기반으로 전환.
 - [x] **P3-22 [be]** ✅ 2026-08-02 수정 (블록리스트 정확 매칭·다운로드 전 검증, DB 접속 정보 print 제거) — BE 소소 — 블록리스트 substring 매치(`ZZZ.TO` 오차단)+다운로드 후 검증(`data_fetcher.py:182-196`), USD-quote 리스트 3중 하드코딩, `portfolio_metrics.py` 중복+매일 재인스턴스화, `database_config.py` print+root 폴백, 캐시 반환 DataFrame 방어적 copy 검토(Codex, 미검증).
-- [x] **P3-23 [fe]** ✅ 2026-08-03 (측정 결과 chart-vendor 청크가 차트 없는 홈 화면에서도 modulepreload되고 있었음 — vite manualChunks 항목 제거로 해소, 재측정으로 확인) — 〔Codex〕 번들 측정 기반 최적화 — chart vendor chunk ~427KB의 초기 필요성 측정, 결과 차트의 실행 후 로드 검토(현재 이미 lazy — 실측으로 검증).
+- [x] **P3-23 [fe]** ✅ 프로덕션 빌드 실측 확인(빌드 #21): `chart-vendor` 청크 소멸, HomePage 12.55 kB / PortfolioPage 549 kB로 분리 — ✅ 2026-08-03 (측정 결과 chart-vendor 청크가 차트 없는 홈 화면에서도 modulepreload되고 있었음 — vite manualChunks 항목 제거로 해소, 재측정으로 확인) — 〔Codex〕 번들 측정 기반 최적화 — chart vendor chunk ~427KB의 초기 필요성 측정, 결과 차트의 실행 후 로드 검토(현재 이미 lazy — 실측으로 검증).
 - [x] **P3-24 [docs]** ✅ 2026-08-02 수정 (실제 conftest·flat 구조 기준 재작성) — BE 테스트 문서 3종 재작성 — `execution.md`(가짜 디렉터리·테스트명), `fixtures.md`(가짜 픽스처·엔드포인트), `async.md`(가짜 파일·픽스처). 실제 conftest 기준으로.
 - [x] **P3-25 [docs]** ✅ 2026-08-02 수정 — FE docs 스테일 — 존재하지 않는 훅 4종 서술(`chart_performance.md`/`data_sampling.md`), 삭제된 `api/` 레이어(`README.md:122,133` 등), `refactoring-plan.md` 아카이브.
 - [x] **P3-26 [docs]** ✅ 2026-08-02 수정 — 문서 소소 — 깨진 링크(`stock_split.md`), `../CLAUDE.md` 경로, "Test Count: 59" 자기모순, `.env.example`의 `DATABASE_NAME=backtest`(실제 `stock_data_cache`), `backtestApi.ts` 잔재, README 죽은 예시, `BACKEND_CORS_ORIGINS` no-op, 루트 docs/ 인덱스 누락.
