@@ -26,9 +26,13 @@ export interface OhlcPoint {
 
 export interface EquityPoint {
   date: string;
-  value?: number;
-  return_pct: number;
-  drawdown_pct: number;
+  // value/return_pct/drawdown_pct는 리밸런싱 마커 포인트에서 null이 될 수 있다.
+  // (Recharts의 connectNulls={true}가 null 포인트를 건너뛰고 선을 이어주는
+  // 것을 이용해, 실제 데이터가 없는 리밸런싱 날짜에 ReferenceLine만 표시한다.
+  // 자세한 내용은 PortfolioCharts.tsx의 equityDataWithRebalancePoints 참고.)
+  value?: number | null;
+  return_pct: number | null;
+  drawdown_pct: number | null;
   [key: string]: unknown;
 }
 

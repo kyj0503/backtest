@@ -1,9 +1,28 @@
-import React, { useState, memo, useMemo } from "react";
+import React, { useState, useEffect, memo, useMemo } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Scatter } from "recharts";
 import { useRenderPerformance } from "@/shared/components";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
 import { TickerInfo } from '../model/types/backtest-result-types';
+
+// 뷰포트 너비를 추적하는 훅.
+// 기존에는 렌더 시점에 window.innerWidth를 직접 읽어 마진/틱 간격/각도를
+// 계산했는데, 이는 최초 렌더 이후 리사이즈에 전혀 반응하지 않는 문제가 있었다.
+// resize 이벤트를 구독해 상태로 관리하면 리사이즈마다 재렌더링되어 반응한다.
+const useViewportWidth = (): number => {
+  const [width, setWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return width;
+};
 
 interface StockData {
   symbol: string;
@@ -105,6 +124,9 @@ const findClosestAggregationDate = (
 const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tickerInfo = {}, tradeLogs = {}, aggregationType = 'daily', className = "" }) => {
   // 성능 모니터링
   useRenderPerformance('StockPriceChart');
+
+  const viewportWidth = useViewportWidth();
+  const isNarrowViewport = viewportWidth < 640;
 
   const [selectedSymbol, setSelectedSymbol] = useState<string>(() => stocksData[0]?.symbol || '');
 
@@ -242,19 +264,19 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
         <>
           <div style={{ width: '100%', height: '400px' }}>
             <ResponsiveContainer debounce={300}>
-              <ComposedChart 
-                data={chartDataWithSignals} 
+              <ComposedChart
+                data={chartDataWithSignals}
                 syncId="stockPriceChart"
-                margin={{ top: 5, right: 20, left: 10, bottom: typeof window !== 'undefined' && window.innerWidth < 640 ? 60 : 30 }}
+                margin={{ top: 5, right: 20, left: 10, bottom: isNarrowViewport ? 60 : 30 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatDate}
                   tick={{ fontSize: 11 }}
-                  interval={Math.max(1, Math.floor(chartDataWithSignals.length / (typeof window !== 'undefined' && window.innerWidth < 640 ? 4 : 8)))}
-                  angle={typeof window !== 'undefined' && window.innerWidth < 640 ? -45 : 0}
-                  textAnchor={typeof window !== 'undefined' && window.innerWidth < 640 ? 'end' : 'middle'}
+                  interval={Math.max(1, Math.floor(chartDataWithSignals.length / (isNarrowViewport ? 4 : 8)))}
+                  angle={isNarrowViewport ? -45 : 0}
+                  textAnchor={isNarrowViewport ? 'end' : 'middle'}
                 />
                 <YAxis
                   tickFormatter={formatPrice}

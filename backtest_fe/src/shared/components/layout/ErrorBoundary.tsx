@@ -131,9 +131,9 @@ class ErrorBoundary extends Component<Props, State> {
                 
                 <hr className="border-red-300 my-4" />
                 <div className="flex gap-2">
-                  <Button 
+                  <Button
                     variant="outline"
-                    className="border-red-300 text-red-700 hover:bg-red-100"
+                    className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
                     onClick={this.handleRestart}
                   >
                     다시 시도

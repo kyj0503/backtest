@@ -6,7 +6,7 @@
  * - 시작점을 100으로 normalize하여 직관적 비교
  * - 범례 클릭으로 개별 라인 토글 가능
  */
-import React, { useState, useMemo, memo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { LegendPayload } from 'recharts';
 import { useRenderPerformance } from '@/shared/components';
@@ -17,6 +17,25 @@ interface BenchmarkIndexChartProps {
   nasdaqData: BenchmarkSeriesPoint[];
   portfolioEquityData: EquityPoint[];  // 포트폴리오 equity curve 데이터
 }
+
+// 뷰포트 너비를 추적하는 훅.
+// 기존에는 렌더 시점에 window.innerWidth를 직접 읽어 마진/틱 간격/각도를
+// 계산했는데, 이는 최초 렌더 이후 리사이즈에 전혀 반응하지 않는 문제가 있었다.
+// resize 이벤트를 구독해 상태로 관리하면 리사이즈마다 재렌더링되어 반응한다.
+const useViewportWidth = (): number => {
+  const [width, setWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return width;
+};
 
 /** 시작점을 100으로 맞춘 정규화 시계열 포인트 */
 interface NormalizedPoint {
@@ -39,6 +58,8 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
 }) => {
   // 성능 모니터링
   useRenderPerformance('BenchmarkIndexChart');
+
+  const viewportWidth = useViewportWidth();
 
   // 각 라인의 표시 여부를 관리하는 상태
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
@@ -201,19 +222,19 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
 
   return (
     <ResponsiveContainer width="100%" height={400} debounce={300}>
-      <LineChart 
-        data={mergedData} 
+      <LineChart
+        data={mergedData}
         syncId="benchmarkChart"
-        margin={{ top: 5, right: 20, left: 10, bottom: window.innerWidth < 640 ? 60 : 5 }}
+        margin={{ top: 5, right: 20, left: 10, bottom: viewportWidth < 640 ? 60 : 5 }}
       >
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis
             dataKey="date"
             tickFormatter={formatDateTick}
             tick={{ fontSize: 12 }}
-            interval={Math.ceil(mergedData.length / (window.innerWidth < 640 ? 4 : window.innerWidth < 1024 ? 6 : 8))}
-            angle={window.innerWidth < 640 ? -45 : 0}
-            textAnchor={window.innerWidth < 640 ? 'end' : 'middle'}
+            interval={Math.ceil(mergedData.length / (viewportWidth < 640 ? 4 : viewportWidth < 1024 ? 6 : 8))}
+            angle={viewportWidth < 640 ? -45 : 0}
+            textAnchor={viewportWidth < 640 ? 'end' : 'middle'}
           />
           <YAxis
             domain={yAxisDomain}

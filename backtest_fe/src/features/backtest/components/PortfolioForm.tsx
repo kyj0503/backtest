@@ -68,7 +68,7 @@ const PortfolioForm: React.FC<PortfolioFormProps> = ({
                 onClick={addCash}
                 disabled={portfolio.length >= VALIDATION_RULES.MAX_PORTFOLIO_SIZE}
                 variant="outline"
-                className="rounded-full border-green-300 text-green-700 hover:bg-green-50 w-full sm:w-auto"
+                className="rounded-full border-green-300 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950 w-full sm:w-auto"
                 size="sm"
               >
                 현금 추가

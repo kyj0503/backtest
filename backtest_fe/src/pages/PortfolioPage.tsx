@@ -10,11 +10,6 @@ import { Button } from '@/shared/ui/button';
 const PortfolioPage: React.FC = () => {
   const { result: results, isLoading: loading, error, runBacktest, reset: clearError } = useBacktest();
 
-  const getErrorTitle = (err: string | null) => {
-    if (!err) return '오류가 발생했습니다';
-    return '오류가 발생했습니다';
-  };
-
   return (
     <div className="min-h-screen bg-background py-4 sm:py-8">
       <div className="mx-auto px-2 sm:px-4 md:px-6 lg:px-8 w-full lg:max-w-screen-2xl">
@@ -43,7 +38,7 @@ const PortfolioPage: React.FC = () => {
             <AlertTriangle className="h-5 w-5" />
             <div className="flex-1">
               <AlertTitle>
-                {getErrorTitle(error)}
+                오류가 발생했습니다
               </AlertTitle>
               {/* whitespace-pre-line: 백엔드 detail 메시지가 여러 줄(예: Pydantic
                   검증 에러를 줄바꿈으로 합친 메시지, 상장일 검증의 항목별

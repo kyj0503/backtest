@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Line, Area, ReferenceLine } from 'recharts';
 import type { TextAnchor } from 'recharts';
 import { CustomTooltip } from './shared';
@@ -8,6 +8,24 @@ import type { EquityPoint } from '../model/types';
 interface EquityChartProps {
   data: EquityPoint[];
 }
+
+// 뷰포트 너비를 추적하는 훅.
+// 기존에는 useMemo 내부에서 렌더 시점에 window.innerWidth를 직접 읽어
+// 리사이즈에 반응하지 않았다. resize 이벤트를 구독해 상태로 관리한다.
+const useViewportWidth = (): number => {
+  const [width, setWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return width;
+};
 
 // 차트 설정 상수 (컴포넌트 외부로 이동하여 재생성 방지)
 const CHART_CONFIG = {
@@ -30,6 +48,8 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
   // 성능 모니터링
   useRenderPerformance('EquityChart');
 
+  const viewportWidth = useViewportWidth();
+
   // 데이터 안전성 검사 (샘플링은 useChartData에서 처리됨)
   const processedData = useMemo(() => {
     if (!data || !Array.isArray(data)) return [];
@@ -43,15 +63,15 @@ const EquityChart: React.FC<EquityChartProps> = memo(({ data }) => {
 
   // 반응형 X축 설정
   const xAxisProps = useMemo(() => {
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    const isMobile = viewportWidth < 640;
     const textAnchor: TextAnchor = isMobile ? 'end' : 'middle';
     return {
-      interval: getXAxisInterval(processedData.length, typeof window !== 'undefined' ? window.innerWidth : 1024),
+      interval: getXAxisInterval(processedData.length, viewportWidth),
       angle: isMobile ? -45 : 0,
       textAnchor,
       height: isMobile ? 60 : 30,
     };
-  }, [processedData.length]);
+  }, [processedData.length, viewportWidth]);
 
   return (
     <ResponsiveContainer width="100%" height={400} debounce={300}>

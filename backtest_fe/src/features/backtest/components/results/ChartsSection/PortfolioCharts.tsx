@@ -72,14 +72,14 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
     // 차트에 없는 리밸런싱 날짜만 추가
     const rebalanceDatesToAdd = rebalance_history
       .filter(event => !existingDates.has(event.date))
-      .map(event => ({
+      .map((event): EquityPoint => ({
         date: event.date,
         // null 값으로 설정: Recharts의 connectNulls={true} 속성으로 인해
         // null 포인트를 건너뛰며 선이 연결됨 (ReferenceLine만 표시됨)
-        value: null as unknown as number,
-        return_pct: null as unknown as number,
-        drawdown_pct: null as unknown as number,
-      } as EquityPoint));
+        value: null,
+        return_pct: null,
+        drawdown_pct: null,
+      }));
 
     // 병합 후 날짜순 정렬
     return [...portfolioEquityData, ...rebalanceDatesToAdd].sort(

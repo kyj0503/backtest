@@ -17,14 +17,14 @@
     "technical-analysis"
   ],
   "author": "Backtesting Team",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "homepage": ".",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-repo/backtesting-frontend.git"
+    "url": "git+https://github.com/kyj0503/backtest.git"
   },
   "bugs": {
-    "url": "https://github.com/your-repo/backtesting-frontend/issues"
+    "url": "https://github.com/kyj0503/backtest/issues"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -40,7 +40,6 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@types/node": "^24.3.1",
     "axios": "^1.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -60,6 +59,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.3.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
@@ -71,9 +71,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "happy-dom": "^20.0.10",
-    "jsdom": "^27.0.0",
     "msw": "^2.11.3",
-    "patch-package": "^8.0.0",
     "postcss": "^8.5.6",
     "shadcn": "^3.2.1",
     "tailwindcss": "^4.3.3",
@@ -98,8 +96,7 @@
     "test:ui": "vitest --ui",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:debug": "playwright test --debug",
-    "postinstall": "patch-package"
+    "test:e2e:debug": "playwright test --debug"
   },
   "browserslist": {
     "production": [

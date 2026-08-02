@@ -284,9 +284,13 @@ export const useChartData = (
     }
 
     // 주간/월간 집계: 수익률의 날짜에 맞춰 equity 데이터 재구성
+    // EquityPoint.return_pct는 리밸런싱 마커 포인트에서 null일 수 있지만
+    // (PortfolioCharts.tsx 참고), rawData는 원본 equity curve에서 바로
+    // 변환된 값이라 이 경로에서는 실제로 null이 나타나지 않는다.
+    // aggregateReturns가 number를 요구하므로 방어적으로 0을 대입한다.
     const dailyReturnsArray = rawData.map(point => ({
       date: point.date,
-      return_pct: point.return_pct,
+      return_pct: point.return_pct ?? 0,
     }));
 
     const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
