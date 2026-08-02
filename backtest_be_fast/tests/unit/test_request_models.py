@@ -167,5 +167,4 @@ class TestBacktestRequest:
         # Then
         assert request.initial_cash == 10000.0  # 기본값
         assert request.commission == 0.002  # 기본값
-        assert request.spread == 0.0  # 기본값
         assert request.strategy_params is None  # 기본값
