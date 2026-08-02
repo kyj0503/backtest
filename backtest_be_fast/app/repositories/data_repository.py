@@ -15,6 +15,12 @@ from app.utils.data_fetcher import data_fetcher
 from app.repositories.stock_repository import get_stock_repository
 from app.constants.data_loading import CacheConfig
 
+# `if key in cache: return cache[key]` 패턴은 두 호출 사이에 TTL이 만료되면
+# (예: 그 사이의 self.logger.debug() 호출 등으로 실제 시간이 흐르면) `in`은 True를
+# 반환했지만 `[]`는 KeyError를 던지는 TOCTOU 레이스를 만든다. `.get(key, sentinel)`은
+# 존재확인과 조회를 하나의 원자적 호출로 묶어 이 레이스를 없앤다.
+_CACHE_MISS = object()
+
 
 class DataRepositoryInterface(ABC):
     """데이터 Repository 인터페이스"""
@@ -43,7 +49,10 @@ class YfinanceDataRepository(DataRepositoryInterface):
     def __init__(self):
         self.data_fetcher = data_fetcher
         self.logger = logging.getLogger(__name__)
-        self._memory_cache: TTLCache = TTLCache(maxsize=500, ttl=3600)
+        # maxsize=500에 대응하는 CacheConfig 상수는 없어 리터럴로 둔다(캐시 항목
+        # 개수 제한이며 CacheConfig는 TTL류 상수만 정의한다). ttl=3600은
+        # CacheConfig.MEMORY_TTL_RECENT와 정확히 일치하므로 그 상수를 사용한다.
+        self._memory_cache: TTLCache = TTLCache(maxsize=500, ttl=CacheConfig.MEMORY_TTL_RECENT)
         self.stock_repository = get_stock_repository()
 
     async def get_stock_data(self, ticker: str, start_date: Union[date, str],
@@ -52,10 +61,13 @@ class YfinanceDataRepository(DataRepositoryInterface):
         try:
             cache_key = f"{ticker}_{start_date}_{end_date}"
 
-            # TTLCache가 자동으로 만료된 항목을 제거하므로 존재 확인만 하면 됨
-            if cache_key in self._memory_cache:
+            # .get()으로 존재확인과 조회를 하나의 원자적 호출로 묶는다 (TOCTOU 방지).
+            # 이전의 `if cache_key in self._memory_cache: return self._memory_cache[cache_key]`는
+            # 두 호출 사이에 TTL이 만료되면 KeyError가 새어나갈 수 있었다.
+            cached_value = self._memory_cache.get(cache_key, _CACHE_MISS)
+            if cached_value is not _CACHE_MISS:
                 self.logger.debug(f"메모리 캐시에서 데이터 반환: {cache_key}")
-                return self._memory_cache[cache_key]
+                return cached_value
 
             try:
                 cached_data = await asyncio.to_thread(

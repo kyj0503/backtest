@@ -9,8 +9,12 @@ API 엔드포인트용 데코레이터 모듈
 **주요 데코레이터**:
 1. @handle_portfolio_errors: 포트폴리오 백테스트 에러 처리
    - DataNotFoundError → 404
-   - InvalidSymbolError → 400
-   - ValidationError → 422
+   - InvalidSymbolError → 422 (app/core/exceptions.py에 정의된 자신의 상태 코드)
+   - ValidationError → 422 (app/core/exceptions.py 자체 정의는 400이지만, 이
+     데코레이터가 detail=e.detail로 422로 재포장한다 — 아래 wrapper 참고.
+     tests/unit/test_portfolio_backtest_error_contract.py::
+     test_validation_error_returns_422가 이 계약을 고정한다)
+   - YfinanceRateLimitError → 429
    - 기타 예외 → 500
 
 **에러 응답 형식**:
@@ -144,13 +148,20 @@ def handle_portfolio_errors(func):
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
-        
+
         except ValidationError as e:
+            # ValidationError 자신의 상태 코드는 400(app/core/exceptions.py)이지만,
+            # 이 엔드포인트의 기존 계약(tests/unit/test_portfolio_backtest_error_contract.py::
+            # test_validation_error_returns_422)이 422를 고정하고 있으므로 상태
+            # 코드는 유지한다. detail만 str(e)(Starlette HTTPException.__str__()이
+            # 반환하는 "{status_code}: {detail}" 형식, 예: "400: <메시지>") 대신
+            # e.detail(원본 메시지)로 바꿔 422 응답 본문에 모순된 "400: " 접두사가
+            # 섞이지 않도록 한다.
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=str(e)
+                detail=e.detail
             )
-        
+
         except (DataNotFoundError, InvalidSymbolError, YfinanceRateLimitError) as e:
             raise e
         

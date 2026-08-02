@@ -143,7 +143,16 @@ class DatabaseConfig:
         }
 
     def log_info(self) -> None:
-        """연결 정보를 로깅합니다."""
+        """연결 정보를 로깅합니다.
+
+        주의(P3-22): 이전에는 아래 logger 호출과 완전히 동일한 정보를 print()로
+        다시 무조건 stdout에 출력했다. print()는 로깅 프레임워크의 레벨/핸들러
+        제어를 우회하므로 운영 환경에서 로그 레벨을 올려도 끌 수 없고, 컨테이너
+        표준출력 로그에 항상 (get_masked_url()로 마스킹되지 않는 database_user
+        포함) 연결 정보가 남았다. logger 호출만으로도 동일한 정보가 이미
+        기록되므로 print()는 제거한다 — 비밀번호는 get_masked_url()로 마스킹된
+        뒤에만 노출된다.
+        """
         logger.info(
             "Database configuration loaded: host=%s port=%s user=%s db=%s DATABASE_URL_set=%s",
             self.database_host or "<unknown>",
@@ -153,7 +162,3 @@ class DatabaseConfig:
             "yes" if os.getenv("DATABASE_URL") else "no",
         )
         logger.debug(f"SQLAlchemy URL (masked): {self.get_masked_url()}")
-        print(
-            f"[database_config] Loaded: host={self.database_host} port={self.database_port} "
-            f"user={self.database_user} db={self.database_name} masked_url={self.get_masked_url()}"
-        )

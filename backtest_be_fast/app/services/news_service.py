@@ -7,9 +7,11 @@ import logging
 import urllib.request
 import urllib.parse
 import json
+import html
 import re
 import time
 import socket
+from html.parser import HTMLParser
 from typing import List, Dict, Any
 from datetime import datetime
 
@@ -17,6 +19,26 @@ from ..core.config import settings
 from ..constants import TICKER_TO_COMPANY_NAME
 
 logger = logging.getLogger(__name__)
+
+
+class _TextOnlyHTMLParser(HTMLParser):
+    """HTML 마크업을 제거하고 텍스트 노드만 수집하는 파서 (P2-44).
+
+    기존 정규식 `<.*?>` 방식은 닫는 '>'가 없는 미종료 태그
+    (예: `<img src=x onerror=alert(1)`, 끝에 '>' 없음)를 태그로 인식하지 못해
+    그대로 통과시켰다. 표준 라이브러리 HTMLParser는 토크나이저 규칙을 따르므로
+    이런 입력에서도 완결되지 않은 태그를 안전하게 버린다.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._chunks: List[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self._chunks.append(data)
+
+    def get_text(self) -> str:
+        return ''.join(self._chunks)
 
 
 class NewsService:
@@ -33,9 +55,32 @@ class NewsService:
             logger.warning("네이버 API 키가 설정되지 않았습니다.")
 
     def remove_html_tags(self, text: str) -> str:
-        """HTML 태그 제거"""
-        clean = re.compile('<.*?>')
-        return re.sub(clean, '', text)
+        """HTML 태그 제거 및 엔티티 디코딩 (P2-44)
+
+        표준 라이브러리 html.parser.HTMLParser로 텍스트 노드만 추출한다.
+        이전 정규식(`<.*?>`) 구현은 닫는 '>'가 없는 미종료 태그를 그대로
+        통과시키는 취약점이 있었다 (예: `<img src=x onerror=alert(1)`).
+        bleach 등 외부 sanitizer 의존성은 추가하지 않았다 - requirements.txt에
+        없고, "태그 제거 + 엔티티 디코딩"만 필요한 이 용도에는 stdlib으로 충분하다.
+        """
+        if not text:
+            return text
+
+        parser = _TextOnlyHTMLParser()
+        try:
+            parser.feed(text)
+            parser.close()
+            cleaned = parser.get_text()
+        except Exception:
+            # 파싱 자체가 실패하는 극단적인 입력에 대한 안전망.
+            # 태그 구조는 보존되지 않지만 최소한 엔티티는 디코딩해 반환한다.
+            logger.warning("HTML 파싱 실패 - 엔티티만 디코딩하여 반환")
+            return html.unescape(text)
+
+        # convert_charrefs=True로 텍스트 노드의 엔티티는 이미 디코딩되지만,
+        # 방어적으로 한 번 더 unescape한다 (이미 디코딩된 문자열에 대한
+        # unescape는 멱등적이라 안전하다).
+        return html.unescape(cleaned)
     
     def is_relevant_news(self, title: str, description: str) -> bool:
         """뉴스의 관련성 판단 - 불필요한 뉴스 필터링"""
