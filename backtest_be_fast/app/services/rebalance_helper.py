@@ -159,6 +159,66 @@ def get_next_nth_weekday(
     return current_date
 
 
+def generate_periodic_schedule(
+    start_date: datetime,
+    end_date: datetime,
+    period_type: str,
+    interval: int,
+    original_nth: int = None
+) -> list:
+    """
+    start_date 이후 end_date까지의 정기 실행일 목록을 생성
+
+    시뮬레이션이 실제로 매수하는 날짜와 동일한 규칙(Nth Weekday)을 사용하므로,
+    납입 횟수 추정과 실제 집행이 어긋나지 않는다. start_date 당일은 포함하지
+    않는다 (초회 매수는 별도로 처리되기 때문).
+
+    Parameters
+    ----------
+    start_date : datetime
+        시작 날짜 (초회 매수일, 결과에 포함되지 않음)
+    end_date : datetime
+        종료 날짜 (포함)
+    period_type : str
+        주기 타입 ('weekly', 'monthly')
+    interval : int
+        간격 (주 단위 또는 월 단위)
+    original_nth : int, optional
+        원본 "몇 번째 요일" 값. None이면 start_date에서 계산
+
+    Returns
+    -------
+    list[datetime]
+        정기 실행 예정일 목록 (오름차순)
+
+    Examples
+    --------
+    >>> dates = generate_periodic_schedule(
+    ...     datetime(2024, 1, 1), datetime(2024, 12, 31), 'monthly', 1
+    ... )
+    >>> len(dates)  # 2월~12월 11회 (1월은 초회 매수로 처리)
+    11
+    """
+    if period_type not in ('weekly', 'monthly') or interval <= 0:
+        return []
+
+    if original_nth is None:
+        original_nth = get_weekday_occurrence(start_date)
+
+    schedule = []
+    cursor = start_date
+    # 방어: 일 단위로도 끝나야 하므로 상한을 둔다 (무한 루프 방지)
+    max_iterations = (end_date - start_date).days + 2
+
+    for _ in range(max_iterations):
+        cursor = get_next_nth_weekday(cursor, period_type, interval, original_nth)
+        if cursor > end_date:
+            break
+        schedule.append(cursor)
+
+    return schedule
+
+
 class RebalanceHelper:
     """리밸런싱 유틸리티"""
 
