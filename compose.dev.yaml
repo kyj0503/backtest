@@ -26,10 +26,25 @@ services:
         condition: service_healthy
     # 런타임에 venv 의존성 동기화 후 서버 시작 (이미지와 볼륨의 동기화 보장)
     command: >
-      sh -c "pip install -r requirements.txt &&
+      sh -c "pip install -r requirements.lock.txt &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --limit-concurrency 100 --backlog 200"
+    # P3-07: 크래시 시 자동 재기동 + 리소스 상한(공유 개발 호스트에서 폭주 방지).
+    # 수치는 관측된 실사용량 기반 튜닝이 아니라 안전판 성격의 보수적 초기값이다.
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
   mysql:
-    image: mysql:8.0
+    # P2-24: mysql:8.0은 Oracle 확장 지원이 2026-04에 종료된 EOL 버전이었다.
+    # 8.4는 다음 LTS이며, schema.sql이 쓰는 8.0+ 문법(utf8mb4_0900_ai_ci,
+    # CHECK 제약)이 그대로 유지된다 — 스키마 초기화 스크립트가 8.4에서도
+    # 깨끗이 적용됨을 일회성 컨테이너로 검증했다 (b4-E-report.md 참고).
+    image: mysql:8.4
     container_name: backtest-mysql-dev
     networks:
       - backtest-net
@@ -56,6 +71,17 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    # P3-07: 크래시 시 자동 재기동 + 리소스 상한. P2-27(워커 x 풀 크기)과는
+    # 별개로, 캐시 DB 컨테이너가 호스트 메모리를 무제한으로 먹지 않도록 한다.
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   backtest-fe:
     build:
@@ -86,6 +112,16 @@ services:
       - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest-be-fast:8000}"
     # 런타임에 node_modules 동기화 후 vite 시작
     command: [ "sh", "-c", "npm install && npm run dev" ]
+    # P3-07: 크래시 시 자동 재기동 + 리소스 상한(공유 개발 호스트에서 폭주 방지).
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
 volumes:
   backtest_mysql_data:

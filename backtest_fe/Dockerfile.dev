@@ -1,5 +1,8 @@
+# syntax=docker/dockerfile:1
 # Development Dockerfile for frontend
-FROM node:20.19.0-alpine
+# P3-05: node:20.19.0-alpine은 EOL(2026-04-30 지남) 고정 태그였다. package.json의
+# engines.node(">=20.0.0")는 22에서도 만족되므로 package.json은 건드리지 않았다.
+FROM node:22-alpine
 
 # Install git for testing dependencies
 RUN apk add --no-cache git
@@ -7,9 +10,16 @@ RUN apk add --no-cache git
 WORKDIR /app
 
 # Install dependencies (cached at image build time)
-# Install dependencies (cached at image build time)
+# P3-07: npm install은 package-lock.json을 무시하고 재해석할 수 있어 이미지
+# 빌드 시점의 의존성 버전이 CI/프로덕션(Dockerfile의 deps 스테이지, npm ci
+# 사용)과 어긋날 수 있었다. 동일한 조건부 패턴으로 맞춘다.
 COPY package*.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f package-lock.json ]; then \
+        npm ci --no-audit --prefer-offline --no-fund; \
+    else \
+        npm install --no-audit --prefer-offline --no-fund; \
+    fi
 
 # Skip copying source code - use bind mount in compose.dev.yaml instead
 

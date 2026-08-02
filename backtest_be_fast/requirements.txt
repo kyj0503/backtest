@@ -1,3 +1,7 @@
+# P2-22: 이 파일은 사람이 편집하는 입력이다. Dockerfile/Dockerfile.dev는 이 파일이
+# 아니라 requirements.lock.txt(전 의존성 고정본)를 설치한다. 여기를 바꾼 뒤에는
+# `docker compose -f compose.dev.yaml exec -T backtest-be-fast pip freeze`로
+# requirements.lock.txt를 재생성할 것 (락 파일 상단 주석에 방법 설명).
 fastapi==0.141.1
 uvicorn[standard]==0.52.0
 pydantic==2.13.4
@@ -19,3 +23,6 @@ cachetools>=5.3.0
 SQLAlchemy>=2.0
 pymysql>=1.0.2
 cryptography>=41.0.0
+# P2-28: 스키마 마이그레이션 도구 (alembic/ 디렉터리 참고). SQLAlchemy 위에서
+# 동작하며 앱과 같은 venv/이미지에서 `alembic upgrade head`로 실행된다.
+alembic==1.18.5

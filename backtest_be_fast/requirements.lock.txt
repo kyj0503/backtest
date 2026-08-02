@@ -1,0 +1,90 @@
+# P2-22: 완전 고정 락 파일 — requirements.txt(사람이 편집하는 입력)의 모든
+# 직접/전이 의존성을 정확한 버전으로 고정한다. Dockerfile / Dockerfile.dev의
+# builder 스테이지는 requirements.txt가 아니라 이 파일을 설치한다.
+#
+# 생성 방법: pip-compile(pip-tools) 대신, 현재 동작 중인 개발 컨테이너의
+# `pip freeze`를 소스 오브 트루스로 사용했다 (189개 unit 테스트가 실제로
+# 통과하는 조합이므로) —
+#   docker compose -f compose.dev.yaml exec -T backtest-be-fast pip freeze
+# 그 출력(런타임+테스트 의존성 혼재)에서, requirements.txt의 각 패키지가
+# 선언한 Requires를 importlib.metadata로 재귀 추적하고 `pip show`의
+# Required-by로 교차 검증해 "런타임에 실제로 필요한" 패키지만 추렸다
+# (테스트 전용 — pytest/httpx/faker/factory-boy/freezegun 및 이들의 전이
+# 의존성 — 은 requirements-test.lock.txt로 분리했다).
+#
+# frozendict는 예외: `pip show frozendict`의 Required-by가 비어 있어(현재
+# yfinance==1.5.2의 선언 메타데이터에는 없음) 정적 추적으로는 안 걸리지만,
+# 개발 컨테이너에 실제로 설치돼 있고 yfinance 내부에서 비공식적으로 참조될
+# 가능성을 배제할 수 없어 안전 쪽으로 유지했다 (제거보다 여분 패키지 하나가
+# 훨씬 저렴하다).
+#
+# 재생성: `docker compose -f compose.dev.yaml exec -T backtest-be-fast pip freeze`
+# 를 다시 떠서 requirements.txt에 선언된 패키지들의 의존성 클로저만 갱신한다.
+# CRITICAL: backtesting==0.3.3 / bokeh==2.4.3 / numpy<2 는 backtesting.py 0.3.3의
+# 강제 요구사항이다 — 메이저 버전을 올리지 말 것 (CLAUDE.md 제약 #2 참고).
+#
+# alembic/Mako는 requirements.txt에 추가된 alembic==1.18.5(P2-28)의
+# 의존성이며, 이미 고정된 SQLAlchemy==2.0.51과 충돌 없이 해석됨을 확인했다.
+
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.14.2
+Backtesting==0.3.3
+beautifulsoup4==4.15.0
+bokeh==2.4.3
+cachetools==7.1.6
+certifi==2026.7.22
+cffi==2.1.0
+charset-normalizer==3.4.9
+click==8.4.2
+cryptography==50.0.0
+curl_cffi==0.15.0
+fastapi==0.141.1
+frozendict==2.4.7
+greenlet==3.5.4
+h11==0.16.0
+httptools==0.8.0
+idna==3.18
+Jinja2==3.1.6
+Mako==1.3.12
+alembic==1.18.5
+markdown-it-py==4.2.0
+MarkupSafe==3.0.3
+mdurl==0.1.2
+multitasking==0.0.13
+numpy==1.26.4
+packaging==26.2
+pandas==2.3.3
+peewee==4.3.0
+pillow==12.3.0
+platformdirs==4.11.0
+prometheus-fastapi-instrumentator==8.1.0
+prometheus_client==0.26.0
+protobuf==7.35.1
+pycparser==3.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
+pydantic_core==2.46.4
+Pygments==2.20.0
+PyMySQL==1.2.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
+python-multipart==0.0.32
+pytz==2026.3.post1
+PyYAML==6.0.3
+requests==2.34.2
+rich==15.0.0
+six==1.17.0
+soupsieve==2.9.1
+SQLAlchemy==2.0.51
+starlette==1.3.1
+tornado==6.5.7
+typing-inspection==0.4.2
+typing_extensions==4.16.0
+tzdata==2026.3
+urllib3==2.7.0
+uvicorn==0.52.0
+uvloop==0.22.1
+watchfiles==1.2.0
+websockets==17.0.1
+yfinance==1.5.2

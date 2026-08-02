@@ -2,6 +2,31 @@ name: backtest-dev-prod
 
 # 개발 환경에서 프로덕션 설정 테스트용
 # reload 없이 워커 모드로 실행
+#
+# P2-25: 이 파일의 존재 이유는 "실제 프로덕션 이미지(멀티스테이지 Dockerfile의
+# runtime 스테이지)"가 워커 모드에서 제대로 동작하는지 검증하는 것이다. 과거에는
+# backtest-be-fast 서비스가 ./backtest_be_fast:/app 바인드 마운트와
+# backtest_be_fast_venv:/opt/venv 볼륨을 갖고 있었는데, 이 둘은 이미지에 COPY된
+# 코드와 /opt/venv에 설치된 의존성을 각각 작업 트리 내용으로 덮어써 버려서
+# "프로덕션 이미지"가 아니라 사실상 dev 소스 + 이전에 시딩된 venv를 그대로
+# 실행하는 셈이었다(검증하려는 대상 자체가 사라짐). 두 볼륨 모두 제거했다 —
+# 이제 이 서비스는 Dockerfile로 빌드된 이미지의 COPY된 코드/venv를 그대로
+# 실행한다.
+#
+# P2-27: MySQL 서비스가 없다. backtest-be-fast는 DATABASE_HOST=mysql(.env
+# 기본값)로 접속하는데, 이 파일에는 그 이름의 서비스가 없다 — compose.dev.yaml
+# 쪽 mysql 서비스가 이미 떠 있고 두 파일이 이름이 같은 외부 네트워크
+# "backtest-network"(아래 networks.backtest-net.name)를 공유하기 때문에,
+# Docker의 서비스명 기반 DNS로 그 컨테이너의 "mysql" 별칭이 그대로 보여서
+# 우연히 동작한다. 즉 이 파일은 `compose.dev.yaml`이 먼저(또는 함께)떠
+# 있다는 것을 암묵적으로 전제한다 — depends_on으로 표현할 수 없는 크로스
+# 파일 의존성이므로 여기 명시한다. 별도 mysql 서비스를 추가하지 않은 이유:
+# 이미 3306/데이터 볼륨을 쓰는 dev 스택의 mysql과 이름·포트가 충돌하거나,
+# 완전히 새 볼륨/포트를 파면 "워커 모드 BE"만 검증한다는 이 파일의 좁은
+# 목적에 비해 배보다 배꼽이 커진다.
+#   실행 순서: compose.dev.yaml로 mysql(+ 필요시 BE/FE)을 먼저 띄운 뒤,
+#   `docker compose -f compose.dev-prod.yaml up backtest-be-fast`로 워커
+#   모드 BE만 추가로 띄운다.
 
 services:
   backtest-be-fast:
@@ -20,19 +45,47 @@ services:
       - .env
     environment:
       - DEBUG=false
-    volumes:
-      - ./backtest_be_fast:/app
-      - backtest_be_fast_venv:/opt/venv
+      # P2-27: pool_config.py의 기본값(POOL_SIZE=4, MAX_OVERFLOW=2)은 이미
+      # 17 workers를 가정해도 안전하다(17 x 6 = 102 <= MySQL 기본
+      # max_connections=151). 아래는 그 관계를 이 파일에서도 명시적으로
+      # 보이게 하려는 것 — 실제 MySQL max_connections나 workers 수를
+      # 바꾸면 이 값도 함께 재계산해야 한다.
+      - DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-4}
+      - DATABASE_MAX_OVERFLOW=${DATABASE_MAX_OVERFLOW:-2}
+    # P2-25: 바인드 마운트/venv 볼륨 없음 — Dockerfile(runtime 스테이지)이 COPY한
+    # 코드와 /opt/venv를 그대로 실행해야 이 파일의 목적(프로덕션 이미지 검증)이
+    # 성립한다. 코드를 바꿨다면 재빌드(`docker compose -f compose.dev-prod.yaml
+    # build backtest-be-fast`)해야 반영된다 — 이 점이 compose.dev.yaml(항상
+    # 최신 소스가 바인드 마운트되어 즉시 반영됨)과의 핵심 차이다.
+    #
     # 개발 환경 프로덕션 모드: 8 논리 코어 → 17 workers
     # reload 비활성화 (성능 테스트용)
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "17", "--limit-concurrency", "100", "--backlog", "200", "--timeout-keep-alive", "30"]
-    
+    # P3-07: 크래시 시 자동 재기동 + 리소스 상한. 17 workers는 이 리포지토리에서
+    # 가장 무거운 프로세스 구성이므로 상한을 넉넉히 잡았다 — 실측 없이 정한
+    # 보수적 초기값이므로 실제 부하 테스트 후 조정할 것.
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 1G
+
   backtest-fe:
     build:
       context: ./backtest_fe
       dockerfile: Dockerfile.dev
-    image: backtest-fe:dev
-    container_name: backtest-fe-dev
+    # P2-25/P3-07: compose.dev.yaml도 정확히 "backtest-fe:dev" /
+    # "backtest-fe-dev"를 쓰므로, 두 스택을 동시에(또는 순차로) 띄우면 image
+    # 태그는 서로 덮어쓰고 container_name은 아예 기동을 거부한다("already in
+    # use"). 이 파일만의 태그/이름으로 분리한다. (FE는 이 파일에서도 여전히
+    # Dockerfile.dev로 빌드한다 — 이 파일의 검증 대상은 BE 워커 모드이므로
+    # FE까지 프로덕션 Dockerfile로 바꾸는 것은 범위 밖이다.)
+    image: backtest-fe:dev-prod
+    container_name: backtest-fe-dev-prod
     networks:
       - backtest-net
     extra_hosts:
@@ -55,10 +108,19 @@ services:
       - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest-be-fast:8000}"
       - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest-be-fast:8000}"
     command: ["npm", "run", "dev"]
+    # P3-07: 크래시 시 자동 재기동 + 리소스 상한.
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
 volumes:
   backtest_fe_node_modules:
-  backtest_be_fast_venv:
 
 networks:
   backtest-net:
