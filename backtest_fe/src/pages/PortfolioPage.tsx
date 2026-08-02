@@ -45,7 +45,10 @@ const PortfolioPage: React.FC = () => {
               <AlertTitle>
                 {getErrorTitle(error)}
               </AlertTitle>
-              <AlertDescription className="mt-2 text-sm">
+              {/* whitespace-pre-line: 백엔드 detail 메시지가 여러 줄(예: Pydantic
+                  검증 에러를 줄바꿈으로 합친 메시지, 상장일 검증의 항목별
+                  안내)로 올 수 있어 줄바꿈을 보존한다. */}
+              <AlertDescription className="mt-2 text-sm whitespace-pre-line">
                 {error}
               </AlertDescription>
             </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, TrendingUp, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import { extractErrorMessage } from '@/shared/api/client';
 import { BacktestRequest } from '../model/types/api-types';
 import { ASSET_TYPES } from '../model/strategyConfig';
 import DateRangeForm from './DateRangeForm';
@@ -26,7 +26,7 @@ interface PortfolioBacktestFormProps {
 
 const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit, loading = false }) => {
   const { state, actions } = useBacktestForm();
-  const { errors, validateForm, setErrors } = useFormValidation();
+  const { errors, validateForm } = useFormValidation();
   const [showErrorModal, setShowErrorModal] = useState(false);
 
   const generateStrategyParams = () => {
@@ -68,43 +68,13 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
         rebalance_frequency: state.settings.rebalanceFrequency
       });
     } catch (error) {
-      console.error('백테스트 실행 중 오류:', error);
-      
-      // 백엔드 검증 에러 메시지 추출
-      let errorMessages: string[] = [];
-      
-      if (axios.isAxiosError(error) && error.response) {
-        const responseData = error.response.data;
-        
-        // Pydantic ValidationError 처리
-        if (responseData?.detail) {
-          if (Array.isArray(responseData.detail)) {
-            // Pydantic validation errors
-            // FastAPI/Pydantic 422 응답: [{ loc, msg, type }, ...]
-            errorMessages = responseData.detail.map((err: unknown) => {
-              if (typeof err === 'object' && err !== null && 'msg' in err && err.msg) {
-                return String(err.msg);
-              }
-              return JSON.stringify(err);
-            });
-          } else if (typeof responseData.detail === 'string') {
-            errorMessages = [responseData.detail];
-          }
-        } else if (responseData?.message) {
-          errorMessages = [responseData.message];
-        } else if (responseData?.error) {
-          errorMessages = [responseData.error];
-        }
-      }
-      
-      // 에러 메시지가 없으면 기본 메시지
-      if (errorMessages.length === 0) {
-        const defaultMessage = error instanceof Error ? error.message : '백테스트 실행 중 오류가 발생했습니다.';
-        errorMessages = [defaultMessage];
-      }
-      
-      setErrors(errorMessages);
-      setShowErrorModal(true);  // 에러 모달 표시
+      // 백엔드/네트워크 에러는 usePortfolioBacktest 훅이 extractErrorMessage로
+      // 실제 메시지를 추출해 페이지 레벨 Alert에 표시한다. 이 모달은 위쪽의
+      // 제출 전 클라이언트 측 검증 실패 전용이며, 백엔드 에러에 대해 더 이상
+      // 중복으로 표시하지 않는다 — 예전에는 모달과 Alert에 서로 다른(모달은
+      // 실제 detail, Alert는 일반 axios 메시지) 내용이 동시에 떠서 모달을
+      // 닫아도 쓸모없는 Alert만 남는 문제가 있었다 (P2-29).
+      console.error('백테스트 실행 중 오류:', extractErrorMessage(error));
     } finally {
       actions.setLoading(false);
     }
