@@ -15,6 +15,7 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 from app.utils.data_fetcher import data_fetcher
 from app.services.database.connection_manager import DatabaseConnectionManager
+from app.core.exceptions import DataNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -208,34 +209,44 @@ class YFinanceRepository:
             raise
 
     def load_ticker_data(self, ticker: str, start_date: Optional[Union[str, date]] = None, end_date: Optional[Union[str, date]] = None, max_retries: int = 3, retry_delay: float = 2.0) -> pd.DataFrame:
-        """DB에서 ticker의 daily_prices를 조회해 pandas DataFrame으로 반환합니다."""
+        """DB에서 ticker의 daily_prices를 조회해 pandas DataFrame으로 반환합니다.
+
+        빈 결과(해당 티커/기간에 데이터가 없는 정상적인 응답)는 일시적 장애가 아니므로
+        재시도하지 않고 즉시 DataNotFoundError(404)를 발생시킨다. 네트워크/DB 오류 같은
+        진짜 예외만 백오프와 함께 재시도한다.
+        """
         last_exception = None
-        
+
         for attempt in range(1, max_retries + 1):
             try:
                 self.logger.info(f"[시도 {attempt}/{max_retries}] {ticker} 데이터 로드 중... ({start_date} ~ {end_date})")
-                
+
                 # 실제 데이터 로드 로직
                 df = self._load_ticker_data_internal(ticker, start_date, end_date)
-                
-                if df is not None and not df.empty:
-                    self.logger.info(f"[성공] {ticker} 데이터 로드 완료: {len(df)}행 (시도 {attempt}회)")
-                    return df
-                else:
-                    self.logger.warning(f"[시도 {attempt}/{max_retries}] {ticker} 데이터가 비어있음")
-                    last_exception = ValueError(f"{ticker} 데이터가 비어있습니다")
-                    
             except Exception as e:
                 self.logger.warning(f"[시도 {attempt}/{max_retries}] {ticker} 데이터 로드 실패: {str(e)}")
                 last_exception = e
-            
-            # 마지막 시도가 아니면 대기 후 재시도
-            if attempt < max_retries:
-                wait_time = retry_delay * attempt  # 점진적 증가 (2초, 4초, 6초...)
-                self.logger.info(f"[재시도 대기] {wait_time}초 후 {ticker} 데이터 재시도...")
-                time.sleep(wait_time)
-        
-        # 모든 재시도 실패
+
+                # 마지막 시도가 아니면 대기 후 재시도 (일시적 장애로 간주)
+                if attempt < max_retries:
+                    wait_time = retry_delay * attempt  # 점진적 증가 (2초, 4초, 6초...)
+                    self.logger.info(f"[재시도 대기] {wait_time}초 후 {ticker} 데이터 재시도...")
+                    time.sleep(wait_time)
+                continue
+
+            if df is not None and not df.empty:
+                self.logger.info(f"[성공] {ticker} 데이터 로드 완료: {len(df)}행 (시도 {attempt}회)")
+                return df
+
+            # 빈 결과는 정상 응답이지 일시적 장애가 아니다 - 재시도 없이 즉시 실패 처리
+            self.logger.warning(f"[시도 {attempt}/{max_retries}] {ticker} 데이터가 비어있음 - 재시도하지 않고 404 처리")
+            raise DataNotFoundError(
+                ticker,
+                str(start_date) if start_date else "",
+                str(end_date) if end_date else "",
+            )
+
+        # 모든 재시도 실패 (진짜 예외만 이 지점에 도달)
         error_msg = f"[실패] {ticker} 데이터 로드 실패 (총 {max_retries}회 시도)"
         if last_exception:
             error_msg += f": {str(last_exception)}"
