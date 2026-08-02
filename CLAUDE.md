@@ -27,7 +27,7 @@ docker build --target test ./backtest_be_fast
 
 **BE flow:** `FastAPI Endpoint → PortfolioManagerService → BacktestEngine / StrategyService / StockRepository → UnifiedDataService`
 
-**FE (Feature-Sliced Design):** `shared` ← `features` ← `pages` (no reverse imports). State: Zustand (global) + `useReducer` (forms). UI: shadcn/ui + Tailwind + Recharts.
+**FE (Feature-Sliced Design):** `shared` ← `features` ← `pages` (no reverse imports). State: React hooks (`useState`/`useReducer`) + localStorage — there is no Zustand or other global-state library in this codebase despite what some older docs claim. UI: shadcn/ui + Tailwind + Recharts.
 
 **DB schema:** see `database/schema.sql`
 
@@ -39,7 +39,11 @@ docker build --target test ./backtest_be_fast
 
 2. **backtesting.py pinned to 0.3.3:** No `finalize_trades`, no `spread` param, commission on entry only, no Kelly Criterion.
 
-3. **Strategy enum values:** `sma_strategy`, `rsi_strategy`, `bollinger_strategy`, `macd_strategy`, `buy_hold_strategy` (NOT "buy_and_hold"), `ema_strategy`
+3. **Strategy enum values:** `sma_strategy`, `rsi_strategy`, `bollinger_strategy`, `macd_strategy`, `buy_hold_strategy` (NOT "buy_and_hold"), `ema_strategy`. `PortfolioBacktestRequest.strategy` validates membership against `StrategyType` — unknown values are rejected, not silently accepted.
+
+11. **Strategy class attributes must match the public param names** in `strategy_service.py`'s `STRATEGIES` spec. `BacktestEngine._build_strategy` filters user overrides with `hasattr(cls, key)`, so a mismatched attribute name silently drops the parameter and the backtest runs on defaults. This bit SMA (`sma_short`/`sma_long` vs `short_window`/`long_window`) — `tests/unit/test_strategy_param_override.py` now guards every strategy without mocking the validator.
+
+12. **Never render API-sourced text with `dangerouslySetInnerHTML`.** News titles/descriptions come from a third party and the backend's tag-stripping regex is bypassable. `LatestNewsSection` decodes HTML entities with a pure string function and renders as JSX text — do not reintroduce a parser-based decode (happy-dom drops tag-shaped text) or feed the decoded value back into innerHTML.
 
 4. **Currency:** Stored in original currency, converted to USD via `BacktestEngine._convert_to_usd()` for calculations.
 
@@ -67,7 +71,7 @@ Always verify changes in Docker containers (`docker compose exec`) before declar
 
 - **BE markers:** `@pytest.mark.unit` (no DB), `@pytest.mark.integration` (DB), `@pytest.mark.external` (real API)
 - **FE:** Vitest + React Testing Library; Playwright for E2E
-- **Current baseline:** BE 141 unit tests, FE 113 tests — both fully green. Any failure is a regression, not pre-existing noise.
+- **Current baseline:** BE 153 unit tests, FE 104 tests — both fully green. Any failure is a regression, not pre-existing noise.
 - **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
 
 ## CI
@@ -79,6 +83,10 @@ The gate blocks **deployment**, not merging — the pipeline checks out `*/main`
 ## Commit Convention
 
 `tag(scope): subject` — Scopes: `be`, `fe`, `common`, `infra` — Tags: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+
+## Outstanding Work
+
+`TODO.md` (repo root) holds the audited backlog — P1/P2/P3 with `file:line` evidence per item. Completed items are checked off with what was done. Consult it before starting work in an area; several known-broken behaviors (DCA denominator, delisted-stock rebalancing, 200-with-error responses) are documented there rather than in code comments.
 
 ## Documentation
 
