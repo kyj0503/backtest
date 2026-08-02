@@ -1,21 +1,38 @@
 """
 DCA 및 리밸런싱 로직 통합 테스트
 
-실제 API를 호출하여 Nth Weekday 방식의 DCA와 리밸런싱이 제대로 작동하는지 검증합니다.
+실제 DB/yfinance 데이터를 사용해 Nth Weekday 방식의 DCA와 리밸런싱이
+제대로 작동하는지 검증합니다 (get_nth_weekday_of_month 등 순수 함수 자체의
+단위 테스트는 tests/unit/test_nth_weekday.py, test_nth_weekday_edge_cases.py 참고).
+
+**P2-40 변경 사항**:
+- 마커 없음 -> `pytestmark = pytest.mark.integration` 추가. 기존에는 마커가
+  없어 `pytest -m integration`으로는 이 파일이 전혀 수집되지 않았고, 반대로
+  마커 없는 bare `pytest`는 이 파일을 수집해서 (서버가 떠 있지 않으면) 접속
+  실패로 깨졌다.
+- `requests` + `http://localhost:8000` 라이브 서버 의존 -> FastAPI
+  `TestClient`로 전환. 별도로 `docker compose up`된 서버가 없어도 동작한다
+  (다만 StockRepository/DB/yfinance는 모킹하지 않으므로 여전히 DB 연결과
+  필요 시 외부 네트워크가 있어야 한다 -- 그래서 unit이 아니라 integration).
+- 결과를 print만 하고 아무것도 assert하지 않던 부분을 실제 단언으로 교체.
+  Total_Trades(거래 횟수)는 2024년치 실제 과거 시세 + 결정론적 DCA/리밸런싱
+  스케줄링 로직의 함수이므로 재현 가능하다 (이미 지나간 과거 구간이라 시세가
+  바뀔 일이 없다). Final_Value는 동일한 이유로 결정론적이지만 부동소수점
+  경로 차이에 다소 민감할 수 있어 pytest.approx(rel=1e-4)로 비교한다.
+  아래 기대값은 이 변경을 적용한 시점에 실제로 API를 호출해 관측한 값이다.
 """
-import requests
-import os
+import pytest
+from fastapi.testclient import TestClient
 
+from app.main import app
 
-BASE_URL = os.getenv("BACKTEST_API_URL", "http://localhost:8000")
+pytestmark = pytest.mark.integration
+
+client = TestClient(app)
 
 
 def test_monthly_dca():
-    """매월 DCA 투자 테스트"""
-    print("\n" + "="*80)
-    print("TEST 1: 매월 DCA 투자 (monthly_1)")
-    print("="*80)
-    
+    """매월 DCA 투자 테스트 (monthly_1): AAPL, 2024-01-10 ~ 2024-12-31, 12개월 -> 12회 매수"""
     payload = {
         "portfolio": [
             {
@@ -31,33 +48,20 @@ def test_monthly_dca():
         "rebalance_frequency": "none",
         "strategy": "buy_hold_strategy"
     }
-    
-    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
-    
-    if response.status_code != 200:
-        print(f"❌ 실패: {response.status_code}")
-        print(f"   에러: {response.text}")
-    
+
+    response = client.post("/api/v1/backtest", json=payload)
     assert response.status_code == 200, f"API Request failed: {response.text}"
-    
-    response_json = response.json()
-    dates = response_json.get("data", {})
-    stats = dates.get("portfolio_statistics", {})
-    
-    print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
-    final_val = stats.get('Final_Value', 0.0)
-    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
-    total_ret = stats.get('Total_Return', 0.0)
-    print(f"   총 수익률: {total_ret:.2f}%")
+
+    stats = response.json().get("data", {}).get("portfolio_statistics", {})
+
+    assert stats.get("Total_Trades") == 12, (
+        f"매월 DCA 12개월치는 12회 매수가 기대됨: {stats.get('Total_Trades')}"
+    )
+    assert stats.get("Final_Value") == pytest.approx(14760.989923900852, rel=1e-4)
 
 
 def test_quarterly_rebalancing():
-    """분기별 리밸런싱 테스트"""
-    print("\n" + "="*80)
-    print("TEST 2: 분기별 리밸런싱 (monthly_3)")
-    print("="*80)
-    
+    """분기별 리밸런싱 테스트 (monthly_3): AAPL 50% + MSFT 50% lump sum, 2024년 4개 분기 리밸런싱"""
     payload = {
         "portfolio": [
             {
@@ -75,32 +79,21 @@ def test_quarterly_rebalancing():
         "rebalance_frequency": "monthly_3",  # 분기별
         "strategy": "buy_hold_strategy"
     }
-    
-    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
-    
-    if response.status_code != 200:
-        print(f"❌ 실패: {response.status_code}")
-        print(f"   에러: {response.text}")
 
+    response = client.post("/api/v1/backtest", json=payload)
     assert response.status_code == 200, f"API Request failed: {response.text}"
-    
-    response_json = response.json()
-    dates = response_json.get("data", {})
-    stats = dates.get("portfolio_statistics", {})
 
-    print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
-    # print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}") # Not available in standard stats
-    final_val = stats.get('Final_Value', 0.0)
-    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
+    stats = response.json().get("data", {}).get("portfolio_statistics", {})
+
+    # 최초 매수(2종목) + 분기별 리밸런싱(4회 x 2종목 리밸런스 거래) = 8회
+    assert stats.get("Total_Trades") == 8, (
+        f"최초 매수 2건 + 분기 리밸런싱 4회 x 2종목: {stats.get('Total_Trades')}"
+    )
+    assert stats.get("Final_Value") == pytest.approx(123.83673897419337, rel=1e-4)
 
 
 def test_weekly_dca():
-    """매주 DCA 투자 테스트"""
-    print("\n" + "="*80)
-    print("TEST 3: 매주 DCA 투자 (weekly_1)")
-    print("="*80)
-    
+    """매주 DCA 투자 테스트 (weekly_1): SPY, 2024-01-10 ~ 2024-03-31 (약 12주) -> 12회 매수"""
     payload = {
         "portfolio": [
             {
@@ -116,31 +109,20 @@ def test_weekly_dca():
         "rebalance_frequency": "none",
         "strategy": "buy_hold_strategy"
     }
-    
-    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
-    
-    if response.status_code != 200:
-        print(f"❌ 실패: {response.status_code}")
-        print(f"   에러: {response.text}")
 
+    response = client.post("/api/v1/backtest", json=payload)
     assert response.status_code == 200, f"API Request failed: {response.text}"
-    
-    response_json = response.json()
-    dates = response_json.get("data", {})
-    stats = dates.get("portfolio_statistics", {})
-    
-    print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
-    final_val = stats.get('Final_Value', 0.0)
-    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
+
+    stats = response.json().get("data", {}).get("portfolio_statistics", {})
+
+    assert stats.get("Total_Trades") == 12, (
+        f"2024-01-10~03-31 매주 DCA는 12회 매수가 기대됨: {stats.get('Total_Trades')}"
+    )
+    assert stats.get("Final_Value") == pytest.approx(1261.5411494713712, rel=1e-4)
 
 
 def test_biweekly_dca():
-    """2주마다 DCA 투자 테스트"""
-    print("\n" + "="*80)
-    print("TEST 4: 2주마다 DCA 투자 (weekly_2)")
-    print("="*80)
-    
+    """2주마다 DCA 투자 테스트 (weekly_2): QQQ, 2024-01-10 ~ 2024-06-30 (약 6개월) -> 13회 매수"""
     payload = {
         "portfolio": [
             {
@@ -156,31 +138,20 @@ def test_biweekly_dca():
         "rebalance_frequency": "none",
         "strategy": "buy_hold_strategy"
     }
-    
-    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
-    
-    if response.status_code != 200:
-        print(f"❌ 실패: {response.status_code}")
-        print(f"   에러: {response.text}")
-        
+
+    response = client.post("/api/v1/backtest", json=payload)
     assert response.status_code == 200, f"API Request failed: {response.text}"
-    
-    response_json = response.json()
-    dates = response_json.get("data", {})
-    stats = dates.get("portfolio_statistics", {})
-    
-    print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
-    final_val = stats.get('Final_Value', 0.0)
-    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
+
+    stats = response.json().get("data", {}).get("portfolio_statistics", {})
+
+    assert stats.get("Total_Trades") == 13, (
+        f"2024-01-10~06-30 2주마다 DCA는 13회 매수가 기대됨: {stats.get('Total_Trades')}"
+    )
+    assert stats.get("Final_Value") == pytest.approx(2835.854201803439, rel=1e-4)
 
 
 def test_combined_dca_and_rebalancing():
-    """DCA + 리밸런싱 조합 테스트"""
-    print("\n" + "="*80)
-    print("TEST 5: DCA + 리밸런싱 조합 (monthly_1 DCA + monthly_3 리밸런싱)")
-    print("="*80)
-    
+    """DCA + 리밸런싱 조합 테스트: AAPL/MSFT 각 월 DCA(12회 x 2종목) + 분기 리밸런싱(4회 x 2종목) = 30회"""
     payload = {
         "portfolio": [
             {
@@ -202,32 +173,21 @@ def test_combined_dca_and_rebalancing():
         "rebalance_frequency": "monthly_3",  # 분기별 리밸런싱
         "strategy": "buy_hold_strategy"
     }
-    
-    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
-    
-    if response.status_code != 200:
-        print(f"❌ 실패: {response.status_code}")
-        print(f"   에러: {response.text}")
 
+    response = client.post("/api/v1/backtest", json=payload)
     assert response.status_code == 200, f"API Request failed: {response.text}"
-    
-    response_json = response.json()
-    dates = response_json.get("data", {})
-    stats = dates.get("portfolio_statistics", {})
-    
-    print(f"✅ 성공!")
-    print(f"   총 거래 횟수: {stats.get('Total_Trades', 'N/A')}")
-    # print(f"   리밸런싱 횟수: {result.get('rebalance_count', 'N/A')}")
-    final_val = stats.get('Final_Value', 0.0)
-    print(f"   최종 포트폴리오 가치: ${final_val:,.2f}")
+
+    stats = response.json().get("data", {}).get("portfolio_statistics", {})
+
+    # 월 DCA 12회 x 2종목 + 분기 리밸런싱 4회 x 2종목 = 30회
+    assert stats.get("Total_Trades") == 30, (
+        f"월 DCA(12x2) + 분기 리밸런싱(4x2) = 30회가 기대됨: {stats.get('Total_Trades')}"
+    )
+    assert stats.get("Final_Value") == pytest.approx(26701.925381014917, rel=1e-4)
 
 
 def test_legacy_frequency_should_fail():
     """잘못된 주기 요청은 거부되어야 함"""
-    print("\n" + "="*80)
-    print("TEST 6: 잘못된 주기 거부 (invalid_freq는 에러 발생해야 함)")
-    print("="*80)
-    
     payload = {
         "portfolio": [
             {
@@ -243,43 +203,7 @@ def test_legacy_frequency_should_fail():
         "rebalance_frequency": "none",
         "strategy": "buy_hold_strategy"
     }
-    
-    response = requests.post(f"{BASE_URL}/api/v1/backtest", json=payload)
-    
-    if response.status_code == 422:  # Validation error
-        print(f"✅ 성공! (예상대로 거부됨)")
-    else:
-        print(f"❌ 실패: 잘못된 주기가 허용되었습니다 (status: {response.status_code})")
-        
+
+    response = client.post("/api/v1/backtest", json=payload)
+
     assert response.status_code == 422, f"Invalid frequency should be rejected but got {response.status_code}"
-
-
-if __name__ == "__main__":
-    # 스크립트로 직접 실행 시 pytest를 통해 실행하거나, 간단히 함수들만 호출
-    # 여기서는 간단호출 방식으로 유지
-    print("\n" + "🚀 DCA 및 리밸런싱 Nth Weekday 로직 통합 테스트 시작" + "\n")
-    
-    # 서버 health check
-    try:
-        response = requests.get(f"{BASE_URL}/health")
-        if response.status_code != 200:
-            print("❌ 서버 응답 이상")
-            exit(1)
-        print("✅ 서버 연결 확인")
-    except Exception as e:
-        print(f"❌ 서버 연결 실패: {e}")
-        print("   docker compose -f compose.dev.yaml up -d 로 서버를 먼저 실행하세요.")
-        exit(1)
-
-    # 직접 실행 시에는 assert가 실패하면 프로그램이 종료됨
-    try:
-        test_monthly_dca()
-        test_quarterly_rebalancing()
-        test_weekly_dca()
-        test_biweekly_dca()
-        test_combined_dca_and_rebalancing()
-        test_legacy_frequency_should_fail()
-        print("\n🎉 모든 테스트 통과!")
-    except AssertionError as e:
-        print(f"\n❌ 테스트 실패: {e}")
-        exit(1)
