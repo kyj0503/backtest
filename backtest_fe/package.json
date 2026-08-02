@@ -85,7 +85,7 @@
     "dev": "vite --host",
     "build": "tsc -p tsconfig.build.json && NODE_ENV=production vite build",
     "build:analyze": "tsc -p tsconfig.build.json && NODE_ENV=production vite build --mode analyze",
-    "lint": "eslint . --report-unused-disable-directives --max-warnings 3",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview --host",
     "type-check": "tsc --noEmit -p tsconfig.build.json",
