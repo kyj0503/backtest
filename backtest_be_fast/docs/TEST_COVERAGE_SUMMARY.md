@@ -6,7 +6,7 @@ Comprehensive unit tests have been created for the following backend modules, fo
 
 **Total Tests Created: 59** (이 문서가 다루는 4개 모듈 기준)
 
-> 현재 `tests/unit` 전체는 **141건**입니다. 이 문서는 아래 4개 모듈에 한정된 보고서이며, 전체 목록은 [UNIT_TEST_QUICK_REFERENCE.md](./UNIT_TEST_QUICK_REFERENCE.md)를 참고하십시오.
+> 현재 `tests/unit` 전체는 **189건**입니다 (이 숫자도 계속 늘어나는 중이므로 정확한 현재 값은 `pytest tests/unit --collect-only`로 확인하십시오). 이 문서는 아래 4개 모듈에 한정된 보고서이며, 전체 목록은 [UNIT_TEST_QUICK_REFERENCE.md](./UNIT_TEST_QUICK_REFERENCE.md)를 참고하십시오.
 **Test Files: 4**
 **All Tests: PASSING ✅**
 
@@ -248,7 +248,7 @@ docker compose -f compose.dev.yaml exec backtest-be-fast \
 ## Key Testing Principles Applied
 
 1. **Unit Testing Best Practices**
-   - Tests are fast (<0.5s total for these 59 tests; 전체 141건도 0.5초 내)
+   - Tests are fast (<0.5s total for these 59 tests; 전체 `tests/unit`도 1초 내)
    - Tests are isolated (no shared state)
    - Tests are deterministic (no random data)
    - Each test has a single responsibility
@@ -289,6 +289,6 @@ docker compose -f compose.dev.yaml exec backtest-be-fast \
 
 ## Summary
 
-이 문서가 다루는 4개 모듈의 59건은 모두 통과합니다. `tests/unit` 전체 **141건**도 모두 통과하며, CI의 `Quality Gate` 스테이지(`docker build --target test ./backtest_be_fast`)가 이를 강제합니다. 실패가 보이면 회귀입니다.
+이 문서가 다루는 4개 모듈의 59건은 모두 통과합니다. `tests/unit` 전체(현재 **189건**)도 모두 통과하며, CI의 `Quality Gate` 스테이지(`docker build --target test ./backtest_be_fast`)가 이를 강제합니다. 실패가 보이면 회귀입니다.
 
 **Status: ✅ COMPLETE AND PASSING**

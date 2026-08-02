@@ -18,7 +18,7 @@
 | 구분 | 기술 |
 |:-----|:-----|
 | **Backend** | Python 3.11, FastAPI, SQLAlchemy, pandas, numpy, backtesting.py 0.3.3 |
-| **Frontend** | TypeScript 5, React 19, Vite 7, Zustand, Recharts 3, React Router 7, shadcn/ui, Tailwind CSS 4 |
+| **Frontend** | TypeScript 5, React 19, Vite 7, React hooks (`useState`/`useReducer`) + localStorage, Recharts 3, React Router 7, shadcn/ui, Tailwind CSS 4 |
 | **Database** | MySQL 8.0 |
 | **Infra** | Docker, Docker Compose, Nginx, Jenkins |
 | **Test** | Pytest (BE), Vitest 4, React Testing Library, Playwright (FE) |
@@ -105,7 +105,7 @@ pytest tests/unit
 pytest --cov=app --cov-report=html
 
 # 특정 테스트 파일 실행
-pytest tests/unit/test_backtest.py -v
+pytest tests/unit/test_backtest_engine.py -v
 ```
 
 ### Frontend 테스트
@@ -194,7 +194,7 @@ docker build --target test ./backtest_fe        # lint → type-check ×2 → vi
 docker build --target test ./backtest_be_fast   # pytest tests/unit
 ```
 
-현재 기준선은 BE 141건, FE 113건이며 모두 통과합니다. 실패가 보이면 회귀입니다.
+현재 기준선은 BE 189건(`tests/unit`), FE 112건이며 모두 통과합니다. 실패가 보이면 회귀입니다. (BE에는 이 외에 DB가 필요한 `tests/integration` 스위트가 별도로 있으며, Quality Gate에는 포함되지 않습니다.)
 
 ---
 
@@ -275,3 +275,7 @@ chore(infra): Docker Compose 설정 최적화
 
 - [Backend 문서](./backtest_be_fast/docs/README.md)
 - [Frontend 문서](./backtest_fe/docs/README.md)
+- [2026-02-06 개선 변경 로그](./docs/CHANGELOG-improvement-2026-02-06.md) — Phase 1-5 상세 변경 내역
+- [2026-02-06 개선 검증 리포트](./docs/VERIFICATION-REPORT-2026-02-06.md) — 독립 검증 및 회귀 분석
+- [코드베이스 분석 리포트](./docs/improvement_analysis.md) — 2026-02-06 시점 초기 분석
+- [nginx-gateway DNS 캐싱 이슈](./docs/ISSUE-nginx-gateway-dns-caching.md) — 미해결 이슈 (home-server 저장소 조치 필요)
