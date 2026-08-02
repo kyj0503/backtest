@@ -252,23 +252,16 @@ class PortfolioManagerService:
         Returns:
             백테스트 결과
         """
-        try:
-            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
-            logger.info(f"포트폴리오 백테스트 시작: 전략={strategy_name}, 종목수={len(request.portfolio)}")
+        strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+        logger.info(f"포트폴리오 백테스트 시작: 전략={strategy_name}, 종목수={len(request.portfolio)}")
 
-            # 전략이 buy_hold_strategy가 아닌 경우 개별 종목별로 전략 백테스트 실행
-            if strategy_name != "buy_hold_strategy":
-                return await self.run_strategy_portfolio_backtest(request)
-            else:
-                return await self.run_buy_and_hold_portfolio_backtest(request)
-                
-        except Exception as e:
-            logger.exception("포트폴리오 백테스트 실행 중 오류 발생")
-            return {
-                'status': 'error',
-                'error': str(e),
-                'code': 'PORTFOLIO_BACKTEST_ERROR'
-            }
+        # 예외를 잡지 않는다: API 레이어의 @handle_portfolio_errors가 HTTP 상태
+        # 코드로 변환해야 하므로, 여기서 catch-all을 다시 넣으면 모든 실패가
+        # 200 응답으로 위장된다.
+        if strategy_name != "buy_hold_strategy":
+            return await self.run_strategy_portfolio_backtest(request)
+        else:
+            return await self.run_buy_and_hold_portfolio_backtest(request)
     
     async def run_strategy_portfolio_backtest(self, request: PortfolioBacktestRequest) -> Dict[str, Any]:
         """
@@ -498,16 +491,14 @@ class PortfolioManagerService:
             
             return recursive_serialize(result)
             
-        except Exception as e:
+        except Exception:
             # --- [Custom Metrics] Record Error ---
             BACKTEST_EXECUTION_TOTAL.labels(strategy_type="strategy_portfolio", status="error").inc()
             # -------------------------------------
+            # 로깅만 하고 재발생시킨다 — 에러 dict로 변환하면 @handle_portfolio_errors가
+            # 무력화되어 실패가 HTTP 200으로 나간다.
             logger.exception("전략 포트폴리오 백테스트 실행 중 오류 발생")
-            return {
-                'status': 'error',
-                'error': str(e),
-                'code': 'STRATEGY_PORTFOLIO_BACKTEST_ERROR'
-            }
+            raise
     
     async def run_buy_and_hold_portfolio_backtest(self, request: PortfolioBacktestRequest) -> Dict[str, Any]:
         """
@@ -914,16 +905,14 @@ class PortfolioManagerService:
 
             return recursive_serialize(result)
             
-        except Exception as e:
+        except Exception:
             # --- [Custom Metrics] Record Error ---
             BACKTEST_EXECUTION_TOTAL.labels(strategy_type="buy_and_hold", status="error").inc()
             # -------------------------------------
+            # 로깅만 하고 재발생시킨다 — 에러 dict로 변환하면 @handle_portfolio_errors가
+            # 무력화되어 실패가 HTTP 200으로 나간다.
             logger.exception("Buy & Hold 포트폴리오 백테스트 실행 중 오류 발생")
-            return {
-                'status': 'error',
-                'error': str(e),
-                'code': 'BUY_HOLD_PORTFOLIO_BACKTEST_ERROR'
-            }
+            raise
 
 
 # 전역 인스턴스 생성

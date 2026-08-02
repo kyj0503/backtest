@@ -217,13 +217,14 @@ class TestBacktestEndpoint:
         
         # When
         response = client.post("/api/v1/backtest", json=payload)
-        
+
         # Then
-        assert response.status_code == 200
-        response_json = response.json()
-        # Unified response format에서 에러는 status="error"로 반환
-        assert response_json["status"] == "error"
-        assert "message" in response_json or "error" in response_json
+        # 유효하지 않은 전략명은 스키마 검증 단계에서 422로 거부된다.
+        # (과거에는 200 + status="error"로 반환됐으나, 실패를 성공 코드로
+        #  감싸던 계약을 제거했다)
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert "invalid_strategy" in str(detail)
     
     # Given: RSI 전략 및 파라미터
     # When: POST /api/v1/backtest 호출
