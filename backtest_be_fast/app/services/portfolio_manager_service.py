@@ -289,10 +289,13 @@ class PortfolioManagerService:
                 total_amount = sum(item.amount for item in request.portfolio)
                 amounts = {item.symbol: item.amount for item in request.portfolio}
             elif all(item.weight is not None for item in request.portfolio):
-                # weight만 입력된 경우, 총 투자금액을 100으로 가정하거나, 프론트에서 별도 입력받을 수도 있음
-                # 여기서는 100 단위로 환산 (실제 투자금액은 프론트에서 amount로 입력 권장)
-                total_amount = 100.0
-                amounts = {item.symbol: total_amount * (item.weight / 100.0) for item in request.portfolio}
+                # weight만 입력된 경우, 100 단위를 기준으로 종목별 금액을 환산한다.
+                # 스키마는 비중 합계 95~105%를 허용하므로(PortfolioBacktestRequest
+                # validator), total_amount는 하드코딩된 100이 아니라 실제 환산된
+                # amounts의 합으로 계산해야 한다. 그렇지 않으면 비중 합계가 100%가
+                # 아닐 때 실제 투자 원금과 분모가 어긋나 수익률이 왜곡된다 (P1-03).
+                amounts = {item.symbol: 100.0 * (item.weight / 100.0) for item in request.portfolio}
+                total_amount = sum(amounts.values())
             else:
                 raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             
@@ -357,7 +360,8 @@ class PortfolioManagerService:
                     end_date=request.end_date,
                     initial_cash=amount,
                     strategy=strategy_value,
-                    strategy_params=request.strategy_params or {}
+                    strategy_params=request.strategy_params or {},
+                    commission=request.commission
                 )
                 
                 try:
