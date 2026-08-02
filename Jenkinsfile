@@ -126,7 +126,8 @@ pipeline {
                             fi
                             sleep 5
                         done
-                        echo "⚠️ Health check timed out, but continuing..."
+                        echo "❌ Health check failed after 10 attempts"
+                        exit 1
                     '''
                 }
             }
