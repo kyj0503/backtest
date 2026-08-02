@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 # Python 3.11 슬림 이미지 사용
-FROM python:3.11-slim
+# base: 의존성까지만 설치한 공통 기반 (test / runtime이 공유)
+FROM python:3.11-slim AS base
 
 # 작업 디렉터리 설정
 WORKDIR /app
@@ -39,6 +40,23 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 COPY requirements-test.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements-test.txt
+
+# 품질 게이트
+#
+# runtime이 base에서 갈라져 나오므로 이 스테이지는 최종 이미지의 의존 경로에
+# 없다. 따라서 `docker build`(타깃 미지정)로는 실행되지 않고, CI가
+# `docker build --target test`로 명시적으로 호출한다.
+# DB가 필요 없는 unit 마커만 돌린다 (tests/integration은 MySQL을 요구).
+FROM base AS test
+
+COPY app ./app
+COPY tests ./tests
+COPY pytest.ini ./
+
+RUN pytest tests/unit -q
+
+# runtime: 실제 배포 이미지 (마지막 스테이지 = 기본 빌드 타깃)
+FROM base AS runtime
 
 # 애플리케이션 코드 복사
 COPY app ./app
