@@ -21,7 +21,12 @@ from app.schemas.requests import BacktestRequest
 from app.services.backtest_service import backtest_service
 from app.repositories.stock_repository import get_stock_repository
 from app.services.dca_calculator import DcaCalculator
-from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
+from app.services.rebalance_helper import (
+    RebalanceHelper,
+    generate_periodic_schedule,
+    get_next_nth_weekday,
+    get_weekday_occurrence,
+)
 from app.services.portfolio_calculator_service import portfolio_calculator
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
@@ -542,20 +547,24 @@ class PortfolioManagerService:
                 dca_frequency = getattr(item, 'dca_frequency', 'monthly_1')
 
                 # DCA 투자 횟수 계산 (Nth Weekday 방식)
+                #
+                # 시뮬레이션이 실제로 매수하는 날짜를 그대로 생성해서 센다.
+                # 과거에는 "월 = 30일" 근사로 추정했는데, 이 값이 총 투자금
+                # (= 수익률의 분모)이 되기 때문에 실제 집행 횟수와 어긋나면
+                # 집행되지 않은 납입금이 손실로 보고됐다. (2024년 전체·월간
+                # 기준 13회로 추정되지만 실제로는 12회 → -7.69%)
                 if investment_type == 'dca':
                     period_info = FREQUENCY_MAP.get(dca_frequency, FREQUENCY_MAP['monthly_1'])
                     period_type, interval = period_info
 
-                    # 근사 계산으로 DCA 횟수 추정
-                    if period_type == 'weekly':
-                        approx_days_per_period = interval * 7
-                    elif period_type == 'monthly':
-                        approx_days_per_period = interval * 30  # 월 평균 30일
-                    else:
-                        approx_days_per_period = 30
-
-                    # 백테스트 기간 동안 몇 번 투자할지 계산
-                    dca_periods = max(1, (backtest_days // approx_days_per_period) + 1)
+                    # 초회 매수 1회 + 이후 정기 매수 예정일 수
+                    periodic_dates = generate_periodic_schedule(
+                        start_date=start_date_obj,
+                        end_date=end_date_obj,
+                        period_type=period_type,
+                        interval=interval,
+                    )
+                    dca_periods = 1 + len(periodic_dates)
                 else:
                     dca_periods = 1
 

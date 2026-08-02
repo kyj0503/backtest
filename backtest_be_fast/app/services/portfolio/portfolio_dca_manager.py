@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Optional, Set, Tuple
 from datetime import datetime, date
 import pandas as pd
 
@@ -20,10 +20,11 @@ class PortfolioDcaManager:
         current_prices: Dict[str, float],
         dca_info: Dict[str, DcaStrategyInfo],
         shares: Dict[str, float],
-        commission: float
+        commission: float,
+        pending_keys: Optional[Set[str]] = None
     ) -> Tuple[int, float]:
         """
-        첫 날 초기 매수를 실행합니다 (일시불 또는 DCA 첫 투자).
+        초기 매수를 실행합니다 (일시불 또는 DCA 첫 투자).
 
         **역할**:
         - 일시불(lump_sum): 전액 한 번에 투자
@@ -31,16 +32,23 @@ class PortfolioDcaManager:
 
         **파라미터**:
         - current_date: 현재 시뮬레이션 날짜
-        - stock_amounts: 종목별 투자 금액
+        - stock_amounts: 종목별 투자 금액 (pending_keys가 주어지면 그 종목만 대상)
         - current_prices: 종목별 USD 변환 가격
         - dca_info: 종목 정보 (DcaStrategyInfo 모델)
         - shares: 종목별 보유 주식 수
         - commission: 거래 수수료 (0.002 = 0.2%)
+        - pending_keys: 아직 초기 매수가 이뤄지지 않은 종목 집합.
+          매수에 성공한 종목은 이 집합에서 제거된다. 첫날 가격이 없는 종목
+          (예: 한쪽 시장 휴장일에 시작)은 집합에 남아 다음 거래일에 재시도된다.
 
         **반환**:
         - trades_executed: 실행된 거래 수
         - daily_cash_inflow: 당일 현금 유입 (투자 금액)
         """
+        if pending_keys is not None:
+            stock_amounts = {
+                key: amount for key, amount in stock_amounts.items() if key in pending_keys
+            }
         trades_executed = 0
         daily_cash_inflow = 0.0
 
@@ -53,6 +61,8 @@ class PortfolioDcaManager:
             investment_type = info.investment_type
 
             if unique_key not in current_prices:
+                # 이 종목은 아직 가격이 없다 (예: 다른 시장의 휴장일에 시작).
+                # pending_keys에 남겨 두면 호출자가 다음 날 다시 시도한다.
                 continue
 
             price = current_prices[unique_key]
@@ -71,7 +81,13 @@ class PortfolioDcaManager:
                 shares[unique_key] = invest_amount / price
                 trades_executed += 1  # 첫 DCA 매수 거래
                 daily_cash_inflow += monthly_amount  # DCA 첫 투자 유입
+                # 초회 매수도 납입 1회로 계상한다. dca_periods가 "총 납입 횟수"
+                # (초회 포함)이므로, 이렇게 해야 정기 매수가 남은 횟수만 집행한다.
+                info.executed_count = 1
                 logger.info(f"{current_date.date()}: {unique_key} DCA 첫 투자 (금액: ${monthly_amount:,.2f}, interval_weeks: {info.dca_frequency})")
+
+            if pending_keys is not None:
+                pending_keys.discard(unique_key)
 
         return trades_executed, daily_cash_inflow
 

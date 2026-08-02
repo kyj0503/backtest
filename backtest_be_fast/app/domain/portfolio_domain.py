@@ -40,6 +40,10 @@ class PortfolioState(BaseModel):
     prev_portfolio_value: float = Field(default=0.0, description="전일 포트폴리오 총 가치")
     prev_date: Optional[date] = Field(default=None, description="전일 날짜")
     is_first_day: bool = Field(default=True, description="첫 날 여부")
+    pending_initial_keys: Set[str] = Field(
+        default_factory=set,
+        description="아직 초기 매수가 이뤄지지 않은 종목 (첫날 가격이 없으면 다음 거래일에 재시도)"
+    )
     
     available_cash: float = Field(default=0.0, description="가용 현금")
     cash_holdings: Dict[str, float] = Field(default_factory=dict, description="종목별 현금 보유량 (초기 할당분)")

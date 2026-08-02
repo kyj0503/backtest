@@ -73,7 +73,8 @@ class PortfolioSimulationEngine:
             shares={key: 0.0 for key in stock_amounts.keys()},
             available_cash=cash_amount,
             cash_holdings={k: v for k, v in amounts.items() if dca_info[k].asset_type == 'cash'},
-            delisted_stocks=set()
+            delisted_stocks=set(),
+            pending_initial_keys=set(stock_amounts.keys())
         )
 
     def detect_and_update_delisting(
@@ -350,18 +351,26 @@ class PortfolioSimulationEngine:
                     f"[{', '.join(delisted_symbols)}]"
                 )
 
-            # 2.4 DCA 실행 (첫날 매수 또는 정기 매수)
-            if state.is_first_day:
+            # 2.4 DCA 실행 (초기 매수 또는 정기 매수)
+            #
+            # 초기 매수는 "첫날 한 번"이 아니라 "각 종목이 처음 가격을 갖는 날"에
+            # 이뤄져야 한다. 혼합 시장 포트폴리오에서는 시작일에 한쪽 시장이
+            # 휴장이라 가격이 없을 수 있는데, 과거에는 그 종목을 건너뛴 뒤 다시
+            # 시도하지 않아 포지션이 영영 열리지 않고 투자금만 분모에 남았다.
+            if state.pending_initial_keys:
                 trades, cash_inflow = self.dca_manager.execute_initial_purchases(
                     current_date=current_date,
                     stock_amounts=stock_amounts,
                     current_prices=current_prices,
                     dca_info=dca_info,
                     shares=state.shares,
-                    commission=commission
+                    commission=commission,
+                    pending_keys=state.pending_initial_keys
                 )
                 state.total_trades += trades
                 daily_cash_inflow += cash_inflow
+
+            if state.is_first_day:
                 state.is_first_day = False
                 state.prev_date = current_date
 
