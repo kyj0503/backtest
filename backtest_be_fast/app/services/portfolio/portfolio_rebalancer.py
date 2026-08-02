@@ -156,7 +156,19 @@ class PortfolioRebalancer:
         for unique_key in cash_holdings.keys():
             weights_before[dca_info[unique_key].symbol] = cash_holdings[unique_key] / total_portfolio_value
 
-        # 목표 비중대로 재조정 (조정된 비중 사용)
+        # 상장폐지 종목은 거래 없이 보유만 유지되므로, 재분배 대상 풀(pool)에서
+        # 그 가치를 제외해야 한다. 그렇지 않으면 total_portfolio_value(상장폐지
+        # 종목의 가치를 포함한 값)를 거래 가능 종목에게 그대로 재분배 비율로
+        # 곱하면서, 상장폐지 종목이 그대로 보유 유지하는 가치가 한 번 더
+        # 더해져(이중 계산) 리밸런싱마다 포트폴리오 총 가치가 상장폐지 종목의
+        # 가치만큼 부풀려진다 (가격 정보가 없으면 0으로 처리, 기존 로직과 동일).
+        delisted_value = sum(
+            shares.get(unique_key, 0) * current_prices.get(unique_key, 0)
+            for unique_key in delisted_stocks
+        )
+        allocatable_pool_value = max(0.0, total_portfolio_value - delisted_value)
+
+        # 목표 비중대로 재조정 (조정된 비중 사용, 상장폐지 가치를 제외한 풀 기준)
         new_shares = {}
         new_cash_holdings = {}
         total_commission_cost = 0
@@ -164,7 +176,7 @@ class PortfolioRebalancer:
         rebalance_trades = []  # 이번 리밸런싱의 거래 내역
 
         for unique_key, target_weight in adjusted_target_weights.items():
-            target_value = total_portfolio_value * target_weight
+            target_value = allocatable_pool_value * target_weight
 
             # 현금 처리
             if dca_info[unique_key].asset_type == 'cash':
