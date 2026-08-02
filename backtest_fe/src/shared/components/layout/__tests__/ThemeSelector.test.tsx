@@ -137,7 +137,13 @@ describe('ThemeSelector', () => {
 
   it('toggles dark mode when the toggle button is clicked', async () => {
     const user = userEvent.setup()
-    render(<ThemeSelector />)
+
+    // 다크 모드 토글은 opt-in이라 기본값에서는 렌더링되지 않는다
+    const { unmount } = render(<ThemeSelector />)
+    expect(screen.queryByRole('button', { name: /라이트|다크/ })).not.toBeInTheDocument()
+    unmount()
+
+    render(<ThemeSelector showDarkModeToggle />)
 
     await user.click(screen.getByRole('button', { name: /라이트/ }))
 

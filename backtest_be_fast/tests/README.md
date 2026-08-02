@@ -119,13 +119,16 @@ pytest -m "not integration"  # DB 없이 실행 가능한 테스트만
 
 ## 테스트 현황
 
-총 **68개 단위 테스트** (통합/E2E 제외)
+총 **141개 단위 테스트** (통합/E2E 제외), 전부 통과.
 
-| 카테고리 | 테스트 수 | 상태 |
+| 카테고리 | 테스트 수 | 구성 |
 |---------|----------|------|
-| 전략 테스트 | 45+ | 통과 |
-| 서비스 테스트 | 15+ | 통과 |
-| 스키마 테스트 | 8+ | 통과 |
+| 서비스 테스트 | 80 | currency_converter 19, portfolio_manager_helpers 16, data_repository 14, chart_data_service 12, backtest_engine 10, strategy_service 9 |
+| 날짜 계산 테스트 | 23 | nth_weekday 14, nth_weekday_edge_cases 9 |
+| 스키마 테스트 | 20 | portfolio_schemas 12, request_models 8 |
+| 전략 테스트 | 18 | rsi 6, bollinger 4, sma·macd·ema·buy_hold 각 2 |
+
+CI의 `Quality Gate` 스테이지가 `docker build --target test ./backtest_be_fast`로 이 141건을 강제하므로, 실패는 회귀입니다.
 
 ## 테스트 특징
 

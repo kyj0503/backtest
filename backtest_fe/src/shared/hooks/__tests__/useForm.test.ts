@@ -6,7 +6,9 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useForm } from '../useForm'
 
-interface TestFormData {
+// `useForm<T>` requires `T extends Record<string, unknown>`.
+// A type alias of an object literal gets an implicit index signature; an interface does not.
+type TestFormData = {
   name: string
   email: string
   age: number
@@ -151,7 +153,7 @@ describe('useForm', () => {
   })
 
   it('should create checkbox handlers', () => {
-    interface CheckboxForm {
+    type CheckboxForm = {
       isChecked: boolean
     }
 

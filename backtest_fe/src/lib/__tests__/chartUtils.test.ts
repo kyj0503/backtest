@@ -25,8 +25,8 @@ const formatChartDate = (dateString: string, format: 'short' | 'long' = 'short')
     // 짧은 형식: MM/DD
     return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`
   } else {
-    // 긴 형식: YYYY-MM-DD
-    return date.toISOString().split('T')[0]
+    // 긴 형식: YYYY-MM-DD (ISO 문자열의 앞 10자)
+    return date.toISOString().slice(0, 10)
   }
 }
 

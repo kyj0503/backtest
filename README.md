@@ -17,11 +17,11 @@
 
 | 구분 | 기술 |
 |:-----|:-----|
-| **Backend** | Python 3.11, FastAPI, SQLAlchemy, pandas, numpy, backtesting.py |
-| **Frontend** | TypeScript, React, Vite, Zustand, Recharts, shadcn/ui, Tailwind CSS |
+| **Backend** | Python 3.11, FastAPI, SQLAlchemy, pandas, numpy, backtesting.py 0.3.3 |
+| **Frontend** | TypeScript 5, React 19, Vite 7, Zustand, Recharts 3, React Router 7, shadcn/ui, Tailwind CSS 4 |
 | **Database** | MySQL 8.0 |
 | **Infra** | Docker, Docker Compose, Nginx, Jenkins |
-| **Test** | Pytest (BE), Vitest, React Testing Library, Playwright (FE) |
+| **Test** | Pytest (BE), Vitest 4, React Testing Library, Playwright (FE) |
 
 ---
 
@@ -35,9 +35,9 @@ backtest/
 │   ├── Dockerfile          # 프로덕션 Docker 이미지
 │   └── requirements.txt    # Python 의존성
 ├── backtest_fe/            # Frontend (React + Vite)
-│   ├── src/                # 소스 코드
-│   ├── __tests__/          # 테스트 코드
-│   └── Dockerfile          # 프로덕션 Docker 이미지
+│   ├── src/                # 소스 코드 (테스트는 각 모듈 옆 __tests__/에 위치)
+│   ├── e2e/                # Playwright E2E
+│   └── Dockerfile          # 프로덕션 Docker 이미지 (test 스테이지 포함)
 ├── database/               # DB 스키마 및 초기화 스크립트
 ├── compose.dev.yaml        # 개발용 Docker Compose
 ├── Jenkinsfile             # CI/CD 파이프라인
@@ -180,7 +180,21 @@ docker compose -f compose.dev.yaml exec backtest-fe npm test
 
 # UI 모드
 docker compose -f compose.dev.yaml exec backtest-fe npm run test:ui
+
+# 린트 및 타입 체크
+docker compose -f compose.dev.yaml exec backtest-fe npm run lint
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # 프로덕션 코드
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # 테스트 코드
 ```
+
+### CI 게이트를 그대로 재현
+
+```bash
+docker build --target test ./backtest_fe        # lint → type-check ×2 → vitest
+docker build --target test ./backtest_be_fast   # pytest tests/unit
+```
+
+현재 기준선은 BE 141건, FE 113건이며 모두 통과합니다. 실패가 보이면 회귀입니다.
 
 ---
 
@@ -204,9 +218,14 @@ docker push ghcr.io/kyj0503/backtest-fe:latest
 ### 자동 Push (Jenkins)
 
 `main` 브랜치에 Push하면 Jenkins가 자동으로:
-1. Backend/Frontend 이미지 빌드
-2. GHCR에 Push (`latest` + 빌드 번호 태그)
-3. home-server 배포 트리거
+1. **Quality Gate** — FE/BE 각 Dockerfile의 `test` 스테이지를 병렬 실행
+   (FE: lint, type-check, type-check:test, vitest / BE: `pytest tests/unit`)
+2. Backend/Frontend 이미지 빌드
+3. GHCR에 Push (`latest` + 빌드 번호 태그)
+4. home-server 배포 트리거
+5. 헬스 체크
+
+Quality Gate가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 다만 이 게이트는 **배포**를 막는 것이며, 파이프라인이 `*/main`을 체크아웃하고 브랜치 보호를 쓰지 않으므로 병합 자체를 막지는 않습니다.
 
 ---
 

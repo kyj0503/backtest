@@ -21,6 +21,29 @@ pipeline {
             }
         }
 
+        stage('Quality Gate') {
+            steps {
+                script {
+                    // 각 Dockerfile의 test 스테이지를 돌린다.
+                    // - FE: lint / type-check / type-check:test / vitest
+                    // - BE: pytest tests/unit (DB 불필요)
+                    // 실패하면 이미지 빌드와 배포에 도달하지 못한다.
+                    //
+                    // test 스테이지는 최종 이미지의 의존 경로에 없으므로 --target으로
+                    // 명시해야 실행된다. deps/base 레이어는 뒤이은 이미지 빌드가
+                    // 그대로 재사용하므로 의존성 설치가 두 번 돌지 않는다.
+                    parallel(
+                        'Frontend': {
+                            sh 'docker build --target test ./backtest_fe'
+                        },
+                        'Backend': {
+                            sh 'docker build --target test ./backtest_be_fast'
+                        }
+                    )
+                }
+            }
+        }
+
         stage('Login GHCR') {
             steps {
                 script {

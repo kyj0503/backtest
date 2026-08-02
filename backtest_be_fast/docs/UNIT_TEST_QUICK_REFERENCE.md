@@ -2,15 +2,23 @@
 
 ## Quick Commands
 
-### Run All New Unit Tests
+### Run All Unit Tests
 ```bash
-cd /home/coontec/source/backtest/backtest_be_fast
-source venv/bin/activate
-pytest tests/unit/test_backtest_engine.py \
-       tests/unit/test_currency_converter.py \
-       tests/unit/test_data_repository.py \
-       tests/unit/test_portfolio_manager_helpers.py \
-       -v --tb=short
+# From the repository root (the project runs in Docker)
+docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit -v
+
+# Same command CI runs as a gate
+docker build --target test ./backtest_be_fast
+```
+
+### Run a Subset
+```bash
+docker compose -f compose.dev.yaml exec backtest-be-fast \
+  pytest tests/unit/test_backtest_engine.py \
+         tests/unit/test_currency_converter.py \
+         tests/unit/test_data_repository.py \
+         tests/unit/test_portfolio_manager_helpers.py \
+         -v --tb=short
 ```
 
 ### Run Individual Test Files
@@ -67,12 +75,24 @@ pytest-watch tests/unit
 
 | File | Tests | Coverage |
 |------|-------|----------|
+| `test_currency_converter.py` | 19 | CurrencyConverter: get_conversion_multiplier, convert_dataframe_to_usd, load_and_prepare_exchange_rates |
+| `test_portfolio_manager_helpers.py` | 16 | PortfolioManagerService: _calculate_weighted_stats, _calculate_daily_return_stats, _format_individual_results_list |
+| `test_nth_weekday.py` | 14 | Nth-weekday date resolution (rebalancing / DCA scheduling) |
+| `test_data_repository.py` | 14 | YfinanceDataRepository: get_stock_data (3-tier cache), invalidate_cache, TTLCache behavior |
+| `test_portfolio_schemas.py` | 12 | Portfolio request schema validation |
+| `test_chart_data_service.py` | 12 | Chart data assembly |
 | `test_backtest_engine.py` | 10 | BacktestEngine: run_backtest, _build_strategy, _convert_result_to_response, _create_fallback_result |
-| `test_currency_converter.py` | 18 | CurrencyConverter: get_conversion_multiplier, convert_dataframe_to_usd, load_and_prepare_exchange_rates |
-| `test_data_repository.py` | 17 | YfinanceDataRepository: get_stock_data (3-tier cache), invalidate_cache, TTLCache behavior |
-| `test_portfolio_manager_helpers.py` | 14 | PortfolioManagerService: _calculate_weighted_stats, _calculate_daily_return_stats, _format_individual_results_list |
+| `test_strategy_service.py` | 9 | Strategy resolution and parameter validation |
+| `test_nth_weekday_edge_cases.py` | 9 | Nth-weekday boundary cases |
+| `test_request_models.py` | 8 | Backtest request model validation |
+| `test_rsi_strategy.py` | 6 | RSI strategy requirements |
+| `test_bollinger_strategy.py` | 4 | Bollinger Bands strategy requirements |
+| `test_sma_strategy.py` | 2 | SMA strategy requirements |
+| `test_macd_strategy.py` | 2 | MACD strategy requirements |
+| `test_ema_strategy.py` | 2 | EMA strategy requirements |
+| `test_buy_hold_strategy.py` | 2 | Buy & Hold strategy requirements |
 
-**Total: 59 tests**
+**Total: 141 tests** (all passing; a failure is a regression, not pre-existing noise)
 
 ---
 
@@ -87,7 +107,7 @@ pytest-watch tests/unit
 ### test_currency_converter.py
 - `TestGetConversionMultiplier` (8 tests) - Currency-specific multipliers
 - `TestConvertDataframeToUsd` (4 tests) - Vectorized conversion
-- `TestLoadAndPrepareExchangeRates` (4 tests) - Exchange rate loading
+- `TestLoadAndPrepareExchangeRates` (5 tests) - Exchange rate loading
 - `TestCurrencyConverterEdgeCases` (2 tests) - Edge cases
 
 ### test_data_repository.py
@@ -100,7 +120,7 @@ pytest-watch tests/unit
 ### test_portfolio_manager_helpers.py
 - `TestCalculateWeightedStats` (4 tests) - Weighted statistics
 - `TestCalculateDailyReturnStats` (5 tests) - Volatility, profit factor
-- `TestFormatIndividualResultsList` (5 tests) - Result formatting
+- `TestFormatIndividualResultsList` (7 tests) - Result formatting
 
 ---
 
@@ -149,7 +169,7 @@ def test_float_comparison(self):
 
 ### Successful Run
 ```
-======================== 59 passed, 2 warnings in 0.39s ========================
+======================= 141 passed, 8 warnings in 0.46s ========================
 ```
 
 ### Failed Test Example
@@ -185,34 +205,45 @@ pytest tests/unit/test_backtest_engine.py -s
 
 ## CI/CD Integration
 
-### GitHub Actions Example
-```yaml
-- name: Run unit tests
-  run: |
-    source venv/bin/activate
-    pytest tests/unit -v --tb=short
+이 저장소의 실제 구성입니다 (예시가 아님).
+
+`Dockerfile`에 `test` 스테이지가 있고, `Jenkinsfile`의 `Quality Gate` 스테이지가 이를 호출합니다.
+
+```dockerfile
+# backtest_be_fast/Dockerfile
+FROM base AS test
+COPY app ./app
+COPY tests ./tests
+COPY pytest.ini ./
+RUN pytest tests/unit -q
 ```
 
-### Jenkins Pipeline Example
 ```groovy
-stage('Unit Tests') {
+// Jenkinsfile
+stage('Quality Gate') {
     steps {
-        sh '''
-            source venv/bin/activate
-            pytest tests/unit -v --tb=short --junitxml=test-results.xml
-        '''
+        script {
+            parallel(
+                'Frontend': { sh 'docker build --target test ./backtest_fe' },
+                'Backend':  { sh 'docker build --target test ./backtest_be_fast' }
+            )
+        }
     }
 }
 ```
+
+`test` 스테이지는 최종 이미지의 의존 경로 밖에 있으므로 `docker build`(타깃 미지정)로는 실행되지 않고, 배포 이미지에도 `tests/`가 포함되지 않습니다. DB가 필요한 `tests/integration`은 게이트에 포함하지 않습니다.
+
+게이트가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 다만 파이프라인이 `*/main`을 체크아웃하므로 이는 **배포 게이트**이지 병합 게이트가 아닙니다.
 
 ---
 
 ## Troubleshooting
 
 ### Issue: Tests fail with "ModuleNotFoundError"
-**Solution:** Activate virtual environment
+**Solution:** 컨테이너 안에서 실행하십시오. 이 프로젝트는 Docker로 돌아가며, 의존성은 컨테이너의 `/opt/venv`에 설치되어 있습니다.
 ```bash
-source venv/bin/activate
+docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit -v
 ```
 
 ### Issue: Tests fail with "asyncio.exceptions.TimeoutError"

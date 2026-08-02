@@ -93,6 +93,16 @@ docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit
 # Frontend tests
 docker compose -f compose.dev.yaml exec backtest-fe npm test
 
+# Frontend quality checks (all four run in CI)
+docker compose -f compose.dev.yaml exec backtest-fe npm run lint
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # prod code
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # test code
+docker compose -f compose.dev.yaml exec backtest-fe npm run test:run
+
+# Reproduce the CI gate exactly
+docker build --target test ./backtest_fe
+docker build --target test ./backtest_be_fast
+
 # API docs: http://localhost:8000/api/v1/docs
 # Frontend: http://localhost:5173
 ```
@@ -111,6 +121,14 @@ docker compose -f compose.dev.yaml exec backtest-fe npm test
 - **Frontend:** Vitest + RTL for components, Playwright for E2E
 - **Mocking:** External APIs (yfinance) in unit tests, real calls in `@pytest.mark.external`
 - **Strategy values:** Use `buy_hold_strategy`, NOT `buy_and_hold` in test fixtures
+- **Baseline:** BE 141 unit tests, FE 113 tests — all green. A failure is a regression.
+- **Test files are type-checked** via `tsconfig.test.json` (`npm run type-check:test`); `tsconfig.build.json` excludes them.
+- **Never set `isolate: false`** in `vitest.config.ts` — shared happy-dom + vitest's duration-based file reordering makes the suite flaky.
+
+## Frontend Stack Constraints
+- **React 19 / Vite 7 / Recharts 3 / React Router 7 / Tailwind CSS 4.**
+- **Tailwind 4 is CSS-first:** no `tailwind.config.js`; config lives in `src/index.css`. Do NOT move theme color literals into `@theme` — `useTheme` injects them at runtime via `root.style.setProperty()`. Use `.app-container`, not `.container`.
+- **`VITE_API_BASE_URL` must be empty** — the service layer already passes full `/api/v1/...` paths.
 
 ## Documentation
 Detailed architecture docs in each service's `docs/` directory:

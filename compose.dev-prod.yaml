@@ -48,7 +48,10 @@ services:
     env_file:
       - .env
     environment:
-      - "VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}"
+      # 비워 두어야 한다. 서비스 레이어가 전체 경로(/api/v1/...)를 넘기므로
+      # /api를 넣으면 /api/api/v1/backtest가 되어 프록시에 매칭되지 않는다.
+      # ':-'가 아닌 '-'를 써서 빈 값이 그대로 유지되도록 한다.
+      - "VITE_API_BASE_URL=${VITE_API_BASE_URL-}"
       - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest-be-fast:8000}"
       - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest-be-fast:8000}"
     command: ["npm", "run", "dev"]

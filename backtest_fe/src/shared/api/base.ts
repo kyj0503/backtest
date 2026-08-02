@@ -6,11 +6,3 @@ export const getApiBaseUrl = (): string => {
   // 빈 문자열 반환: backtestService.ts에서 전체 경로(/api/v1/...)를 사용
   return '';
 };
-
-export const buildApiUrl = (path: string): string => {
-  const base = getApiBaseUrl();
-  if (!path.startsWith('/')) {
-    return `${base}/${path}`;
-  }
-  return `${base}${path}`;
-};

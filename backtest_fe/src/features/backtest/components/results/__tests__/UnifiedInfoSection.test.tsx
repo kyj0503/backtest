@@ -14,6 +14,8 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import UnifiedInfoSection from '../UnifiedInfoSection';
+import type { NewsItem } from '../../../model/types/backtest-result-types';
+import type { VolatilityEvent } from '../../../model/types/volatility-news-types';
 
 describe('UnifiedInfoSection', () => {
   const mockVolatilityEvents = {
@@ -22,10 +24,11 @@ describe('UnifiedInfoSection', () => {
         date: '2023-01-05',
         daily_return: 7.5,
         close_price: 150.25,
+        volume: 98_000_000,
         event_type: '급등',
       },
     ],
-  };
+  } satisfies Record<string, VolatilityEvent[]>;
 
   const mockLatestNews = {
     AAPL: [
@@ -36,7 +39,7 @@ describe('UnifiedInfoSection', () => {
         pubDate: '2023-01-12',
       },
     ],
-  };
+  } satisfies Record<string, NewsItem[]>;
 
   describe('정상 렌더링', () => {
     it('급등락 이벤트와 뉴스가 있을 때 컴포넌트를 렌더링한다', () => {
@@ -73,6 +76,7 @@ describe('UnifiedInfoSection', () => {
           date: '2023-01-08',
           daily_return: 5.8,
           close_price: 105.30,
+          volume: 21_000_000,
           event_type: '급등',
         }],
       };
