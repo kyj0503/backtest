@@ -7,7 +7,6 @@ from fastapi import APIRouter, status
 from fastapi.responses import JSONResponse
 import logging
 import asyncio
-import os
 from datetime import datetime
 
 from ....schemas.schemas import PortfolioBacktestRequest
@@ -15,6 +14,7 @@ from ....services.portfolio_manager_service import portfolio_manager_service
 from ....repositories.stock_repository import get_stock_repository
 from ....services.unified_data_service import unified_data_service
 from ....services.news_service import news_service
+from ....core.config import settings
 from ....core.exceptions import ValidationError
 from ..decorators import handle_portfolio_errors
 
@@ -27,29 +27,18 @@ router = APIRouter()
 unified_data_service.news_service = news_service
 
 # --- [P2-04] 포트폴리오 백테스트 최소 기간 ---
-# app/schemas/schemas.py가 아니라 여기서 강제하는 이유: PortfolioBacktestRequest를
-# 직접 생성해 DCA/리밸런싱/시뮬레이션 엔진만 단위테스트하는 기존 테스트들
-# (예: tests/unit/test_dca_schedule_alignment.py, test_portfolio_manager_batch4_fixes.py,
-# test_portfolio_calculator_equity_curve.py, test_simulation_engine_async_offload.py)이
-# 3~14일짜리 짧은 기간을 사용한다. 스키마 레벨에 30일 하한을 넣으면 그 테스트들이
-# 전부 깨진다. 실제 HTTP 요청만 거치는 엔드포인트 레벨에 두면 그 테스트들에는
-# 영향을 주지 않으면서 실제 사용자 요청은 여전히 막을 수 있다.
-MIN_BACKTEST_PERIOD_DAYS = 30
+# 스키마가 아니라 엔드포인트에서 강제한다. 스키마는 "요청 데이터의 형태"를,
+# 엔드포인트는 "HTTP 요청으로 받아들일 정책"을 책임진다 — 시뮬레이션 엔진을
+# 직접 호출하는 내부 사용(단위 테스트 포함)에는 이 하한이 적용되지 않는 것이
+# 의도된 동작이다.
+MIN_BACKTEST_PERIOD_DAYS = settings.min_backtest_period_days
 
 # --- [P2-16] 동시 실행 제한 & 타임아웃 ---
-# 포트폴리오 크기는 settings.max_portfolio_items로 제한되지만 "동시 요청 수 x
-# 기간 x 종목 수"로 늘어나는 총 작업량에는 상한이 없다. 다른 배치가 CPU 무거운
-# 시뮬레이션을 asyncio.to_thread로 워커 스레드에 위임했으므로(portfolio_
-# simulation_engine.py::execute_simulation) 이벤트 루프 블로킹은 이미 해소됐고,
-# 남은 위험은 "프로세스 공유 스레드풀(기본 min(32, cpu+4)개) 고갈"이다 -- 동시
-# 요청이 많으면 스레드풀 슬롯을 오래 점유해 다른 요청(및 다른 엔드포인트)까지
-# 밀릴 수 있다.
-#
-# app/core/config.py(Settings)는 이번 배치의 수정 대상 파일 목록에 없어 손댈 수
-# 없었다. 대신 os.getenv()로 오버라이드 가능한 모듈 상수로 구성했다 -- 여전히
-# "configurable"하다는 요구를 만족하면서 파일 범위를 지킨다.
-MAX_CONCURRENT_BACKTESTS = int(os.getenv("MAX_CONCURRENT_BACKTESTS", "8"))
-BACKTEST_TIMEOUT_SECONDS = float(os.getenv("BACKTEST_TIMEOUT_SECONDS", "60"))
+# 시뮬레이션은 asyncio.to_thread로 워커 스레드에 위임되므로 이벤트 루프는 막지
+# 않지만, 동시 요청이 많으면 프로세스 공유 스레드풀 슬롯을 오래 점유해 다른
+# 요청까지 밀린다. 값은 Settings에서 읽는다 (환경변수로 오버라이드 가능).
+MAX_CONCURRENT_BACKTESTS = settings.max_concurrent_backtests
+BACKTEST_TIMEOUT_SECONDS = settings.backtest_timeout_seconds
 # 세마포어는 모듈 임포트 시점의 MAX_CONCURRENT_BACKTESTS 값으로 크기가 고정된다
 # (asyncio.Semaphore는 동적으로 리사이즈할 수 없음). 테스트는 이 객체 자체를
 # monkeypatch로 교체해 작은 값으로 검증한다.

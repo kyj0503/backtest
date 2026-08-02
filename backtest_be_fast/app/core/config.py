@@ -79,6 +79,15 @@ class Settings(BaseSettings):
     
     # 포트폴리오 설정
     max_portfolio_items: int = 20  # 포트폴리오 최대 종목 수
+
+    # 백테스트 요청 한도 (P2-16)
+    # 포트폴리오 크기는 max_portfolio_items로 제한되지만 "동시 요청 수 x 기간 x
+    # 종목 수"로 늘어나는 총 작업량에는 상한이 없다. 시뮬레이션은 워커 스레드로
+    # 위임돼 이벤트 루프를 막지는 않으나, 동시 요청이 많으면 공유 스레드풀을
+    # 점유해 다른 요청까지 밀린다.
+    min_backtest_period_days: int = 30  # 이보다 짧으면 연환산 지표가 무의미하다
+    max_concurrent_backtests: int = 8
+    backtest_timeout_seconds: float = 60.0
     max_symbol_length: int = 10  # 심볼 최대 길이
     default_dca_periods: int = 12  # DCA 기본 기간 (개월)
     max_dca_periods: int = 60  # DCA 최대 기간 (개월)

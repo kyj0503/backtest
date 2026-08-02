@@ -36,3 +36,8 @@ ENV/
 
 # Logs
 *.log 
+# 커버리지 산출물 (커밋 대상 아님)
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
