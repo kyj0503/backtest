@@ -7,7 +7,6 @@ from typing import Union
 from datetime import date
 import pandas as pd
 import logging
-import asyncio
 
 from app.repositories.data_repository import data_repository
 from app.repositories.stock_repository import get_stock_repository
@@ -53,19 +52,6 @@ class DataService:
         except Exception as e:
             logger.error(f"데이터 조회 실패: {ticker}, {e}")
             raise DataNotFoundError(ticker, str(start_date), str(end_date))
-
-    async def get_ticker_data(
-        self,
-        ticker: str,
-        start_date: Union[date, str],
-        end_date: Union[date, str],
-        use_db_first: bool = True
-    ) -> pd.DataFrame:
-        """주식 데이터 조회 (비동기)"""
-        return await asyncio.to_thread(
-            self._get_ticker_data_internal,
-            ticker, start_date, end_date, use_db_first
-        )
 
     def get_ticker_data_sync(
         self,
