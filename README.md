@@ -20,7 +20,7 @@
 | **Backend** | Python 3.11, FastAPI, SQLAlchemy, pandas, numpy, backtesting.py 0.3.3 |
 | **Frontend** | TypeScript 5, React 19, Vite 7, React hooks (`useState`/`useReducer`) + localStorage, Recharts 3, React Router 7, shadcn/ui, Tailwind CSS 4 |
 | **Database** | MySQL 8.0 |
-| **Infra** | Docker, Docker Compose, Nginx, Jenkins |
+| **Infra** | Docker, Docker Compose, Nginx, Jenkins (`home-server`에서 중앙 관리) |
 | **Test** | Pytest (BE), Vitest 4, React Testing Library, Playwright (FE) |
 
 ---
@@ -40,7 +40,6 @@ backtest/
 │   └── Dockerfile          # 프로덕션 Docker 이미지 (test 스테이지 포함)
 ├── database/               # DB 스키마 및 초기화 스크립트
 ├── compose.dev.yaml        # 개발용 Docker Compose
-├── Jenkinsfile             # CI/CD 파이프라인
 └── README.md
 ```
 
@@ -215,17 +214,20 @@ docker build --platform linux/amd64 -t ghcr.io/kyj0503/backtest-fe:latest ./back
 docker push ghcr.io/kyj0503/backtest-fe:latest
 ```
 
-### 자동 Push (Jenkins)
+### 중앙 CI/CD (Jenkins)
 
-`main` 브랜치에 Push하면 Jenkins가 자동으로:
-1. **Quality Gate** — FE/BE 각 Dockerfile의 `test` 스테이지를 병렬 실행
-   (FE: lint, type-check, type-check:test, vitest / BE: `pytest tests/unit`)
-2. Backend/Frontend 이미지 빌드
-3. GHCR에 Push (`latest` + 빌드 번호 태그)
-4. home-server 배포 트리거
-5. 헬스 체크
+Backend와 Frontend 파이프라인은 각각 아래 경로에서 관리합니다.
 
-Quality Gate가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 다만 이 게이트는 **배포**를 막는 것이며, 파이프라인이 `*/main`을 체크아웃하고 브랜치 보호를 쓰지 않으므로 병합 자체를 막지는 않습니다.
+- `home-server/cicd/jenkins/pipeline/backtest-be/`
+- `home-server/cicd/jenkins/pipeline/backtest-fe/`
+
+Jenkins의 `backtest-be`, `backtest-fe` Job을 수동 실행하고 `APP_ENV`를 선택합니다.
+각 Job은 해당 Dockerfile의 `test` 스테이지와 의존성 감사를 통과한 뒤 이미지를 빌드합니다.
+
+- `dev`: `dev` 브랜치를 빌드해 `:dev` 이미지로 Push
+- `prod`: `main` 브랜치를 빌드해 `:latest` 이미지로 Push한 뒤 배포 및 헬스 체크
+
+Quality Gate가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 이 게이트는 **배포**를 막는 것이며 병합 자체를 막지는 않습니다.
 
 ---
 
