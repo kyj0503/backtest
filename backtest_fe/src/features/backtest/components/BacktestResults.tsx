@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { toast } from 'sonner';
 import ChartsSection from './results/ChartsSection';
 import WarningBanner from './results/WarningBanner';
 import { BacktestResultsProps } from '../model/types/backtest-result-types';
@@ -24,7 +25,7 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Report download failed:', error);
-      alert('리포트 다운로드에 실패했습니다. 콘솔을 확인하세요.');
+      toast.error('리포트 다운로드에 실패했습니다. 콘솔을 확인하세요.');
     }
   };
 
@@ -42,15 +43,15 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('CSV download failed:', error);
-      alert('CSV 다운로드에 실패했습니다. 콘솔을 확인하세요.');
+      toast.error('CSV 다운로드에 실패했습니다. 콘솔을 확인하세요.');
     }
   };
 
   if (!data) {
     return (
-      <div className="mx-auto w-full lg:max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-sm p-8 sm:p-16 text-center shadow-lg">
-        <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-yellow-100 shadow-md">
-          <AlertCircle className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-600" />
+      <div className="mx-auto w-full lg:max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-xs p-8 sm:p-16 text-center shadow-lg">
+        <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-yellow-100 dark:bg-yellow-900/30 shadow-md">
+          <AlertCircle className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-600 dark:text-yellow-500" />
         </div>
         <h3 className={`${HEADING_STYLES.h1} mb-3 text-xl sm:text-2xl`}>데이터가 없습니다</h3>
         <p className={`${TEXT_STYLES.body} text-sm sm:text-base`}>백테스트를 실행해 주세요.</p>
@@ -60,9 +61,9 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
 
   if (isPortfolio && (!('portfolio_composition' in data) || !data.portfolio_composition)) {
     return (
-      <div className="mx-auto w-full lg:max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-sm p-8 sm:p-16 text-center shadow-lg">
-        <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-yellow-100 shadow-md">
-          <AlertCircle className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-600" />
+      <div className="mx-auto w-full lg:max-w-[1600px] rounded-3xl border-2 border-border/50 bg-card/50 backdrop-blur-xs p-8 sm:p-16 text-center shadow-lg">
+        <div className="mx-auto mb-4 sm:mb-6 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-yellow-100 dark:bg-yellow-900/30 shadow-md">
+          <AlertCircle className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-600 dark:text-yellow-500" />
         </div>
         <h3 className={`${HEADING_STYLES.h1} mb-3 text-xl sm:text-2xl`}>포트폴리오 데이터가 없습니다</h3>
         <p className={`${TEXT_STYLES.body} text-sm sm:text-base`}>유효한 포트폴리오를 구성해 주세요.</p>

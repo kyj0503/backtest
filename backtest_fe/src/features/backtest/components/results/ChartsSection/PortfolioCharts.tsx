@@ -20,15 +20,15 @@ import { Loader2 } from 'lucide-react';
 import { LazyStockPriceChart } from '../../lazy/LazyChartComponents';
 import { ChartLoading } from '@/shared/components';
 import { ResultBlock } from '../../shared';
-import { EquityPoint, PortfolioData } from '../../../model/types';
+import { EquityPoint, PortfolioData, StockDataItem, TickerInfo, TradeLog } from '../../../model/types';
 import { formatCurrency, formatDateShort } from '../../../utils';
 
 interface PortfolioChartsProps {
   portfolioData: PortfolioData;
   portfolioEquityData: EquityPoint[];
-  stocksData: Array<{ symbol: string; data: any[] }>;
-  tickerInfo: Record<string, any>;
-  tradeLogs: Record<string, any[]>;
+  stocksData: StockDataItem[];
+  tickerInfo: Record<string, TickerInfo>;
+  tradeLogs: Record<string, TradeLog[]>;
   loadingStockData?: boolean;
   aggregationType?: 'daily' | 'weekly' | 'monthly';
 }
@@ -72,14 +72,14 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
     // 차트에 없는 리밸런싱 날짜만 추가
     const rebalanceDatesToAdd = rebalance_history
       .filter(event => !existingDates.has(event.date))
-      .map(event => ({
+      .map((event): EquityPoint => ({
         date: event.date,
         // null 값으로 설정: Recharts의 connectNulls={true} 속성으로 인해
         // null 포인트를 건너뛰며 선이 연결됨 (ReferenceLine만 표시됨)
-        value: null as unknown as number,
-        return_pct: null as unknown as number,
-        drawdown_pct: null as unknown as number,
-      } as EquityPoint));
+        value: null,
+        return_pct: null,
+        drawdown_pct: null,
+      }));
 
     // 병합 후 날짜순 정렬
     return [...portfolioEquityData, ...rebalanceDatesToAdd].sort(
@@ -117,11 +117,11 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
             <XAxis dataKey="date" tickFormatter={formatDateShort} />
             <YAxis tickFormatter={(value: number) => formatCurrency(value)} />
             <Tooltip
-              formatter={(value: number) => [
-                formatCurrency(value),
+              formatter={(value: unknown) => [
+                formatCurrency(Number(value)),
                 isMultipleStocks ? '포트폴리오 가치' : '자산 가치',
               ]}
-              labelFormatter={(label: string) => `날짜: ${label}`}
+              labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
             />
             {/* 리밸런싱 마커 - 차트 데이터에 포함된 날짜 기준 */}
             {rebalance_history?.map((event, idx) => (
@@ -162,8 +162,8 @@ export const PortfolioCharts: React.FC<PortfolioChartsProps> = memo(({
               tickFormatter={(value: number) => `${value.toFixed(1)}%`} 
             />
             <Tooltip
-              formatter={(value: number) => [`${value.toFixed(2)}%`, `${periodLabel} 수익률`]}
-              labelFormatter={(label: string) => `날짜: ${label}`}
+              formatter={(value: unknown) => [`${Number(value).toFixed(2)}%`, `${periodLabel} 수익률`]}
+              labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
             />
             <Line 
               type="monotone" 

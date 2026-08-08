@@ -1,4 +1,5 @@
 import { StrategyParamValue } from '../model/types/api-types';
+import { validateBacktestForm } from './useFormValidation';
 
 export interface UseBacktestFormReturn {
   state: BacktestFormState;
@@ -26,14 +27,15 @@ export interface UseBacktestFormReturn {
 }
 import { useReducer, useEffect } from 'react';
 import { STRATEGY_CONFIGS, StrategyParameter } from '../model/strategyConfig';
-import { BacktestFormState, Stock, initialBacktestFormState } from '../model/types/backtest-form-types';
+import { BacktestFormState, Stock, initialBacktestFormState, getDefaultDates } from '../model/types/backtest-form-types';
 import { backtestFormReducer, backtestFormHelpers } from '../model/backtestFormReducer';
 
 
 export const useBacktestForm = (initialState?: Partial<BacktestFormState>): UseBacktestFormReturn => {
   const [state, dispatch] = useReducer(
     backtestFormReducer,
-    { ...initialBacktestFormState, ...initialState }
+    initialState,
+    (override) => ({ ...initialBacktestFormState, dates: getDefaultDates(), ...override })
   );
 
   // 전략 변경 시 기본 파라미터 설정
@@ -117,32 +119,7 @@ export const useBacktestForm = (initialState?: Partial<BacktestFormState>): UseB
 
   const helpers = {
     getTotalAmount: () => backtestFormHelpers.getTotalAmount(state.portfolio),
-    
-    validateForm: () => {
-      const errors: string[] = [];
-      
-      // 포트폴리오 검증
-      const portfolioErrors = backtestFormHelpers.validatePortfolio(state.portfolio);
-      errors.push(...portfolioErrors);
-      
-      // 날짜 검증
-      if (!state.dates.startDate) {
-        errors.push('시작 날짜를 선택해주세요.');
-      }
-      if (!state.dates.endDate) {
-        errors.push('종료 날짜를 선택해주세요.');
-      }
-      if (state.dates.startDate && state.dates.endDate && state.dates.startDate >= state.dates.endDate) {
-        errors.push('시작 날짜는 종료 날짜보다 이전이어야 합니다.');
-      }
-      
-      // 수수료 검증
-      if (state.settings.commission < 0 || state.settings.commission > 5) {
-        errors.push('수수료는 0% ~ 5% 사이여야 합니다.');
-      }
-
-      return errors;
-    }
+    validateForm: () => validateBacktestForm(state),
   };
 
   return {

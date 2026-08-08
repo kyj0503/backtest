@@ -226,13 +226,15 @@ CREATE TABLE daily_prices (
 
 ## 검증 방법
 
-`verify_split.py` 스크립트로 테스트:
+> **참고**: 아래에서 설명하는 `verify_split.py`는 임시 검증 스크립트로, 현재 저장소에는 존재하지 않습니다(2025-11-28 당시 임시로 작성해 사용한 것으로 보이며 커밋되지 않았습니다). 이 섹션은 소급 분할 감지 로직을 수동으로 검증하려면 어떤 시나리오를 확인해야 하는지 참고용으로 남겨 둡니다 — 자동화된 회귀 테스트는 아직 없습니다(`tests/unit/`, `tests/integration/`에 split 관련 테스트 파일 없음).
+
+과거에는 다음과 같은 임시 스크립트로 테스트했습니다:
 
 ```bash
-docker exec backtest-be-fast-dev python /app/verify_split.py
+docker exec backtest-be-fast-dev python /app/verify_split.py  # 스크립트 없음 — 예시일 뿐
 ```
 
-이 스크립트는:
+이 스크립트가 확인하던 것:
 1. 분할 전 가짜 고가 데이터 삽입
 2. 분할일 이후 범위만 요청 (소급 분할 시나리오)
 3. 시스템이 분할을 감지하고 데이터를 재수집하는지 확인
@@ -240,9 +242,8 @@ docker exec backtest-be-fast-dev python /app/verify_split.py
 
 ## 참고 파일
 
-- `app/services/yfinance_db.py`: 메인 로직 (`_fetch_and_save_missing_data`)
+- `app/repositories/yfinance_repository.py`: 메인 로직 (`_fetch_and_save_missing_data`)
 - `app/utils/data_fetcher.py`: 메타데이터 조회 (`get_last_split_date`)
-- `verify_split.py`: 검증 스크립트
 
 ---
 
@@ -441,8 +442,9 @@ from app.utils.data_fetcher import data_fetcher
 
 #### 테스트 2: 분할 메타데이터 보존
 
+당시 임시로 작성해 사용한 `verify_split.py`(현재 저장소에는 없음)로 실행한 기록입니다:
+
 ```bash
-# verify_split.py 실행
 docker exec backtest-be-fast-dev python /app/verify_split.py
 ```
 
@@ -538,7 +540,7 @@ Stock Splits 컬럼 값:
 
 **시스템 활용:**
 ```python
-# yfinance_db.py
+# app/repositories/yfinance_repository.py
 if 'StockSplits' in df_new.columns:
     split_rows = df_new[df_new['StockSplits'] != 0]
     if not split_rows.empty:
@@ -554,7 +556,7 @@ if 'StockSplits' in df_new.columns:
 #### 현재 구현 방식
 
 ```python
-# yfinance_db.py
+# app/repositories/yfinance_repository.py
 if not split_rows.empty:
     # 1. 기존 DB 데이터 삭제
     conn.execute(text("DELETE FROM daily_prices WHERE stock_id = ..."))

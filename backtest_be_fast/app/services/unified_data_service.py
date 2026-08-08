@@ -3,9 +3,11 @@
 주가, 환율, 벤치마크, 뉴스 등 백테스트 관련 데이터를 한 번에 수집합니다.
 병렬 요청으로 응답 시간을 최적화하고, 개별 실패 시에도 나머지 데이터를 반환합니다.
 """
+import asyncio
+import concurrent.futures
 import logging
 import pandas as pd
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from .data_service import data_service
 from app.repositories.stock_repository import get_stock_repository
@@ -16,7 +18,13 @@ logger = logging.getLogger(__name__)
 
 class UnifiedDataService:
     """통합 데이터 수집 서비스"""
-    
+
+    # collect_all_unified_data()의 독립적인 I/O(심볼별 주가, 종목 메타데이터,
+    # 환율, 벤치마크, 뉴스)를 병렬 실행할 때 사용하는 워커 수 상한. 무제한
+    # fan-out은 외부 API(yfinance/Naver) 레이트리밋을 유발할 수 있으므로
+    # 작은 값으로 고정한다 (P2-12). DB 커넥션 풀(pool_size=40+overflow=80)
+    # 대비로도 충분히 작다.
+    _MAX_PARALLEL_WORKERS = 5
 
     def __init__(self, news_service=None):
         """
@@ -61,7 +69,8 @@ class UnifiedDataService:
         self,
         symbols: List[str],
         start_date: str,
-        end_date: str
+        end_date: str,
+        price_histories: Optional[Dict[str, pd.DataFrame]] = None
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         주가 데이터 수집
@@ -70,6 +79,10 @@ class UnifiedDataService:
             symbols: 종목 심볼 리스트
             start_date: 시작 날짜 (YYYY-MM-DD)
             end_date: 종료 날짜 (YYYY-MM-DD)
+            price_histories: 미리 조회된 종목별 주가 히스토리 (선택, P2-12).
+                collect_all_unified_data처럼 collect_volatility_events와 데이터를
+                공유해 심볼당 중복 조회를 피하고 싶을 때 전달한다. None이면
+                이 메서드가 직접 조회한다 (단독 호출 시 기존과 동일하게 동작).
 
         Returns:
             종목별 주가 데이터 딕셔너리
@@ -77,7 +90,10 @@ class UnifiedDataService:
         stock_data = {}
         for symbol in symbols:
             try:
-                df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
+                if price_histories is not None:
+                    df = price_histories.get(symbol)
+                else:
+                    df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
                 if df is not None and not df.empty:
                     stock_data[symbol] = self._transform_stock_data(df)
                 else:
@@ -130,7 +146,8 @@ class UnifiedDataService:
         start_date: str,
         end_date: str,
         threshold: float = None,
-        max_events_per_symbol: int = 10
+        max_events_per_symbol: int = 10,
+        price_histories: Optional[Dict[str, pd.DataFrame]] = None
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
         급등/급락 이벤트 수집
@@ -141,6 +158,10 @@ class UnifiedDataService:
             end_date: 종료 날짜 (YYYY-MM-DD)
             threshold: 급등/급락 기준 (%) - 기본값은 settings.volatility_threshold_pct
             max_events_per_symbol: 종목당 최대 이벤트 수
+            price_histories: 미리 조회된 종목별 주가 히스토리 (선택, P2-12).
+                collect_all_unified_data처럼 collect_stock_data와 데이터를 공유해
+                심볼당 중복 조회를 피하고 싶을 때 전달한다. None이면 이 메서드가
+                직접 조회한다 (단독 호출 시 기존과 동일하게 동작).
 
         Returns:
             종목별 급등/급락 이벤트 딕셔너리
@@ -150,14 +171,17 @@ class UnifiedDataService:
             threshold = settings.volatility_threshold_pct
 
         volatility_events = {}
-        
+
         for symbol in symbols:
             try:
-                df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
+                if price_histories is not None:
+                    df = price_histories.get(symbol)
+                else:
+                    df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
                 if df is not None and not df.empty:
                     events = self._calculate_volatility_events(
-                        df, 
-                        threshold, 
+                        df,
+                        threshold,
                         max_events_per_symbol
                     )
                     volatility_events[symbol] = events
@@ -166,7 +190,7 @@ class UnifiedDataService:
             except Exception as e:
                 logger.warning(f"급등락 이벤트 수집 실패: {symbol} - {str(e)}")
                 volatility_events[symbol] = []
-        
+
         return volatility_events
     
     def collect_benchmark_data(
@@ -273,7 +297,53 @@ class UnifiedDataService:
                 latest_news[symbol] = []
 
         return latest_news
-    
+
+    def _fetch_price_history(
+        self,
+        symbol: str,
+        start_date: str,
+        end_date: str
+    ) -> pd.DataFrame:
+        """단일 종목의 주가 히스토리를 조회합니다 (실패 시 빈 DataFrame, P2-12)."""
+        try:
+            df = data_service.get_ticker_data_sync(symbol, start_date, end_date)
+            return df if df is not None else pd.DataFrame()
+        except Exception as e:
+            logger.warning(f"주가 히스토리 조회 실패: {symbol} - {str(e)}")
+            return pd.DataFrame()
+
+    def _fetch_price_histories(
+        self,
+        symbols: List[str],
+        start_date: str,
+        end_date: str
+    ) -> Dict[str, pd.DataFrame]:
+        """
+        종목별 주가 히스토리를 병렬로, 심볼당 1회만 조회합니다 (P2-12).
+
+        collect_stock_data와 collect_volatility_events가 결과를 공유하도록 해
+        기존에 심볼당 두 번(주가 데이터용, 급등락 이벤트용) 조회하던 중복을
+        제거한다. 조회 자체도 bounded ThreadPoolExecutor로 병렬 실행해 종목
+        수에 비례해 늘어나던 순차 대기 시간을 없앤다. 워커 수는
+        _MAX_PARALLEL_WORKERS로 제한해 외부 API(yfinance) 레이트리밋을 존중한다
+        (무제한 fan-out 금지).
+        """
+        if not symbols:
+            return {}
+
+        price_histories: Dict[str, pd.DataFrame] = {}
+        max_workers = min(len(symbols), self._MAX_PARALLEL_WORKERS)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_symbol = {
+                executor.submit(self._fetch_price_history, symbol, start_date, end_date): symbol
+                for symbol in symbols
+            }
+            for future in concurrent.futures.as_completed(future_to_symbol):
+                symbol = future_to_symbol[future]
+                price_histories[symbol] = future.result()
+
+        return price_histories
+
     def collect_all_unified_data(
         self,
         symbols: List[str],
@@ -294,26 +364,41 @@ class UnifiedDataService:
 
         Returns:
             모든 통합 데이터를 포함하는 딕셔너리
+
+        Note (P2-12):
+            서로 독립적인 I/O(심볼별 주가 히스토리, 종목 메타데이터, 환율,
+            벤치마크, 뉴스)를 bounded ThreadPoolExecutor로 병렬 실행한다. 이
+            메서드는 엔드포인트에서 asyncio.to_thread로 감싸 워커 스레드에서
+            동기적으로 호출되므로(app/api/v1/endpoints/backtest.py), 코루틴이
+            아니라 스레드 기반 병렬화를 사용한다. 심볼별 주가 히스토리는
+            collect_stock_data/collect_volatility_events 양쪽이 공유하도록 한
+            번만 조회한다 (기존에는 심볼당 두 번 조회했다).
         """
-        # 종목 메타데이터 (currency 포함)
-        ticker_info = self.collect_ticker_info(symbols)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._MAX_PARALLEL_WORKERS) as executor:
+            price_histories_future = executor.submit(
+                self._fetch_price_histories, symbols, start_date, end_date
+            )
+            ticker_info_future = executor.submit(self.collect_ticker_info, symbols)
+            exchange_future = executor.submit(self.collect_exchange_data, start_date, end_date)
+            benchmark_future = executor.submit(self.collect_benchmark_data, start_date, end_date)
+            news_future = (
+                executor.submit(self.collect_latest_news, symbols, news_display_count)
+                if include_news else None
+            )
 
-        # 주가 데이터
-        stock_data = self.collect_stock_data(symbols, start_date, end_date)
+            price_histories = price_histories_future.result()
+            ticker_info = ticker_info_future.result()
+            exchange_rates, exchange_stats = exchange_future.result()
+            sp500_benchmark, nasdaq_benchmark = benchmark_future.result()
+            latest_news = news_future.result() if news_future else {}
 
-        # 환율 데이터 및 통계
-        exchange_rates, exchange_stats = self.collect_exchange_data(start_date, end_date)
-
-        # 급등/급락 이벤트
-        volatility_events = self.collect_volatility_events(symbols, start_date, end_date)
-
-        # 벤치마크 데이터
-        sp500_benchmark, nasdaq_benchmark = self.collect_benchmark_data(start_date, end_date)
-
-        # 뉴스 (선택적)
-        latest_news = {}
-        if include_news:
-            latest_news = self.collect_latest_news(symbols, news_display_count)
+        # 이미 조회한 주가 히스토리를 공유해 중복 조회 없이 파생 데이터를 계산한다
+        stock_data = self.collect_stock_data(
+            symbols, start_date, end_date, price_histories=price_histories
+        )
+        volatility_events = self.collect_volatility_events(
+            symbols, start_date, end_date, price_histories=price_histories
+        )
 
         logger.info(
             f"통합 데이터 수집 완료: "

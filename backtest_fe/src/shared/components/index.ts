@@ -16,16 +16,10 @@ export type { FormSectionProps } from './form/FormSection';
 export { FormLegend } from './form/FormLegend';
 
 // Loading Components
-export { LoadingSpinner, InlineSpinner, ButtonSpinner } from './loading/LoadingSpinner';
-export type { LoadingSpinnerProps } from './loading/LoadingSpinner';
 export { default as ChartLoading } from './loading/ChartLoading';
-
-// Feedback Components
-export { ErrorMessage, FieldError, ToastMessage } from './feedback/ErrorMessage';
-export type { ErrorMessageProps } from './feedback/ErrorMessage';
 
 // Tooltip Components
 export { default as FinancialTermTooltip } from './tooltip/FinancialTermTooltip';
 
 // Debug Components
-export { default as PerformanceMonitor, useRenderPerformance } from './debug/PerformanceMonitor';
+export { useRenderPerformance } from './debug/PerformanceMonitor';

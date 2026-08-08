@@ -7,13 +7,13 @@ import React, { memo } from 'react';
 import BenchmarkIndexChart from '../BenchmarkIndexChart';
 import BenchmarkReturnsChart from '../BenchmarkReturnsChart';
 import { ResultBlock } from '../../shared';
-import { EquityPoint } from '../../../model/types';
+import { BenchmarkSeriesPoint, EquityPoint } from '../../../model/types';
 
 interface BenchmarkSectionProps {
-  sp500Benchmark: any[];
-  nasdaqBenchmark: any[];
-  sp500BenchmarkWithReturn: any[];
-  nasdaqBenchmarkWithReturn: any[];
+  sp500Benchmark: BenchmarkSeriesPoint[];
+  nasdaqBenchmark: BenchmarkSeriesPoint[];
+  sp500BenchmarkWithReturn: BenchmarkSeriesPoint[];
+  nasdaqBenchmarkWithReturn: BenchmarkSeriesPoint[];
   equityDataForBenchmark: EquityPoint[];
   aggregationType?: 'daily' | 'weekly' | 'monthly';
 }

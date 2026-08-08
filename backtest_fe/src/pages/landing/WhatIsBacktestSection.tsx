@@ -3,7 +3,7 @@ import React from 'react';
 export const WhatIsBacktestSection: React.FC = () => {
   return (
     <section className="py-16 sm:py-24 bg-muted/30">
-      <div className="container mx-auto px-4 sm:px-6 lg:max-w-6xl">
+      <div className="app-container mx-auto px-4 sm:px-6 lg:max-w-6xl">
         <div className="space-y-8 sm:space-y-12">
           <div className="text-center space-y-3 sm:space-y-4 px-4">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">백테스트란?</h2>

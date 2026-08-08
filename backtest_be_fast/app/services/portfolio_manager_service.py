@@ -21,7 +21,12 @@ from app.schemas.requests import BacktestRequest
 from app.services.backtest_service import backtest_service
 from app.repositories.stock_repository import get_stock_repository
 from app.services.dca_calculator import DcaCalculator
-from app.services.rebalance_helper import RebalanceHelper, get_next_nth_weekday, get_weekday_occurrence
+from app.services.rebalance_helper import (
+    RebalanceHelper,
+    generate_periodic_schedule,
+    get_next_nth_weekday,
+    get_weekday_occurrence,
+)
 from app.services.portfolio_calculator_service import portfolio_calculator
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
@@ -40,8 +45,8 @@ from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
 from app.utils.currency_converter import currency_converter, CurrencyConverter
 from app.monitoring.custom_metrics import (
     BACKTEST_EXECUTION_TOTAL,
-    TICKER_POPULARITY_TOTAL,
-    BACKTEST_PROCESSING_SECONDS
+    BACKTEST_PROCESSING_SECONDS,
+    record_ticker_popularity,
 )
 
 logger = logging.getLogger(__name__)
@@ -79,6 +84,122 @@ class PortfolioManagerService:
         )
         
         logger.info("포트폴리오 서비스가 초기화되었습니다")
+
+    @staticmethod
+    def _calculate_weighted_stats(portfolio_results: Dict[str, Any]) -> Dict[str, float]:
+        """포트폴리오 결과에서 가중 평균 통계를 계산합니다."""
+        total_trades = sum(
+            r.get('strategy_stats', {}).get('total_trades', 0)
+            for r in portfolio_results.values()
+        )
+        weighted_win_rate = sum(
+            r['weight'] * r.get('strategy_stats', {}).get('win_rate_pct', 0)
+            for r in portfolio_results.values()
+        )
+        weighted_max_drawdown = sum(
+            r['weight'] * abs(r.get('strategy_stats', {}).get('max_drawdown_pct', 0))
+            for r in portfolio_results.values()
+        )
+        weighted_sharpe_ratio = sum(
+            r['weight'] * r.get('strategy_stats', {}).get('sharpe_ratio', 0)
+            for r in portfolio_results.values()
+        )
+        return {
+            'total_trades': total_trades,
+            'weighted_win_rate': weighted_win_rate,
+            'weighted_max_drawdown': weighted_max_drawdown,
+            'weighted_sharpe_ratio': weighted_sharpe_ratio,
+        }
+
+    @staticmethod
+    def _calculate_daily_return_stats(daily_returns: Dict[str, float]) -> Dict[str, float]:
+        """일별 수익률에서 연간 변동성, 프로핏 팩터 등을 계산합니다."""
+        returns_list = list(daily_returns.values())
+        daily_volatility = np.std(returns_list) if len(returns_list) > 1 else 0.0
+        annual_volatility = daily_volatility * np.sqrt(252)
+        positive_returns = [r for r in returns_list if r > 0]
+        negative_returns = [r for r in returns_list if r < 0]
+        total_gains = sum(positive_returns) if positive_returns else 0.0
+        total_losses = abs(sum(negative_returns)) if negative_returns else 0.0
+        profit_factor = total_gains / total_losses if total_losses > 0 else 0.0
+        return {
+            'annual_volatility': annual_volatility,
+            'profit_factor': profit_factor,
+            'positive_days': len(positive_returns),
+            'negative_days': len(negative_returns),
+        }
+
+    @staticmethod
+    def _calculate_true_portfolio_stats(
+        equity_curve: Dict[str, float],
+        daily_returns: Dict[str, float],
+        total_amount: float
+    ) -> Dict[str, Any]:
+        """집계된 포트폴리오 equity curve에서 실제 포트폴리오 지표를 계산합니다 (P2-08).
+
+        개별 종목 지표의 가중평균(예: Sharpe, MDD)은 종목 간 상관관계와 하락 시점의
+        차이를 무시하므로 포트폴리오 전체의 진짜 지표가 아니다. 예를 들어 두 종목이
+        서로 다른 날짜에 하락하면 포트폴리오 MDD는 각 종목 MDD의 가중평균보다
+        완만해야 하는데, 가중평균 방식은 이를 반영하지 못한다.
+
+        buy&hold 경로가 이미 같은 목적으로 사용하는
+        portfolio_calculator.calculate_portfolio_statistics()를 그대로 재사용해
+        두 경로의 지표 산출 방식을 일치시킨다.
+
+        Args:
+            equity_curve: 날짜별 포트폴리오 총 가치(달러). 이미 종목별 실제
+                equity curve를 합산해 만들어진 값
+                (_calculate_realistic_equity_curve의 결과)
+            daily_returns: 날짜별 포트폴리오 일간 수익률(퍼센트 단위, 예: 2.5 = 2.5%)
+            total_amount: 초기 총 투자금 (정규화 기준)
+
+        Returns:
+            portfolio_calculator.calculate_portfolio_statistics()와 동일한 키를 가진
+            딕셔너리 (Sharpe_Ratio, Max_Drawdown, Avg_Drawdown, Peak_Value,
+            Total_Trading_Days 등 포함)
+        """
+        dates_sorted = sorted(equity_curve.keys())
+        equity_df = pd.DataFrame(
+            {
+                'Portfolio_Value': [equity_curve[d] / total_amount for d in dates_sorted],
+                'Daily_Return': [daily_returns.get(d, 0.0) / 100.0 for d in dates_sorted],
+            },
+            index=pd.to_datetime(dates_sorted)
+        )
+        return portfolio_calculator.calculate_portfolio_statistics(equity_df, total_amount)
+
+    @staticmethod
+    def _format_individual_results_list(
+        individual_returns: Dict[str, Any],
+        portfolio_results: Dict[str, Any] = None,
+        mode: str = 'strategy'
+    ) -> List[Dict[str, Any]]:
+        """individual_returns를 테스트 호환 리스트로 변환합니다."""
+        results = []
+        for key, returns in individual_returns.items():
+            if mode == 'strategy':
+                results.append({
+                    'ticker': returns['symbol'],
+                    'final_equity': returns['final_value'],
+                    'total_return_pct': returns['return'],
+                    'sharpe_ratio': portfolio_results[key].get('strategy_stats', {}).get('sharpe_ratio', 0.0) if portfolio_results and key in portfolio_results else 0.0,
+                    'weight': returns['weight'],
+                    'amount': returns['amount'],
+                    'trades': returns.get('trades', 0),
+                    'win_rate': returns.get('win_rate', 0.0)
+                })
+            else:  # buy_hold
+                results.append({
+                    'ticker': returns['symbol'] if returns.get('symbol') else key,
+                    'final_equity': returns['amount'] + (returns['amount'] * returns['return'] / 100),
+                    'total_return_pct': returns['return'],
+                    'sharpe_ratio': 0.0,
+                    'weight': returns['weight'],
+                    'amount': returns['amount'],
+                    'trades': 1 if returns.get('symbol', '') != 'CASH' else 0,
+                    'win_rate': 100.0 if returns['return'] > 0 else 0.0
+                })
+        return results
 
     async def calculate_dca_portfolio_returns(
         self,
@@ -175,23 +296,16 @@ class PortfolioManagerService:
         Returns:
             백테스트 결과
         """
-        try:
-            strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
-            logger.info(f"포트폴리오 백테스트 시작: 전략={strategy_name}, 종목수={len(request.portfolio)}")
+        strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
+        logger.info(f"포트폴리오 백테스트 시작: 전략={strategy_name}, 종목수={len(request.portfolio)}")
 
-            # 전략이 buy_hold_strategy가 아닌 경우 개별 종목별로 전략 백테스트 실행
-            if strategy_name != "buy_hold_strategy":
-                return await self.run_strategy_portfolio_backtest(request)
-            else:
-                return await self.run_buy_and_hold_portfolio_backtest(request)
-                
-        except Exception as e:
-            logger.exception("포트폴리오 백테스트 실행 중 오류 발생")
-            return {
-                'status': 'error',
-                'error': str(e),
-                'code': 'PORTFOLIO_BACKTEST_ERROR'
-            }
+        # 예외를 잡지 않는다: API 레이어의 @handle_portfolio_errors가 HTTP 상태
+        # 코드로 변환해야 하므로, 여기서 catch-all을 다시 넣으면 모든 실패가
+        # 200 응답으로 위장된다.
+        if strategy_name != "buy_hold_strategy":
+            return await self.run_strategy_portfolio_backtest(request)
+        else:
+            return await self.run_buy_and_hold_portfolio_backtest(request)
     
     async def run_strategy_portfolio_backtest(self, request: PortfolioBacktestRequest) -> Dict[str, Any]:
         """
@@ -212,28 +326,35 @@ class PortfolioManagerService:
                 total_amount = sum(item.amount for item in request.portfolio)
                 amounts = {item.symbol: item.amount for item in request.portfolio}
             elif all(item.weight is not None for item in request.portfolio):
-                # weight만 입력된 경우, 총 투자금액을 100으로 가정하거나, 프론트에서 별도 입력받을 수도 있음
-                # 여기서는 100 단위로 환산 (실제 투자금액은 프론트에서 amount로 입력 권장)
-                total_amount = 100.0
-                amounts = {item.symbol: total_amount * (item.weight / 100.0) for item in request.portfolio}
+                # weight만 입력된 경우, 100 단위를 기준으로 종목별 금액을 환산한다.
+                # 스키마는 비중 합계 95~105%를 허용하므로(PortfolioBacktestRequest
+                # validator), total_amount는 하드코딩된 100이 아니라 실제 환산된
+                # amounts의 합으로 계산해야 한다. 그렇지 않으면 비중 합계가 100%가
+                # 아닐 때 실제 투자 원금과 분모가 어긋나 수익률이 왜곡된다 (P1-03).
+                amounts = {item.symbol: 100.0 * (item.weight / 100.0) for item in request.portfolio}
+                total_amount = sum(amounts.values())
             else:
                 raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
             
-            # --- [Custom Metrics] Ticker Popularity ---
+            # --- [Custom Metrics] Ticker Popularity (카디널리티 상한, P2-15) ---
+            # 현금(asset_type='cash')은 "티커"가 아니므로 집계 대상에서 제외한다
+            # -- 커스텀 현금 이름(예: "예금")이 라벨로 새어나가는 것도 막는다.
             for item in request.portfolio:
-                TICKER_POPULARITY_TOTAL.labels(ticker=item.symbol).inc()
+                if item.asset_type != 'cash':
+                    record_ticker_popularity(item.symbol)
             # ------------------------------------------
 
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
             logger.info(f"전략 기반 백테스트: {strategy_name}, 총 투자금액: ${total_amount:,.2f}")
             
             # 각 종목별로 전략 백테스트 실행
+            failed_symbols = []
             for idx, item in enumerate(request.portfolio):
                 symbol = item.symbol
                 # amount/weight 동시 지원
                 amount = amounts[symbol]
                 weight = amount / total_amount if total_amount > 0 else 0.0
-                
+
                 # 현금 처리 (수익률 0%, 전략 적용 안함)
                 if item.asset_type == 'cash':
                     logger.info(f"현금 자산 {symbol} 처리 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
@@ -279,7 +400,8 @@ class PortfolioManagerService:
                     end_date=request.end_date,
                     initial_cash=amount,
                     strategy=strategy_value,
-                    strategy_params=request.strategy_params or {}
+                    strategy_params=request.strategy_params or {},
+                    commission=request.commission
                 )
                 
                 try:
@@ -320,68 +442,36 @@ class PortfolioManagerService:
                         
                 except Exception as e:
                     logger.error(f"종목 {symbol} 백테스트 오류: {str(e)}")
+                    failed_symbols.append({'symbol': symbol, 'error': str(e)})
                     continue
             
             if not portfolio_results:
                 raise ValueError("모든 종목의 백테스트가 실패했습니다.")
-            
+
             # 포트폴리오 전체 통계 계산
             portfolio_return = (total_portfolio_value / total_amount - 1) * 100
-            total_trades = sum(result.get('strategy_stats', {}).get('total_trades', 0) 
-                             for result in portfolio_results.values())
-            
-            # 가중 평균 승률 계산
-            weighted_win_rate = sum(
-                result['weight'] * result.get('strategy_stats', {}).get('win_rate_pct', 0)
-                for result in portfolio_results.values()
-            )
-            
-            # 가중 평균 최대 드로우다운 계산
-            weighted_max_drawdown = sum(
-                result['weight'] * abs(result.get('strategy_stats', {}).get('max_drawdown_pct', 0))
-                for result in portfolio_results.values()
-            )
-            
-            # 가중 평균 샤프 비율 계산
-            weighted_sharpe_ratio = sum(
-                result['weight'] * result.get('strategy_stats', {}).get('sharpe_ratio', 0)
-                for result in portfolio_results.values()
-            )
-            
-            # 가중 평균 프로핏 팩터 계산
-            weighted_profit_factor = sum(
-                result['weight'] * result.get('strategy_stats', {}).get('profit_factor', 1.0)
-                for result in portfolio_results.values()
-            )
+            weighted_stats = self._calculate_weighted_stats(portfolio_results)
 
             # 백테스트 기간 계산
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
             duration_days = (end_date_obj - start_date_obj).days
-
-            # 연간 수익률 계산
             annual_return = ((total_portfolio_value / total_amount) ** (365.25 / duration_days) - 1) * 100 if duration_days > 0 else 0
 
-            # 먼저 equity curve, daily returns, weight history 계산
+            # equity curve, daily returns, weight history 계산
             equity_curve, daily_returns, weight_history = await portfolio_calculator._calculate_realistic_equity_curve(
                 request, portfolio_results, total_amount
             )
 
-            # daily_returns로부터 연간 변동성 계산
-            returns_list = [v for v in daily_returns.values()]
-            daily_volatility = np.std(returns_list) if len(returns_list) > 1 else 0.0
-            annual_volatility = daily_volatility * np.sqrt(252)  # 연간 거래일 수로 연간화
+            # daily_returns 기반 통계
+            dr_stats = self._calculate_daily_return_stats(daily_returns)
 
-            # daily_returns로부터 프로핏 팩터 계산
-            positive_returns = [r for r in returns_list if r > 0]
-            negative_returns = [r for r in returns_list if r < 0]
-            total_gains = sum(positive_returns) if positive_returns else 0.0
-            total_losses = abs(sum(negative_returns)) if negative_returns else 0.0
-            actual_profit_factor = total_gains / total_losses if total_losses > 0 else 0.0
-
-            # Positive/Negative Days 계산
-            positive_days = len(positive_returns)
-            negative_days = len(negative_returns)
+            # 집계된 equity curve에서 실제 포트폴리오 지표(Sharpe/MDD/AvgDD/Peak/
+            # 거래일수)를 계산한다. 종목별 지표의 가중평균은 상관관계와 하락 시점
+            # 차이를 무시하므로 포트폴리오 전체의 진짜 지표가 아니다 (P2-08).
+            true_portfolio_stats = self._calculate_true_portfolio_stats(
+                equity_curve, daily_returns, total_amount
+            )
 
             # 포트폴리오 통계 (프론트엔드 호환)
             portfolio_statistics = {
@@ -390,36 +480,33 @@ class PortfolioManagerService:
                 'Duration': f'{duration_days} days',
                 'Initial_Value': total_amount,
                 'Final_Value': total_portfolio_value,
-                'Peak_Value': total_portfolio_value,  # 전략 기반에서는 최종값과 동일하게 가정
+                'Peak_Value': true_portfolio_stats['Peak_Value'],
                 'Total_Return': portfolio_return,
                 'Annual_Return': annual_return,
-                'Annual_Volatility': annual_volatility,  # 실제 계산된 연간 변동성
-                'Sharpe_Ratio': weighted_sharpe_ratio,
-                'Max_Drawdown': -weighted_max_drawdown,  # 음수로 표시
-                'Avg_Drawdown': -weighted_max_drawdown / 2,  # 평균 드로우다운 추정
-                'Max_Consecutive_Gains': 0,  # 전략 기반에서는 계산 복잡
-                'Max_Consecutive_Losses': 0,  # 전략 기반에서는 계산 복잡
-                'Total_Trading_Days': duration_days,
-                'Total_Trades': total_trades,  # 전체 거래 횟수 추가
-                'Positive_Days': positive_days,  # 실제 계산된 값
-                'Negative_Days': negative_days,  # 실제 계산된 값
-                'Win_Rate': weighted_win_rate,
-                'Profit_Factor': actual_profit_factor  # 실제 계산된 프로핏 팩터
+                'Annual_Volatility': dr_stats['annual_volatility'],
+                'Sharpe_Ratio': true_portfolio_stats['Sharpe_Ratio'],
+                'Max_Drawdown': true_portfolio_stats['Max_Drawdown'],
+                'Avg_Drawdown': true_portfolio_stats['Avg_Drawdown'],
+                'Max_Consecutive_Gains': 0,
+                'Max_Consecutive_Losses': 0,
+                'Total_Trading_Days': true_portfolio_stats['Total_Trading_Days'],
+                'Total_Trades': weighted_stats['total_trades'],
+                'Positive_Days': dr_stats['positive_days'],
+                'Negative_Days': dr_stats['negative_days'],
+                'Win_Rate': weighted_stats['weighted_win_rate'],
+                'Profit_Factor': dr_stats['profit_factor']
             }
 
-            # individual_results를 리스트 형태로 변환 (테스트 호환성)
-            individual_results_list = []
-            for symbol, returns in individual_returns.items():
-                individual_results_list.append({
-                    'ticker': returns['symbol'],
-                    'final_equity': returns['final_value'],
-                    'total_return_pct': returns['return'],
-                    'sharpe_ratio': portfolio_results[symbol].get('strategy_stats', {}).get('sharpe_ratio', 0.0),
-                    'weight': returns['weight'],
-                    'amount': returns['amount'],
-                    'trades': returns.get('trades', 0),
-                    'win_rate': returns.get('win_rate', 0.0)
-                })
+            individual_results_list = self._format_individual_results_list(
+                individual_returns, portfolio_results, mode='strategy'
+            )
+
+            # 실패 종목 경고 메시지 생성
+            warnings = []
+            if failed_symbols:
+                for fs in failed_symbols:
+                    warnings.append(f"종목 {fs['symbol']} 백테스트 실패: {fs['error']}")
+                logger.warning(f"실패한 종목 {len(failed_symbols)}개: {[fs['symbol'] for fs in failed_symbols]}")
 
             result = {
                 'status': 'success',
@@ -432,7 +519,7 @@ class PortfolioManagerService:
                         'total_return_pct': portfolio_return
                     },
                     'portfolio_composition': [
-                        {'symbol': result['symbol'], 
+                        {'symbol': result['symbol'],
                          'weight': result['weight'], 'amount': result['amount']}
                         for symbol, result in portfolio_results.items()
                     ],
@@ -443,10 +530,11 @@ class PortfolioManagerService:
                     'equity_curve': equity_curve,
                     'daily_returns': daily_returns,
                     'weight_history': weight_history,
-                    'rebalance_history': []  # 전략 포트폴리오는 리밸런싱 없음
+                    'rebalance_history': [],  # 전략 포트폴리오는 리밸런싱 없음
+                    'warnings': warnings,
                 }
             }
-            
+
             logger.info(f"전략 포트폴리오 백테스트 완료: 총 수익률 {portfolio_return:.2f}%")
             
             # --- [Custom Metrics] Record Success ---
@@ -457,16 +545,14 @@ class PortfolioManagerService:
             
             return recursive_serialize(result)
             
-        except Exception as e:
+        except Exception:
             # --- [Custom Metrics] Record Error ---
             BACKTEST_EXECUTION_TOTAL.labels(strategy_type="strategy_portfolio", status="error").inc()
             # -------------------------------------
+            # 로깅만 하고 재발생시킨다 — 에러 dict로 변환하면 @handle_portfolio_errors가
+            # 무력화되어 실패가 HTTP 200으로 나간다.
             logger.exception("전략 포트폴리오 백테스트 실행 중 오류 발생")
-            return {
-                'status': 'error',
-                'error': str(e),
-                'code': 'STRATEGY_PORTFOLIO_BACKTEST_ERROR'
-            }
+            raise
     
     async def run_buy_and_hold_portfolio_backtest(self, request: PortfolioBacktestRequest) -> Dict[str, Any]:
         """
@@ -498,32 +584,40 @@ class PortfolioManagerService:
 
             # Phase 1: 먼저 모든 종목의 투자 타입을 확인하고 dca_info 설정
             symbols_to_load = []  # 데이터를 로드할 종목 리스트
+            cash_entry_counter = 0  # 현금 항목은 심볼 중복이 허용되므로 고유 키가 필요하다 (P2-07)
 
             for item in request.portfolio:
                 symbol = item.symbol
-                
-                # --- [Custom Metrics] Ticker Popularity ---
-                TICKER_POPULARITY_TOTAL.labels(ticker=symbol).inc()
+
+                # --- [Custom Metrics] Ticker Popularity (카디널리티 상한, P2-15) ---
+                # 현금(asset_type='cash')은 "티커"가 아니므로 집계 대상에서 제외한다
+                # -- 커스텀 현금 이름(예: "예금")이 라벨로 새어나가는 것도 막는다.
+                if item.asset_type != 'cash':
+                    record_ticker_popularity(symbol)
                 # ------------------------------------------
 
                 investment_type = getattr(item, 'investment_type', 'lump_sum')
                 dca_frequency = getattr(item, 'dca_frequency', 'monthly_1')
 
                 # DCA 투자 횟수 계산 (Nth Weekday 방식)
+                #
+                # 시뮬레이션이 실제로 매수하는 날짜를 그대로 생성해서 센다.
+                # 과거에는 "월 = 30일" 근사로 추정했는데, 이 값이 총 투자금
+                # (= 수익률의 분모)이 되기 때문에 실제 집행 횟수와 어긋나면
+                # 집행되지 않은 납입금이 손실로 보고됐다. (2024년 전체·월간
+                # 기준 13회로 추정되지만 실제로는 12회 → -7.69%)
                 if investment_type == 'dca':
                     period_info = FREQUENCY_MAP.get(dca_frequency, FREQUENCY_MAP['monthly_1'])
                     period_type, interval = period_info
 
-                    # 근사 계산으로 DCA 횟수 추정
-                    if period_type == 'weekly':
-                        approx_days_per_period = interval * 7
-                    elif period_type == 'monthly':
-                        approx_days_per_period = interval * 30  # 월 평균 30일
-                    else:
-                        approx_days_per_period = 30
-
-                    # 백테스트 기간 동안 몇 번 투자할지 계산
-                    dca_periods = max(1, (backtest_days // approx_days_per_period) + 1)
+                    # 초회 매수 1회 + 이후 정기 매수 예정일 수
+                    periodic_dates = generate_periodic_schedule(
+                        start_date=start_date_obj,
+                        end_date=end_date_obj,
+                        period_type=period_type,
+                        interval=interval,
+                    )
+                    dca_periods = 1 + len(periodic_dates)
                 else:
                     dca_periods = 1
 
@@ -533,8 +627,21 @@ class PortfolioManagerService:
                 if item.amount is not None:
                     per_period_amount = item.amount  # 입력한 금액 = 회당 투자 금액
                 elif item.weight is not None:
-                    # weight 모드는 나중에 처리
-                    per_period_amount = 0
+                    # weight 모드: STRATEGY 경로(run_strategy_portfolio_backtest)와
+                    # 동일하게 100 단위 기준으로 총 투자금액을 환산해 두 경로가 같은
+                    # 규칙을 따르도록 일치시킨다 (수정 전에는 여기서 0으로 고정되어
+                    # total_investment/total_amount가 모두 0이 되고, 시뮬레이션의
+                    # 정규화 단계에서 0으로 나누기가 발생해 스키마상 유효한 요청도
+                    # 크래시했다 - P1-04).
+                    # DCA의 경우 이 환산된 총액을 dca_periods로 나눠 회당 금액을
+                    # 구해야, 아래에서 재계산하는
+                    # "total_investment = per_period_amount * dca_periods"가
+                    # 원래 환산된 총액과 다시 일치한다.
+                    weight_based_total = 100.0 * (item.weight / 100.0)
+                    per_period_amount = (
+                        weight_based_total / dca_periods if investment_type == 'dca'
+                        else weight_based_total
+                    )
                 else:
                     raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight를 입력해야 합니다.')
 
@@ -546,10 +653,26 @@ class PortfolioManagerService:
                     # 일시불: 회당 금액 = 총 금액
                     total_investment = per_period_amount
 
-                amounts[symbol] = total_investment
+                # 고유 키 생성: 현금 자산은 schemas.py의 validate_portfolio가 중복
+                # 검증에서 의도적으로 제외하므로(같은 이름의 현금을 여러 개 추가할
+                # 수 있음) symbol을 그대로 키로 쓰면 amounts/dca_info에서 먼저 들어온
+                # 항목이 나중 항목에 덮어써진다. 그 결과 total_amount(=
+                # sum(amounts.values()))가 실제 현금 총액보다 작아지고, 별도로
+                # 누적되는 cash_amount와 어긋나 individual_returns['CASH']의 weight가
+                # 100%를 넘어서는 등 수치가 불일치했다 (P2-07). 주식 심볼은 스키마가
+                # 이미 중복을 거부하므로 그대로 symbol을 키로 사용해도 안전하고, 이후
+                # 코드가 unique_key로 symbol을 역참조(dca_info[unique_key].symbol)하는
+                # 구조와도 맞는다.
+                if asset_type == 'cash':
+                    cash_entry_counter += 1
+                    unique_key = f"{symbol}__cash_{cash_entry_counter}"
+                else:
+                    unique_key = symbol
+
+                amounts[unique_key] = total_investment
 
                 # 분할 매수 정보 저장
-                dca_info[symbol] = DcaStrategyInfo(
+                dca_info[unique_key] = DcaStrategyInfo(
                     symbol=symbol,
                     allocation=0.0, # Will be calculated if needed, or derived from amounts
                     asset_type=asset_type,
@@ -764,19 +887,9 @@ class PortfolioManagerService:
                                 'trade_log': dca_trade_log
                             }
             
-            # individual_results를 리스트 형태로 변환 (테스트 호환성)
-            individual_results_list = []
-            for unique_key, returns in individual_returns.items():
-                individual_results_list.append({
-                    'ticker': returns['symbol'] if returns.get('symbol') else unique_key,
-                    'final_equity': returns['amount'] + (returns['amount'] * returns['return'] / 100),
-                    'total_return_pct': returns['return'],
-                    'sharpe_ratio': 0.0,  # Buy & Hold에서는 계산하지 않음
-                    'weight': returns['weight'],
-                    'amount': returns['amount'],
-                    'trades': 1 if returns.get('symbol', '') != 'CASH' else 0,
-                    'win_rate': 100.0 if returns['return'] > 0 else 0.0
-                })
+            individual_results_list = self._format_individual_results_list(
+                individual_returns, mode='buy_hold'
+            )
 
             # 리밸런싱 히스토리와 비중 변화 데이터 추출
             rebalance_history = portfolio_result.attrs.get('rebalance_history', [])
@@ -883,16 +996,14 @@ class PortfolioManagerService:
 
             return recursive_serialize(result)
             
-        except Exception as e:
+        except Exception:
             # --- [Custom Metrics] Record Error ---
             BACKTEST_EXECUTION_TOTAL.labels(strategy_type="buy_and_hold", status="error").inc()
             # -------------------------------------
+            # 로깅만 하고 재발생시킨다 — 에러 dict로 변환하면 @handle_portfolio_errors가
+            # 무력화되어 실패가 HTTP 200으로 나간다.
             logger.exception("Buy & Hold 포트폴리오 백테스트 실행 중 오류 발생")
-            return {
-                'status': 'error',
-                'error': str(e),
-                'code': 'BUY_HOLD_PORTFOLIO_BACKTEST_ERROR'
-            }
+            raise
 
 
 # 전역 인스턴스 생성

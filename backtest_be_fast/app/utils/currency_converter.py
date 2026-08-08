@@ -196,25 +196,28 @@ class CurrencyConverter:
             original_close_min = data['Close'].min()
             original_close_max = data['Close'].max()
 
-            # 각 행에 대해 환율 적용
-            converted_count = 0
-            for idx in converted_data.index:
-                # 타임존 제거 (환율 데이터 인덱스와 매칭)
-                idx_no_tz = self._remove_timezone(pd.DatetimeIndex([idx]))[0]
+            # 벡터화된 환율 변환 (행 단위 루프 대신 pandas 연산)
+            # 1. 가격 데이터 인덱스의 타임존 제거
+            price_index_no_tz = self._remove_timezone(converted_data.index)
 
-                # 환율 데이터에서 해당 날짜의 환율 가져오기
-                if idx_no_tz in exchange_data.index and pd.notna(exchange_data.loc[idx_no_tz, 'Close']):
-                    exchange_rate = exchange_data.loc[idx_no_tz, 'Close']
+            # 2. 환율 데이터를 가격 인덱스에 맞게 정렬 (이미 reindex됨)
+            exchange_rates_aligned = exchange_data['Close'].reindex(price_index_no_tz)
 
-                    # 통화별 변환 비율 계산
-                    multiplier = self.get_conversion_multiplier(currency, exchange_rate)
+            # 3. 통화별 변환 비율 계산 (벡터 연산)
+            if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
+                multipliers = exchange_rates_aligned
+            else:
+                multipliers = 1.0 / exchange_rates_aligned.where(exchange_rates_aligned > 0, 1.0)
 
-                    # OHLC 컬럼 변환
-                    for col in ['Open', 'High', 'Low', 'Close']:
-                        if col in converted_data.columns:
-                            converted_data.loc[idx, col] *= multiplier
+            # 4. NaN이 아닌 행만 변환
+            valid_mask = multipliers.notna()
+            converted_count = int(valid_mask.sum())
 
-                    converted_count += 1
+            # 5. multipliers를 원래 인덱스에 매핑하여 OHLC 컬럼에 적용
+            multipliers.index = converted_data.index
+            for col in ['Open', 'High', 'Low', 'Close']:
+                if col in converted_data.columns:
+                    converted_data.loc[valid_mask.values, col] *= multipliers[valid_mask].values
 
             # 변환 후 가격 범위
             converted_close_min = converted_data['Close'].min()
@@ -229,8 +232,16 @@ class CurrencyConverter:
             return converted_data
 
         except Exception as e:
-            logger.error(f"통화 변환 중 오류: {e}, 원본 데이터 사용")
-            return data
+            # [P2-02] 환율 데이터를 로드/적용하지 못했다고 원본(비USD) 가격을
+            # 그대로 반환하면 안 된다. 호출자는 이 반환값이 이미 USD로 변환된
+            # 것으로 취급하므로, 예를 들어 KRW 7만원대 가격이 $70,000짜리
+            # 자산으로 둔갑한 채 "성공"으로 보고되는 조용한 오염이 발생한다.
+            # 변환이 필요한데(비USD) 실패했다면 명시적으로 실패를 알린다.
+            logger.error(f"{ticker} ({currency}) 통화 변환 실패: {e}")
+            raise ValueError(
+                f"{ticker} 가격을 {currency}에서 USD로 변환할 수 없습니다 "
+                f"(환율 데이터 조회/적용 실패): {e}"
+            ) from e
 
     async def load_multiple_exchange_rates(
         self,

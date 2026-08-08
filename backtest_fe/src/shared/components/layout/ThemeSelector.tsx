@@ -3,13 +3,13 @@ import { useTheme } from '@/shared/hooks/useTheme';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { ThemeName } from '@/shared/types/theme';
+import { ThemeDefinition, ThemeName } from '@/shared/types/theme';
 
 interface ThemePreviewProps {
   themeName: ThemeName;
   isActive: boolean;
   onClick: () => void;
-  theme: any;
+  theme: ThemeDefinition;
 }
 
 const ThemePreview: React.FC<ThemePreviewProps> = ({ isActive, onClick, theme }) => {
@@ -22,7 +22,7 @@ const ThemePreview: React.FC<ThemePreviewProps> = ({ isActive, onClick, theme })
       role="button"
       tabIndex={0}
       aria-pressed={isActive}
-      className={`cursor-pointer transition-all duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+      className={`cursor-pointer transition-all duration-200 hover:scale-105 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 ${
         isActive ? 'ring-2 ring-primary shadow-lg' : 'hover:shadow-md'
       }`}
       onClick={onClick}

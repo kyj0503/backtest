@@ -1,128 +1,137 @@
 # AI Coding Agent Instructions for Backtesting Platform
 
 ## Project Overview
-**라고할때살걸** is a Korean trading strategy backtesting platform ("I should have bought it then") that helps users test "what if" investment scenarios using historical data. It supports single stocks, multi-asset portfolios, DCA (dollar-cost averaging), and rebalancing strategies.
+**라고할때살걸** - Korean trading strategy backtesting platform for testing "what if" investment scenarios. Supports single stocks, multi-asset portfolios, DCA, and rebalancing strategies.
 
-**Tech Stack:**
-- Backend: Python/FastAPI, backtesting.py, SQLAlchemy, pandas, yfinance
-- Frontend: TypeScript/React/Vite, Zustand, Recharts, shadcn/ui, Tailwind CSS
-- Database: MySQL (dev/prod), SQLite (tests)
-- Infrastructure: Docker Compose, Nginx
+**Stack:** Python/FastAPI + TypeScript/React/Vite | MySQL (prod) / SQLite (tests) | Docker Compose
 
-## Architecture Overview
+## Architecture
 
-### Backend Flow
+### Backend Data Flow
 ```
-API Request → FastAPI → PortfolioService → BacktestEngine → backtesting.py
-                                      ↓
-Data Sources: MySQL Cache → yfinance API → External APIs
+FastAPI Endpoint → PortfolioManagerService → PortfolioDataLoader → StockRepository
+                                          → BacktestEngine (backtesting.py wrapper)
+                                          → CurrencyConverter (USD normalization)
 ```
 
-**Key Components:**
-- `app/services/portfolio_service.py`: Main orchestration for multi-asset backtesting
-- `app/services/backtest_engine.py`: Wraps backtesting.py with currency conversion
-- `app/services/unified_data_service.py`: Collects prices, news, exchange rates
-- `app/repositories/`: Data access layer (stock prices, news)
+**Key Services:**
+- [backtest_engine.py](backtest_be_fast/app/services/backtest_engine.py): Wraps `backtesting.py`, handles currency conversion via `_convert_to_usd()`
+- [portfolio/portfolio_data_loader.py](backtest_be_fast/app/services/portfolio/portfolio_data_loader.py): Parallel data loading with `asyncio.gather()`
+- [unified_data_service.py](backtest_be_fast/app/services/unified_data_service.py): Aggregates prices, news, exchange rates
 
-### Frontend Architecture (Feature-Sliced Design)
+### Frontend (Feature-Sliced Design)
 ```
-pages/ → features/ → shared/
+pages/ → features/backtest/ → shared/
 ```
-**Dependency Rule:** `shared` ← `features` ← `pages` (no circular imports)
+**Dependency:** `shared` ← `features` ← `pages` (no reverse imports)
 
-**State Management:**
-- Global: Zustand stores (theme, shared data)
-- Local: `useState` (simple), `useReducer` (complex forms like portfolio weights)
+**State:** Zustand (global: theme, results) | `useReducer` (complex forms)
 
-## Critical Patterns & Pitfalls
+## ⚠️ Critical: Async/Sync Boundary
 
-### ASYNC/SYNC BOUNDARY (CRITICAL)
-**Problem:** Race conditions occur when synchronous I/O (DB queries, yfinance API) runs directly in async context without `asyncio.to_thread()`.
+**Problem:** Race conditions when sync I/O runs in async context without thread isolation. Symptom: first run fails, second succeeds.
 
-**Symptoms:** First backtest with new data fails, second run succeeds.
-
-**Solution:** ALL synchronous I/O in async functions MUST be wrapped:
 ```python
-# WRONG - causes race conditions
-async def some_function():
-    data = load_ticker_data(symbol, start, end)  # Sync I/O in async context
+# ❌ WRONG - causes race conditions
+async def fetch_data():
+    data = stock_repository.load_stock_data(symbol, start, end)
 
-# CORRECT
-async def some_function():
-    data = await asyncio.to_thread(load_ticker_data, symbol, start, end)
+# ✅ CORRECT - always wrap sync I/O
+async def fetch_data():
+    data = await asyncio.to_thread(stock_repository.load_stock_data, symbol, start, end)
 ```
 
-**Check these files:** `portfolio_service.py`, `backtest_engine.py`, any async function calling DB/API operations.
+**Verify in:** Any async function calling `StockRepository`, `yfinance`, or DB operations.
 
-### Currency Conversion Policy
-- **Individual prices:** Stored in original currency (KRW, JPY, EUR, etc.)
-- **Backtesting calculations:** ALL assets converted to USD via exchange rates
-- **Frontend display:** Stock data in original currency, backtest results in USD
+## ⚠️ Critical: backtesting.py Version (0.3.3)
 
-**Implementation:** `app/services/backtest_engine.py:_convert_to_usd()`
+**Project uses backtesting==0.3.3** - DO NOT use features from newer versions.
 
-### Database Transaction Isolation
-**Problem:** Save data then query immediately fails due to snapshot isolation.
+| Feature | 0.3.x | 0.6.x+ | Status |
+|---------|-------|--------|--------|
+| `finalize_trades` param | ❌ | ✅ | **Don't use** |
+| `spread` param | ❌ | ✅ | **Don't use** |
+| `commission` | 1x (entry only) | 2x (entry+exit) | Different calculation |
+| Kelly Criterion stat | ❌ | ✅ | **Don't use** |
 
-**Solution:** Explicit commit + refresh, or query within same transaction.
+```python
+# ❌ WRONG - 0.6.x+ only
+bt = Backtest(df, Strategy, cash=10000, finalize_trades=True)
 
-### Testing Strategy
-**Backend (pytest):**
-- `@pytest.mark.unit`: Fast, isolated (no DB/external)
-- `@pytest.mark.integration`: With database
-- `@pytest.mark.external`: Calls yfinance/external APIs
-- `@pytest.mark.asyncio`: All async tests
+# ✅ CORRECT - 0.3.x compatible
+bt = Backtest(df, Strategy, cash=10000, commission=0)
+```
 
-**Frontend (Vitest + RTL + Playwright):**
-- Unit: Pure functions, utilities, reducers
-- Component: React behavior, user interactions
-- E2E: Full user workflows
+**Why 0.3.3?** Stable API, no commission calculation changes, pandas 2.x compatible.
 
-## Development Workflow
+## Strategy Enum Values
 
-### Local Development
+**Always use exact enum values from `app/schemas/requests.py`:**
+```python
+class StrategyType(str, Enum):
+    SMA_STRATEGY = "sma_strategy"
+    RSI_STRATEGY = "rsi_strategy"
+    BOLLINGER_STRATEGY = "bollinger_strategy"
+    MACD_STRATEGY = "macd_strategy"
+    BUY_HOLD_STRATEGY = "buy_hold_strategy"  # NOT "buy_and_hold"
+    EMA_STRATEGY = "ema_strategy"
+```
+
+## Currency Handling
+- **Storage:** Original currency (KRW, JPY, EUR)
+- **Calculations:** All converted to USD in `BacktestEngine._convert_to_usd()`
+- **Display:** Original for prices, USD for backtest results
+
+## Development Commands
 ```bash
-# Start all services
+# Start services
 docker compose -f compose.dev.yaml up -d --build
 
-# Access points
-# Frontend: http://localhost:5173
-# Backend API docs: http://localhost:8000/api/v1/docs
+# Backend tests (markers: @pytest.mark.unit|integration|external|asyncio)
+docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit
 
-# Run tests
-docker compose -f compose.dev.yaml exec backtest-be-fast pytest
+# Frontend tests
 docker compose -f compose.dev.yaml exec backtest-fe npm test
+
+# Frontend quality checks (all four run in CI)
+docker compose -f compose.dev.yaml exec backtest-fe npm run lint
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # prod code
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # test code
+docker compose -f compose.dev.yaml exec backtest-fe npm run test:run
+
+# Reproduce the CI gate exactly
+docker build --target test ./backtest_fe
+docker build --target test ./backtest_be_fast
+
+# API docs: http://localhost:8000/api/v1/docs
+# Frontend: http://localhost:5173
 ```
 
-### Key Files to Understand
-- `backtest_be_fast/app/main.py`: FastAPI app setup, CORS, routing
-- `backtest_be_fast/app/core/config.py`: Settings, environment variables
-- `backtest_be_fast/app/services/portfolio_service.py`: Main backtest orchestration
-- `backtest_be_fast/app/services/backtest_engine.py`: Currency conversion, strategy execution
-- `backtest_fe/src/App.tsx`: React app structure, routing
-- `database/schema.sql`: MySQL schema for stock data caching
+## Common Tasks
 
-### Common Tasks
-- **Add new strategy:** Modify `app/strategies/`, update `backtest_engine.py:_build_strategy()`
-- **Add API endpoint:** Create in `app/api/v1/endpoints/`, register in `api.py`
-- **Add frontend feature:** Create in `src/features/`, follow Feature-Sliced Design
-- **Database changes:** Update `database/schema.sql`, create migration script
+| Task | Location | Notes |
+|------|----------|-------|
+| Add strategy | `app/services/strategy_service.py` | Register in `_build_strategy()` |
+| Add API endpoint | `app/api/v1/endpoints/` | Use `@handle_portfolio_errors` decorator |
+| Add frontend feature | `src/features/backtest/` | Follow hooks/components/api structure |
+| Batch DB queries | Use `get_tickers_info_batch()` | Avoid N+1 queries |
 
-### Performance Optimizations
-- N+1 query elimination (10x speedup)
-- Parallel data loading for portfolios
-- Chart memoization: `memo`, `useMemo`, `useCallback`
-- Smart data sampling for long-term backtests
+## Testing Patterns
+- **Backend:** `@pytest.mark.unit` (no DB), `@pytest.mark.asyncio` (async tests)
+- **Frontend:** Vitest + RTL for components, Playwright for E2E
+- **Mocking:** External APIs (yfinance) in unit tests, real calls in `@pytest.mark.external`
+- **Strategy values:** Use `buy_hold_strategy`, NOT `buy_and_hold` in test fixtures
+- **Baseline:** BE 141 unit tests, FE 113 tests — all green. A failure is a regression.
+- **Test files are type-checked** via `tsconfig.test.json` (`npm run type-check:test`); `tsconfig.build.json` excludes them.
+- **Never set `isolate: false`** in `vitest.config.ts` — shared happy-dom + vitest's duration-based file reordering makes the suite flaky.
 
-## Code Quality Standards
-- **Backend:** Type hints, pydantic models, comprehensive error handling
-- **Frontend:** TypeScript strict mode, ESLint, component composition over inheritance
-- **Testing:** Behavior over implementation, mock external dependencies
-- **Architecture:** Repository pattern, dependency injection, single responsibility
+## Frontend Stack Constraints
+- **React 19 / Vite 7 / Recharts 3 / React Router 7 / Tailwind CSS 4.**
+- **Tailwind 4 is CSS-first:** no `tailwind.config.js`; config lives in `src/index.css`. Do NOT move theme color literals into `@theme` — `useTheme` injects them at runtime via `root.style.setProperty()`. Use `.app-container`, not `.container`.
+- **`VITE_API_BASE_URL` must be empty** — the service layer already passes full `/api/v1/...` paths.
 
-## Deployment
-- **Dev:** Docker Compose with hot reload
-- **Prod:** Nginx reverse proxy, separate containers
-- **Database:** MySQL in prod, SQLite for tests
-
-Reference: `CLAUDE.md` for detailed architecture docs in each service's `docs/` directory.
+## Documentation
+Detailed architecture docs in each service's `docs/` directory:
+- [Backend troubleshooting](backtest_be_fast/docs/troubleshooting/race_condition.md)
+- [Performance optimizations](backtest_be_fast/docs/performance/optimization-summary.md)
+- [Frontend state management](backtest_fe/docs/architecture/state_management.md)

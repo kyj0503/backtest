@@ -1,116 +1,281 @@
-# 트레이딩 전략 백테스팅 플랫폼
+# Backtest - 트레이딩 전략 백테스팅 플랫폼
 
-**개인 맞춤형 트레이딩 전략 백테스팅 플랫폼입니다.**
-
-이 프로젝트는 주식, 암호화폐 등 다양한 자산에 대한 투자 전략을 과거 데이터로 검증하고, 포트폴리오의 성과를 분석하여 데이터 기반의 합리적인 의사결정을 돕기 위해 개발되었습니다.
+주식, 암호화폐 등 다양한 자산에 대한 투자 전략을 과거 데이터로 검증하고, 포트폴리오의 성과를 분석하여 데이터 기반의 합리적인 의사결정을 돕는 플랫폼입니다.
 
 ## 주요 기능
 
--   **단일 종목 백테스트**: 특정 종목에 대해 하나의 투자 전략(예: SMA, RSI)을 적용하여 성과를 분석합니다.
--   **포트폴리오 백테스트**: 여러 자산을 조합한 포트폴리오의 과거 성과를 시뮬레이션합니다.
--   **자산 분배 전략**: 정적 가중치, 동적 가중치 등 다양한 자산 분배 전략을 테스트합니다.
--   **정기 투자 (DCA) 시뮬레이션**: 적립식 투자(Cost Averaging) 전략의 성과를 분석합니다.
--   **리밸런싱 전략**: 주기적인 자산 비중 조절(리밸런싱) 효과를 검증합니다.
--   **상세 분석 리포트**: 수익률, 변동성, 샤프 지수 등 다양한 통계 지표와 시각화 차트를 제공합니다.
+- **단일 종목 백테스트**: SMA, RSI 등 투자 전략 적용 및 성과 분석
+- **포트폴리오 백테스트**: 여러 자산 조합의 과거 성과 시뮬레이션
+- **자산 분배 전략**: 정적/동적 가중치 전략 테스트
+- **정기 투자 (DCA) 시뮬레이션**: 적립식 투자 전략 성과 분석
+- **리밸런싱 전략**: 주기적 자산 비중 조절 효과 검증
+- **상세 분석 리포트**: 수익률, 변동성, 샤프 지수 등 통계 지표 제공
+
+---
 
 ## 기술 스택
 
-| 구분       | 기술                                                              |
-| :--------- | :---------------------------------------------------------------- |
-| **백엔드**   | Python, FastAPI, backtesting.py, SQLAlchemy, pandas, numpy        |
-| **프론트엔드** | TypeScript, React, Vite, Zustand, Recharts, shadcn/ui, Tailwind CSS |
-| **데이터베이스** | MySQL (개발/프로덕션), SQLite (테스트)                     |
-| **인프라/배포** | Docker, Docker Compose, Nginx                                     |
-| **테스트**     | Pytest (백엔드), Vitest, React Testing Library, Playwright (프론트엔드) |
+| 구분 | 기술 |
+|:-----|:-----|
+| **Backend** | Python 3.11, FastAPI, SQLAlchemy, pandas, numpy, backtesting.py 0.3.3 |
+| **Frontend** | TypeScript 5, React 19, Vite 7, React hooks (`useState`/`useReducer`) + localStorage, Recharts 3, React Router 7, shadcn/ui, Tailwind CSS 4 |
+| **Database** | MySQL 8.0 |
+| **Infra** | Docker, Docker Compose, Nginx, Jenkins |
+| **Test** | Pytest (BE), Vitest 4, React Testing Library, Playwright (FE) |
+
+---
 
 ## 프로젝트 구조
 
 ```
-.
-├── backtest_be_fast/  # 백엔드 (FastAPI)
-├── backtest_fe/       # 프론트엔드 (React + Vite)
-├── database/          # DB 스키마 및 초기화 스크립트
-├── compose.dev.yaml   # 개발용 Docker Compose 설정
-└── README.md          # 프로젝트 안내 문서
+backtest/
+├── backtest_be_fast/       # Backend (FastAPI)
+│   ├── app/                # 애플리케이션 코드
+│   ├── tests/              # 테스트 코드
+│   ├── Dockerfile          # 프로덕션 Docker 이미지
+│   └── requirements.txt    # Python 의존성
+├── backtest_fe/            # Frontend (React + Vite)
+│   ├── src/                # 소스 코드 (테스트는 각 모듈 옆 __tests__/에 위치)
+│   ├── e2e/                # Playwright E2E
+│   └── Dockerfile          # 프로덕션 Docker 이미지 (test 스테이지 포함)
+├── database/               # DB 스키마 및 초기화 스크립트
+├── compose.dev.yaml        # 개발용 Docker Compose
+├── Jenkinsfile             # CI/CD 파이프라인
+└── README.md
 ```
 
 ---
 
-## 개발 환경 시작하기 (Docker)
+## 네이티브 환경에서 실행
 
-프로젝트의 모든 서비스는 Docker Compose를 통해 한 번에 실행할 수 있습니다. (Docker 설치 필수)
+### Backend
 
 ```bash
-# 1. 개발용 컨테이너 빌드 및 백그라운드 실행
+cd backtest_be_fast
+
+# 1. 가상환경 생성 및 활성화
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 2. 의존성 설치
+pip install -r requirements.txt
+
+# 3. 환경변수 설정
+cp .env.example .env
+# .env 파일 수정 (DB 연결 정보 등)
+
+# 4. 서버 실행
+python run_server.py
+# 또는
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Frontend
+
+```bash
+cd backtest_fe
+
+# 1. 의존성 설치
+npm install
+
+# 2. 개발 서버 실행
+npm run dev
+```
+
+**접속 URL**
+- Frontend: http://localhost:5173
+- Backend API Docs: http://localhost:8000/docs
+
+---
+
+## 네이티브 환경에서 테스트
+
+### Backend 테스트
+
+```bash
+cd backtest_be_fast
+
+# 전체 테스트 실행
+pytest
+
+# 단위 테스트만 실행
+pytest tests/unit
+
+# 커버리지 리포트
+pytest --cov=app --cov-report=html
+
+# 특정 테스트 파일 실행
+pytest tests/unit/test_backtest_engine.py -v
+```
+
+### Frontend 테스트
+
+```bash
+cd backtest_fe
+
+# 전체 테스트 실행
+npm test
+
+# Watch 모드
+npm run test:watch
+
+# UI 모드로 테스트
+npm run test:ui
+
+# E2E 테스트 (Playwright)
+npm run test:e2e
+```
+
+---
+
+## Docker 환경에서 실행
+
+```bash
+# 0. 환경변수 설정 (저장소 루트의 .env를 compose가 참조)
+cp .env.example .env
+# .env 파일 수정 (네이버 API 키 등)
+
+# 1. 개발용 컨테이너 빌드 및 실행
 docker compose -f compose.dev.yaml up -d --build
 
-# 2. 서비스 접속
-#    - 프론트엔드: http://localhost:5173
-#    - 백엔드 API 문서 (Swagger UI): http://localhost:8000/api/v1/docs
+# 2. 로그 확인
+docker compose -f compose.dev.yaml logs -f
 
-# 3. 로그 확인 (필요 시)
+# 3. 특정 서비스 로그
 docker compose -f compose.dev.yaml logs -f backtest-be-fast
 
 # 4. 서비스 중지
 docker compose -f compose.dev.yaml down
+
+# 5. 볼륨 포함 완전 삭제
+docker compose -f compose.dev.yaml down -v
 ```
 
-## 테스트 실행하기
+**접속 URL**
+- Frontend: http://localhost:5173
+- Backend API Docs: http://localhost:8000/docs
 
-### 백엔드 테스트
+---
+
+## Docker 환경에서 테스트
+
+### Backend 테스트
 
 ```bash
-# 컨테이너 내에서 모든 테스트 실행
+# 전체 테스트
 docker compose -f compose.dev.yaml exec backtest-be-fast pytest
 
 # 단위 테스트
 docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit
+
+# 커버리지
+docker compose -f compose.dev.yaml exec backtest-be-fast pytest --cov=app
 ```
 
-### 프론트엔드 테스트
+### Frontend 테스트
 
 ```bash
-# 컨테이너 내에서 모든 테스트 실행
+# 전체 테스트
 docker compose -f compose.dev.yaml exec backtest-fe npm test
 
-# 대화형 UI 모드로 테스트 실행
+# UI 모드
 docker compose -f compose.dev.yaml exec backtest-fe npm run test:ui
+
+# 린트 및 타입 체크
+docker compose -f compose.dev.yaml exec backtest-fe npm run lint
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # 프로덕션 코드
+docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # 테스트 코드
 ```
 
-## 커밋 메시지 컨벤션
+### CI 게이트를 그대로 재현
 
-1. 기본 포맷 (Format)
+```bash
+docker build --target test ./backtest_fe        # lint → type-check ×2 → vitest
+docker build --target test ./backtest_be_fast   # pytest tests/unit
+```
+
+현재 기준선은 BE 189건(`tests/unit`), FE 112건이며 모두 통과합니다. 실패가 보이면 회귀입니다. (BE에는 이 외에 DB가 필요한 `tests/integration` 스위트가 별도로 있으며, Quality Gate에는 포함되지 않습니다.)
+
+---
+
+## GHCR에 이미지 Push
+
+### 수동 Push
+
+```bash
+# 1. GHCR 로그인
+echo $GITHUB_TOKEN | docker login ghcr.io -u kyj0503 --password-stdin
+
+# 2. Backend 이미지 빌드 및 Push
+docker build --platform linux/amd64 -t ghcr.io/kyj0503/backtest-be:latest ./backtest_be_fast
+docker push ghcr.io/kyj0503/backtest-be:latest
+
+# 3. Frontend 이미지 빌드 및 Push
+docker build --platform linux/amd64 -t ghcr.io/kyj0503/backtest-fe:latest ./backtest_fe
+docker push ghcr.io/kyj0503/backtest-fe:latest
+```
+
+### 자동 Push (Jenkins)
+
+`main` 브랜치에 Push하면 Jenkins가 자동으로:
+1. **Quality Gate** — FE/BE 각 Dockerfile의 `test` 스테이지를 병렬 실행
+   (FE: lint, type-check, type-check:test, vitest / BE: `pytest tests/unit`)
+2. Backend/Frontend 이미지 빌드
+3. GHCR에 Push (`latest` + 빌드 번호 태그)
+4. home-server 배포 트리거
+5. 헬스 체크
+
+Quality Gate가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 다만 이 게이트는 **배포**를 막는 것이며, 파이프라인이 `*/main`을 체크아웃하고 브랜치 보호를 쓰지 않으므로 병합 자체를 막지는 않습니다.
+
+---
+
+## 커밋 컨벤션
+
+### 기본 포맷
 
 ```
 태그(스코프): 제목 (50자 내외)
 
-- 본문 (선택 사항, 자세한 설명이 필요할 때만 작성)
+- 본문 (선택 사항)
 ```
 
-2. 스코프 (Scope) - 위치 구분
+### 스코프 (Scope)
+
+| 스코프 | 설명 |
+|:-------|:-----|
+| `be` | Backend 관련 코드 |
+| `fe` | Frontend 관련 코드 |
+| `common` | 프로젝트 전체 설정 (README, .gitignore 등) |
+| `infra` | 배포, Docker, CI/CD 등 |
+
+### 태그 (Type)
+
+| 태그 | 설명 | 예시 |
+|:-----|:-----|:-----|
+| `feat` | 새로운 기능 추가 | API 개발, 컴포넌트 추가 |
+| `fix` | 버그 수정 | 로직 오류, 오타 수정 |
+| `docs` | 문서 수정 | README, Swagger, 주석 |
+| `style` | 코드 포맷팅 | 들여쓰기, 세미콜론 |
+| `refactor` | 코드 리팩토링 | 기능 변경 없이 구조 개선 |
+| `test` | 테스트 코드 | 테스트 추가/수정 |
+| `chore` | 기타 잡무 | 빌드 설정, 라이브러리 추가 |
+
+### 예시
 
 ```
-be | Backend 관련 코드
-fe | Frontend 관련 코드
-common | 양쪽 모두 영향이 있거나, 프로젝트 전체 설정 (README, .gitignore)
-infra | 배포, Docker, CI/CD 등
+feat(be): 포트폴리오 백테스트 API 구현
+fix(fe): 차트 렌더링 오류 수정
+docs(common): README 설치 가이드 추가
+chore(infra): Docker Compose 설정 최적화
 ```
 
-3. 태그 (Type) - 작업 성격
+---
 
-```
-feat | 새로운 기능 추가 | API 개발, 버튼 추가
-fix | 버그 수정 | 로직 오류 수정, 오타 수정
-docs | 문서 수정 | README, Swagger, 주석 수정
-style | 코드 포맷팅 (로직 변경 X) | 세미콜론 누락, 줄바꿈, 들여쓰기 정렬
-refactor | 코드 리팩토링 | 기능 변경 없이 코드 구조 개선
-test | 테스트 코드 | 테스트 코드 추가/수정 (프로덕션 코드 변경 X)
-chore | 기타 잡무 | 빌드 설정, 패키지 매니저 설정, 라이브러리 추가
-```
+## 관련 문서
 
-## 문서
-
-프로젝트의 아키텍처, 설계 결정, 테스트 전략 등에 대한 상세 문서는 각 서비스의 `docs` 디렉토리에서 확인할 수 있습니다.
-
--   [백엔드 문서 바로가기](./backtest_be_fast/docs/README.md)
--   [프론트엔드 문서 바로가기](./backtest_fe/docs/README.md)
+- [Backend 문서](./backtest_be_fast/docs/README.md)
+- [Frontend 문서](./backtest_fe/docs/README.md)
+- [2026-02-06 개선 변경 로그](./docs/CHANGELOG-improvement-2026-02-06.md) — Phase 1-5 상세 변경 내역
+- [2026-02-06 개선 검증 리포트](./docs/VERIFICATION-REPORT-2026-02-06.md) — 독립 검증 및 회귀 분석
+- [코드베이스 분석 리포트](./docs/improvement_analysis.md) — 2026-02-06 시점 초기 분석
+- [nginx-gateway DNS 캐싱 이슈](./docs/ISSUE-nginx-gateway-dns-caching.md) — 미해결 이슈 (home-server 저장소 조치 필요)

@@ -7,6 +7,9 @@ import numpy as np
 from backtesting import Backtest
 from app.strategies.strategies import EmaStrategy
 
+pytestmark = pytest.mark.unit
+
+
 class TestEmaRequirements:
 
     def create_fixture_data(self, price_pattern: list) -> pd.DataFrame:
@@ -41,7 +44,7 @@ class TestEmaRequirements:
         data = p1 + p2
         df = self.create_fixture_data(data)
 
-        bt = Backtest(df, EmaStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
+        bt = Backtest(df, EmaStrategy, cash=standard_setup['cash'], commission=0)
         stats = bt.run(fast_window=5, slow_window=10)
         
         trades = stats['_trades']
@@ -62,7 +65,7 @@ class TestEmaRequirements:
         data = p0 + p1 + p2
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, EmaStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
+        bt = Backtest(df, EmaStrategy, cash=standard_setup['cash'], commission=0)
         stats = bt.run(fast_window=5, slow_window=10)
         
         trades = stats['_trades']

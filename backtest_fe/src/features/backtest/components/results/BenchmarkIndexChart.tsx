@@ -6,14 +6,49 @@
  * - 시작점을 100으로 normalize하여 직관적 비교
  * - 범례 클릭으로 개별 라인 토글 가능
  */
-import React, { useState, useMemo, memo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import type { LegendPayload } from 'recharts';
 import { useRenderPerformance } from '@/shared/components';
+import type { BenchmarkSeriesPoint, EquityPoint } from '../../model/types';
 
 interface BenchmarkIndexChartProps {
-  sp500Data: any[];
-  nasdaqData: any[];
-  portfolioEquityData: any[];  // 포트폴리오 equity curve 데이터
+  sp500Data: BenchmarkSeriesPoint[];
+  nasdaqData: BenchmarkSeriesPoint[];
+  portfolioEquityData: EquityPoint[];  // 포트폴리오 equity curve 데이터
+}
+
+// 뷰포트 너비를 추적하는 훅.
+// 기존에는 렌더 시점에 window.innerWidth를 직접 읽어 마진/틱 간격/각도를
+// 계산했는데, 이는 최초 렌더 이후 리사이즈에 전혀 반응하지 않는 문제가 있었다.
+// resize 이벤트를 구독해 상태로 관리하면 리사이즈마다 재렌더링되어 반응한다.
+const useViewportWidth = (): number => {
+  const [width, setWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return width;
+};
+
+/** 시작점을 100으로 맞춘 정규화 시계열 포인트 */
+interface NormalizedPoint {
+  date: string;
+  normalized: number;
+}
+
+/** 포트폴리오/지수 세 계열을 날짜로 병합한 차트 행 */
+interface MergedBenchmarkRow {
+  date: string;
+  portfolio?: number;
+  sp500?: number;
+  nasdaq?: number;
 }
 
 const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
@@ -24,6 +59,8 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   // 성능 모니터링
   useRenderPerformance('BenchmarkIndexChart');
 
+  const viewportWidth = useViewportWidth();
+
   // 각 라인의 표시 여부를 관리하는 상태
   const [visibleLines, setVisibleLines] = useState<Record<string, boolean>>({
     portfolio: true,
@@ -32,14 +69,17 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   });
 
   // 데이터를 시작점 100으로 normalize하는 함수 (샘플링은 useChartData에서 처리됨)
-  const normalizeData = (data: any[], valueKey: string) => {
+  const normalizeData = <T extends { date: string }>(
+    data: T[],
+    valueKey: keyof T & string
+  ): NormalizedPoint[] => {
     if (!data || data.length === 0) return [];
-    const startValue = data[0][valueKey];
+    const startValue = Number(data[0]?.[valueKey]);
     if (!startValue || startValue === 0) return [];
 
-    return data.map((point: any) => ({
+    return data.map((point) => ({
       date: point.date,
-      normalized: (point[valueKey] / startValue) * 100,
+      normalized: (Number(point[valueKey]) / startValue) * 100,
     }));
   };
 
@@ -105,7 +145,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
 
   // 세 데이터를 날짜별로 병합
   const mergedData = useMemo(() => {
-    const dataMap = new Map<string, any>();
+    const dataMap = new Map<string, MergedBenchmarkRow>();
 
     // 포트폴리오 데이터 추가
     normalizedPortfolio.forEach(p => {
@@ -139,7 +179,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
   const yAxisDomain = useMemo(() => {
     if (mergedData.length === 0) return ['auto', 'auto'];
 
-    let allValues: number[] = [];
+    const allValues: number[] = [];
     
     mergedData.forEach(item => {
       if (visibleLines.portfolio && item.portfolio !== undefined) {
@@ -168,7 +208,7 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  const handleLegendClick = useCallback((data: any) => {
+  const handleLegendClick = useCallback((data: LegendPayload) => {
     const dataKey = data.dataKey;
     if (dataKey && typeof dataKey === 'string') {
       setVisibleLines(prev => ({
@@ -182,19 +222,19 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
 
   return (
     <ResponsiveContainer width="100%" height={400} debounce={300}>
-      <LineChart 
-        data={mergedData} 
+      <LineChart
+        data={mergedData}
         syncId="benchmarkChart"
-        margin={{ top: 5, right: 20, left: 10, bottom: window.innerWidth < 640 ? 60 : 5 }}
+        margin={{ top: 5, right: 20, left: 10, bottom: viewportWidth < 640 ? 60 : 5 }}
       >
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis
             dataKey="date"
             tickFormatter={formatDateTick}
             tick={{ fontSize: 12 }}
-            interval={Math.ceil(mergedData.length / (window.innerWidth < 640 ? 4 : window.innerWidth < 1024 ? 6 : 8))}
-            angle={window.innerWidth < 640 ? -45 : 0}
-            textAnchor={window.innerWidth < 640 ? 'end' : 'middle'}
+            interval={Math.ceil(mergedData.length / (viewportWidth < 640 ? 4 : viewportWidth < 1024 ? 6 : 8))}
+            angle={viewportWidth < 640 ? -45 : 0}
+            textAnchor={viewportWidth < 640 ? 'end' : 'middle'}
           />
           <YAxis
             domain={yAxisDomain}
@@ -202,15 +242,16 @@ const BenchmarkIndexChart: React.FC<BenchmarkIndexChartProps> = memo(({
             tick={{ fontSize: 13 }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => {
+            formatter={(value: unknown, name: unknown) => {
               const labels: Record<string, string> = {
                 portfolio: '내 포트폴리오',
                 sp500: 'S&P 500',
                 nasdaq: 'NASDAQ',
               };
-              return [value.toFixed(2), labels[name] || name];
+              const key = String(name);
+              return [Number(value).toFixed(2), labels[key] || key];
             }}
-            labelFormatter={(label: string) => `날짜: ${label}`}
+            labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
             contentStyle={{
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               border: '1px solid #ccc',

@@ -12,7 +12,7 @@
 import React, { Suspense, memo, useState } from 'react';
 import { Grid3X3, Grid } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
-import { ChartLoading } from '@/shared/components';
+import { ChartLoading, ErrorBoundary } from '@/shared/components';
 import { LazyStatsSummary } from '../../lazy/LazyChartComponents';
 import { ChartData, PortfolioData } from '../../../model/types';
 import { useChartData } from '../../../hooks/charts/useChartData';
@@ -20,6 +20,13 @@ import { PortfolioCharts } from './PortfolioCharts';
 import { SingleStockCharts } from './SingleStockCharts';
 import { BenchmarkSection } from './BenchmarkSection';
 import { SupplementaryCharts } from './SupplementaryCharts';
+
+const ChartErrorFallback = ({ section }: { section: string }) => (
+  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-center">
+    <p className="text-sm text-destructive">{section} 차트를 렌더링하는 중 오류가 발생했습니다.</p>
+    <p className="text-xs text-muted-foreground mt-1">다른 차트는 정상 표시됩니다.</p>
+  </div>
+);
 
 interface ChartsSectionProps {
   data: ChartData | PortfolioData;
@@ -74,8 +81,8 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
     <div className="space-y-6">
       {/* 샘플링 경고 표시 */}
       {samplingWarning && (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">{samplingWarning}</p>
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-600 rounded-lg">
+          <p className="text-sm text-yellow-800 dark:text-yellow-300">{samplingWarning}</p>
         </div>
       )}
 
@@ -125,51 +132,57 @@ const ChartsSection: React.FC<ChartsSectionProps> = memo(({ data, isPortfolio })
         }}
       >
         {/* 3.1 기본 차트 (포트폴리오 또는 단일 종목) */}
-        {isPortfolio && portfolioData ? (
-          <PortfolioCharts
-            portfolioData={portfolioData}
-            portfolioEquityData={portfolioEquityData}
-            stocksData={stocksData}
-            tickerInfo={tickerInfo}
-            tradeLogs={tradeLogs}
-            aggregationType={aggregationType}
-          />
-        ) : chartData ? (
-          <SingleStockCharts
-            chartData={chartData}
-            singleEquityData={singleEquityData}
-            singleTrades={singleTrades}
-            singleOhlcData={singleOhlcData}
-            stocksData={stocksData}
-            tickerInfo={tickerInfo}
-            tradeLogs={tradeLogs}
-            aggregationType={aggregationType}
-          />
-        ) : null}
+        <ErrorBoundary fallback={<ChartErrorFallback section="포트폴리오/종목" />}>
+          {isPortfolio && portfolioData ? (
+            <PortfolioCharts
+              portfolioData={portfolioData}
+              portfolioEquityData={portfolioEquityData}
+              stocksData={stocksData}
+              tickerInfo={tickerInfo}
+              tradeLogs={tradeLogs}
+              aggregationType={aggregationType}
+            />
+          ) : chartData ? (
+            <SingleStockCharts
+              chartData={chartData}
+              singleEquityData={singleEquityData}
+              singleTrades={singleTrades}
+              singleOhlcData={singleOhlcData}
+              stocksData={stocksData}
+              tickerInfo={tickerInfo}
+              tradeLogs={tradeLogs}
+              aggregationType={aggregationType}
+            />
+          ) : null}
+        </ErrorBoundary>
 
         {/* 3.2 벤치마크 차트 */}
-        <BenchmarkSection
-          sp500Benchmark={sp500Benchmark}
-          nasdaqBenchmark={nasdaqBenchmark}
-          sp500BenchmarkWithReturn={sp500BenchmarkWithReturn}
-          nasdaqBenchmarkWithReturn={nasdaqBenchmarkWithReturn}
-          equityDataForBenchmark={equityDataForBenchmark}
-          aggregationType={aggregationType}
-        />
+        <ErrorBoundary fallback={<ChartErrorFallback section="벤치마크" />}>
+          <BenchmarkSection
+            sp500Benchmark={sp500Benchmark}
+            nasdaqBenchmark={nasdaqBenchmark}
+            sp500BenchmarkWithReturn={sp500BenchmarkWithReturn}
+            nasdaqBenchmarkWithReturn={nasdaqBenchmarkWithReturn}
+            equityDataForBenchmark={equityDataForBenchmark}
+            aggregationType={aggregationType}
+          />
+        </ErrorBoundary>
 
         {/* 3.3 부가 정보 차트 */}
-        <SupplementaryCharts
-          exchangeRates={exchangeRates}
-          exchangeStats={exchangeStats}
-          volatilityEvents={volatilityEvents}
-          latestNews={latestNews}
-          hasVolatilityEvents={hasVolatilityEvents}
-          hasNews={hasNews}
-          tickerInfo={tickerInfo}
-          rebalanceHistory={rebalanceHistory}
-          weightHistory={weightHistory}
-          portfolioComposition={portfolioData?.portfolio_composition}
-        />
+        <ErrorBoundary fallback={<ChartErrorFallback section="부가 정보" />}>
+          <SupplementaryCharts
+            exchangeRates={exchangeRates}
+            exchangeStats={exchangeStats}
+            volatilityEvents={volatilityEvents}
+            latestNews={latestNews}
+            hasVolatilityEvents={hasVolatilityEvents}
+            hasNews={hasNews}
+            tickerInfo={tickerInfo}
+            rebalanceHistory={rebalanceHistory}
+            weightHistory={weightHistory}
+            portfolioComposition={portfolioData?.portfolio_composition}
+          />
+        </ErrorBoundary>
       </div>
     </div>
   );

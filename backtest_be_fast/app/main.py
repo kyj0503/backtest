@@ -25,7 +25,6 @@ FastAPI 애플리케이션 메인 진입점
 """
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
 import logging
 from datetime import datetime
@@ -82,14 +81,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS 미들웨어 설정
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.backend_cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS는 nginx에서 통합 관리 (home-server/nginx/nginx.conf)
 
 # API 라우터 포함
 app.include_router(api_router, prefix=settings.api_v1_str)

@@ -11,12 +11,12 @@ asyncio.gather()를 사용하여 순차적 데이터베이스 쿼리를 병렬 �
   - 병렬 로딩: 1.09초
   - 성능 향상: **1.8배**
 - 분석: 데이터 양이 많아질수록(5년치) DB I/O 및 데이터프레임 변환(CPU) 부하가 커져 병렬화의 이점이 다소 감소함 (소량 데이터에서는 5~6배 향상).
-- 위치: app/services/portfolio_service.py 라인 1490-1510 부근
+- 위치: `app/services/portfolio/portfolio_data_loader.py`의 `PortfolioDataLoader.load_stock_data_parallel()` (호출부: `PortfolioManagerService.run_buy_and_hold_portfolio_backtest`). 리팩토링으로 줄 번호가 자주 바뀌므로 메서드명으로 찾는 것을 권장합니다.
 
 구현:
 ```python
 load_tasks = [
-    asyncio.to_thread(load_ticker_data, symbol, start_date, end_date)
+    asyncio.to_thread(self.stock_repository.load_stock_data, symbol, start_date, end_date)
     for symbol in symbols_to_load
 ]
 load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
@@ -26,7 +26,7 @@ load_results = await asyncio.gather(*load_tasks, return_exceptions=True)
 - 이전: 순차 로딩
 - 이후: asyncio.gather()를 사용한 병렬 로딩
 - 성능 향상: 포트폴리오 데이터 로딩과 유사한 수준의 병렬화 이점 제공 (약 3-5배 예상)
-- 위치: app/utils/currency_converter.py 라인 360-390 부근
+- 위치: `app/utils/currency_converter.py`의 `CurrencyConverter.load_multiple_exchange_rates()`
 
 ### 데이터베이스 쿼리 최적화
 

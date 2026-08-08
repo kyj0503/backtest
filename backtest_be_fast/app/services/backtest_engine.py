@@ -8,14 +8,13 @@ from datetime import datetime, timedelta, date
 from typing import Dict, Any, Optional, List, Type
 from uuid import uuid4
 import pandas as pd
-import numpy as np
 
 from backtesting import Backtest, Strategy
 from fastapi import HTTPException
 
 from app.schemas.requests import BacktestRequest
 from app.schemas.responses import BacktestResult
-from app.utils.data_fetcher import data_fetcher, InvalidSymbolError as DataFetcherInvalidSymbolError
+from app.utils.data_fetcher import data_fetcher
 from app.repositories.data_repository import data_repository
 from app.services.strategy_service import strategy_service
 from app.services.validation_service import validation_service
@@ -76,56 +75,40 @@ class BacktestEngine:
             )
             self.logger.debug("백테스트 객체 생성 완료")
             
-            try:
-                run_kwargs = self._build_run_kwargs(request)
-                # FIXED: Wrap synchronous bt.run() with asyncio.to_thread() (async/sync boundary)
-                result = await asyncio.to_thread(self._execute_backtest, bt, run_kwargs)
-                self.logger.info("백테스트 실행 완료")
-                self.logger.info(f"거래 수: {result['# Trades']}")
-                self.logger.info(f"수익률: {result.get('Return [%]', 0):.2f}%")
-                self.logger.info(f"Buy & Hold: {result.get('Buy & Hold Return [%]', 0):.2f}%")
-                
-                # 디버깅: 실제 stats 키들 출력
-                self.logger.debug("=== 백테스트 결과 키들 ===")
-                for key in result.index:
-                    self.logger.debug(f"  '{key}': {result.get(key)}")
-                self.logger.debug("========================")
-                
-                # 결과가 유효한지 확인
-                if result is not None and '# Trades' in result:
-                    return self._convert_result_to_response(result, request)
-                else:
-                    self.logger.warning(f"백테스트 결과가 유효하지 않음 ({request.ticker}), fallback 사용")
-                    raise Exception(f"백테스트 결과가 유효하지 않습니다: {request.ticker}")
-                    
-            except Exception as e:
-                self.logger.error(f"백테스트 실행 중 오류: {e}")
-                self.logger.info("Fallback 통계 생성 중...")
-                # 실제 주가 변동을 반영한 fallback 통계 생성
-                return self._create_fallback_result(data, request)
-            
+            # FIXED: Wrap synchronous bt.run() with asyncio.to_thread() (async/sync boundary)
+            result = await asyncio.to_thread(self._execute_backtest, bt)
+            self.logger.info("백테스트 실행 완료")
+            self.logger.info(f"거래 수: {result['# Trades']}")
+            self.logger.info(f"수익률: {result.get('Return [%]', 0):.2f}%")
+            self.logger.info(f"Buy & Hold: {result.get('Buy & Hold Return [%]', 0):.2f}%")
+
+            # 디버깅: 실제 stats 키들 출력
+            self.logger.debug("=== 백테스트 결과 키들 ===")
+            for key in result.index:
+                self.logger.debug(f"  '{key}': {result.get(key)}")
+            self.logger.debug("========================")
+
+            # 참고: 위 83행의 `result['# Trades']`가 이미 이 키를 무조건 역참조한다.
+            # 그 키가 없다면(또는 result가 None이라면) 83행에서 먼저 KeyError/TypeError가
+            # 발생해 이 지점에 도달하기 전에 아래 except 블록으로 빠진다. 즉 이 시점에
+            # 도달했다면 '# Trades' in result는 항상 참이다. 과거에는 이 사실이 없는
+            # 것처럼 "무효한 결과" 분기를 두고 실제로 실행된 거래가 없는데도
+            # `_create_fallback_result()`로 Win Rate 100%/거래 1건 같은 조작된 통계를
+            # HTTP 200 성공으로 반환했다(P3-21). 그 분기는 도달 불가능한 죽은 코드였다.
+            return self._convert_result_to_response(result, request)
+
         except Exception as e:
             self.logger.error(f"백테스트 전체 프로세스 오류: {e}")
 
             # 이미 HTTPException으로 만들어진 예외는 그대로 재발생시켜 호출자(엔드포인트)에서
-            # 적절한 상태코드를 처리할 수 있도록 한다.
+            # 적절한 상태코드를 처리할 수 있도록 한다. ValidationError와
+            # InvalidSymbolError는 모두 HTTPException의 서브클래스이므로 이 분기에서
+            # 이미 처리된다 (별도의 isinstance 분기가 필요 없다 — 과거에는 아래에
+            # 도달 불가능한 ValidationError/InvalidSymbolError 전용 분기가 있었는데,
+            # 그중 ValidationError 분기는 `try: raise e / except Exception: pass`로
+            # 자기 자신이 던진 예외를 즉시 삼켜버리는 자기 무력화 버그까지 있었다).
             if isinstance(e, HTTPException):
                 raise
-
-            # custom ValidationError는 그대로 재발생시키도록 허용
-            try:
-                if isinstance(e, ValidationError):
-                    raise e
-            except Exception:
-                # import 실패시 무시
-                pass
-
-            # data_fetcher에서 발생시키는 InvalidSymbolError는 422로 매핑
-            try:
-                if isinstance(e, DataFetcherInvalidSymbolError):
-                    raise HTTPException(status_code=422, detail=str(e))
-            except Exception:
-                pass
 
             # 그 외 에러는 500으로 처리
             raise HTTPException(status_code=500, detail=f"백테스트 실행 실패: {str(e)}")
@@ -169,24 +152,24 @@ class BacktestEngine:
         if not params:
             return base_strategy
 
-        sanitized_params: Dict[str, Any] = {}
         try:
             validated = self.strategy_service.validate_strategy_params(
                 strategy_name,
                 params,
             )
-            sanitized_params = {
-                key: validated[key]
-                for key in params.keys()
-                if key in validated
-            }
         except ValueError as exc:
             self.logger.warning(
-                "전략 파라미터 검증 경고(%s): %s - 원본 값 사용",
+                "전략 파라미터 검증 실패(%s): %s",
                 strategy_name,
                 exc,
             )
-            sanitized_params = params
+            raise ValidationError(str(exc)) from exc
+
+        sanitized_params: Dict[str, Any] = {
+            key: validated[key]
+            for key in params.keys()
+            if key in validated
+        }
 
         overrides = {
             key: value
@@ -205,26 +188,9 @@ class BacktestEngine:
         configured_name = f"{base_strategy.__name__}Configured_{uuid4().hex[:8]}"
         return type(configured_name, (base_strategy,), overrides)
 
-    def _build_run_kwargs(self, request: BacktestRequest) -> Dict[str, Any]:
-        """Backtest.run 호출 시 사용할 부가 인자 구성"""
-        run_kwargs: Dict[str, Any] = {}
-        if request.spread and request.spread > 0:
-            run_kwargs["spread"] = request.spread
-        return run_kwargs
-
-    def _execute_backtest(self, bt: Backtest, run_kwargs: Dict[str, Any]) -> pd.Series:
-        """Backtest 실행 래퍼 (옵션 인자 호환성 처리)"""
-        try:
-            if run_kwargs:
-                return bt.run(**run_kwargs)
-            return bt.run()
-        except TypeError as error:
-            # 일부 backtesting 버전은 spread 매개변수를 지원하지 않음
-            if "spread" in run_kwargs and "spread" in str(error):
-                self.logger.warning("Backtest.run spread 인자 미지원 - spread 제외 후 재시도")
-                safe_kwargs = {k: v for k, v in run_kwargs.items() if k != "spread"}
-                return bt.run(**safe_kwargs) if safe_kwargs else bt.run()
-            raise
+    def _execute_backtest(self, bt: Backtest) -> pd.Series:
+        """Backtest 실행 래퍼"""
+        return bt.run()
 
     def _create_fallback_result(self, data: pd.DataFrame, request: BacktestRequest) -> BacktestResult:
         """실제 데이터 기반의 fallback 결과 생성"""
@@ -342,46 +308,16 @@ class BacktestEngine:
                     self.logger.warning(f"equity curve 변환 실패: {e}")
                     equity_curve_dict = None
 
-            if getattr(request, 'benchmark_ticker', None):
-                try:
-                    self.logger.info(f"벤치마크 데이터 로딩 중: {request.benchmark_ticker}")
-                    benchmark = self.data_fetcher.fetch_stock_data(
-                        ticker=request.benchmark_ticker,
-                        start_date=start_date,
-                        end_date=end_date
-                    )
-                    if (
-                        benchmark is not None and not benchmark.empty
-                        and isinstance(equity_curve_df, pd.DataFrame) and not equity_curve_df.empty
-                    ):
-                        self.logger.debug(
-                            f"벤치마크 데이터 로드 완료: {len(benchmark)} 포인트, "
-                            f"전략 equity curve: {len(equity_curve_df)} 포인트"
-                        )
-                        strat_returns = equity_curve_df['Equity'].pct_change().dropna()
-                        bench_returns = benchmark['Close'].pct_change().dropna()
-                        strat_returns, bench_returns = strat_returns.align(bench_returns, join='inner')
-                        if len(strat_returns) > 1 and bench_returns.var() != 0:
-                            cov_matrix = np.cov(strat_returns, bench_returns)
-                            cov = cov_matrix[0][1]
-                            var_bench = bench_returns.var()
-                            if var_bench != 0:
-                                beta_value = cov / var_bench
-                                mean_strat = strat_returns.mean()
-                                mean_bench = bench_returns.mean()
-                                alpha_pct = (mean_strat - beta_value * mean_bench) * 100
-                                beta_value = float(beta_value)
-                                alpha_pct = float(alpha_pct)
-                                self.logger.info(
-                                    f"Alpha/Beta 계산 완료: Alpha={alpha_pct:.2f}%, Beta={beta_value:.3f} "
-                                    f"(전략 평균 수익률={mean_strat*100:.3f}%, 벤치마크 평균 수익률={mean_bench*100:.3f}%)"
-                                )
-                        else:
-                            self.logger.warning("Alpha/Beta 계산 불가: 데이터 포인트 부족 또는 벤치마크 분산 0")
-                    else:
-                        self.logger.warning(f"벤치마크 데이터 없음 또는 equity curve 없음")
-                except Exception as e:
-                    self.logger.warning(f"Alpha/Beta 계산 실패: {e}")
+            # 참고(P3-19): 여기에는 과거 request.benchmark_ticker가 설정된 경우
+            # Alpha/Beta를 계산하는 벤치마크 비교 블록이 있었다. BacktestRequest에
+            # benchmark_ticker 필드 자체가 없어(schemas/requests.py) 어떤 라이브 호출도
+            # 이 필드를 채울 수 없었으므로 도달 불가능한 죽은 코드였다. 게다가 되살릴
+            # 경우 두 가지 잠재 버그가 있었다: (1) 동기 self.data_fetcher.fetch_stock_data()
+            # 호출을 asyncio.to_thread 없이 이 async 경로에서 직접 호출해 이벤트 루프를
+            # 블로킹했고, (2) equity_curve_df의 tz-aware 인덱스와 fetch_stock_data가
+            # 반환하는 tz-naive 인덱스를 정렬 없이 비교해 pct_change/align 결과가 어긋날
+            # 수 있었다. 벤치마크 비교 기능이 필요해지면 두 버그를 모두 고친 뒤
+            # 새로 구현해야 한다. alpha_pct/beta는 항상 None으로 응답에 포함된다.
 
             return BacktestResult(
                 ticker=request.ticker,
@@ -395,7 +331,12 @@ class BacktestEngine:
                 annualized_return_pct=safe_float(stats.get('Return (Ann.) [%]', 0.0)),
                 buy_and_hold_return_pct=safe_float(stats.get('Buy & Hold Return [%]', 0.0)),
                 cagr_pct=safe_float(stats.get('Return (Ann.) [%]', 0.0)),  # CAGR은 연간 수익률과 동일
-                volatility_pct=safe_float(stats.get('Volatility [%]', 0.0)),
+                # backtesting.py 0.3.3은 연환산 변동성을 'Volatility (Ann.) [%]'로
+                # 내보낸다. 과거에는 존재하지 않는 'Volatility [%]'를 읽어
+                # .get 기본값 때문에 항상 0.0이 보고됐다.
+                volatility_pct=safe_float(
+                    stats.get('Volatility (Ann.) [%]', stats.get('Volatility [%]', 0.0))
+                ),
                 sharpe_ratio=safe_float(stats.get('Sharpe Ratio', 0.0)),
                 sortino_ratio=safe_float(stats.get('Sortino Ratio', 0.0)),
                 calmar_ratio=safe_float(stats.get('Calmar Ratio', 0.0)),
@@ -418,7 +359,15 @@ class BacktestEngine:
             )
         except Exception as e:
             self.logger.error(f"결과 변환 실패: {str(e)}")
-            return self._create_fallback_result(pd.DataFrame(), request)
+            # 이전에는 여기서 _create_fallback_result(pd.DataFrame(), request)를 호출해
+            # 완전히 조작된(전부 0인) 결과를 HTTP 200 성공으로 반환했다(P3-21). 실제
+            # 백테스트는 성공했는데 결과를 응답 스키마로 변환하는 과정에서만 실패한
+            # 것이므로, 실패를 성공으로 위장하지 않고 그대로 실패로 표면화한다 —
+            # run_backtest()의 예외 처리기가 이를 500으로 매핑한다.
+            raise HTTPException(
+                status_code=500,
+                detail=f"백테스트 결과 변환에 실패했습니다: {request.ticker}"
+            ) from e
 
 
 # 글로벌 인스턴스

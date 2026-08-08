@@ -27,6 +27,6 @@ export const ResultBlock: React.FC<ResultBlockProps> = ({
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
     </div>
-    <div className="mt-4">{children}</div>
+    <div className="mt-4" role="figure" aria-label={`${title} 차트`}>{children}</div>
   </div>
 );

@@ -23,10 +23,15 @@ RUN python3 -m venv ${VENV_DIR}
 ENV PATH="${VENV_DIR}/bin:$PATH"
 
 # Install dependencies layer (cached)
-COPY requirements.txt .
-COPY requirements-test.txt .
-RUN pip install -r requirements.txt
-RUN pip install -r requirements-test.txt
+# P2-22: 이미지 빌드 시점에는 완전 고정된 락 파일을 설치해 재현성을 보장한다.
+# (compose.dev.yaml의 command는 컨테이너 기동 시 requirements.lock.txt를 다시
+# pip install해 바인드 마운트된 소스와 venv 볼륨을 동기화한다 — 사람이 편집하는
+# requirements.txt 자체는 여기서 설치에 쓰이지 않지만 bind mount로 계속
+# 컨테이너 안에 존재하며, 락 재생성 시 입력으로 쓰인다.)
+COPY requirements.lock.txt .
+COPY requirements-test.lock.txt .
+RUN pip install -r requirements.lock.txt
+RUN pip install -r requirements-test.lock.txt
 
 # NOTE: We do NOT COPY app code here because it is bind-mounted in docker-compose.dev.yaml.
 # This prevents cache invalidation when source code changes.

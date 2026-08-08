@@ -1,5 +1,11 @@
 # 주가 분할 메타데이터 최적화 구현 가이드
 
+> **📌 이미 적용된 히스토리 문서입니다.** 이 문서는 마이그레이션 전 "적용 가이드"로 작성되었지만, 아래 변경 사항은 모두 현재 코드베이스에 반영되어 있습니다.
+> - DB 마이그레이션: `database/schema.sql`에 이미 `last_split_date`/`last_split_ratio`/`splits_updated_at` 컬럼과 인덱스가 포함되어 있습니다. 별도로 `ALTER TABLE`을 실행할 필요가 없습니다.
+> - 원래 이 문서가 가리키던 서비스 모듈과 배치 스크립트는 각각 `app/repositories/yfinance_repository.py`, `scripts/manage_stock_splits.py`로 이름이 바뀌어 있습니다 (아래 본문은 새 이름으로 갱신했습니다). `migrations/add_split_metadata_columns.sql`은 현재 저장소에 없습니다 — 스키마는 `database/schema.sql`에 직접 반영되어 있습니다.
+> - DB 이름은 (Docker Compose 기준) `backtest_db`가 아니라 `stock_data_cache`입니다 (`database/schema.sql` 참고).
+> - 아래 본문은 당시 작성된 그대로 남겨 두었으니, 명령어를 그대로 복사해 실행하지 말고 위 대응 관계를 참고해 현재 경로/이름으로 바꿔서 사용하세요.
+
 ## 📋 개요
 
 **문제**: 백테스트 실행 시 매번 `get_last_split_date()` API를 호출하여 성능 저하 발생
@@ -19,7 +25,7 @@
 
 ```bash
 # 1. MySQL 접속
-docker exec -it backtest-be-fast-dev mysql -h mysql -u root -ppassword backtest_db
+docker exec -it backtest-be-fast-dev mysql -h mysql -u root -ppassword stock_data_cache
 
 # 2. 마이그레이션 SQL 실행
 ALTER TABLE stocks
@@ -54,9 +60,9 @@ exit
 
 모든 변경 사항은 이미 다음 파일에 적용되었습니다:
 - ✅ `app/utils/data_fetcher.py`
-- ✅ `app/services/yfinance_db.py`
-- ✅ `scripts/update_split_metadata.py`
-- ✅ `migrations/add_split_metadata_columns.sql`
+- ✅ `app/repositories/yfinance_repository.py`
+- ✅ `scripts/manage_stock_splits.py`
+- ✅ `database/schema.sql` (컬럼이 스키마에 직접 반영됨; 별도 마이그레이션 파일 없음)
 
 **Docker 컨테이너 재시작:**
 ```bash
@@ -74,7 +80,7 @@ docker logs -f backtest-be-fast-dev
 **전체 종목 분할 정보 한 번 수집:**
 ```bash
 # 모든 종목 강제 업데이트 (100개씩)
-docker exec backtest-be-fast-dev python scripts/update_split_metadata.py --all --batch-size 100
+docker exec backtest-be-fast-dev python scripts/manage_stock_splits.py --all --batch-size 100
 ```
 
 **예상 출력**:
@@ -116,7 +122,7 @@ docker exec backtest-be-fast-dev python scripts/update_split_metadata.py --all -
 crontab -e
 
 # 매일 새벽 2시 실행
-0 2 * * * docker exec backtest-be-fast-dev python scripts/update_split_metadata.py --batch-size 100 >> /var/log/split_update.log 2>&1
+0 2 * * * docker exec backtest-be-fast-dev python scripts/manage_stock_splits.py --batch-size 100 >> /var/log/split_update.log 2>&1
 ```
 
 #### 방법 B: Docker Compose 서비스
@@ -131,7 +137,7 @@ services:
       sh -c "
         while true; do
           echo '[$(date)] Starting split metadata update...'
-          python scripts/update_split_metadata.py --batch-size 100
+          python scripts/manage_stock_splits.py --batch-size 100
           echo '[$(date)] Sleeping for 24 hours...'
           sleep 86400
         done
@@ -141,7 +147,7 @@ services:
       - DB_PORT=3306
       - DB_USER=root
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=backtest_db
+      - DB_NAME=stock_data_cache
     depends_on:
       - mysql
     restart: unless-stopped
@@ -189,14 +195,15 @@ LIMIT 10;
 ```bash
 # 백테스트 실행 시간 측정
 time docker exec backtest-be-fast-dev python -c "
-from app.services.yfinance_db import load_ticker_data
+from app.repositories.yfinance_repository import YFinanceRepository
 import time
 
+repo = YFinanceRepository()
 tickers = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'ADBE', 'CRM']
 start = time.time()
 
 for ticker in tickers:
-    df = load_ticker_data(ticker, '2023-01-01', '2024-01-01')
+    df = repo.load_ticker_data(ticker, '2023-01-01', '2024-01-01')
     print(f'{ticker}: {len(df)} rows')
 
 elapsed = time.time() - start
@@ -238,13 +245,13 @@ docker logs backtest-be-fast-dev 2>&1 | grep "소급 분할"
 
 ```bash
 # 통계만 조회
-docker exec backtest-be-fast-dev python scripts/update_split_metadata.py --stats-only
+docker exec backtest-be-fast-dev python scripts/manage_stock_splits.py --stats-only
 
 # 7일 이상 된 종목만 업데이트 (50개)
-docker exec backtest-be-fast-dev python scripts/update_split_metadata.py
+docker exec backtest-be-fast-dev python scripts/manage_stock_splits.py
 
 # 모든 종목 강제 업데이트 (100개)
-docker exec backtest-be-fast-dev python scripts/update_split_metadata.py --all --batch-size 100
+docker exec backtest-be-fast-dev python scripts/manage_stock_splits.py --all --batch-size 100
 ```
 
 ### 유용한 SQL 쿼리
@@ -312,7 +319,7 @@ docker exec backtest-be-fast-dev pwd
 # 출력: /app
 
 # 스크립트 실행 (절대 경로 사용)
-docker exec backtest-be-fast-dev python /app/scripts/update_split_metadata.py
+docker exec backtest-be-fast-dev python /app/scripts/manage_stock_splits.py
 ```
 
 ### 문제 3: 분할 정보가 업데이트되지 않음
@@ -332,7 +339,7 @@ LIMIT 10;
 **해결**:
 ```bash
 # 강제 업데이트
-docker exec backtest-be-fast-dev python scripts/update_split_metadata.py --all
+docker exec backtest-be-fast-dev python scripts/manage_stock_splits.py --all
 ```
 
 ### 문제 4: 성능 개선이 없음
@@ -343,7 +350,7 @@ docker exec backtest-be-fast-dev python scripts/update_split_metadata.py --all
 **디버깅**:
 ```bash
 # 로그 레벨을 DEBUG로 설정
-docker exec backtest-be-fast-dev grep "get_last_split_date" /app/app/services/yfinance_db.py
+docker exec backtest-be-fast-dev grep "get_last_split_date" /app/app/repositories/yfinance_repository.py
 
 # 출력에 get_last_split_date 함수 호출이 없어야 함
 # 있으면 코드 재배포 필요
@@ -366,10 +373,10 @@ docker exec backtest-be-fast-dev grep "get_last_split_date" /app/app/services/yf
 
 | 파일 | 변경 사항 |
 |------|-----------|
-| `migrations/add_split_metadata_columns.sql` | ✨ 신규: DB 스키마 마이그레이션 |
-| `scripts/update_split_metadata.py` | ✨ 신규: 정기 업데이트 배치 스크립트 |
+| `database/schema.sql` | ✨ 신규: `last_split_date`/`last_split_ratio`/`splits_updated_at` 컬럼 및 인덱스 (별도 마이그레이션 파일 없이 스키마에 직접 포함) |
+| `scripts/manage_stock_splits.py` | ✨ 신규: 정기 업데이트 배치 스크립트 |
 | `app/utils/data_fetcher.py` | 🔧 수정: `fetch_ticker_info()`에 분할 정보 포함 |
-| `app/services/yfinance_db.py` | 🔧 수정: DB 기반 분할 체크 (API 호출 제거) |
+| `app/repositories/yfinance_repository.py` | 🔧 수정: DB 기반 분할 체크 (API 호출 제거) |
 
 ---
 

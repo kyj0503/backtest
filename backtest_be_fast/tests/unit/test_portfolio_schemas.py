@@ -10,6 +10,10 @@
 import pytest
 from pydantic import ValidationError
 from app.schemas.schemas import PortfolioStock, PortfolioBacktestRequest
+from app.schemas.requests import StrategyType
+
+pytestmark = pytest.mark.unit
+
 
 class TestPortfolioStock:
     """포트폴리오 종목 모델 테스트"""
@@ -74,7 +78,7 @@ class TestPortfolioBacktestRequest:
             "start_date": "2023-01-01",
             "end_date": "2024-01-01",
             "commission": 0.002,
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         request = PortfolioBacktestRequest(**data)
         assert len(request.portfolio) == 2
@@ -84,7 +88,7 @@ class TestPortfolioBacktestRequest:
             "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
             "start_date": "2024-01-01",
             "end_date": "2023-01-01",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError) as exc_info:
             PortfolioBacktestRequest(**data)
@@ -102,7 +106,7 @@ class TestPortfolioBacktestRequest:
             }],
             "start_date": "2023-01-01",
             "end_date": "2023-10-31",  # 약 10개월
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError) as exc_info:
             PortfolioBacktestRequest(**data)
@@ -119,7 +123,7 @@ class TestPortfolioBacktestRequest:
             }],
             "start_date": "2023-01-01",
             "end_date": "2025-01-01",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         request = PortfolioBacktestRequest(**data)
         assert request.portfolio[0].dca_frequency == 'monthly_1'
@@ -143,7 +147,7 @@ class TestPortfolioBacktestRequest:
             ],
             "start_date": "2023-01-01",
             "end_date": "2023-10-31",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError) as exc_info:
             PortfolioBacktestRequest(**data)
@@ -161,7 +165,7 @@ class TestPortfolioBacktestRequest:
             }],
             "start_date": "2023-01-01",
             "end_date": "2024-01-01", # 정확히 1년
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         request = PortfolioBacktestRequest(**data)
         assert request.portfolio[0].dca_frequency == 'monthly_12'
@@ -171,7 +175,7 @@ class TestPortfolioBacktestRequest:
             "portfolio": [],
             "start_date": "2023-01-01",
             "end_date": "2024-01-01",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError):
             PortfolioBacktestRequest(**data)
@@ -181,7 +185,39 @@ class TestPortfolioBacktestRequest:
             "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
             "start_date": "2023/01/01",
             "end_date": "2024-01-01",
-            "strategy": "buy_and_hold"
+            "strategy": "buy_hold_strategy"
         }
         with pytest.raises(ValidationError):
             PortfolioBacktestRequest(**data)
+
+    def test_default_strategy_is_valid_strategy_type(self):
+        """strategy 미입력 시 기본값이 StrategyType의 유효한 값이어야 함 (P2-03)"""
+        data = {
+            "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
+            "start_date": "2023-01-01",
+            "end_date": "2024-01-01",
+        }
+        request = PortfolioBacktestRequest(**data)
+        assert request.strategy in {s.value for s in StrategyType}
+
+    def test_invalid_strategy_raises_error(self):
+        """StrategyType에 없는 임의의 strategy 값은 ValidationError 발생 (P2-03)"""
+        data = {
+            "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
+            "start_date": "2023-01-01",
+            "end_date": "2024-01-01",
+            "strategy": "nonsense_strategy",
+        }
+        with pytest.raises(ValidationError):
+            PortfolioBacktestRequest(**data)
+
+    def test_sma_strategy_still_accepted(self):
+        """sma_strategy와 같은 유효한 StrategyType 값은 계속 허용됨 (P2-03)"""
+        data = {
+            "portfolio": [{"symbol": "AAPL", "amount": 5000.0}],
+            "start_date": "2023-01-01",
+            "end_date": "2024-01-01",
+            "strategy": "sma_strategy",
+        }
+        request = PortfolioBacktestRequest(**data)
+        assert request.strategy == "sma_strategy"

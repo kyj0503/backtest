@@ -261,7 +261,7 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
         : equityData;
 
       sampledEquity.forEach((point: EquityPoint) => {
-        const equityValue = point.value !== undefined ? point.value : (point as { equity?: number }).equity || 0;
+        const equityValue = point.value !== undefined && point.value !== null ? point.value : (point as { equity?: number }).equity || 0;
         csvRows.push(`${point.date},${equityValue.toFixed(2)}`);
       });
       csvRows.push('');
@@ -323,7 +323,7 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
         : equityData;
 
       sampledEquity.forEach((point: EquityPoint) => {
-        const equityValue = point.value !== undefined ? point.value : (point as { equity?: number }).equity || 0;
+        const equityValue = point.value !== undefined && point.value !== null ? point.value : (point as { equity?: number }).equity || 0;
         csvRows.push(`${point.date},${equityValue.toFixed(2)}`);
       });
       csvRows.push('');

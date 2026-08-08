@@ -9,13 +9,22 @@
  */
 import React, { useMemo, useState, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import type { LegendPayload } from 'recharts';
 import { useRenderPerformance } from '@/shared/components';
-import { EquityPoint } from '../../model/types';
+import { BenchmarkSeriesPoint, EquityPoint } from '../../model/types';
 
 interface BenchmarkReturnsChartProps {
-  sp500Data: any[];
-  nasdaqData: any[];
+  sp500Data: BenchmarkSeriesPoint[];
+  nasdaqData: BenchmarkSeriesPoint[];
   portfolioEquityData: EquityPoint[];
+}
+
+/** 포트폴리오/지수 세 계열의 기간 수익률을 날짜로 병합한 차트 행 */
+interface MergedReturnsRow {
+  date: string;
+  portfolio?: number;
+  sp500?: number;
+  nasdaq?: number;
 }
 
 export const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(({
@@ -35,12 +44,15 @@ export const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(
 
   // 모든 데이터를 날짜 기준으로 병합
   const mergedData = useMemo(() => {
-    const dataMap = new Map<string, any>();
+    const dataMap = new Map<string, MergedReturnsRow>();
 
     // 포트폴리오 수익률 추가 (배열 형태로 받음)
     if (portfolioEquityData && portfolioEquityData.length > 0) {
       portfolioEquityData.forEach(point => {
-        if (point.return_pct !== undefined) {
+        // EquityPoint.return_pct는 리밸런싱 마커 포인트에서 null일 수 있다
+        // (PortfolioCharts.tsx 참고). 이 차트에서는 그런 포인트를 표시하지
+        // 않으므로 null/undefined 모두 건너뛴다.
+        if (point.return_pct !== undefined && point.return_pct !== null) {
           dataMap.set(point.date, {
             date: point.date,
             portfolio: point.return_pct,
@@ -103,7 +115,7 @@ export const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  const handleLegendClick = useCallback((data: any) => {
+  const handleLegendClick = useCallback((data: LegendPayload) => {
     const dataKey = data.dataKey;
     if (dataKey && typeof dataKey === 'string') {
       setVisibleLines(prev => ({
@@ -130,15 +142,16 @@ export const BenchmarkReturnsChart: React.FC<BenchmarkReturnsChartProps> = memo(
             tick={{ fontSize: 13 }}
           />
           <Tooltip
-            formatter={(value: number, name: string) => {
+            formatter={(value: unknown, name: unknown) => {
               const labels: Record<string, string> = {
                 portfolio: '내 포트폴리오',
                 sp500: 'S&P 500',
                 nasdaq: 'NASDAQ',
               };
-              return [`${value.toFixed(2)}%`, labels[name] || name];
+              const key = String(name);
+              return [`${Number(value).toFixed(2)}%`, labels[key] || key];
             }}
-            labelFormatter={(label: string) => `날짜: ${label}`}
+            labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
             contentStyle={{
               backgroundColor: 'rgba(255, 255, 255, 0.95)',
               border: '1px solid #ccc',

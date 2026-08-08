@@ -22,14 +22,9 @@ export type {
   PortfolioBacktestResponse,
   Strategy,
   StrategyParameter,
-  NewsResponse,
-  VolatilityData,
-  ExchangeRateData,
-  SystemInfo,
   HttpMethod,
   UnifiedBacktestResponse,
-  UnifiedBacktestResult,
-  ApiEndpoint
+  UnifiedBacktestResult
 } from './api-types';
 
 // 폼 관련 타입
@@ -50,7 +45,9 @@ export type {
   TradeMarker,
   IndicatorPoint,
   ExchangeRatePoint,
+  ExchangeRateStats,
   BenchmarkPoint,
+  BenchmarkSeriesPoint,
   PortfolioStatistics,
   ChartData,
   NewsItem,
@@ -68,8 +65,7 @@ export type {
 
 // 급등락 관련 타입
 export type {
-  VolatilityEvent,
-  StockVolatilityNewsProps
+  VolatilityEvent
 } from './volatility-news-types';
 
 export { TICKER_TO_COMPANY_NAME, getCompanyName } from './volatility-news-types';

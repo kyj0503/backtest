@@ -15,6 +15,7 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 from app.utils.data_fetcher import data_fetcher
 from app.services.database.connection_manager import DatabaseConnectionManager
+from app.core.exceptions import DataNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -58,15 +59,29 @@ class YFinanceRepository:
             raise last_error
         raise RuntimeError(f"DB Operation failed after {max_retries} attempts, but no exception was captured.")
 
-    def _save_stock_metadata(self, conn, ticker: str) -> int:
-        """stocks 테이블에 메타데이터 저장 (Upsert)"""
-        # ensure stock exists
-        info = {}
+    def _fetch_ticker_info_safe(self, ticker: str) -> dict:
+        """
+        외부 API(yfinance)에서 티커 정보를 조회합니다.
+
+        DB 트랜잭션/커넥션을 점유하지 않은 상태에서 호출해야 합니다 (P2-10).
+        느린 Yahoo 응답이 커넥션 풀의 커넥션과 트랜잭션 락을 오래 붙잡는 것을
+        막기 위함입니다.
+        """
         try:
-            info = self.data_fetcher.fetch_ticker_info(ticker)
+            return self.data_fetcher.fetch_ticker_info(ticker)
         except Exception:
             self.logger.warning(f"{ticker} info 조회 실패/누락, 기본값으로 진행")
-        
+            return {}
+
+    def _save_stock_metadata(self, conn, ticker: str, info: dict) -> int:
+        """stocks 테이블에 메타데이터 저장 (Upsert)
+
+        info는 트랜잭션을 열기 전에 _fetch_ticker_info_safe()로 미리 조회되어
+        전달됩니다 (네트워크 호출을 트랜잭션 밖으로 빼기 위함, P2-10).
+        """
+        # 호출자(및 재시도 시 재사용되는 값)와 상태를 공유하지 않도록 방어적으로 복사
+        info = dict(info) if info else {}
+
         # DB에서 기존 last_handled_split 보존
         existing_split = None
         try:
@@ -190,12 +205,18 @@ class YFinanceRepository:
 
     def save_ticker_data(self, ticker: str, df: pd.DataFrame) -> int:
         """stocks 테이블에 티커 등록 및 daily_prices에 행을 upsert 합니다."""
+        # 외부 API(yfinance) 호출은 트랜잭션을 열기 전에 미리 수행한다 (P2-10).
+        # _retry_on_deadlock이 _transactional_save를 여러 번 재시도할 수 있는데,
+        # 네트워크 조회가 트랜잭션 안에 있으면 재시도마다 커넥션/락을 잡은 채
+        # 느린 외부 응답을 기다리게 된다. 여기서 한 번만 조회해 재사용한다.
+        info = self._fetch_ticker_info_safe(ticker)
+
         def _transactional_save():
             engine = self._get_engine()
             with engine.begin() as conn:  # Context manager handles commit/rollback automatically
-                # 1. Metadata 저장
-                stock_id = self._save_stock_metadata(conn, ticker)
-                
+                # 1. Metadata 저장 (네트워크 조회 없이 DB 쓰기만 수행)
+                stock_id = self._save_stock_metadata(conn, ticker, info)
+
                 # 2. Price 저장
                 saved_count = self._save_daily_prices(conn, stock_id, df)
                 return saved_count
@@ -208,75 +229,101 @@ class YFinanceRepository:
             raise
 
     def load_ticker_data(self, ticker: str, start_date: Optional[Union[str, date]] = None, end_date: Optional[Union[str, date]] = None, max_retries: int = 3, retry_delay: float = 2.0) -> pd.DataFrame:
-        """DB에서 ticker의 daily_prices를 조회해 pandas DataFrame으로 반환합니다."""
+        """DB에서 ticker의 daily_prices를 조회해 pandas DataFrame으로 반환합니다.
+
+        빈 결과(해당 티커/기간에 데이터가 없는 정상적인 응답)는 일시적 장애가 아니므로
+        재시도하지 않고 즉시 DataNotFoundError(404)를 발생시킨다. 네트워크/DB 오류 같은
+        진짜 예외만 백오프와 함께 재시도한다.
+        """
         last_exception = None
-        
+
         for attempt in range(1, max_retries + 1):
             try:
                 self.logger.info(f"[시도 {attempt}/{max_retries}] {ticker} 데이터 로드 중... ({start_date} ~ {end_date})")
-                
+
                 # 실제 데이터 로드 로직
                 df = self._load_ticker_data_internal(ticker, start_date, end_date)
-                
-                if df is not None and not df.empty:
-                    self.logger.info(f"[성공] {ticker} 데이터 로드 완료: {len(df)}행 (시도 {attempt}회)")
-                    return df
-                else:
-                    self.logger.warning(f"[시도 {attempt}/{max_retries}] {ticker} 데이터가 비어있음")
-                    last_exception = ValueError(f"{ticker} 데이터가 비어있습니다")
-                    
             except Exception as e:
                 self.logger.warning(f"[시도 {attempt}/{max_retries}] {ticker} 데이터 로드 실패: {str(e)}")
                 last_exception = e
-            
-            # 마지막 시도가 아니면 대기 후 재시도
-            if attempt < max_retries:
-                wait_time = retry_delay * attempt  # 점진적 증가 (2초, 4초, 6초...)
-                self.logger.info(f"[재시도 대기] {wait_time}초 후 {ticker} 데이터 재시도...")
-                time.sleep(wait_time)
-        
-        # 모든 재시도 실패
+
+                # 마지막 시도가 아니면 대기 후 재시도 (일시적 장애로 간주)
+                if attempt < max_retries:
+                    wait_time = retry_delay * attempt  # 점진적 증가 (2초, 4초, 6초...)
+                    self.logger.info(f"[재시도 대기] {wait_time}초 후 {ticker} 데이터 재시도...")
+                    time.sleep(wait_time)
+                continue
+
+            if df is not None and not df.empty:
+                self.logger.info(f"[성공] {ticker} 데이터 로드 완료: {len(df)}행 (시도 {attempt}회)")
+                return df
+
+            # 빈 결과는 정상 응답이지 일시적 장애가 아니다 - 재시도 없이 즉시 실패 처리
+            self.logger.warning(f"[시도 {attempt}/{max_retries}] {ticker} 데이터가 비어있음 - 재시도하지 않고 404 처리")
+            raise DataNotFoundError(
+                ticker,
+                str(start_date) if start_date else "",
+                str(end_date) if end_date else "",
+            )
+
+        # 모든 재시도 실패 (진짜 예외만 이 지점에 도달)
         error_msg = f"[실패] {ticker} 데이터 로드 실패 (총 {max_retries}회 시도)"
         if last_exception:
             error_msg += f": {str(last_exception)}"
         self.logger.error(error_msg)
         raise ValueError(error_msg)
 
+    def _update_ticker_info(self, ticker: str, stock_id: int, info: dict) -> None:
+        """stocks 테이블의 info_json을 업데이트합니다 (쓰기 전용)."""
+        engine = self._get_engine()
+        with engine.begin() as conn:
+            conn.execute(
+                text("UPDATE stocks SET info_json = :info WHERE id = :id"),
+                {"info": json.dumps(info), "id": stock_id}
+            )
+
     def get_ticker_info_from_db(self, ticker: str) -> Dict[str, Any]:
         """
         DB에서 티커의 메타데이터 조회
         """
         engine = self._get_engine()
-        conn = engine.connect()
+        default_info = {
+            'symbol': ticker.upper(),
+            'currency': 'USD',
+            'company_name': ticker.upper(),
+            'exchange': 'Unknown',
+            'first_trade_date': None
+        }
         try:
             ticker = ticker.upper()
-            row = conn.execute(
-                text("SELECT id, info_json FROM stocks WHERE ticker = :t"),
-                {"t": ticker}
-            ).fetchone()
+            # 커넥션은 SELECT 하나만 수행하고 즉시 반환한다 (P2-10). 상장일이
+            # 없어 Yahoo Finance를 조회해야 하는 경우, 그 네트워크 호출과 후속
+            # UPDATE(_update_ticker_info)는 아래에서 이 커넥션을 닫은 뒤 별도로
+            # 수행한다 - 느린 외부 응답 동안 DB 커넥션을 붙잡지 않기 위함이다.
+            with engine.connect() as conn:
+                row = conn.execute(
+                    text("SELECT id, info_json FROM stocks WHERE ticker = :t"),
+                    {"t": ticker}
+                ).fetchone()
 
             if row and row[1]:
                 try:
                     stock_id = row[0]
                     info = json.loads(row[1])
-                    
+
                     # 상장일이 없으면 Yahoo Finance에서 가져와 업데이트
+                    # (DB 커넥션이 열려있지 않은 상태에서 네트워크 호출)
                     if not info.get('first_trade_date'):
                         self.logger.info(f"{ticker}: DB에 상장일 없음 - Yahoo Finance에서 조회")
                         try:
                             fresh_info = self.data_fetcher.fetch_ticker_info(ticker)
                             if fresh_info.get('first_trade_date'):
                                 info['first_trade_date'] = fresh_info['first_trade_date']
-                                # DB 업데이트
-                                conn.execute(
-                                    text("UPDATE stocks SET info_json = :info WHERE id = :id"),
-                                    {"info": json.dumps(info), "id": stock_id}
-                                )
-                                conn.commit()
+                                self._update_ticker_info(ticker, stock_id, info)
                                 self.logger.info(f"{ticker}: 상장일 업데이트 완료 - {info['first_trade_date']}")
                         except Exception as e:
                             self.logger.warning(f"{ticker}: 상장일 조회 실패 - {e}")
-                    
+
                     return {
                         'symbol': ticker,
                         'currency': info.get('currency', 'USD'),
@@ -287,25 +334,10 @@ class YFinanceRepository:
                 except Exception as e:
                     self.logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
 
-            # DB에 없으면 기본값 반환
-            return {
-                'symbol': ticker,
-                'currency': 'USD',
-                'company_name': ticker,
-                'exchange': 'Unknown',
-                'first_trade_date': None
-            }
+            return default_info
         except Exception as e:
             self.logger.error(f"티커 정보 조회 실패: {ticker} - {e}")
-            return {
-                'symbol': ticker,
-                'currency': 'USD',
-                'company_name': ticker,
-                'exchange': 'Unknown',
-                'first_trade_date': None
-            }
-        finally:
-            conn.close()
+            return default_info
 
     def get_ticker_info_batch_from_db(self, tickers: List[str]) -> Dict[str, Dict[str, Any]]:
         """
@@ -315,17 +347,17 @@ class YFinanceRepository:
             return {}
 
         engine = self._get_engine()
-        conn = engine.connect()
         try:
             # 대문자로 변환
             upper_tickers = [t.upper() for t in tickers]
 
-            # IN 절을 사용한 배치 조회
-            placeholders = ', '.join([f':t{i}' for i in range(len(upper_tickers))])
-            query = text(f"SELECT ticker, info_json FROM stocks WHERE ticker IN ({placeholders})")
-            params = {f't{i}': ticker for i, ticker in enumerate(upper_tickers)}
+            with engine.connect() as conn:
+                # IN 절을 사용한 배치 조회
+                placeholders = ', '.join([f':t{i}' for i in range(len(upper_tickers))])
+                query = text(f"SELECT ticker, info_json FROM stocks WHERE ticker IN ({placeholders})")
+                params = {f't{i}': ticker for i, ticker in enumerate(upper_tickers)}
 
-            rows = conn.execute(query, params).fetchall()
+                rows = conn.execute(query, params).fetchall()
 
             # 결과를 딕셔너리로 변환
             result = {}
@@ -340,11 +372,11 @@ class YFinanceRepository:
                     try:
                         info = json.loads(row[1])
                         first_trade_date = info.get('first_trade_date', None)
-                        
+
                         # 상장일이 없으면 경고 리스트에 추가
                         if not first_trade_date:
                             missing_listing_dates.append(ticker)
-                        
+
                         result[ticker] = {
                             'symbol': ticker,
                             'currency': info.get('currency', 'USD'),
@@ -369,7 +401,7 @@ class YFinanceRepository:
                         'exchange': 'Unknown',
                         'first_trade_date': None
                     }
-            
+
             # 상장일이 없는 종목이 있으면 경고
             if missing_listing_dates:
                 self.logger.warning(
@@ -403,8 +435,6 @@ class YFinanceRepository:
                 }
                 for ticker in tickers
             }
-        finally:
-            conn.close()
 
     def _normalize_date_params(self, start_date: Optional[Union[str, date, datetime, pd.Timestamp]], end_date: Optional[Union[str, date, datetime, pd.Timestamp]]) -> Tuple[date, date]:
         """
@@ -453,7 +483,6 @@ class YFinanceRepository:
 
                 # 데이터 저장 후 커넥션을 닫고 새로 연결 - 트랜잭션 격리 문제 방지
                 conn.close()
-                time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
                 conn = engine.connect()
             except Exception as e:
                 self.logger.exception("티커가 DB에 없고 yfinance 수집 실패")
@@ -528,7 +557,6 @@ class YFinanceRepository:
                     self.save_ticker_data(ticker, df_new)
                     # 데이터 저장 후 커넥션을 닫고 새로 연결하여 트랜잭션 격리 문제 방지
                     conn.close()
-                    time.sleep(0.1)  # 100ms 대기 - DB 커밋 완료 보장
                     conn = engine.connect()
                     return conn
                 else:
@@ -551,7 +579,6 @@ class YFinanceRepository:
                      self.save_ticker_data(ticker, df_new)
                      # 데이터 저장 후 커넥션 갱신
                      conn.close()
-                     time.sleep(0.1)
                      conn = engine.connect()
             except Exception:
                 self.logger.exception("누락 기간 수집 실패")
@@ -613,6 +640,9 @@ class YFinanceRepository:
     def _load_ticker_data_internal(self, ticker: str, start_date=None, end_date=None) -> pd.DataFrame:
         """
         실제 데이터 로드 로직 (내부용)
+
+        Note: _ensure_stock_exists와 _fetch_and_save_missing_data는 내부적으로
+        커넥션을 닫고 새로 연결하는 패턴을 사용하므로 context manager 대신 수동 관리.
         """
         engine = self._get_engine()
         conn = engine.connect()
@@ -641,7 +671,6 @@ class YFinanceRepository:
         DB에서 뉴스 데이터 조회 (최대 age 체크)
         """
         engine = self._get_engine()
-        conn = engine.connect()
         try:
             # created_at이 max_age_hours 이내인 뉴스만 조회
             cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
@@ -655,8 +684,9 @@ class YFinanceRepository:
                 LIMIT 20
             """)
 
-            result = conn.execute(query, {"ticker": ticker, "cutoff_time": cutoff_time})
-            rows = result.fetchall()
+            with engine.connect() as conn:
+                result = conn.execute(query, {"ticker": ticker, "cutoff_time": cutoff_time})
+                rows = result.fetchall()
 
             if not rows:
                 self.logger.debug(f"DB에 {ticker}의 최신 뉴스({max_age_hours}시간 이내)가 없습니다")
@@ -678,8 +708,6 @@ class YFinanceRepository:
         except Exception as e:
             self.logger.error(f"DB 뉴스 조회 실패: {ticker} - {str(e)}")
             return None
-        finally:
-            conn.close()
 
     def save_news_to_db(self, ticker: str, news_list: list) -> int:
         """
@@ -689,56 +717,51 @@ class YFinanceRepository:
             return 0
 
         engine = self._get_engine()
-        conn = engine.connect()
-        trans = conn.begin()
 
         try:
-            # 기존 해당 티커의 모든 뉴스 삭제 (새로 저장하기 전에)
-            delete_query = text("""
-                DELETE FROM stock_news
-                WHERE ticker = :ticker
-            """)
-            conn.execute(delete_query, {"ticker": ticker})
+            with engine.begin() as conn:
+                # 기존 해당 티커의 모든 뉴스 삭제 (새로 저장하기 전에)
+                delete_query = text("""
+                    DELETE FROM stock_news
+                    WHERE ticker = :ticker
+                """)
+                conn.execute(delete_query, {"ticker": ticker})
 
-            # 새 뉴스 저장
-            saved_count = 0
-            for news in news_list:
-                try:
-                    # pubDate 파싱 (RFC 2822 형식)
-                    pub_date_str = news.get('pubDate', '')
-                    pub_timestamp = email.utils.parsedate_tz(pub_date_str)
-                    if pub_timestamp:
-                        news_date = datetime.fromtimestamp(email.utils.mktime_tz(pub_timestamp)).date()
-                    else:
-                        news_date = datetime.now().date()
+                # 새 뉴스 저장
+                saved_count = 0
+                for news in news_list:
+                    try:
+                        # pubDate 파싱 (RFC 2822 형식)
+                        pub_date_str = news.get('pubDate', '')
+                        pub_timestamp = email.utils.parsedate_tz(pub_date_str)
+                        if pub_timestamp:
+                            news_date = datetime.fromtimestamp(email.utils.mktime_tz(pub_timestamp)).date()
+                        else:
+                            news_date = datetime.now().date()
 
-                    # 단순 삽입 (이미 해당 티커의 기존 데이터는 삭제됨)
-                    insert_query = text("""
-                        INSERT INTO stock_news (ticker, news_date, title, link, description, source, created_at)
-                        VALUES (:ticker, :news_date, :title, :link, :description, :source, NOW())
-                    """)
+                        # 단순 삽입 (이미 해당 티커의 기존 데이터는 삭제됨)
+                        insert_query = text("""
+                            INSERT INTO stock_news (ticker, news_date, title, link, description, source, created_at)
+                            VALUES (:ticker, :news_date, :title, :link, :description, :source, NOW())
+                        """)
 
-                    conn.execute(insert_query, {
-                        "ticker": ticker,
-                        "news_date": news_date,
-                        "title": news['title'][:500],  # 길이 제한
-                        "link": news.get('link', '')[:1000],
-                        "description": news.get('description', '')[:1000] if news.get('description') else None,
-                        "source": "Naver"
-                    })
-                    saved_count += 1
+                        conn.execute(insert_query, {
+                            "ticker": ticker,
+                            "news_date": news_date,
+                            "title": news['title'][:500],  # 길이 제한
+                            "link": news.get('link', '')[:1000],
+                            "description": news.get('description', '')[:1000] if news.get('description') else None,
+                            "source": "Naver"
+                        })
+                        saved_count += 1
 
-                except Exception as e:
-                    self.logger.warning(f"뉴스 저장 실패 (계속 진행): {str(e)}")
-                    continue
+                    except Exception as e:
+                        self.logger.warning(f"뉴스 저장 실패 (계속 진행): {str(e)}")
+                        continue
 
-            trans.commit()
-            self.logger.info(f"DB에 {ticker} 뉴스 {saved_count}/{len(news_list)}개 저장 완료")
-            return saved_count
+                self.logger.info(f"DB에 {ticker} 뉴스 {saved_count}/{len(news_list)}개 저장 완료")
+                return saved_count
 
         except Exception as e:
-            trans.rollback()
             self.logger.error(f"DB 뉴스 저장 실패: {ticker} - {str(e)}")
             return 0
-        finally:
-            conn.close()

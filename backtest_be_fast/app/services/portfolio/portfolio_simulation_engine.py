@@ -4,8 +4,9 @@
 매일의 시장 데이터(가격, 환율)를 처리하고 DCA 매수, 리밸런싱, 상장폐지 등의 핵심 로직을 실행합니다.
 """
 
+import asyncio
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Set, Tuple
 from datetime import datetime, date
 import pandas as pd
 
@@ -73,7 +74,8 @@ class PortfolioSimulationEngine:
             shares={key: 0.0 for key in stock_amounts.keys()},
             available_cash=cash_amount,
             cash_holdings={k: v for k, v in amounts.items() if dca_info[k].asset_type == 'cash'},
-            delisted_stocks=set()
+            delisted_stocks=set(),
+            pending_initial_keys=set(stock_amounts.keys())
         )
 
     def detect_and_update_delisting(
@@ -81,6 +83,7 @@ class PortfolioSimulationEngine:
         current_date: pd.Timestamp,
         stock_amounts: Dict[str, float],
         current_prices: Dict[str, float],
+        tradeable_today: Set[str],
         dca_info: Dict[str, DcaStrategyInfo],
         delisted_stocks: set,
         last_valid_prices: Dict[str, float],
@@ -90,31 +93,43 @@ class PortfolioSimulationEngine:
         상장폐지 종목을 감지하고 상태를 업데이트합니다.
 
         **역할**:
-        - 30일 이상 가격 데이터가 없는 종목을 상장폐지로 판단
+        - 30일 이상 RAW 가격 데이터가 없는 종목을 상장폐지로 판단
         - 마지막 유효 가격과 날짜를 추적
         - 재상장 케이스 처리
+
+        **[P2-14] current_prices가 아닌 tradeable_today로 판단하는 이유**:
+        current_prices는 _pre_calculate_prices가 만든 ffill 시리즈에서 유래한다.
+        ffill은 결측치를 이전 값으로 무한정 채우므로, 종목이 실제로 사라진
+        뒤에도 current_prices에는 (다른 종목이 date_range를 계속 늘리는 한)
+        영원히 값이 남는다. 그 결과 "현재 가격이 없을 때"로 분기하는 예전
+        로직은 종목이 사라진 이후로는 절대 실행되지 않아, last_price_date가
+        멈추지 않고 상장폐지가 영영 감지되지 않았다. tradeable_today는
+        reindex/ffill 이전의 RAW 인덱스에서 직접 파생되므로 이 문제가 없다.
 
         Args:
             current_date: 현재 시뮬레이션 날짜
             stock_amounts: 종목별 투자 금액
-            current_prices: 종목별 현재 가격 (MODIFIED)
+            current_prices: 종목별 현재 가격 (MODIFIED, 밸류에이션용 ffill 값)
+            tradeable_today: [P2-14] 오늘 RAW 데이터로 실제 관측된 종목 집합
             dca_info: 종목 정보
             delisted_stocks: 상장폐지 종목 집합 (MODIFIED)
             last_valid_prices: 마지막 유효 가격 (MODIFIED)
-            last_price_date: 마지막 가격 날짜 (MODIFIED)
+            last_price_date: 마지막으로 RAW 관측된 날짜 (MODIFIED)
         """
-        # 상장폐지 감지: 가격 데이터가 30일 이상 없으면 상장폐지로 판단
+        # 상장폐지 감지: RAW 데이터가 30일 이상 없으면 상장폐지로 판단
         for unique_key in stock_amounts.keys():
-            # 현재 가격이 있으면 마지막 유효 가격 갱신
-            if unique_key in current_prices:
-                last_valid_prices[unique_key] = current_prices[unique_key]
+            if unique_key in tradeable_today:
+                # 오늘 실제로 관측됐으면 마지막 유효 가격/날짜 갱신
+                if unique_key in current_prices:
+                    last_valid_prices[unique_key] = current_prices[unique_key]
                 last_price_date[unique_key] = current_date.date()
                 if unique_key in delisted_stocks:
                     # 상장 복원? (재상장 케이스)
                     self.logger.info(f"{unique_key} 가격 데이터 재등장 (재상장?), 상장폐지 상태 해제")
                     delisted_stocks.remove(unique_key)
             else:
-                # 현재 가격이 없을 때
+                # 오늘 관측되지 않았을 때 (current_prices는 ffill로 여전히
+                # 값을 갖고 있을 수 있으므로 여기서 참조하지 않는다)
                 if unique_key in last_price_date:
                     days_without_price = (current_date.date() - last_price_date[unique_key]).days
                     if days_without_price >= TradingThresholds.DELISTING_THRESHOLD_DAYS and unique_key not in delisted_stocks:
@@ -122,13 +137,16 @@ class PortfolioSimulationEngine:
                         symbol = dca_info[unique_key].symbol
                         self.logger.warning(
                             f"{symbol} ({unique_key}) 상장폐지 감지: "
-                            f"마지막 가격 날짜 {last_price_date[unique_key]}, "
-                            f"{days_without_price}일간 가격 데이터 없음. "
-                            f"마지막 유효 가격 ${last_valid_prices[unique_key]:.2f} 유지"
+                            f"마지막 RAW 관측 날짜 {last_price_date[unique_key]}, "
+                            f"{days_without_price}일간 원본 데이터 없음. "
+                            f"마지막 유효 가격 ${last_valid_prices.get(unique_key, 0):.2f} 유지"
                         )
                         delisted_stocks.add(unique_key)
 
-        # 상장폐지된 종목의 가격을 마지막 유효 가격으로 유지
+        # 상장폐지된 종목의 가격을 마지막 유효 가격으로 유지 (일반적으로는
+        # aligned_prices의 ffill이 이미 이 값을 제공하므로 아래는 방어적
+        # fallback -- 예: 종목이 portfolio_data에 아예 없어 aligned_prices에
+        # 항목 자체가 없는 경우).
         for unique_key in delisted_stocks:
             if unique_key in last_valid_prices and unique_key not in current_prices:
                 current_prices[unique_key] = last_valid_prices[unique_key]
@@ -207,11 +225,16 @@ class PortfolioSimulationEngine:
                      
                      price_series = price_series * multipliers
             elif currency != 'USD':
-                # [Copilot Suggestion] 지원하지 않는 통화 경고 로그 복원
-                # (USD가 아닌데 exchange_rates에 없는 경우)
-                self.logger.warning(
-                    f"{symbol} ({unique_key}) 지원하지 않는 통화 '{currency}' 또는 환율 데이터 누락. "
-                    f"변환 없이 원본 가격 사용."
+                # [P2-02] 환율 데이터가 없다고 원본(비USD) 가격을 그대로 흘려보내면
+                # 안 된다 -- 이후 시뮬레이션이 이 가격을 USD 현금과 그대로 합산해,
+                # 예컨대 KRW 7만원대 가격이 $70,000짜리 자산으로 둔갑한 채 "성공"으로
+                # 보고되는 조용한 오염이 발생한다 (기존에는 경고 로그만 남기고 계속
+                # 진행했음). 지원하지 않는 통화이거나 환율 데이터 로딩이 실패한
+                # 경우이므로 명시적으로 실패를 알린다.
+                raise ValueError(
+                    f"{symbol} ({unique_key}) 통화 '{currency}'의 환율 데이터가 없어 "
+                    f"USD로 변환할 수 없습니다 (지원하지 않는 통화이거나 환율 데이터 "
+                    f"로딩 실패). 변환되지 않은 원본 가격으로 백테스트를 진행할 수 없습니다."
                 )
             
             aligned_prices[unique_key] = price_series
@@ -252,6 +275,69 @@ class PortfolioSimulationEngine:
                 
         return current_prices, last_valid_exchange_rates
 
+    def _pre_calculate_tradeable_mask(
+        self,
+        date_range: pd.DatetimeIndex,
+        stock_amounts: Dict[str, float],
+        portfolio_data: Dict[str, pd.DataFrame],
+        dca_info: Dict[str, DcaStrategyInfo]
+    ) -> Dict[str, pd.Series]:
+        """
+        [P2-14] 종목별로 "해당 날짜에 실제로 RAW 데이터가 존재했는가"를 나타내는
+        불리언 마스크를 date_range에 맞춰 미리 계산합니다.
+
+        `_pre_calculate_prices`가 만드는 aligned_prices는 밸류에이션을 위해
+        ffill로 결측치를 채운 시리즈이므로, 그 자체로는 "그 날짜에 실제로 거래가
+        가능했는가"를 답할 수 없다 (ffill은 무한정 이전 값을 반복하기 때문에,
+        상장폐지된 종목도 영원히 값을 갖는 것처럼 보인다). 이 메서드는 reindex
+        직전의 RAW 인덱스만을 근거로 마스크를 만들어, 거래 실행(초기 매수/DCA
+        정기 매수/리밸런싱)과 상장폐지 감지가 밸류에이션과 별개로 "실제로 관측된
+        날"만 참조하도록 한다.
+
+        `_pre_calculate_prices`와 정확히 같은 (date_range, stock_amounts,
+        portfolio_data, dca_info) 조합에 대해 계산되므로, 함께 사용해도 두
+        딕셔너리의 key 집합은 항상 일치한다 (같은 이유로 심볼이 없으면 둘 다
+        해당 unique_key를 건너뛴다).
+
+        Returns:
+            {unique_key: Series(bool, index=date_range)} -- True인 날짜만 그
+            종목의 원본 Close 데이터가 실제로 존재했던(관측된) 날이다.
+        """
+        aligned_tradeable: Dict[str, pd.Series] = {}
+
+        for unique_key in stock_amounts.keys():
+            symbol = dca_info[unique_key].symbol
+            if symbol not in portfolio_data:
+                continue
+
+            df = portfolio_data[symbol]
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index)
+
+            observed = df['Close'].notna()
+            aligned_tradeable[unique_key] = observed.reindex(date_range, fill_value=False)
+
+        return aligned_tradeable
+
+    def _get_daily_tradeable_keys(
+        self,
+        current_date: pd.Timestamp,
+        aligned_tradeable: Dict[str, pd.Series]
+    ) -> Set[str]:
+        """
+        [P2-14] 미리 계산된 tradeable 마스크에서 O(1)로 당일 관측 여부를 조회합니다.
+
+        Returns:
+            오늘 RAW 데이터로 실제 관측된 unique_key 집합.
+        """
+        tradeable_today: Set[str] = set()
+        for unique_key, mask_series in aligned_tradeable.items():
+            try:
+                if bool(mask_series.at[current_date]):
+                    tradeable_today.add(unique_key)
+            except KeyError:
+                pass  # 마스크에 해당 날짜가 없으면 관측되지 않은 것으로 취급
+        return tradeable_today
 
     async def execute_simulation(
         self,
@@ -271,7 +357,7 @@ class PortfolioSimulationEngine:
     ) -> pd.DataFrame:
         """
         전체 시뮬레이션 루프를 실행합니다.
-        
+
         Args:
             date_range: 시뮬레이션 날짜 범위
             start_date_obj: 시작 날짜 객체
@@ -286,9 +372,57 @@ class PortfolioSimulationEngine:
             exchange_rates_by_currency: 환율 데이터
             rebalance_frequency: 리밸런싱 주기
             commission: 수수료율
-            
+
         Returns:
             시뮬레이션 결과 DataFrame
+
+        Note:
+            [P2-01] 이 메서드 자체는 순수 CPU-bound 동기 작업(최대 10년 x N종목의
+            pandas/pydantic 연산)이며 내부에 await가 없다. async def인데 await가
+            전혀 없으면 실행되는 동안 이벤트 루프 전체를 독점해 다른 요청 처리가
+            멈춘다. 그래서 실제 작업은 _execute_simulation_sync에 그대로 두고,
+            여기서는 asyncio.to_thread로 워커 스레드에 위임만 한다 (공개 시그니처는
+            그대로 유지되므로 호출자는 변경할 필요가 없다).
+        """
+        return await asyncio.to_thread(
+            self._execute_simulation_sync,
+            date_range,
+            start_date_obj,
+            end_date_obj,
+            stock_amounts,
+            amounts,
+            cash_amount,
+            total_amount,
+            portfolio_data,
+            dca_info,
+            ticker_currencies,
+            exchange_rates_by_currency,
+            rebalance_frequency,
+            commission,
+        )
+
+    def _execute_simulation_sync(
+        self,
+        date_range: pd.DatetimeIndex,
+        start_date_obj: datetime,
+        end_date_obj: datetime,
+        stock_amounts: Dict[str, float],
+        amounts: Dict[str, float],
+        cash_amount: float,
+        total_amount: float,
+        portfolio_data: Dict[str, pd.DataFrame],
+        dca_info: Dict[str, DcaStrategyInfo],
+        ticker_currencies: Dict[str, str],
+        exchange_rates_by_currency: Dict[str, Dict[date, float]],
+        rebalance_frequency: str,
+        commission: float
+    ) -> pd.DataFrame:
+        """
+        execute_simulation의 실제 동기 구현체.
+
+        [P2-01] execute_simulation(async 공개 API)이 asyncio.to_thread를 통해
+        워커 스레드에서 이 메서드를 실행한다. 순수 동기 함수이므로 여기서는
+        이벤트 루프가 필요한 어떤 작업(await 등)도 수행해서는 안 된다.
         """
         # 1. 상태 초기화
         state = self.initialize_portfolio_state(
@@ -303,6 +437,11 @@ class PortfolioSimulationEngine:
         # [성능 최적화] 데이터 미리 준비 (Vectorization)
         aligned_prices, aligned_exchange_rates = self._pre_calculate_prices(
             date_range, stock_amounts, portfolio_data, dca_info, ticker_currencies, exchange_rates_by_currency
+        )
+        # [P2-14] 밸류에이션용 ffill 가격(aligned_prices)과는 별개로, 거래
+        # 실행/상장폐지 감지에 쓸 "당일 RAW 관측 여부" 마스크를 미리 계산한다.
+        aligned_tradeable = self._pre_calculate_tradeable_mask(
+            date_range, stock_amounts, portfolio_data, dca_info
         )
         last_valid_exchange_rates = {} # 루프 내 캐싱용
 
@@ -322,12 +461,17 @@ class PortfolioSimulationEngine:
                 ticker_currencies=ticker_currencies,
                 last_valid_exchange_rates=last_valid_exchange_rates
             )
+            # [P2-14] 오늘 RAW 데이터로 실제 관측된 종목 집합. current_prices와
+            # 달리 ffill로 채워지지 않으므로, 거래 실행 여부와 상장폐지 감지의
+            # 근거로 쓴다 (밸류에이션은 계속 current_prices/ffill을 사용한다).
+            tradeable_today = self._get_daily_tradeable_keys(current_date, aligned_tradeable)
 
             # 2.2 상장폐지 감지
             self.detect_and_update_delisting(
                 current_date=current_date,
                 stock_amounts=stock_amounts,
                 current_prices=current_prices,
+                tradeable_today=tradeable_today,
                 dca_info=dca_info,
                 delisted_stocks=state.delisted_stocks,
                 last_valid_prices=state.last_valid_prices,
@@ -350,31 +494,40 @@ class PortfolioSimulationEngine:
                     f"[{', '.join(delisted_symbols)}]"
                 )
 
-            # 2.4 DCA 실행 (첫날 매수 또는 정기 매수)
-            if state.is_first_day:
+            # 2.4 DCA 실행 (초기 매수 또는 정기 매수)
+            #
+            # 초기 매수는 "첫날 한 번"이 아니라 "각 종목이 처음 가격을 갖는 날"에
+            # 이뤄져야 한다. 혼합 시장 포트폴리오에서는 시작일에 한쪽 시장이
+            # 휴장이라 가격이 없을 수 있는데, 과거에는 그 종목을 건너뛴 뒤 다시
+            # 시도하지 않아 포지션이 영영 열리지 않고 투자금만 분모에 남았다.
+            if state.pending_initial_keys:
                 trades, cash_inflow = self.dca_manager.execute_initial_purchases(
                     current_date=current_date,
                     stock_amounts=stock_amounts,
                     current_prices=current_prices,
                     dca_info=dca_info,
                     shares=state.shares,
-                    commission=commission
+                    commission=commission,
+                    pending_keys=state.pending_initial_keys,
+                    tradeable_keys=tradeable_today
                 )
                 state.total_trades += trades
                 daily_cash_inflow += cash_inflow
+
+            if state.is_first_day:
                 state.is_first_day = False
                 state.prev_date = current_date
 
             if state.prev_date is not None and state.prev_date != current_date:
                 trades, cash_inflow = self.dca_manager.execute_periodic_purchases(
                     current_date=current_date,
-                    prev_date=state.prev_date,
                     stock_amounts=stock_amounts,
                     current_prices=current_prices,
                     dca_info=dca_info,
                     shares=state.shares,
                     commission=commission,
-                    start_date_obj=start_date_obj
+                    start_date_obj=start_date_obj,
+                    tradeable_keys=tradeable_today
                 )
                 state.total_trades += trades
                 daily_cash_inflow += cash_inflow
@@ -395,15 +548,30 @@ class PortfolioSimulationEngine:
                     )
 
             if should_rebalance and len(target_weights) > 1:
+                # [P2-14] 오늘 RAW로 관측되지 않은(하지만 상장폐지로 확정되지는
+                # 않은) 종목은 이번 리밸런싱에서만 "일시적으로" 상장폐지 종목과
+                # 동일하게 취급한다 -- 존재하지 않았던 오늘의 ffill 가격으로
+                # 거래를 체결시키지 않기 위해서다. state.delisted_stocks 자체는
+                # 건드리지 않고, 이번 호출에만 쓰는 지역 합집합을 만든다
+                # (PortfolioRebalancer는 "보유 유지 + 재분배 풀에서 제외 +
+                # 수수료 비례축소 제외"를 이미 delisted_stocks 파라미터만으로
+                # 정확히 수행하므로, portfolio_rebalancer.py 자체를 변경할
+                # 필요가 없다).
+                non_tradeable_today_stocks = {
+                    key for key in stock_amounts.keys()
+                    if key not in state.delisted_stocks and key not in tradeable_today
+                }
+                rebalance_excluded_stocks = state.delisted_stocks | non_tradeable_today_stocks
+
                 adjusted_target_weights = self.rebalancer.calculate_adjusted_weights(
                     target_weights=target_weights,
-                    delisted_stocks=state.delisted_stocks,
+                    delisted_stocks=rebalance_excluded_stocks,
                     dca_info=dca_info
                 )
 
-                if state.delisted_stocks:
+                if rebalance_excluded_stocks:
                     for unique_key, adj_weight in adjusted_target_weights.items():
-                        if unique_key not in state.delisted_stocks:
+                        if unique_key not in rebalance_excluded_stocks:
                             original_weight = target_weights.get(unique_key, 0.0)
                             if original_weight != adj_weight:
                                 symbol = dca_info[unique_key].symbol
@@ -427,7 +595,7 @@ class PortfolioSimulationEngine:
                     commission=commission,
                     total_stock_value=total_stock_value,
                     dca_info=dca_info,
-                    delisted_stocks=state.delisted_stocks
+                    delisted_stocks=rebalance_excluded_stocks
                 )
 
                 state.shares = rebalance_result['updated_shares']

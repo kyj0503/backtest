@@ -111,6 +111,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                         placeholder="현금 자산 이름 입력 (예: USD, KRW)"
                         maxLength={20}
                         className="w-full bg-accent/50"
+                        aria-label={`${index + 1}번째 현금 자산 이름`}
                       />
                     ) : (
                       <>
@@ -148,6 +149,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                             maxLength={10}
                             className="w-full"
                             autoComplete="off"
+                            aria-label={`${index + 1}번째 종목 심볼`}
                           />
                         )}
                       </>
@@ -163,6 +165,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                     step="100"
                     disabled={portfolioInputMode === 'weight'}
                     className="w-full"
+                    aria-label={`${index + 1}번째 종목 투자 금액`}
                   />
                 </TableCell>
                 <TableCell className="w-28">
@@ -227,6 +230,7 @@ export const PortfolioTable: React.FC<PortfolioTableProps> = ({
                       max="100"
                       step="0.1"
                       className="w-20 px-2 py-1 text-sm"
+                      aria-label={`${index + 1}번째 종목 비중`}
                     />
                   ) : (
                     <span title="DCA를 포함한 총 투자금액 비율로 자동 계산됨. 비중을 직접 입력하려면 비중 기반 모드로 전환하세요.">

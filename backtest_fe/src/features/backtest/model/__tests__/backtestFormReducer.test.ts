@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, assert } from 'vitest'
 import { backtestFormReducer, backtestFormHelpers } from '../backtestFormReducer'
 import { initialBacktestFormState, type BacktestFormState } from '../types/backtest-form-types'
 import { ASSET_TYPES } from '../strategyConfig'
@@ -31,10 +31,16 @@ describe('backtestFormReducer', () => {
       payload: 'weight',
     })
 
-    expect(nextState.portfolio[0].weight).toBe(60)
-    expect(nextState.portfolio[1].weight).toBe(40)
-    expect(nextState.portfolio[0].amount).toBe(6000)
-    expect(nextState.portfolio[1].amount).toBe(4000)
+    expect(nextState.portfolio).toHaveLength(2)
+    const [aapl, msft] = nextState.portfolio
+    assert.isDefined(aapl)
+    assert.isDefined(msft)
+    expect(aapl.symbol).toBe('AAPL')
+    expect(msft.symbol).toBe('MSFT')
+    expect(aapl.weight).toBe(60)
+    expect(msft.weight).toBe(40)
+    expect(aapl.amount).toBe(6000)
+    expect(msft.amount).toBe(4000)
     expect(nextState.portfolioInputMode).toBe('weight')
   })
 
@@ -67,8 +73,51 @@ describe('backtestFormReducer', () => {
     })
 
     expect(nextState.totalInvestment).toBe(20000)
-    expect(nextState.portfolio[0].amount).toBe(12000)
-    expect(nextState.portfolio[1].amount).toBe(8000)
+    expect(nextState.portfolio).toHaveLength(2)
+    const [aapl, msft] = nextState.portfolio
+    assert.isDefined(aapl)
+    assert.isDefined(msft)
+    expect(aapl.symbol).toBe('AAPL')
+    expect(msft.symbol).toBe('MSFT')
+    expect(aapl.amount).toBe(12000)
+    expect(msft.amount).toBe(8000)
+  })
+
+  it('recalculates DCA per-period amounts when total investment changes in weight mode', () => {
+    // 기존 테스트들은 모두 investmentType: 'lump_sum'만 다뤄서
+    // recalcAmountsByWeight의 DCA 분기(회당 금액 = 배분액 / dcaPeriods)가
+    // 리듀서 액션 dispatch 경로로는 검증되지 않았다.
+    const weightedDcaState: BacktestFormState = {
+      ...cloneState(initialBacktestFormState),
+      portfolioInputMode: 'weight',
+      totalInvestment: 10000,
+      dates: { startDate: '2025-01-01', endDate: '2025-10-31' },
+      portfolio: [
+        {
+          symbol: 'AAPL',
+          amount: 0,
+          weight: 100,
+          investmentType: 'dca',
+          dcaFrequency: 'monthly_1',
+          assetType: ASSET_TYPES.STOCK,
+        },
+      ],
+    }
+
+    const nextState = backtestFormReducer(weightedDcaState, {
+      type: 'SET_TOTAL_INVESTMENT',
+      payload: 20000,
+    })
+
+    expect(nextState.totalInvestment).toBe(20000)
+    expect(nextState.portfolio).toHaveLength(1)
+    const [aapl] = nextState.portfolio
+    assert.isDefined(aapl)
+    expect(aapl.symbol).toBe('AAPL')
+    // DCA는 회당 금액으로 분할되므로 전체 투자금(20000)보다 훨씬 작아야 한다
+    // (단순 lump_sum이었다면 20000 전액이 amount가 됨)
+    expect(aapl.amount).toBeGreaterThan(0)
+    expect(aapl.amount).toBeLessThan(20000)
   })
 
   it('clears weight when updating amounts directly in amount mode', () => {
@@ -90,8 +139,12 @@ describe('backtestFormReducer', () => {
       payload: { index: 0, field: 'amount', value: 15000 },
     })
 
-    expect(updated.portfolio[0].amount).toBe(15000)
-    expect(updated.portfolio[0].weight).toBeUndefined()
+    expect(updated.portfolio).toHaveLength(1)
+    const [updatedStock] = updated.portfolio
+    assert.isDefined(updatedStock)
+    expect(updatedStock.symbol).toBe('AAPL')
+    expect(updatedStock.amount).toBe(15000)
+    expect(updatedStock.weight).toBeUndefined()
   })
 })
 

@@ -1,6 +1,9 @@
 """백테스팅 전략 모음
 
-Buy & Hold, SMA, EMA, RSI, Bollinger Bands, MACD 등 6가지 전략을 구현합니다.
+SMA, EMA, RSI, Bollinger Bands, MACD 5가지 전략을 구현합니다.
+(Buy & Hold는 backtesting.py가 아닌 포트폴리오 시뮬레이터 경로에서 처리되므로
+ 여기에는 구현되지 않는다 — app/services/portfolio_manager_service.py의
+ run_buy_and_hold_portfolio_backtest() 참고)
 """
 import pandas as pd
 import numpy as np
@@ -30,25 +33,6 @@ class PositionSizingMixin:
 
 
 # ========================
-# Strategy: Buy & Hold
-# ========================
-
-class BuyAndHoldStrategy(Strategy):
-    """매수 후 보유 전략
-
-    가장 단순한 전략: 백테스트 시작 시점에 전액 매수하고 끝까지 보유
-    """
-
-    def init(self):
-        self.bought = False
-
-    def next(self):
-        if not self.bought:
-            self.buy()
-            self.bought = True
-
-
-# ========================
 # Strategy: SMA Crossover
 # ========================
 
@@ -60,13 +44,13 @@ def _sma_helper(values, n):
 class SmaCrossStrategy(PositionSizingMixin, Strategy):
     """이동평균 교차 전략 (단기선이 장기선을 상향/하향 돌파 시 매매)"""
 
-    sma_short = 10
-    sma_long = 20
+    short_window = 10
+    long_window = 20
     position_size = 0.95
 
     def init(self):
-        self.sma1 = self.I(_sma_helper, self.data.Close, self.sma_short)
-        self.sma2 = self.I(_sma_helper, self.data.Close, self.sma_long)
+        self.sma1 = self.I(_sma_helper, self.data.Close, self.short_window)
+        self.sma2 = self.I(_sma_helper, self.data.Close, self.long_window)
 
     def next(self):
         if not self.position:

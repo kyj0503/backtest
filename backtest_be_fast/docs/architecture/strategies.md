@@ -28,14 +28,16 @@
 
 ### 2. SMA Crossover (단순이동평균 교차)
 
--   **전략명**: `sma_cross_strategy`
--   **설명**: 단기 이동평균선과 장기 이동평균선의 교차를 이용한 전형적인 추세 추종 전략입니다.
+-   **전략명**: `sma_strategy`
+-   **설명**: 단기 이동평균선과 장기 이동평균선의 교차를 이용한 전형적인 추세 추종 전략입니다. 구현 클래스는 `SmaCrossStrategy`입니다.
 -   **주요 파라미터**:
-    -   `sma_short` (기본값: `10`): 단기 이동평균선 기간.
-    -   `sma_long` (기본값: `20`): 장기 이동평균선 기간.
+    -   `short_window` (기본값: `10`): 단기 이동평균선 기간.
+    -   `long_window` (기본값: `20`): 장기 이동평균선 기간.
 -   **매매 규칙**:
-    -   **매수 (골든 크로스)**: 단기 이평선(`sma_short`)이 장기 이평선(`sma_long`)을 상향 돌파할 때.
+    -   **매수 (골든 크로스)**: 단기 이평선(`short_window`)이 장기 이평선(`long_window`)을 상향 돌파할 때.
     -   **매도 (데드 크로스)**: 단기 이평선이 장기 이평선을 하향 돌파할 때.
+
+> **참고**: 이 전략의 공개 파라미터 이름은 한때 `sma_short`/`sma_long`이었으나 `strategy_service.py`의 `STRATEGIES` 스펙과 `SmaCrossStrategy` 클래스 속성명이 어긋나 있었습니다. `BacktestEngine._build_strategy`는 `hasattr(cls, key)`로 사용자 파라미터를 필터링하므로, 이름이 어긋나면 파라미터가 조용히 무시되고 기본값으로 백테스트가 실행되는 버그가 있었습니다. 현재는 `short_window`/`long_window`로 통일되어 있습니다 (`tests/unit/test_strategy_param_override.py`가 모든 전략에 대해 이 회귀를 방지합니다).
 
 ### 3. EMA Crossover (지수이동평균 교차)
 
@@ -62,7 +64,7 @@
 
 ### 5. Bollinger Bands (볼린저 밴드)
 
--   **전략명**: `bollinger_bands_strategy`
+-   **전략명**: `bollinger_strategy`
 -   **설명**: 주가의 변동성을 측정하는 지표로, 이동평균선을 중심으로 표준편차 범위의 상단/하단 밴드를 형성합니다. 가격이 밴드를 어떻게 터치하는지에 따라 매매 시점을 결정합니다.
 -   **주요 파라미터**:
     -   `period` (기본값: `20`): 중심선(이동평균) 계산 기간.
@@ -117,12 +119,23 @@
     ```
 
 2.  **전략 등록 (`app/services/strategy_service.py`)**
-    -   `STRATEGY_CLASSES` 딕셔너리에 새 전략 클래스를 추가합니다. 키는 프론트엔드에서 사용할 전략의 고유 이름(문자열)입니다.
+    -   모듈 레벨 `STRATEGIES` 딕셔너리(`STRATEGY_CLASSES`가 아닙니다)에 새 전략을 추가합니다. 키는 API가 사용할 전략의 고유 이름(문자열)이고, 값은 클래스뿐 아니라 이름·설명·파라미터 스펙·제약조건까지 포함하는 딕셔너리입니다 — 여기 등록한 파라미터 이름이 실제 전략 클래스의 속성명과 일치해야 합니다 (`BacktestEngine._build_strategy`가 `hasattr(cls, key)`로 필터링하므로, 이름이 다르면 값이 조용히 무시됩니다).
 
     ```python
-    STRATEGY_CLASSES = {
+    STRATEGIES: Dict[str, Dict[str, Any]] = {
         # ... 기존 전략들
-        "my_new_strategy": MyNewStrategy,
+        "my_new_strategy": {
+            "class": MyNewStrategy,
+            "name": "My New Strategy",
+            "description": "설명",
+            "parameters": {
+                "my_param": {
+                    "type": int, "default": 15, "min": 2, "max": 50,
+                    "description": "예시 파라미터",
+                },
+            },
+            "constraints": [],
+        },
     }
     ```
 

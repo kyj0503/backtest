@@ -21,84 +21,86 @@ asyncio_mode = strict
 
 테스트 대상인 비동기 함수나 메서드를 호출할 때는 반드시 `await` 키워드를 붙여야 합니다. `await`를 생략하면 코루틴(coroutine) 객체만 반환되고 실제 코드는 실행되지 않아 테스트가 실패하거나 잘못된 결과를 낳을 수 있습니다.
 
-### 예시: 비동기 서비스 테스트
+### 예시: 비동기 서비스 테스트 (실제 코드)
 
-`BacktestService`의 `run_backtest` 메서드는 내부적으로 `asyncio.to_thread`를 사용하여 동기 I/O 작업을 비동기적으로 처리합니다. 이 서비스를 테스트하는 코드는 다음과 같습니다.
+`BacktestEngine.run_backtest`는 `async def`이며, 내부에서 `asyncio.to_thread`로 동기 I/O를 감쌉니다. 아래는 실제 `tests/unit/test_backtest_engine.py`에 있는 테스트를 그대로 옮긴 것입니다 (의존성은 전부 모킹되어 있어 `unit` 마커가 붙어 있습니다 — DB나 외부 API를 실제로 호출하는 것은 아닙니다).
 
 ```python
-# tests/integration/services/test_backtest_service.py
-import pytest
-from app.services.backtest_service import backtest_service
-from app.schemas.requests import BacktestRequest
-
-@pytest.mark.integration
+# tests/unit/test_backtest_engine.py
 @pytest.mark.asyncio  # pytest-asyncio에게 이 테스트가 비동기임을 명시
-async def test_run_backtest_async(sample_ticker_data_fixture):
-    """
-    BacktestService.run_backtest가 비동기적으로 올바르게 실행되는지 테스트합니다.
-    """
-    # given: 테스트 요청 데이터 준비
-    request = BacktestRequest(
-        strategy_name="sma",
-        tickers=["AAPL"],
-        start_date="2022-01-01",
-        end_date="2023-01-01",
-        initial_capital=10000,
-        params={"sma_short": 10, "sma_long": 20}
+async def test_run_backtest_success_returns_valid_result(
+    self, mock_data_repository, mock_strategy_service, mock_validation_service,
+    sample_price_data, backtest_request, mock_backtest_stats
+):
+    engine = BacktestEngine(
+        data_repository=mock_data_repository,
+        strategy_service_instance=mock_strategy_service,
+        validation_service_instance=mock_validation_service
     )
+    mock_data_repository.get_stock_data.return_value = sample_price_data
 
-    # when: 비동기 서비스 메서드 호출
-    # backtest_service.run_backtest는 async 함수이므로 await를 사용해야 합니다.
-    result = await backtest_service.run_backtest(request)
+    with patch('app.services.backtest_engine.currency_converter') as mock_converter:
+        mock_converter.convert_dataframe_to_usd = AsyncMock(return_value=sample_price_data)
+        with patch.object(engine, '_execute_backtest', return_value=mock_backtest_stats):
+            # BacktestEngine.run_backtest는 async 함수이므로 await를 사용해야 합니다.
+            result = await engine.run_backtest(backtest_request)
 
-    # then: 결과 검증
-    assert result is not None
-    assert "stats" in result
-    assert result["stats"]["Sharpe Ratio"] > 0
+    assert isinstance(result, BacktestResult)
+    assert result.total_return_pct == 25.5
 ```
 
 -   `@pytest.mark.asyncio`: 이 마커는 `pytest-asyncio`에게 해당 테스트가 비동기임을 명시적으로 알려줍니다. `strict` 모드에서는 모든 `async def` 테스트에 이 마커를 붙이는 것이 권장됩니다.
 
 ## 비동기 API 엔드포인트 테스트
 
-`httpx`의 `AsyncClient`를 사용하여 비동기 API 엔드포인트를 테스트할 수 있습니다. `conftest.py`에 `async_client` 픽스처를 정의하여 재사용할 수 있습니다.
+`conftest.py`는 `httpx.AsyncClient` 기반의 `client`라는 이름의 픽스처를 정의합니다 (`async_client`가 아닙니다). **다만 현재 이 픽스처를 실제로 쓰는 테스트는 없습니다.** `tests/integration/test_backtest_api.py`와 `tests/unit/test_portfolio_backtest_error_contract.py`는 대신 파일 상단에서 `fastapi.testclient.TestClient(app)`(동기)를 직접 생성해 사용합니다 — API 엔드포인트 테스트는 관례상 동기 방식입니다.
 
-### `async_client` 픽스처 예시
+### `client` 픽스처 (conftest.py, 실제 정의)
 
 ```python
 # tests/conftest.py
-import pytest
-from httpx import AsyncClient
-from app.main import app
-
-@pytest.fixture(scope="function")
-async def async_client():
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
+@pytest.fixture
+async def client() -> AsyncGenerator:
+    """테스트용 HTTP 클라이언트 - Integration tests only"""
+    if not HAS_HTTPX:
+        pytest.skip("httpx not installed")
+    if app is None:
+        pytest.skip("FastAPI app not available")
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
 ```
 
-### 테스트 코드 예시
+### 실제 API 테스트는 동기 `TestClient`를 사용합니다
 
 ```python
-# tests/e2e/test_portfolio_api.py
-import pytest
+# tests/integration/test_backtest_api.py (실제 코드 발췌)
+from fastapi.testclient import TestClient
+from app.main import app
 
-@pytest.mark.e2e
-@pytest.mark.asyncio
-async def test_portfolio_backtest_e2e(async_client):
-    # given: 요청 데이터
-    request_data = {
-        # ... 포트폴리오 백테스트 요청 데이터 ...
-    }
+client = TestClient(app)  # 모듈 레벨, pytest 픽스처가 아님
 
-    # when: 비동기 클라이언트로 API 요청
-    response = await async_client.post("/api/v1/portfolio/backtest", json=request_data)
+class TestBacktestEndpoint:
+    @pytest.mark.integration
+    def test_single_asset_backtest_success(self):
+        payload = {
+            "portfolio": [{"symbol": "AAPL", "amount": 10000.0,
+                            "investment_type": "lump_sum", "asset_type": "stock"}],
+            "start_date": "2023-01-01",
+            "end_date": "2023-06-30",
+            "strategy": "buy_hold_strategy",
+            "commission": 0.002,
+            "rebalance_frequency": "monthly_1"
+        }
 
-    # then: 응답 검증
-    assert response.status_code == 200
-    result = response.json()
-    assert "total_performance" in result
+        # 실제 백테스트 API는 이 하나뿐입니다: POST /api/v1/backtest
+        # (POST /api/v1/portfolio/backtest 라는 경로는 존재하지 않습니다)
+        response = client.post("/api/v1/backtest", json=payload)
+
+        assert response.status_code == 200
+        assert response.json()["status"] == "success"
 ```
+
+`tests/e2e/test_golden_master.py`도 같은 패턴(동기 `TestClient`)을 씁니다. `tests/e2e/test_portfolio_api.py`라는 파일은 없습니다.
 
 ## 주의사항
 

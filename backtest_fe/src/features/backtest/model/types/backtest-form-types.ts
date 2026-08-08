@@ -53,6 +53,14 @@ export type BacktestFormAction =
   | { type: 'SET_TOTAL_INVESTMENT'; payload: number }
   | { type: 'RESET_FORM' };
 
+export const getDefaultDates = () => {
+  const today = new Date();
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  return { startDate: fmt(oneYearAgo), endDate: fmt(today) };
+};
+
 export const initialBacktestFormState: BacktestFormState = {
   portfolio: [{
     symbol: '',
@@ -60,10 +68,7 @@ export const initialBacktestFormState: BacktestFormState = {
     investmentType: 'lump_sum',
     dcaFrequency: 'monthly_1'
   }],
-  dates: {
-    startDate: '2025-01-01',
-    endDate: '2025-10-31'
-  },
+  dates: getDefaultDates(),
   strategy: {
     selectedStrategy: 'buy_hold_strategy',
     strategyParams: {}

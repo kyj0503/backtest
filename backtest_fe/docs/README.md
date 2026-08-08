@@ -9,7 +9,7 @@
     -   `Feature-Sliced Design`에 기반한 설계 원칙을 기술합니다.
 
 -   [**상태 관리**](./architecture/state_management.md)
-    -   `Zustand`를 이용한 전역 상태 관리와 `useReducer`를 활용한 복잡한 로컬 상태 관리 패턴을 설명합니다.
+    -   React hooks(`useState`/`useReducer`) + localStorage 기반 상태 관리와, `useReducer`를 활용한 복잡한 로컬 상태 관리 패턴을 설명합니다. (이 코드베이스에 전역 상태 라이브러리는 없습니다 — Zustand 등은 도입된 적이 없습니다.)
 
 ## 성능 최적화
 

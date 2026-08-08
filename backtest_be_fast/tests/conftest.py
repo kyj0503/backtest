@@ -162,7 +162,7 @@ def sample_backtest_request():
         "start_date": "2023-01-01",
         "end_date": "2023-12-31",
         "initial_capital": 10000.0,
-        "strategy": "buy_and_hold",
+        "strategy": "buy_hold_strategy",
         "parameters": {}
     }
 

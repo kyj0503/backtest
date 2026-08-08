@@ -21,19 +21,22 @@ class BacktestException(Exception):
 # HTTP 예외 클래스들
 class DataNotFoundError(HTTPException):
     """데이터를 찾을 수 없을 때 발생하는 예외"""
-    def __init__(self, symbol: str, start_date: str, end_date: str):
-        detail = f"'{symbol}' 종목의 데이터를 찾을 수 없습니다. (기간: {start_date} ~ {end_date})"
+    def __init__(self, detail_or_symbol: str = "", start_date: str = "", end_date: str = ""):
+        if start_date and end_date:
+            detail = f"'{detail_or_symbol}' 종목의 데이터를 찾을 수 없습니다. (기간: {start_date} ~ {end_date})"
+        else:
+            detail = detail_or_symbol
         super().__init__(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=detail
         )
-        logger.warning(f"데이터 없음: {symbol} ({start_date} ~ {end_date})")
+        logger.warning(f"데이터 없음: {detail}")
 
 
 class InvalidSymbolError(HTTPException):
     """잘못된 종목 심볼일 때 발생하는 예외"""
     def __init__(self, symbol: str):
-        detail = f"'{symbol}'은(는) 유효하지 않은 종목 심볼입니다."
+        detail = symbol if len(symbol) > 30 else f"'{symbol}'은(는) 유효하지 않은 종목 심볼입니다."
         super().__init__(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=detail
@@ -43,14 +46,19 @@ class InvalidSymbolError(HTTPException):
 
 class YfinanceRateLimitError(HTTPException):
     """Yahoo Finance API 제한에 도달했을 때 발생하는 예외"""
-    def __init__(self, retry_after: int = 60):
-        detail = f"Yahoo Finance API 요청 제한에 도달했습니다. {retry_after}초 후 다시 시도해주세요."
+    def __init__(self, detail_or_retry: str | int = 60):
+        if isinstance(detail_or_retry, int):
+            detail = f"Yahoo Finance API 요청 제한에 도달했습니다. {detail_or_retry}초 후 다시 시도해주세요."
+            headers = {"Retry-After": str(detail_or_retry)}
+        else:
+            detail = detail_or_retry
+            headers = {"Retry-After": "60"}
         super().__init__(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=detail,
-            headers={"Retry-After": str(retry_after)}
+            headers=headers
         )
-        logger.warning("Yahoo Finance API 요청 제한 도달")
+        logger.warning(f"Yahoo Finance API 제한: {detail}")
 
 
 class ValidationError(HTTPException):

@@ -1,4 +1,7 @@
 // 주가 변동성 및 뉴스 관련 타입 정의
+import { NewsItem } from './backtest-result-types';
+
+export type { NewsItem };
 
 export interface VolatilityEvent {
   date: string;
@@ -6,21 +9,6 @@ export interface VolatilityEvent {
   close_price: number;
   volume: number;
   event_type: string;
-}
-
-export interface NewsItem {
-  title: string;
-  description: string;
-  link: string;
-  pubDate: string;
-  company: string;
-}
-
-export interface StockVolatilityNewsProps {
-  symbols: string[];
-  startDate: string;
-  endDate: string;
-  className?: string;
 }
 
 // 티커 심볼을 한국어 기업명으로 매핑 (백엔드와 동일한 매핑 사용)

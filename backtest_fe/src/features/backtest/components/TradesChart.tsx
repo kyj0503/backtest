@@ -2,17 +2,10 @@ import React, { memo, useMemo, useCallback } from 'react';
 import { ScatterChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Scatter, Cell, ReferenceLine } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-
-interface Trade {
-  date: string;
-  type: 'entry' | 'exit';
-  pnl_pct?: number;
-  price?: number;
-  [key: string]: string | number | undefined;
-}
+import type { TradeMarker } from '../model/types';
 
 interface TradesChartProps {
-  trades: Trade[];
+  trades: TradeMarker[];
   showCard?: boolean;
 }
 

@@ -57,7 +57,7 @@ function calculateYearDuration(startDate: string | Date, endDate: string | Date)
  * @param data 원본 일간 데이터 (가격, equity, value 등)
  * @returns 매 7번째 데이터 포인트만 포함된 배열
  */
-function aggregateToWeekly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
+function aggregateToWeekly<T extends { date: string }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
 
   const weekly: T[] = [];
@@ -261,7 +261,7 @@ function getNextMonthNthWeekday(currentDate: Date, originalNth: number): Date {
  * @param data 원본 일간 데이터 (가격, equity, value 등)
  * @returns 실제 달력 월 기준으로 샘플링된 배열
  */
-function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data: T[]): T[] {
+function aggregateToMonthly<T extends { date: string }>(data: T[]): T[] {
   if (!data || data.length === 0) return [];
 
   const monthly: T[] = [];
@@ -363,7 +363,7 @@ function aggregateToMonthly<T extends { date: string; [key: string]: any }>(data
  * @param endDate 백테스트 종료일
  * @returns 집계된 데이터 및 메타 정보
  */
-export function smartSampleByPeriod<T extends { date: string; [key: string]: any }>(
+export function smartSampleByPeriod<T extends { date: string }>(
   data: T[],
   startDate?: string | Date,
   endDate?: string | Date
@@ -439,18 +439,18 @@ export function sampleData<T>(data: T[], maxPoints: number = 500): T[] {
 
   // 첫 번째 포인트는 항상 포함
   const firstItem = data[0];
-  if (firstItem) sampled.push(firstItem);
+  if (firstItem !== undefined) sampled.push(firstItem);
 
   // 균등 간격으로 샘플링
   for (let i = step; i < data.length - 1; i += step) {
     const item = data[i];
-    if (item) sampled.push(item);
+    if (item !== undefined) sampled.push(item);
   }
 
   // 마지막 포인트는 항상 포함 (종료 값 보존)
   if (data.length > 1) {
     const lastItem = data[data.length - 1];
-    if (lastItem) sampled.push(lastItem);
+    if (lastItem !== undefined) sampled.push(lastItem);
   }
 
   return sampled;
@@ -505,7 +505,7 @@ export function adaptiveSampleData<T>(
 
   // 마지막 포인트 추가
   const lastItem = data[data.length - 1];
-  if (lastItem) sampled.push(lastItem);
+  if (lastItem !== undefined) sampled.push(lastItem);
 
   // 여전히 포인트가 부족하면 균등 샘플링으로 보완
   if (sampled.length < maxPoints * 0.5) {
@@ -556,7 +556,7 @@ export function filterRebalanceMarkers<T extends { date?: string; timestamp?: st
  * @param aggregationType 'daily' | 'weekly' | 'monthly'
  * @returns 집계된 수익률 데이터
  */
-export function aggregateReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+export function aggregateReturns<T extends { date: string; return_pct: number }>(
   dailyReturns: T[],
   aggregationType: 'daily' | 'weekly' | 'monthly'
 ): T[] {
@@ -581,7 +581,7 @@ export function aggregateReturns<T extends { date: string; return_pct: number; [
  * @param dailyReturns 일간 수익률 배열
  * @returns 7일 단위로 집계된 복리 수익률
  */
-function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+function aggregateWeeklyReturns<T extends { date: string; return_pct: number }>(
   dailyReturns: T[]
 ): T[] {
   if (!dailyReturns || dailyReturns.length === 0) return [];
@@ -625,7 +625,7 @@ function aggregateWeeklyReturns<T extends { date: string; return_pct: number; [k
  * @param dailyReturns 일간 수익률 배열
  * @returns 실제 달력 월 단위로 집계된 복리 수익률
  */
-function aggregateMonthlyReturns<T extends { date: string; return_pct: number; [key: string]: any }>(
+function aggregateMonthlyReturns<T extends { date: string; return_pct: number }>(
   dailyReturns: T[]
 ): T[] {
   if (!dailyReturns || dailyReturns.length === 0) return [];

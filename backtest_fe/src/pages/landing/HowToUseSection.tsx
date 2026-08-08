@@ -3,7 +3,7 @@ import React from 'react';
 export const HowToUseSection: React.FC = () => {
   return (
     <section className="py-16 sm:py-24 bg-background">
-      <div className="container mx-auto px-4 sm:px-6 lg:max-w-6xl">
+      <div className="app-container mx-auto px-4 sm:px-6 lg:max-w-6xl">
         <div className="space-y-10 sm:space-y-16">
           <div className="text-center space-y-3 sm:space-y-4 px-4">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">어떻게 사용하나요?</h2>

@@ -6,7 +6,6 @@ import { apiClient } from '@/shared/api/client'
 import type {
   BacktestRequest,
   UnifiedBacktestResponse,
-  NewsResponse,
 } from '../../model/types/api-types'
 
 const baseRequest: BacktestRequest = {
@@ -69,7 +68,7 @@ describe('BacktestService (integration)', () => {
     }
 
     server.use(
-      http.post(`${TEST_BASE_URL}/api/v1/backtest`, async ({ request }) => {
+      http.post<never, BacktestRequest>(`${TEST_BASE_URL}/api/v1/backtest`, async ({ request }) => {
         capturedBody = await request.json()
         return HttpResponse.json(mockResponse)
       })
@@ -89,39 +88,5 @@ describe('BacktestService (integration)', () => {
     )
 
     await expect(BacktestService.executeBacktest(baseRequest)).rejects.toThrow()
-  })
-
-  it('sends query parameters when searching news', async () => {
-    const capturedQueries: Record<string, string> = {}
-
-    const mockNews: NewsResponse = {
-      lastBuildDate: '2024-01-01',
-      total: 1,
-      start: 1,
-      display: 5,
-      items: [
-        {
-          title: 'Sample news',
-          link: 'https://example.com/news',
-          description: 'Example description',
-          pubDate: '2024-01-01',
-        },
-      ],
-    }
-
-    server.use(
-      http.get(`${TEST_BASE_URL}/api/v1/naver-news/search`, ({ request }) => {
-        const url = new URL(request.url)
-        url.searchParams.forEach((value, key) => {
-          capturedQueries[key] = value
-        })
-        return HttpResponse.json(mockNews)
-      })
-    )
-
-    const result = await BacktestService.searchNews('AAPL', 5)
-
-    expect(result).toEqual(mockNews)
-    expect(capturedQueries).toEqual({ query: 'AAPL', display: '5' })
   })
 })

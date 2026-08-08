@@ -1,4 +1,8 @@
 # Test dependencies
+#
+# P2-22: 사람이 편집하는 입력이다. Dockerfile의 test 스테이지 / Dockerfile.dev는
+# requirements-test.lock.txt(고정본, requirements.lock.txt 위에 얹어 설치)를
+# 설치한다. 재생성 방법은 requirements.lock.txt 상단 주석 참고.
 pytest>=8.2.0
 pytest-asyncio==0.24.0
 pytest-cov==4.1.0

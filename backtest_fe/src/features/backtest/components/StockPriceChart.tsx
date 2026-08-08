@@ -1,9 +1,28 @@
-import React, { useState, memo, useMemo } from "react";
+import React, { useState, useEffect, memo, useMemo } from "react";
 import { ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Scatter } from "recharts";
 import { useRenderPerformance } from "@/shared/components";
 import StockSymbolSelector from './results/StockSymbolSelector';
 import { formatPriceWithCurrency } from "@/shared/lib/utils/numberUtils";
 import { TickerInfo } from '../model/types/backtest-result-types';
+
+// 뷰포트 너비를 추적하는 훅.
+// 기존에는 렌더 시점에 window.innerWidth를 직접 읽어 마진/틱 간격/각도를
+// 계산했는데, 이는 최초 렌더 이후 리사이즈에 전혀 반응하지 않는 문제가 있었다.
+// resize 이벤트를 구독해 상태로 관리하면 리사이즈마다 재렌더링되어 반응한다.
+const useViewportWidth = (): number => {
+  const [width, setWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1024
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return width;
+};
 
 interface StockData {
   symbol: string;
@@ -23,6 +42,16 @@ interface TradeLog {
   Type?: 'BUY' | 'SELL';  // 거래 타입 (리밸런싱용)
   PnL?: number;
   ReturnPct?: number;
+}
+
+// 주가 데이터에 매매 신호를 merge한 차트 데이터 포인트
+// buySignal/sellSignal은 해당 날짜에 신호가 없으면 undefined (recharts가 점을 건너뜀)
+interface StockChartPoint {
+  date: string;
+  price: number;
+  volume?: number;
+  buySignal?: number;
+  sellSignal?: number;
 }
 
 interface StockPriceChartProps {
@@ -96,13 +125,16 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
   // 성능 모니터링
   useRenderPerformance('StockPriceChart');
 
+  const viewportWidth = useViewportWidth();
+  const isNarrowViewport = viewportWidth < 640;
+
   const [selectedSymbol, setSelectedSymbol] = useState<string>(() => stocksData[0]?.symbol || '');
 
   // 선택된 종목의 데이터 찾기
   const selectedStockData = stocksData.find(stock => stock.symbol === selectedSymbol);
 
   // 선택된 종목의 매매 신호를 주가 데이터에 merge
-  const chartDataWithSignals = useMemo(() => {
+  const chartDataWithSignals = useMemo<StockChartPoint[]>(() => {
     if (!selectedStockData) return [];
 
     const logs = tradeLogs[selectedSymbol];
@@ -116,7 +148,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
 
     logs.forEach((trade) => {
       // 실제 거래 날짜 추출
-      let tradeDates: string[] = [];
+      const tradeDates: string[] = [];
 
       if (trade.Type) {
         // Type 필드가 있으면 (리밸런싱, DCA 등)
@@ -162,7 +194,7 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
   // Y축 도메인 계산 (메모이제이션)
   const yAxisDomain = useMemo<[number, number]>(() => {
     const prices = chartDataWithSignals
-      .map((d: any) => d.price)
+      .map((d) => d.price)
       .filter((price): price is number => typeof price === 'number' && !isNaN(price));
     
     if (prices.length === 0) return [0, 100];
@@ -232,32 +264,34 @@ const StockPriceChart: React.FC<StockPriceChartProps> = memo(({ stocksData, tick
         <>
           <div style={{ width: '100%', height: '400px' }}>
             <ResponsiveContainer debounce={300}>
-              <ComposedChart 
-                data={chartDataWithSignals} 
+              <ComposedChart
+                data={chartDataWithSignals}
                 syncId="stockPriceChart"
-                margin={{ top: 5, right: 20, left: 10, bottom: typeof window !== 'undefined' && window.innerWidth < 640 ? 60 : 30 }}
+                margin={{ top: 5, right: 20, left: 10, bottom: isNarrowViewport ? 60 : 30 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatDate}
                   tick={{ fontSize: 11 }}
-                  interval={Math.max(1, Math.floor(chartDataWithSignals.length / (typeof window !== 'undefined' && window.innerWidth < 640 ? 4 : 8)))}
-                  angle={typeof window !== 'undefined' && window.innerWidth < 640 ? -45 : 0}
-                  textAnchor={typeof window !== 'undefined' && window.innerWidth < 640 ? 'end' : 'middle'}
+                  interval={Math.max(1, Math.floor(chartDataWithSignals.length / (isNarrowViewport ? 4 : 8)))}
+                  angle={isNarrowViewport ? -45 : 0}
+                  textAnchor={isNarrowViewport ? 'end' : 'middle'}
                 />
                 <YAxis
                   tickFormatter={formatPrice}
                   domain={yAxisDomain}
                 />
                 <Tooltip
-                  labelFormatter={(label: any) => `날짜: ${label}`}
-                  formatter={(value: any, name: string) => {
+                  labelFormatter={(label: unknown) => `날짜: ${String(label)}`}
+                  formatter={(value: unknown, name: unknown) => {
                     if (!value) return null;
-                    if (name === 'price') return [formatPrice(value), '주가'];
-                    if (name === 'buySignal') return [formatPrice(value), '매수'];
-                    if (name === 'sellSignal') return [formatPrice(value), '매도'];
-                    return [value, name];
+                    const key = String(name);
+                    const price = Number(value);
+                    if (key === 'price') return [formatPrice(price), '주가'];
+                    if (key === 'buySignal') return [formatPrice(price), '매수'];
+                    if (key === 'sellSignal') return [formatPrice(price), '매도'];
+                    return [String(value), key];
                   }}
                 />
                 {/* 주가 라인 */}

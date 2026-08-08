@@ -40,29 +40,33 @@ pytest
     pytest -m "not e2e"
     ```
 
-`pytest.ini` 파일에 등록된 마커 목록은 다음과 같습니다.
+`pytest.ini` 파일에 등록된 마커 목록은 다음과 같습니다 (실제 `backtest_be_fast/pytest.ini`의 `markers` 섹션을 그대로 옮긴 것입니다 — 6개 전부).
 ```ini
 [pytest]
 markers =
-    unit: marks tests as unit tests
-    integration: marks tests as integration tests
-    e2e: marks tests as end-to-end tests
-    db: marks tests that require database access
+    unit: Unit tests - fast, isolated tests (단위 테스트 - 빠르고 독립적)
+    integration: Integration tests - tests with external dependencies (통합 테스트 - 외부 의존성 포함)
+    e2e: End-to-end tests - full workflow tests (E2E 테스트 - 전체 워크플로우)
+    slow: Slow running tests (느린 테스트)
+    db: Tests that require database (데이터베이스 필요)
+    external: Tests that call external APIs (외부 API 호출)
 ```
 
 #### 파일 또는 디렉토리 지정 실행
 
-특정 파일이나 디렉토리 경로를 지정하여 해당 범위의 테스트만 실행할 수 있습니다.
+특정 파일이나 디렉토리 경로를 지정하여 해당 범위의 테스트만 실행할 수 있습니다. **`tests/unit`과 `tests/integration`은 하위 디렉토리 없이 평평한(flat) 구조입니다** — `services/`, `strategies/`, `api/` 같은 하위 폴더는 없고, 모든 `test_*.py` 파일이 각 디렉토리 바로 아래에 있습니다.
 
 ```bash
 # 특정 파일의 모든 테스트 실행
-pytest tests/unit/services/test_backtest_engine.py
+pytest tests/unit/test_backtest_engine.py
 
-# 특정 디렉토리의 모든 테스트 실행
-pytest tests/integration/api/
+# 특정 디렉토리의 모든 테스트 실행 (하위 디렉토리 없이 평평한 구조)
+pytest tests/integration/
 
-# 특정 테스트 함수 실행 (:: 사용)
-pytest tests/unit/strategies/test_sma_strategy.py::test_sma_strategy_buy_signal
+# 특정 테스트 클래스/메서드 실행 (:: 사용). 테스트는 함수가 아니라
+# 클래스 메서드로 작성되어 있습니다 (예: tests/unit/test_sma_strategy.py의
+# TestSmaRequirements 클래스).
+pytest tests/unit/test_sma_strategy.py::TestSmaRequirements::test_req_sma_02_golden_cross_buy
 ```
 
 ### 상세 결과 출력

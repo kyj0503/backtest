@@ -1,80 +1,91 @@
 import { ASSET_TYPES } from './strategyConfig';
 import { calculateDcaPeriods } from '../utils/calculateDcaPeriods';
-import { BacktestFormState, BacktestFormAction, Stock } from './types/backtest-form-types';
+import { BacktestFormState, BacktestFormAction, Stock, initialBacktestFormState, getDefaultDates } from './types/backtest-form-types';
+
+/**
+ * 비중 기반 모드에서 amount 자동 계산 (DCA 고려)
+ *
+ * 순수 함수로 모듈 스코프에 두어 reducer와 테스트가 동일한 구현을 공유한다.
+ * (과거에는 reducer 내부 클로저였고, 테스트가 70줄짜리 사본을 별도로
+ * 유지했다 — 실제 로직과 갈라질 위험이 있어 이 함수로 통합했다.)
+ */
+export function recalcAmountsByWeight(
+  portfolio: Stock[],
+  totalInvestment: number,
+  startDate?: string,
+  endDate?: string
+): Stock[] {
+  if (!startDate || !endDate || totalInvestment === 0) {
+    // 날짜 정보 없으면 기본 계산
+    return portfolio.map(s =>
+      typeof s.weight === 'number'
+        ? { ...s, amount: Math.round((s.weight / 100) * totalInvestment) }
+        : s
+    );
+  }
+
+  // Step 1: weight 항목들의 인덱스 찾기
+  const weightIndices: number[] = [];
+  portfolio.forEach((s, index) => {
+    if (typeof s.weight === 'number') {
+      weightIndices.push(index);
+    }
+  });
+
+  if (weightIndices.length === 0) return portfolio;
+
+  // Step 2: 각 weight 항목의 amount 계산
+  const perPeriodAmounts: (number | null)[] = new Array(portfolio.length).fill(null);
+  let accumulatedTotalAmount = 0;  // 비 DCA 종목들의 누적 투자액
+
+  weightIndices.forEach((index, pos) => {
+    const s = portfolio[index];
+    if (!s) return;
+    const weightPercent = s.weight || 0;
+    const totalAmountForStock = (weightPercent / 100) * totalInvestment;
+    const isLastWeightItem = pos === weightIndices.length - 1;
+
+    if (s.investmentType === 'dca') {
+      const dcaPeriods = calculateDcaPeriods(startDate, endDate, s.dcaFrequency || 'monthly_1');
+
+      if (isLastWeightItem) {
+        // 마지막 DCA 항목: 정확한 오차 보정
+        // remainingTotal = 총액 - (이전 종목들의 실제 투자액)
+        const remainingTotal = totalInvestment - accumulatedTotalAmount;
+        // 회당 금액 = 남은 총액 / 기간 (반올림으로 일관성 있게 계산)
+        const perPeriodAmount = Math.round(remainingTotal / dcaPeriods);
+        perPeriodAmounts[index] = perPeriodAmount;
+      } else {
+        // 일반 DCA 항목
+        const perPeriodAmount = Math.round(totalAmountForStock / dcaPeriods);
+        perPeriodAmounts[index] = perPeriodAmount;
+        // 누적: 회당 금액 × 기간 (실제 투자액 기반, 반올림된 회당 금액 사용)
+        accumulatedTotalAmount += Math.round(perPeriodAmount * dcaPeriods);
+      }
+    } else {
+      // 일시불 항목
+      const amount = Math.round(totalAmountForStock);
+      perPeriodAmounts[index] = amount;
+      if (!isLastWeightItem) {
+        accumulatedTotalAmount += amount;
+      } else {
+        // 마지막 일시불 항목: 오차 보정
+        const remainingTotal = totalInvestment - accumulatedTotalAmount;
+        perPeriodAmounts[index] = remainingTotal;
+      }
+    }
+  });
+
+  // Step 3: 최종 결과 반영
+  return portfolio.map((s, index) => {
+    if (perPeriodAmounts[index] !== null) {
+      return { ...s, amount: perPeriodAmounts[index]! };
+    }
+    return s;
+  });
+}
 
 export function backtestFormReducer(state: BacktestFormState, action: BacktestFormAction): BacktestFormState {
-  // 비중 기반 모드에서 amount 자동 계산 (DCA 고려)
-  const recalcAmountsByWeight = (portfolio: Stock[], totalInvestment: number, startDate?: string, endDate?: string) => {
-    if (!startDate || !endDate || totalInvestment === 0) {
-      // 날짜 정보 없으면 기본 계산
-      return portfolio.map(s =>
-        typeof s.weight === 'number'
-          ? { ...s, amount: Math.round((s.weight / 100) * totalInvestment) }
-          : s
-      );
-    }
-
-    // Step 1: weight 항목들의 인덱스 찾기
-    const weightIndices: number[] = [];
-    portfolio.forEach((s, index) => {
-      if (typeof s.weight === 'number') {
-        weightIndices.push(index);
-      }
-    });
-
-    if (weightIndices.length === 0) return portfolio;
-
-    // Step 2: 각 weight 항목의 amount 계산
-    const perPeriodAmounts: (number | null)[] = new Array(portfolio.length).fill(null);
-    let accumulatedTotalAmount = 0;  // 비 DCA 종목들의 누적 투자액
-
-    weightIndices.forEach((index, pos) => {
-      const s = portfolio[index];
-      if (!s) return;
-      const weightPercent = s.weight || 0;
-      const totalAmountForStock = (weightPercent / 100) * totalInvestment;
-      const isLastWeightItem = pos === weightIndices.length - 1;
-
-      if (s.investmentType === 'dca') {
-        const dcaPeriods = calculateDcaPeriods(startDate, endDate, s.dcaFrequency || 'monthly_1');
-        
-        if (isLastWeightItem) {
-          // 마지막 DCA 항목: 정확한 오차 보정
-          // remainingTotal = 총액 - (이전 종목들의 실제 투자액)
-          const remainingTotal = totalInvestment - accumulatedTotalAmount;
-          // 회당 금액 = 남은 총액 / 기간 (반올림으로 일관성 있게 계산)
-          const perPeriodAmount = Math.round(remainingTotal / dcaPeriods);
-          perPeriodAmounts[index] = perPeriodAmount;
-        } else {
-          // 일반 DCA 항목
-          const perPeriodAmount = Math.round(totalAmountForStock / dcaPeriods);
-          perPeriodAmounts[index] = perPeriodAmount;
-          // 누적: 회당 금액 × 기간 (실제 투자액 기반, 반올림된 회당 금액 사용)
-          accumulatedTotalAmount += Math.round(perPeriodAmount * dcaPeriods);
-        }
-      } else {
-        // 일시불 항목
-        const amount = Math.round(totalAmountForStock);
-        perPeriodAmounts[index] = amount;
-        if (!isLastWeightItem) {
-          accumulatedTotalAmount += amount;
-        } else {
-          // 마지막 일시불 항목: 오차 보정
-          const remainingTotal = totalInvestment - accumulatedTotalAmount;
-          perPeriodAmounts[index] = remainingTotal;
-        }
-      }
-    });
-
-    // Step 3: 최종 결과 반영
-    return portfolio.map((s, index) => {
-      if (perPeriodAmounts[index] !== null) {
-        return { ...s, amount: perPeriodAmounts[index]! };
-      }
-      return s;
-    });
-  };
-
   switch (action.type) {
     case 'SET_PORTFOLIO':
       return {
@@ -298,32 +309,7 @@ export function backtestFormReducer(state: BacktestFormState, action: BacktestFo
       };
 
     case 'RESET_FORM':
-      return {
-        portfolio: [{
-          symbol: '',
-          amount: 10000,
-          investmentType: 'lump_sum',
-          dcaFrequency: 'monthly_1'
-        }],
-        dates: {
-          startDate: '2023-01-01',
-          endDate: '2024-12-31'
-        },
-        strategy: {
-          selectedStrategy: 'buy_hold_strategy',
-          strategyParams: {}
-        },
-        settings: {
-          rebalanceFrequency: 'monthly_1',
-          commission: 0.2
-        },
-        ui: {
-          errors: [],
-          isLoading: false
-        },
-        portfolioInputMode: 'amount',
-        totalInvestment: 10000
-      };
+      return { ...initialBacktestFormState, dates: getDefaultDates() };
 
     default:
       return state;

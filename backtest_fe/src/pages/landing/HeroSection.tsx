@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 export const HeroSection: React.FC = () => {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-background via-background to-primary/5 pt-12 sm:pt-20 pb-20 sm:pb-32">
-      <div className="container mx-auto px-4 sm:px-6 lg:max-w-5xl">
+      <div className="app-container mx-auto px-4 sm:px-6 lg:max-w-5xl">
         <div className="text-center space-y-6 sm:space-y-8">
           <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium border border-primary/20">
             <Activity className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -41,8 +41,11 @@ export const HeroSection: React.FC = () => {
           <div className="mt-8 sm:mt-12 px-2">
             <img
               src="/images/landing/backtest-main.png"
-              alt="백테스트 플랫폼 메인 화면"
+              alt="백테스트 플랫폼 메인 화면 — 포트폴리오 수익률 차트와 전략 설정 화면"
               className="w-full max-w-6xl mx-auto rounded-2xl shadow-2xl border border-border/50"
+              fetchPriority="high"
+              width={1200}
+              height={675}
             />
           </div>
         </div>

@@ -1,5 +1,7 @@
 // 백테스트 결과 관련 타입 정의
 
+import type { IndicatorData } from './api-types';
+
 export interface Stock {
   symbol: string;
   weight: number;
@@ -24,9 +26,13 @@ export interface OhlcPoint {
 
 export interface EquityPoint {
   date: string;
-  value?: number;
-  return_pct: number;
-  drawdown_pct: number;
+  // value/return_pct/drawdown_pct는 리밸런싱 마커 포인트에서 null이 될 수 있다.
+  // (Recharts의 connectNulls={true}가 null 포인트를 건너뛰고 선을 이어주는
+  // 것을 이용해, 실제 데이터가 없는 리밸런싱 날짜에 ReferenceLine만 표시한다.
+  // 자세한 내용은 PortfolioCharts.tsx의 equityDataWithRebalancePoints 참고.)
+  value?: number | null;
+  return_pct: number | null;
+  drawdown_pct: number | null;
   [key: string]: unknown;
 }
 
@@ -46,10 +52,31 @@ export interface ExchangeRatePoint {
   rate: number;
 }
 
+/**
+ * 환율 주요 지점(시작/종료/최고/최저) 통계.
+ *
+ * 백엔드 `UnifiedDataService._calculate_exchange_stats()` 응답과 대응한다.
+ * 환율 데이터가 비어 있으면 백엔드가 빈 객체(`{}`)를 반환하므로 모든 필드가 선택적이다.
+ */
+export interface ExchangeRateStats {
+  start_point?: ExchangeRatePoint;
+  end_point?: ExchangeRatePoint;
+  high_point?: ExchangeRatePoint;
+  low_point?: ExchangeRatePoint;
+}
+
 export interface BenchmarkPoint {
   date: string;
   close: number;
   volume?: number;
+}
+
+/**
+ * 차트에서 사용하는 벤치마크 시계열 포인트.
+ * useChartData가 원본 지수 데이터에 기간 수익률(return_pct)을 덧붙여 만든다.
+ */
+export interface BenchmarkSeriesPoint extends BenchmarkPoint {
+  return_pct?: number;
 }
 
 export interface PortfolioStatistics {
@@ -82,9 +109,12 @@ export interface ChartData {
   ohlc_data?: OhlcPoint[];
   equity_data?: EquityPoint[];
   trade_markers?: TradeMarker[];
-  indicators?: IndicatorPoint[];
+  // 백엔드는 지표를 "시계열 서술자"로 내려준다: { name, type, color, data: [{ date, value }] }
+  // (개별 데이터 포인트 배열이 아니다 — api-types의 IndicatorData가 실제 계약이다)
+  indicators?: IndicatorData[];
   summary_stats?: Record<string, unknown>;
   exchange_rates?: ExchangeRatePoint[];
+  exchange_stats?: ExchangeRateStats;
   sp500_benchmark?: BenchmarkPoint[];
   nasdaq_benchmark?: BenchmarkPoint[];
 }
@@ -103,6 +133,7 @@ export interface NewsItem {
   description: string;
   pubDate: string;
   originallink?: string;
+  company?: string;
 }
 
 export interface RebalanceTrade {
@@ -152,7 +183,8 @@ export interface StrategyStats {
   sharpe_ratio?: number;
   max_drawdown_pct?: number;
   final_equity?: number;
-  [key: string]: any;
+  // 백엔드가 전략별로 추가 통계를 덧붙일 수 있어 열려 있는 형태를 유지한다.
+  [key: string]: unknown;
 }
 
 export interface PortfolioData {
@@ -173,6 +205,7 @@ export interface PortfolioData {
   ticker_info?: Record<string, TickerInfo>;
   stock_data?: Record<string, Array<{ date: string; price: number; volume: number }>>;
   exchange_rates?: ExchangeRatePoint[];
+  exchange_stats?: ExchangeRateStats;
   volatility_events?: Record<string, VolatilityEvent[]>;
   latest_news?: Record<string, NewsItem[]>;
   sp500_benchmark?: BenchmarkPoint[];

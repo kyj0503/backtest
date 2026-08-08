@@ -14,16 +14,16 @@ import {
 import { ChartLoading } from '@/shared/components';
 import { ResultBlock } from '../../shared';
 import TradeSignalsChart from '../../TradeSignalsChart';
-import { ChartData, EquityPoint, TradeMarker, OhlcPoint } from '../../../model/types';
+import { ChartData, EquityPoint, TradeMarker, OhlcPoint, StockDataItem, TickerInfo, TradeLog } from '../../../model/types';
 
 interface SingleStockChartsProps {
   chartData: ChartData;
   singleEquityData: EquityPoint[];
   singleTrades: TradeMarker[];
   singleOhlcData: OhlcPoint[];
-  stocksData: Array<{ symbol: string; data: any[] }>;
-  tickerInfo: Record<string, any>;
-  tradeLogs: Record<string, any[]>;
+  stocksData: StockDataItem[];
+  tickerInfo: Record<string, TickerInfo>;
+  tradeLogs: Record<string, TradeLog[]>;
   loadingStockData?: boolean;
   aggregationType?: 'daily' | 'weekly' | 'monthly';
 }
@@ -47,9 +47,9 @@ export const SingleStockCharts: React.FC<SingleStockChartsProps> = memo(({
       <ResultBlock title="OHLC 차트" description="가격 변동과 거래 시그널을 확인하세요">
         <Suspense fallback={<ChartLoading height={360} />}>
           <LazyOHLCChart
-            data={singleOhlcData as any}
-            indicators={(chartData.indicators ?? []) as any}
-            trades={singleTrades as any}
+            data={singleOhlcData}
+            indicators={chartData.indicators ?? []}
+            trades={singleTrades}
           />
         </Suspense>
       </ResultBlock>
@@ -57,7 +57,7 @@ export const SingleStockCharts: React.FC<SingleStockChartsProps> = memo(({
       {/* 수익률 & 드로우다운 차트 */}
       <ResultBlock title="수익률 & 드로우다운 차트" description="전략의 누적 수익률과 드로우다운을 확인하세요">
         <Suspense fallback={<ChartLoading height={360} />}>
-          <LazyEquityChart data={singleEquityData as any} />
+          <LazyEquityChart data={singleEquityData} />
         </Suspense>
       </ResultBlock>
 
@@ -82,7 +82,7 @@ export const SingleStockCharts: React.FC<SingleStockChartsProps> = memo(({
         <>
           <ResultBlock title="거래 내역" description="전략이 실행한 체결 신호">
             <Suspense fallback={<ChartLoading height={360} />}>
-              <LazyTradesChart trades={singleTrades as any} showCard={false} />
+              <LazyTradesChart trades={singleTrades} showCard={false} />
             </Suspense>
           </ResultBlock>
 
