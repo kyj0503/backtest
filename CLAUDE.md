@@ -91,7 +91,9 @@ The gate blocks **deployment**, not merging — the pipeline checks out `*/main`
 
 ## Outstanding Work
 
-`TODO.md` (repo root) holds the audited backlog — P1/P2/P3 with `file:line` evidence per item. Completed items are checked off with what was done. Consult it before starting work in an area; several known-broken behaviors (DCA denominator, delisted-stock rebalancing, 200-with-error responses) are documented there rather than in code comments.
+`TODO.md` (repo root) holds **only the open backlog** — P0/P1/P2/P3 with `file:line` evidence per item, plus a status summary and recommended order at the top. Consult it before starting work in an area; several known-broken behaviors (DCA denominator, delisted-stock rebalancing, 200-with-error responses) are documented there rather than in code comments.
+
+`HISTORY.md` (repo root) holds **completed work**, grouped by audit round, with the reasoning behind each fix. When you finish a TODO item, move it to HISTORY.md rather than leaving a checked box in TODO.md. Read HISTORY.md before "fixing" something that looks wrong — several counter-intuitive choices (validators kept despite low coverage, `stock_news` deliberately without an FK, pure-string HTML entity decode) are recorded there with the evidence that produced them.
 
 ## Documentation
 
