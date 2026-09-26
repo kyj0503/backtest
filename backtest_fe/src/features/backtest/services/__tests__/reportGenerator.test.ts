@@ -72,4 +72,11 @@ describe('reportGenerator statistics', () => {
     expect(generateCSVReport(withTrades, true)).toContain('거래 승률,60.00%');
     expect(generateTextReport(withoutTrades, true)).not.toContain('거래 승률');
   });
+
+  it('prints N/A when the strategy path had no trades (Trade_Win_Rate null)', () => {
+    const data = makeData(makeStats({ Trade_Win_Rate: null, Profit_Factor: null }));
+
+    expect(generateTextReport(data, true)).toMatch(/거래 승률\s*: N\/A/);
+    expect(generateCSVReport(data, true)).toContain('거래 승률,N/A');
+  });
 });
