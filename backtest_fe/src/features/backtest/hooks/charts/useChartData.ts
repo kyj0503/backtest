@@ -12,12 +12,17 @@
  * - 2년~5년: 주간 집계 (7일 간격)
  * - 5년~10년: 월간 집계 (실제 달력 월 기준)
  * - 10년 초과: 월간 집계 + 경고 표시
- * 
+ *
  * **복리 계산 대상**:
  * - portfolioEquityData.return_pct
  * - singleEquityData.return_pct
  * - sp500Benchmark.return_pct
  * - nasdaqBenchmark.return_pct
+ *
+ * **모듈 구성**:
+ * - 이 파일: memo 배선과 반환 형태만 담당
+ * - chartDataSelectors.ts: 응답에서 원본 조각 선택, 기간/샘플링 단위 판정
+ * - chartSeriesBuilders.ts: 차트별 샘플링과 수익률 버킷 재구성
  */
 
 import { useMemo } from 'react';
@@ -28,49 +33,23 @@ import {
   TradeLog, StockDataItem,
 } from '../../model/types';
 import {
-  transformPortfolioEquityData,
-  transformSingleEquityData,
   transformTradeMarkers,
   transformOhlcData,
   extractTradeLogs,
-  extractBenchmarkData,
   extractStatsPayload,
 } from '../../utils';
-import { smartSampleByPeriod, aggregateReturns } from '@/shared/utils/dataSampling';
-
-/**
- * 이진 탐색을 통해 특정 날짜에 해당하거나 그 이전의 데이터 포인트 찾기
- * 
- * @param sortedData 날짜 기준 오름차순 정렬된 데이터 배열
- * @param targetDate 검색 대상 날짜
- * @returns 해당 날짜 또는 그 이전 데이터 포인트, 없으면 null
- * 
- * @example
- * const point = findDataPointOnOrBefore(sortedData, '2024-11-01');
- */
-function findDataPointOnOrBefore<T extends { date: string }>(
-  sortedData: T[],
-  targetDate: string
-): T | null {
-  if (sortedData.length === 0) return null;
-  
-  let left = 0, right = sortedData.length - 1;
-  let result: T | null = null;
-  
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    const midItem = sortedData[mid];
-    if (!midItem) break;
-    if (midItem.date <= targetDate) {
-      result = midItem;
-      left = mid + 1;
-    } else {
-      right = mid - 1;
-    }
-  }
-  
-  return result;
-}
+import {
+  resolveDateRange,
+  resolveSamplingMeta,
+  collectStocksData,
+  hasAnyEntries,
+} from './chartDataSelectors';
+import {
+  sampleByDateRange,
+  buildPortfolioEquitySeries,
+  buildSingleEquitySeries,
+  buildBenchmarkSeries,
+} from './chartSeriesBuilders';
 
 export interface UseChartDataReturn {
   // 데이터 타입 구분
@@ -136,21 +115,10 @@ export const useChartData = (
   );
 
   // 백테스트 날짜 범위 추출
-  const { startDate, endDate } = useMemo(() => {
-    if (isPortfolio && portfolioData) {
-      return {
-        startDate: portfolioData.portfolio_statistics.Start,
-        endDate: portfolioData.portfolio_statistics.End,
-      };
-    }
-    if (!isPortfolio && chartData) {
-      return {
-        startDate: chartData.start_date,
-        endDate: chartData.end_date,
-      };
-    }
-    return { startDate: undefined, endDate: undefined };
-  }, [isPortfolio, portfolioData, chartData]);
+  const { startDate, endDate } = useMemo(
+    () => resolveDateRange(isPortfolio, portfolioData, chartData),
+    [isPortfolio, portfolioData, chartData]
+  );
 
   // 종목 메타데이터
   const tickerInfo = useMemo<Record<string, TickerInfo>>(() => {
@@ -159,27 +127,14 @@ export const useChartData = (
 
   // 주가 데이터 (스마트 샘플링 적용)
   const stocksData = useMemo(() => {
-    let rawStocksData: StockDataItem[] = [];
-
-    if (portfolioData?.stock_data) {
-      rawStocksData = Object.entries(portfolioData.stock_data).map(([symbol, data]) => ({
-        symbol,
-        data,
-      }));
-    } else if (chartData?.ticker && 'stock_data' in data) {
-      const portfolioStyleData = data as PortfolioData;
-      const stockData = portfolioStyleData.stock_data?.[chartData.ticker];
-      if (stockData) {
-        rawStocksData = [{ symbol: chartData.ticker, data: stockData }];
-      }
-    }
+    const rawStocksData = collectStocksData(data, portfolioData, chartData);
 
     // 주가 데이터에 스마트 샘플링 적용
     if (startDate && endDate) {
-      return rawStocksData.map(({ symbol, data }) => {
-        const { data: sampledData } = smartSampleByPeriod(data, startDate, endDate);
-        return { symbol, data: sampledData };
-      });
+      return rawStocksData.map(({ symbol, data }) => ({
+        symbol,
+        data: sampleByDateRange(data, startDate, endDate),
+      }));
     }
 
     return rawStocksData;
@@ -196,128 +151,21 @@ export const useChartData = (
   }, [data, isPortfolio]);
 
   // 샘플링 메타 정보 계산 (먼저 계산하여 다른 곳에서 사용)
-  const { aggregationType, samplingWarning } = useMemo(() => {
-    if (!startDate || !endDate) {
-      return { aggregationType: 'daily' as const, samplingWarning: undefined };
-    }
-
-    // 임시 데이터로 샘플링 전략 확인
-    const { aggregationType: type, warning } = smartSampleByPeriod(
-      [{ date: startDate }],
-      startDate,
-      endDate
-    );
-
-    return { aggregationType: type, samplingWarning: warning };
-  }, [startDate, endDate]);
+  const { aggregationType, samplingWarning } = useMemo(
+    () => resolveSamplingMeta(startDate, endDate),
+    [startDate, endDate]
+  );
 
   // 포트폴리오 equity 데이터 (스마트 샘플링 + 수익률 복리 집계)
   const portfolioEquityData = useMemo<EquityPoint[]>(() => {
     if (!portfolioData) return [];
-    
-    // 원본 데이터 변환
-    const rawEquityData = transformPortfolioEquityData(
-      portfolioData.equity_curve,
-      portfolioData.daily_returns
-    );
-
-    // 날짜 범위가 없으면 원본 반환
-    if (!startDate || !endDate) {
-      return rawEquityData;
-    }
-
-    // 일간 집계: 기존 샘플링 방식 사용
-    if (aggregationType === 'daily') {
-      const { data: sampledEquityData } = smartSampleByPeriod(rawEquityData, startDate, endDate);
-      return sampledEquityData;
-    }
-
-    // 주간/월간 집계: 수익률의 날짜에 맞춰 equity 데이터 재구성
-    const dailyReturnsArray = Object.entries(portfolioData.daily_returns).map(([date, return_pct]) => ({
-      date,
-      return_pct: return_pct as number,
-    }));
-
-    const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
-    
-    // 집계된 수익률의 날짜에 맞춰 equity curve를 재구성
-    const equityByDate = new Map(rawEquityData.map(eq => [eq.date, eq]));
-    const sortedRawEquity = [...rawEquityData].sort((a, b) => 
-      a.date < b.date ? -1 : a.date > b.date ? 1 : 0
-    );
-
-    return aggregatedReturns.map(r => {
-      const eq = equityByDate.get(r.date) ?? (findDataPointOnOrBefore(sortedRawEquity, r.date) ?? null);
-      if (!eq) {
-        console.warn(`[포트폴리오 차트] ${r.date} 날짜의 equity 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return {
-          date: r.date,
-          value: undefined,
-          return_pct: r.return_pct,
-          drawdown_pct: 0,
-        };
-      }
-      return {
-        ...eq,
-        date: r.date, // 집계 날짜로 덮어씀
-        return_pct: r.return_pct,
-      };
-    });
+    return buildPortfolioEquitySeries(portfolioData, startDate, endDate, aggregationType);
   }, [portfolioData, startDate, endDate, aggregationType]);
 
   // 단일 종목 equity 데이터 (스마트 샘플링 + 수익률 복리 집계)
   const singleEquityData = useMemo<EquityPoint[]>(() => {
     if (!chartData?.equity_data) return [];
-    
-    // 원본 데이터 변환
-    const rawData = transformSingleEquityData(chartData.equity_data);
-
-    // 날짜 범위가 없으면 원본 반환
-    if (!startDate || !endDate) {
-      return rawData;
-    }
-
-    // 일간 집계: 기존 샘플링 방식 사용
-    if (aggregationType === 'daily') {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
-    }
-
-    // 주간/월간 집계: 수익률의 날짜에 맞춰 equity 데이터 재구성
-    // EquityPoint.return_pct는 리밸런싱 마커 포인트에서 null일 수 있지만
-    // (PortfolioCharts.tsx 참고), rawData는 원본 equity curve에서 바로
-    // 변환된 값이라 이 경로에서는 실제로 null이 나타나지 않는다.
-    // aggregateReturns가 number를 요구하므로 방어적으로 0을 대입한다.
-    const dailyReturnsArray = rawData.map(point => ({
-      date: point.date,
-      return_pct: point.return_pct ?? 0,
-    }));
-
-    const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
-    
-    // 집계된 수익률의 날짜에 맞춰 equity curve를 재구성
-    const equityByDate = new Map(rawData.map(eq => [eq.date, eq]));
-    const sortedRawEquity = [...rawData].sort((a, b) => 
-      a.date < b.date ? -1 : a.date > b.date ? 1 : 0
-    );
-
-    return aggregatedReturns.map(r => {
-      const eq = equityByDate.get(r.date) ?? (findDataPointOnOrBefore(sortedRawEquity, r.date) ?? null);
-      if (!eq) {
-        console.warn(`[단일종목 차트] ${r.date} 날짜의 equity 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return {
-          date: r.date,
-          value: undefined,
-          return_pct: r.return_pct,
-          drawdown_pct: 0,
-        };
-      }
-      return {
-        ...eq,
-        date: r.date,
-        return_pct: r.return_pct,
-      };
-    });
+    return buildSingleEquitySeries(chartData.equity_data, startDate, endDate, aggregationType);
   }, [chartData?.equity_data, startDate, endDate, aggregationType]);
 
   // 단일 종목 거래 마커
@@ -329,94 +177,19 @@ export const useChartData = (
   // 단일 종목 OHLC 데이터 (스마트 샘플링 적용)
   const singleOhlcData = useMemo<OhlcPoint[]>(() => {
     if (!chartData?.ohlc_data) return [];
-    const rawData = transformOhlcData(chartData.ohlc_data);
-
-    if (startDate && endDate) {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
-    }
-
-    return rawData;
+    return sampleByDateRange(transformOhlcData(chartData.ohlc_data), startDate, endDate);
   }, [chartData?.ohlc_data, startDate, endDate]);
 
   // 벤치마크 데이터 (스마트 샘플링 + 수익률 복리 집계)
-  const sp500Benchmark = useMemo<BenchmarkSeriesPoint[]>(() => {
-    const rawData = extractBenchmarkData(data, 'sp500');
-    if (!startDate || !endDate || rawData.length === 0) {
-      return rawData;
-    }
+  const sp500Benchmark = useMemo<BenchmarkSeriesPoint[]>(
+    () => buildBenchmarkSeries(data, 'sp500', startDate, endDate, aggregationType),
+    [data, startDate, endDate, aggregationType]
+  );
 
-    // 일간 집계: 기존 샘플링 방식
-    if (aggregationType === 'daily') {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
-    }
-
-    // 주간/월간 집계: 수익률의 날짜에 맞춰 데이터 재구성
-    const dailyReturnsArray = rawData.map(point => ({
-      date: point.date,
-      return_pct: (point as BenchmarkSeriesPoint).return_pct ?? 0,
-    }));
-
-    const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
-
-    const dataByDate = new Map(rawData.map(item => [item.date, item]));
-    const sortedRawData = [...rawData].sort((a, b) =>
-      a.date < b.date ? -1 : a.date > b.date ? 1 : 0
-    );
-
-    return aggregatedReturns.map(r => {
-      const item = dataByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawData, r.date);
-      if (!item) {
-        console.warn(`[S&P 500 벤치마크] ${r.date} 날짜의 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return { date: r.date, close: 0, return_pct: r.return_pct };
-      }
-      return {
-        ...item,
-        date: r.date,
-        return_pct: r.return_pct,
-      };
-    });
-  }, [data, startDate, endDate, aggregationType]);
-
-  const nasdaqBenchmark = useMemo<BenchmarkSeriesPoint[]>(() => {
-    const rawData = extractBenchmarkData(data, 'nasdaq');
-    if (!startDate || !endDate || rawData.length === 0) {
-      return rawData;
-    }
-
-    // 일간 집계: 기존 샘플링 방식
-    if (aggregationType === 'daily') {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
-    }
-
-    // 주간/월간 집계: 수익률의 날짜에 맞춰 데이터 재구성
-    const dailyReturnsArray = rawData.map(point => ({
-      date: point.date,
-      return_pct: (point as BenchmarkSeriesPoint).return_pct ?? 0,
-    }));
-
-    const aggregatedReturns = aggregateReturns(dailyReturnsArray, aggregationType);
-
-    const dataByDate = new Map(rawData.map(item => [item.date, item]));
-    const sortedRawData = [...rawData].sort((a, b) =>
-      a.date < b.date ? -1 : a.date > b.date ? 1 : 0
-    );
-
-    return aggregatedReturns.map(r => {
-      const item = dataByDate.get(r.date) ?? findDataPointOnOrBefore(sortedRawData, r.date);
-      if (!item) {
-        console.warn(`[NASDAQ 벤치마크] ${r.date} 날짜의 데이터 없음 (집계수익률=${r.return_pct}%)`);
-        return { date: r.date, close: 0, return_pct: r.return_pct };
-      }
-      return {
-        ...item,
-        date: r.date,
-        return_pct: r.return_pct,
-      };
-    });
-  }, [data, startDate, endDate, aggregationType]);
+  const nasdaqBenchmark = useMemo<BenchmarkSeriesPoint[]>(
+    () => buildBenchmarkSeries(data, 'nasdaq', startDate, endDate, aggregationType),
+    [data, startDate, endDate, aggregationType]
+  );
 
   // 백엔드에서 이미 return_pct를 계산해서 보내므로 그대로 사용
   const sp500BenchmarkWithReturn = sp500Benchmark;
@@ -428,11 +201,7 @@ export const useChartData = (
       portfolioData?.exchange_rates
       || (data as ChartData).exchange_rates
       || [];
-    if (startDate && endDate && rawData.length > 0) {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
-    }
-    return rawData;
+    return rawData.length > 0 ? sampleByDateRange(rawData, startDate, endDate) : rawData;
   }, [portfolioData, data, startDate, endDate]);
 
   const exchangeStats = useMemo<ExchangeRateStats | undefined>(() => {
@@ -446,11 +215,7 @@ export const useChartData = (
       || {};
   }, [portfolioData, data]);
 
-  const hasVolatilityEvents = useMemo(() => {
-    return Object.keys(volatilityEvents).some(
-      symbol => volatilityEvents[symbol] && volatilityEvents[symbol].length > 0
-    );
-  }, [volatilityEvents]);
+  const hasVolatilityEvents = useMemo(() => hasAnyEntries(volatilityEvents), [volatilityEvents]);
 
   // 뉴스 데이터
   const latestNews = useMemo<Record<string, NewsItem[]>>(() => {
@@ -459,11 +224,7 @@ export const useChartData = (
       || {};
   }, [portfolioData, data]);
 
-  const hasNews = useMemo(() => {
-    return Object.keys(latestNews).some(
-      symbol => latestNews[symbol] && latestNews[symbol].length > 0
-    );
-  }, [latestNews]);
+  const hasNews = useMemo(() => hasAnyEntries(latestNews), [latestNews]);
 
   // 리밸런싱 데이터
   const rebalanceHistory = useMemo(() => {
@@ -473,11 +234,7 @@ export const useChartData = (
   // 포트폴리오 비중 변화 (스마트 샘플링 적용)
   const weightHistory = useMemo(() => {
     const rawData = portfolioData?.weight_history || [];
-    if (startDate && endDate && rawData.length > 0) {
-      const { data: sampledData } = smartSampleByPeriod(rawData, startDate, endDate);
-      return sampledData;
-    }
-    return rawData;
+    return rawData.length > 0 ? sampleByDateRange(rawData, startDate, endDate) : rawData;
   }, [portfolioData, startDate, endDate]);
 
   return {
