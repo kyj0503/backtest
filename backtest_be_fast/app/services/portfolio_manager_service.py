@@ -37,6 +37,13 @@ from app.services.portfolio.portfolio_execution import (
     run_strategy_per_symbol,
     simulate_buy_hold,
 )
+from app.services.portfolio.portfolio_statistics_builder import (
+    build_cash_only_statistics,
+    build_strategy_statistics,
+    calculate_true_portfolio_stats,
+    calculate_weighted_stats,
+    strategy_headline_returns,
+)
 from app.services.portfolio.portfolio_inputs import (
     BuyHoldAllocationBuilder,
     drop_unloaded_symbols,
@@ -95,80 +102,10 @@ class PortfolioManagerService:
         
         logger.info("포트폴리오 서비스가 초기화되었습니다")
 
-    @staticmethod
-    def _calculate_weighted_stats(portfolio_results: Dict[str, Any]) -> Dict[str, float]:
-        """포트폴리오 결과에서 종목별 전략 통계를 합산·가중평균합니다.
-
-        `trade_win_rate`는 전 종목의 거래를 합친 거래 기준 승률(%)이다 —
-        종목별 승률을 거래 수로 가중평균하면 "이긴 거래 수 / 전체 거래 수"와 같다.
-        과거에는 투자금 비중으로 가중평균해 거래가 없는 현금 비중만큼 승률이
-        깎였다(현금 50% → 승률 절반). 거래가 하나도 없으면 None.
-        """
-        total_trades = sum(
-            r.get('strategy_stats', {}).get('total_trades', 0)
-            for r in portfolio_results.values()
-        )
-        winning_trades = 0.0
-        for r in portfolio_results.values():
-            stats = r.get('strategy_stats', {})
-            trades = stats.get('total_trades', 0) or 0
-            win_rate = stats.get('win_rate_pct', 0) or 0
-            if trades > 0 and np.isfinite(win_rate):
-                winning_trades += trades * win_rate / 100
-        trade_win_rate = winning_trades / total_trades * 100 if total_trades > 0 else None
-        weighted_max_drawdown = sum(
-            r['weight'] * abs(r.get('strategy_stats', {}).get('max_drawdown_pct', 0))
-            for r in portfolio_results.values()
-        )
-        weighted_sharpe_ratio = sum(
-            r['weight'] * r.get('strategy_stats', {}).get('sharpe_ratio', 0)
-            for r in portfolio_results.values()
-        )
-        return {
-            'total_trades': total_trades,
-            'trade_win_rate': trade_win_rate,
-            'weighted_max_drawdown': weighted_max_drawdown,
-            'weighted_sharpe_ratio': weighted_sharpe_ratio,
-        }
-
-    @staticmethod
-    def _calculate_true_portfolio_stats(
-        equity_curve: Dict[str, float],
-        daily_returns: Dict[str, float],
-        total_amount: float
-    ) -> Dict[str, Any]:
-        """집계된 포트폴리오 equity curve에서 실제 포트폴리오 지표를 계산합니다 (P2-08).
-
-        개별 종목 지표의 가중평균(예: Sharpe, MDD)은 종목 간 상관관계와 하락 시점의
-        차이를 무시하므로 포트폴리오 전체의 진짜 지표가 아니다. 예를 들어 두 종목이
-        서로 다른 날짜에 하락하면 포트폴리오 MDD는 각 종목 MDD의 가중평균보다
-        완만해야 하는데, 가중평균 방식은 이를 반영하지 못한다.
-
-        buy&hold 경로가 이미 같은 목적으로 사용하는
-        portfolio_calculator.calculate_portfolio_statistics()를 그대로 재사용해
-        두 경로의 지표 산출 방식을 일치시킨다.
-
-        Args:
-            equity_curve: 날짜별 포트폴리오 총 가치(달러). 이미 종목별 실제
-                equity curve를 합산해 만들어진 값
-                (_calculate_realistic_equity_curve의 결과)
-            daily_returns: 날짜별 포트폴리오 일간 수익률(퍼센트 단위, 예: 2.5 = 2.5%)
-            total_amount: 초기 총 투자금 (정규화 기준)
-
-        Returns:
-            portfolio_calculator.calculate_portfolio_statistics()와 동일한 키를 가진
-            딕셔너리 (Sharpe_Ratio, Max_Drawdown, Avg_Drawdown, Peak_Value,
-            Total_Trading_Days 등 포함)
-        """
-        dates_sorted = sorted(equity_curve.keys())
-        equity_df = pd.DataFrame(
-            {
-                'Portfolio_Value': [equity_curve[d] / total_amount for d in dates_sorted],
-                'Daily_Return': [daily_returns.get(d, 0.0) / 100.0 for d in dates_sorted],
-            },
-            index=pd.to_datetime(dates_sorted)
-        )
-        return portfolio_calculator.calculate_portfolio_statistics(equity_df, total_amount)
+    # 통계 조립 규칙은 portfolio_statistics_builder로 옮겼다. 기존 이름은 테스트와
+    # 호출부 호환을 위해 그대로 둔다.
+    _calculate_weighted_stats = staticmethod(calculate_weighted_stats)
+    _calculate_true_portfolio_stats = staticmethod(calculate_true_portfolio_stats)
 
     @staticmethod
     def _format_individual_results_list(
@@ -289,16 +226,10 @@ class PortfolioManagerService:
                 raise ValueError("모든 종목의 백테스트가 실패했습니다.")
 
             # 포트폴리오 전체 통계 계산
-            portfolio_return = (total_portfolio_value / total_amount - 1) * 100
-            weighted_stats = self._calculate_weighted_stats(portfolio_results)
-
-            # 백테스트 기간 계산
-            start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
-            end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
-            duration_days = (end_date_obj - start_date_obj).days
-            # 전략 경로는 중도 납입이 없어(A-02: DCA 거부) 최종/원금 연환산이 곧
-            # 시간가중(TWR) 연환산과 같은 정의다 (A-19)
-            annual_return = ((total_portfolio_value / total_amount) ** (365.25 / duration_days) - 1) * 100 if duration_days > 0 else 0
+            portfolio_return, duration_days, annual_return = strategy_headline_returns(
+                request, total_amount, total_portfolio_value
+            )
+            weighted_stats = calculate_weighted_stats(portfolio_results)
 
             # equity curve, daily returns, weight history 계산
             equity_curve, daily_returns, weight_history = await portfolio_calculator._calculate_realistic_equity_curve(
@@ -312,35 +243,21 @@ class PortfolioManagerService:
             # 여기서 가져와 buy&hold 경로와 같은 정의를 쓴다 (A-09). 과거에는
             # Win_Rate가 거래 승률의 금액 가중평균, Profit_Factor 폴백이 0.0이라
             # 전략만 바꿔도 같은 필드의 의미가 달라졌다.
-            true_portfolio_stats = self._calculate_true_portfolio_stats(
+            true_portfolio_stats = calculate_true_portfolio_stats(
                 equity_curve, daily_returns, total_amount
             )
 
             # 포트폴리오 통계 (프론트엔드 호환)
-            portfolio_statistics = {
-                'Start': request.start_date,
-                'End': request.end_date,
-                'Duration': f'{duration_days} days',
-                'Initial_Value': total_amount,
-                'Final_Value': total_portfolio_value,
-                'Peak_Value': true_portfolio_stats['Peak_Value'],
-                'Total_Return': portfolio_return,
-                'Annual_Return': annual_return,
-                'Annual_Volatility': true_portfolio_stats['Annual_Volatility'],
-                'Sharpe_Ratio': true_portfolio_stats['Sharpe_Ratio'],
-                'Max_Drawdown': true_portfolio_stats['Max_Drawdown'],
-                'Avg_Drawdown': true_portfolio_stats['Avg_Drawdown'],
-                'Max_Consecutive_Gains': true_portfolio_stats['Max_Consecutive_Gains'],
-                'Max_Consecutive_Losses': true_portfolio_stats['Max_Consecutive_Losses'],
-                'Total_Trading_Days': true_portfolio_stats['Total_Trading_Days'],
-                'Total_Trades': weighted_stats['total_trades'],
-                'Positive_Days': true_portfolio_stats['Positive_Days'],
-                'Negative_Days': true_portfolio_stats['Negative_Days'],
-                'Win_Rate': true_portfolio_stats['Win_Rate'],
-                # 거래 기준 승률(전 종목 거래 합산). 전략 경로에만 있다.
-                'Trade_Win_Rate': weighted_stats['trade_win_rate'],
-                'Profit_Factor': true_portfolio_stats['Profit_Factor'],
-            }
+            portfolio_statistics = build_strategy_statistics(
+                request,
+                duration_days=duration_days,
+                total_amount=total_amount,
+                total_portfolio_value=total_portfolio_value,
+                portfolio_return=portfolio_return,
+                annual_return=annual_return,
+                weighted_stats=weighted_stats,
+                true_portfolio_stats=true_portfolio_stats,
+            )
 
             individual_results_list = self._format_individual_results_list(
                 individual_returns, portfolio_results, mode='strategy'
@@ -455,35 +372,12 @@ class PortfolioManagerService:
             if not portfolio_data and cash_amount > 0:
                 logger.info("현금만 있는 포트폴리오로 백테스트 실행")
 
-                # 현금 전용 결과 생성
+                # 현금 전용 결과 생성 (현금은 수익률 0%)
                 start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
                 end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
                 duration_days = (end_date_obj - start_date_obj).days
-                
-                # 현금은 수익률 0%
-                statistics = {
-                    'Start': request.start_date,
-                    'End': request.end_date,
-                    'Duration': f'{duration_days} days',
-                    'Initial_Value': cash_amount,
-                    'Final_Value': cash_amount,
-                    'Peak_Value': cash_amount,
-                    'Total_Return': 0.0,
-                    'Annual_Return': 0.0,
-                    'Annual_Volatility': 0.0,
-                    'Sharpe_Ratio': 0.0,
-                    'Max_Drawdown': 0.0,
-                    'Avg_Drawdown': 0.0,
-                    'Max_Consecutive_Gains': 0,
-                    'Max_Consecutive_Losses': 0,
-                    'Total_Trading_Days': duration_days,
-                    'Positive_Days': 0,
-                    'Negative_Days': 0,
-                    'Win_Rate': 0.0,
-                    # 손실일이 없으니 정의되지 않는다 — 다른 경로와 같은 계약 (A-09)
-                    'Profit_Factor': None,
-                }
-                
+                statistics = build_cash_only_statistics(request, duration_days, cash_amount)
+
                 individual_returns = {
                     'CASH': {
                         'weight': 1.0,
