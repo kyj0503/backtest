@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Optional, Tuple
 from datetime import datetime
 import pandas as pd
 from app.domain.portfolio_domain import DcaStrategyInfo
@@ -25,6 +25,19 @@ class PortfolioMetrics:
     """포트폴리오 지표 계산 클래스"""
 
     @staticmethod
+    def portfolio_value(
+        shares: Dict[str, float],
+        available_cash: float,
+        current_prices: Dict[str, float],
+    ) -> float:
+        """현금 + 당일 가격이 있는 보유 종목의 평가액."""
+        value = available_cash
+        for unique_key in shares.keys():
+            if unique_key in current_prices:
+                value += shares[unique_key] * current_prices[unique_key]
+        return value
+
+    @staticmethod
     def calculate_daily_metrics_and_history(
         current_date: pd.Timestamp,
         shares: Dict[str, float],
@@ -34,7 +47,8 @@ class PortfolioMetrics:
         prev_portfolio_value: float,
         daily_cash_inflow: float,
         total_amount: float,
-        dca_info: Dict[str, DcaStrategyInfo]
+        dca_info: Dict[str, DcaStrategyInfo],
+        pre_flow_value: Optional[float] = None,
     ) -> Tuple[float, float, Dict[str, Any]]:
         """
         일일 포트폴리오 가치, 수익률, 비중을 계산합니다.
@@ -49,15 +63,16 @@ class PortfolioMetrics:
             daily_cash_inflow: 당일 추가 투자금
             total_amount: 초기 총 투자 금액
             dca_info: 종목 정보
+            pre_flow_value: 당일 납입 직전 평가금(당일 가격, 납입 매수 전 보유분).
+                납입이 있는 날 수익률을 유입 시점 재평가로 계산할 때 쓴다
 
         Returns:
             (정규화된 포트폴리오 가치, 일일 수익률, 현재 비중) 튜플
         """
         # 포트폴리오 가치 계산
-        current_portfolio_value = available_cash
-        for unique_key in shares.keys():
-            if unique_key in current_prices:
-                current_portfolio_value += shares[unique_key] * current_prices[unique_key]
+        current_portfolio_value = PortfolioMetrics.portfolio_value(
+            shares, available_cash, current_prices
+        )
 
         # 포트폴리오 비중 기록
         current_weights = {'date': current_date.strftime('%Y-%m-%d')}
@@ -80,7 +95,23 @@ class PortfolioMetrics:
                 )
 
         # 수익률 계산 (추가 투자금 제외)
-        if prev_portfolio_value > 0:
+        if prev_portfolio_value > 0 and daily_cash_inflow > 0 and pre_flow_value is not None:
+            # 납입일: 유입 시점에 재평가하는 시간가중 수익률. 납입금은 당일 종가로
+            # 체결되므로 하루를 둘로 나눠 연결한다.
+            #   구간 1: 전일 평가금 → 납입 직전 평가금 (당일 가격 변동, 기존 자본만 노출)
+            #   구간 2: 납입 직후 자본(직전 평가금 + 납입금) → 당일 최종 평가금
+            #           (새 납입금의 매수 수수료, 같은 날 리밸런싱 비용)
+            # 과거 공식 (V - P - F) / P는 새 납입금의 수수료를 기존 자본 P만으로 나눠,
+            # P가 작으면(첫 매수 지연 등) 가격 변동 없이도 하루 -20% 가까운
+            # 가짜 손실을 만들었다. P + F 분모 근사는 당일 가격 변동을 노출되지 않은
+            # 새 납입금에도 나눠 줘 납입일 시장 수익률을 희석하므로 쓰지 않는다.
+            post_flow_capital = pre_flow_value + daily_cash_inflow
+            daily_return = (
+                (pre_flow_value / prev_portfolio_value)
+                * (current_portfolio_value / post_flow_capital)
+                - 1.0
+            )
+        elif prev_portfolio_value > 0:
             net_change = (
                 current_portfolio_value - prev_portfolio_value - daily_cash_inflow
             )

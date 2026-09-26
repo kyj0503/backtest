@@ -71,7 +71,9 @@ class BacktestResult(BaseModel):
     # 거래 통계
     total_trades: int = Field(..., description="총 거래 수")
     win_rate_pct: float = Field(..., description="승률 (%)")
-    profit_factor: float = Field(..., description="수익 팩터")
+    profit_factor: Optional[float] = Field(
+        None, description="수익 팩터 (총이익 / 총손실). 손실 거래나 거래가 없으면 계산 불가라 null"
+    )
     avg_trade_pct: float = Field(..., description="평균 거래 수익률 (%)")
     best_trade_pct: float = Field(..., description="최고 거래 수익률 (%)")
     worst_trade_pct: float = Field(..., description="최악 거래 수익률 (%)")

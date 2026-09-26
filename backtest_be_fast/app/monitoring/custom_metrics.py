@@ -13,10 +13,14 @@ P2-15의 첫 구현은 "처음 본 티커 200개 + other"(first-N-seen)였다. �
 초반에 무작위 티커가 슬롯을 채우면 그 뒤의 실제 인기 티커가 전부 other로
 묶였다(A-18). 지금 정책은 TickerLabelPolicy docstring 참고.
 """
+import logging
+import os
+import re
 from threading import Lock
 from typing import Dict, FrozenSet, Iterable, Optional, Set
 
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter, Gauge, Histogram
+from prometheus_client import multiprocess
 
 from app.constants.ticker_mapping import TICKER_TO_COMPANY_NAME
 
@@ -65,6 +69,74 @@ BACKTEST_STAGE_SECONDS = Histogram(
     "Time spent in each stage of a single backtest request",
     ["stage"],
     buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 60.0],
+)
+
+
+# --- 동시 실행 관측 (A-04/A-05 후속) ---
+# 실행기(app/services/backtest_runner.py)의 실행 중·대기 중 작업 수. uvicorn 워커마다
+# 따로 세고 /metrics(MultiProcessCollector)가 살아 있는 워커 값을 더한다(livesum).
+# 전체 슬롯이 컨테이너 전체 상한이므로 running 합계는 max_concurrent_backtests를
+# 넘지 않는다. 비멀티프로세스(개발·테스트)에서는 multiprocess_mode가 무시된다.
+#
+# livesum은 mark_process_dead(pid)가 불리기 전까지 죽은 워커의 파일도 더한다.
+# uvicorn은 gunicorn의 child_exit 같은 훅이 없어, 작업 도중 죽은 워커(OOM kill 등)의
+# +1이 컨테이너 재시작(entrypoint가 디렉터리를 비움)까지 남는다. 그래서 게이지를
+# 만들기 전에 _purge_stale_live_gauge_files()로 정리한다. uvicorn이 죽은 워커를 새로
+# 띄우면 그 워커가 이 모듈을 임포트하며 정리하므로, 죽은 워커의 값은 교체 워커가
+# 뜰 때 사라진다.
+_LIVE_GAUGE_FILE = re.compile(r"^gauge_live[a-z]+_(\d+)\.db$")
+
+logger = logging.getLogger(__name__)
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:  # 다른 사용자 프로세스 — 살아 있다
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def _purge_stale_live_gauge_files(path: Optional[str] = None) -> None:
+    """죽은 pid와 자기 pid의 live 게이지 파일을 지운다.
+
+    자기 pid도 지우는 이유: prometheus_client는 pid로 파일 이름을 정하고, 파일이 이미
+    있으면 그 값을 이어받는다. 죽은 워커와 같은 pid를 새 워커가 받으면 이전 값이
+    그대로 이어진다. 이 함수는 이 프로세스가 live 게이지를 만들기 전에(이 모듈 임포트
+    시점) 불리므로 자기 pid 파일은 이전 프로세스의 것이다.
+    """
+    path = path or os.environ.get("PROMETHEUS_MULTIPROC_DIR")
+    if not path or not os.path.isdir(path):
+        return
+    own_pid = os.getpid()
+    pids = set()
+    for name in os.listdir(path):
+        match = _LIVE_GAUGE_FILE.match(name)
+        if match:
+            pids.add(int(match.group(1)))
+    for pid in pids:
+        if pid == own_pid or not _pid_alive(pid):
+            try:
+                multiprocess.mark_process_dead(pid, path)
+            except OSError as exc:  # 다른 워커가 먼저 지운 경우 등
+                logger.debug("live 게이지 파일 정리 실패 pid=%s: %s", pid, exc)
+
+
+_purge_stale_live_gauge_files()
+
+BACKTEST_JOBS_RUNNING = Gauge(
+    "backtest_jobs_running",
+    "Backtest jobs holding a global concurrency slot (includes jobs still stopping after a 504)",
+    multiprocess_mode="livesum",
+)
+BACKTEST_JOBS_WAITING = Gauge(
+    "backtest_jobs_waiting",
+    "Backtest requests waiting for a global concurrency slot",
+    multiprocess_mode="livesum",
 )
 
 

@@ -503,6 +503,12 @@ class PortfolioSimulationEngine:
                     f"[{', '.join(delisted_symbols)}]"
                 )
 
+            # 납입 직전 평가금: 납입일 수익률을 유입 시점 재평가로 계산하는 데 쓴다
+            # (PortfolioMetrics.calculate_daily_metrics_and_history 참고).
+            pre_flow_value = PortfolioMetrics.portfolio_value(
+                state.shares, state.available_cash, current_prices
+            )
+
             # 2.4 DCA 실행 (초기 매수 또는 정기 매수)
             #
             # 초기 매수는 "첫날 한 번"이 아니라 "각 종목이 처음 가격을 갖는 날"에
@@ -636,7 +642,8 @@ class PortfolioSimulationEngine:
                 prev_portfolio_value=state.prev_portfolio_value,
                 daily_cash_inflow=daily_cash_inflow,
                 total_amount=total_amount,
-                dca_info=dca_info
+                dca_info=dca_info,
+                pre_flow_value=pre_flow_value,
             )
 
             if twr_start_ratio is None and state.prev_portfolio_value <= 0 and normalized_value > 0:

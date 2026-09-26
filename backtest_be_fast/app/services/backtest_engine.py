@@ -21,7 +21,7 @@ from app.services.validation_service import validation_service
 from app.core.exceptions import ValidationError
 from app.constants.currencies import SUPPORTED_CURRENCIES
 from app.utils.currency_converter import currency_converter
-from app.utils.type_converters import safe_float, safe_int
+from app.utils.type_converters import optional_finite_float, safe_float, safe_int
 
 
 class BacktestEngine:
@@ -262,7 +262,9 @@ class BacktestEngine:
                 avg_drawdown_pct=safe_float(stats.get('Avg. Drawdown [%]', 0.0)),
                 total_trades=safe_int(stats.get('# Trades', 0)),
                 win_rate_pct=safe_float(stats.get('Win Rate [%]', 0.0)),
-                profit_factor=safe_float(stats.get('Profit Factor', 0.0)),
+                # backtesting.py는 손실 거래가 없거나 거래가 없으면 NaN을 준다.
+                # 0.0으로 바꾸면 "이익 없음"이라는 다른 뜻이 되므로 None(A-09와 같은 규칙)
+                profit_factor=optional_finite_float(stats.get('Profit Factor')),
                 avg_trade_pct=safe_float(stats.get('Avg. Trade [%]', 0.0)),
                 best_trade_pct=safe_float(stats.get('Best Trade [%]', 0.0)),
                 worst_trade_pct=safe_float(stats.get('Worst Trade [%]', 0.0)),
