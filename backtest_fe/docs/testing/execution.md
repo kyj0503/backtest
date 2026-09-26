@@ -81,7 +81,7 @@
 
 ## CI에서의 실행
 
-`Jenkinsfile`의 `Quality Gate` 스테이지가 `docker build --target test ./backtest_fe`로 아래를 순서대로 실행합니다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못합니다.
+`Jenkinsfile`의 `Pre-deploy Tests` 스테이지가 `docker build --target test ./backtest_fe`로 아래를 순서대로 실행합니다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못합니다.
 
 ```
 npm run lint → npm run type-check → npm run type-check:test → npm run test:run

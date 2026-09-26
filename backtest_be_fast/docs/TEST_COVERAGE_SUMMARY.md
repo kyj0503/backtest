@@ -289,6 +289,6 @@ docker compose -f compose.dev.yaml exec backtest-be-fast \
 
 ## Summary
 
-이 문서가 다루는 4개 모듈의 59건은 모두 통과합니다. `tests/unit` 전체(현재 **189건**)도 모두 통과하며, CI의 `Quality Gate` 스테이지(`docker build --target test ./backtest_be_fast`)가 이를 강제합니다. 실패가 보이면 회귀입니다.
+이 문서가 다루는 4개 모듈의 59건은 모두 통과합니다. `tests/unit` 전체(현재 **189건**)도 모두 통과하며, CI의 `Pre-deploy Tests` 스테이지(`docker build --target test ./backtest_be_fast`)가 이를 강제합니다. 실패가 보이면 회귀입니다.
 
 **Status: ✅ COMPLETE AND PASSING**

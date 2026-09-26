@@ -18,7 +18,7 @@ docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # p
 docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # test code
 docker compose -f compose.dev.yaml exec backtest-fe npm run test:run
 
-# Reproduce the CI pre-deploy test stage exactly (Jenkins stage named 'Quality Gate')
+# Reproduce the CI pre-deploy test stage exactly (Jenkins stage named 'Pre-deploy Tests')
 docker build --target test ./backtest_fe
 docker build --target test ./backtest_be_fast
 ```
@@ -81,7 +81,7 @@ Always verify changes in Docker containers (`docker compose exec`) before declar
 
 ## CI
 
-The Jenkins pipelines live in the **home-server** repo (`cicd/jenkins/pipeline/backtest-{be,fe}/`) since commit `44df5b9`; they call back into this repo's `scripts/audit-deps.sh` and the Dockerfile `test` targets. They run a `Quality Gate` stage and a `Dependency Audit` stage before building images. The audit blocks deployment on high-severity findings; unfixable-and-unreachable advisories are allowlisted with a documented reason in `scripts/audit-deps.sh` (FE list is currently empty; BE keeps the bokeh entry — emptying it makes the BE audit fail, which is how you verify it still can). Each Dockerfile has a `test` stage that CI invokes with `--target test`; those stages are outside the final image's dependency chain, so a plain `docker build` does not run them and produces the same artifacts as before.
+The Jenkins pipelines live in the **home-server** repo (`cicd/jenkins/pipeline/backtest-{be,fe}/`) since commit `44df5b9`; they call back into this repo's `scripts/audit-deps.sh` and the Dockerfile `test` targets. They run a `Pre-deploy Tests` stage and a `Dependency Audit` stage before building images. The audit blocks deployment on high-severity findings; unfixable-and-unreachable advisories are allowlisted with a documented reason in `scripts/audit-deps.sh` (FE list is currently empty; BE keeps the bokeh entry — emptying it makes the BE audit fail, which is how you verify it still can). Each Dockerfile has a `test` stage that CI invokes with `--target test`; those stages are outside the final image's dependency chain, so a plain `docker build` does not run them and produces the same artifacts as before.
 
 These checks block **deployment**, not merging — the pipeline checks out `*/main` and the repo uses no branch protection or GitHub checks.
 
