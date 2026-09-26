@@ -140,7 +140,7 @@ describe('BacktestResults — 부분 데이터', () => {
     const data = makePortfolioData({
       portfolio_composition: [{ symbol: 'AAPL', weight: 1 }],
       individual_returns: {
-        AAPL: { weight: 1, return: 0.08, start_price: 125, end_price: 135 },
+        AAPL: { weight: 1, return: 8, start_price: 125, end_price: 135 },
       },
       stock_data: {
         AAPL: RESULT_DATES.map((date, i) => ({ date, price: 125 + i, volume: 1000 })),

@@ -7,11 +7,15 @@ export interface Stock {
   weight: number;
 }
 
+// BE individual_returns 항목. return은 이미 백분율(8 = 8%), weight는 0~1 비율이다.
+// 매수 후 보유 경로는 start_price/end_price를, 전략 경로는 initial_value/final_value를 싣는다.
 export interface IndividualReturn {
   weight: number;
   return: number;
-  start_price: number;
-  end_price: number;
+  start_price?: number;
+  end_price?: number;
+  initial_value?: number;
+  final_value?: number;
 }
 
 export interface OhlcPoint {

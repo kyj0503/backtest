@@ -58,9 +58,11 @@ export const makePortfolioStatistics = (
 /** AAPL 60% + MSFT 40% buy&hold 포트폴리오. warnings는 빈 배열(정상 응답 계약). */
 export const makePortfolioData = (overrides: Partial<PortfolioData> = {}): PortfolioData => ({
   portfolio_statistics: makePortfolioStatistics(),
+  // BE 계약: return은 이미 백분율(8 = 8%), weight는 0~1 비율이다
+  // (portfolio_manager_service.py의 `(end_price / start_price - 1) * 100`).
   individual_returns: {
-    AAPL: { weight: 0.6, return: 0.08, start_price: 125, end_price: 135 },
-    MSFT: { weight: 0.4, return: 0.05, start_price: 240, end_price: 252 },
+    AAPL: { weight: 0.6, return: 8, start_price: 125, end_price: 135 },
+    MSFT: { weight: 0.4, return: 5, start_price: 240, end_price: 252 },
   },
   portfolio_composition: [
     { symbol: 'AAPL', weight: 0.6 },

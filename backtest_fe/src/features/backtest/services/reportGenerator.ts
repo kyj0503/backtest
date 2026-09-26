@@ -32,6 +32,11 @@ const percentOrNA = (value: number | null | undefined): string => {
   return formatted === 'N/A' ? formatted : `${formatted}%`;
 };
 
+const dollarOrNA = (value: number | null | undefined): string => {
+  const formatted = fixedOrNA(value);
+  return formatted === 'N/A' ? formatted : `$${formatted}`;
+};
+
 // RebalanceHistoryTable과 같은 표기. increase/decrease는 현금 비중 조정이다.
 const REBALANCE_ACTION_LABELS: Record<RebalanceTrade['action'], string> = {
   buy: '매수',
@@ -96,8 +101,14 @@ export const generateTextReport = (data: BacktestResultData, isPortfolio: boolea
       lines.push('■ 개별 종목 수익률');
       lines.push('-'.repeat(80));
       Object.entries(data.individual_returns).forEach(([symbol, info]) => {
-        lines.push(`  ${symbol.padEnd(10)} - 수익률: ${(info.return * 100).toFixed(2)}%  |  비중: ${(info.weight * 100).toFixed(2)}%`);
-        lines.push(`               시작가: $${info.start_price.toFixed(2)}  |  종료가: $${info.end_price.toFixed(2)}`);
+        // return은 BE가 이미 백분율로 준다. weight만 0~1 비율이라 100을 곱한다.
+        lines.push(`  ${symbol.padEnd(10)} - 수익률: ${percentOrNA(info.return)}  |  비중: ${(info.weight * 100).toFixed(2)}%`);
+        if (info.start_price !== undefined || info.end_price !== undefined) {
+          lines.push(`               시작가: ${dollarOrNA(info.start_price)}  |  종료가: ${dollarOrNA(info.end_price)}`);
+        } else if (info.initial_value !== undefined || info.final_value !== undefined) {
+          // 전략 포트폴리오 경로는 가격 대신 투자 금액과 최종 가치를 준다.
+          lines.push(`               투자금: ${dollarOrNA(info.initial_value)}  |  최종 가치: ${dollarOrNA(info.final_value)}`);
+        }
       });
       lines.push('');
     }
@@ -233,7 +244,7 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
       csvRows.push('개별 종목 수익률');
       csvRows.push('종목,수익률(%),비중(%),시작가($),종료가($)');
       Object.entries(data.individual_returns).forEach(([symbol, info]) => {
-        csvRows.push(`${symbol},${(info.return * 100).toFixed(2)},${(info.weight * 100).toFixed(2)},${info.start_price.toFixed(2)},${info.end_price.toFixed(2)}`);
+        csvRows.push(`${symbol},${fixedOrNA(info.return)},${(info.weight * 100).toFixed(2)},${fixedOrNA(info.start_price)},${fixedOrNA(info.end_price)}`);
       });
       csvRows.push('');
     }
