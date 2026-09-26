@@ -1,7 +1,20 @@
 -- =================================================================
 -- yfinance 데이터 캐싱 및 뉴스 데이터 저장을 위한 데이터베이스 및 테이블 생성 DDL
--- 대상 DBMS: MySQL 8.0+
+-- 대상 DBMS: MySQL 8.4 (8.0+ 문법)
+--
+-- 스키마 변경은 이 파일과 Alembic 새 리비전(backtest_be_fast/alembic/versions/)을
+-- 함께 고친다. 두 경로(빈 DB에 이 파일로 initdb / `alembic upgrade head`)의
+-- 최종 스키마는 COMMENT까지 같아야 하며, scripts/check-schema-parity.sh로
+-- 확인한다 (A-11). 컬럼 설명은 `--` 주석이 아니라 COMMENT 절로 적는다 —
+-- Alembic 리비전이 같은 문구를 COMMENT로 만들기 때문이다.
 -- =================================================================
+
+-- 0. 클라이언트 문자셋 고정 (A-11)
+-- 공식 mysql 이미지의 initdb는 로케일이 POSIX인 mysql 클라이언트로 이 파일을
+-- 실행하고, 그 클라이언트의 기본 연결 문자셋은 latin1이다. SET NAMES가 없으면
+-- 아래 한글 COMMENT가 UTF-8 바이트를 latin1로 읽은 이중 인코딩(예: '주식' →
+-- 'ì£¼ì‹')으로 저장된다 — mysql:8.4 initdb 실측(character_set_client=latin1).
+SET NAMES utf8mb4;
 
 -- 1. 데이터베이스 생성 (이미 존재하면 생성하지 않음)
 -- utf8mb4_0900_ai_ci는 MySQL 8.0의 권장 콜레이션입니다.
@@ -24,15 +37,15 @@ DROP TABLE IF EXISTS stocks;
 -- 각 주식(티커)의 고유 정보와 자주 변하지 않는 데이터를 저장합니다.
 CREATE TABLE stocks (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    ticker VARCHAR(20) NOT NULL UNIQUE,          -- 주식 티커 (예: AAPL, 005930.KS)
-    name VARCHAR(255),                            -- 회사명 (예: Apple Inc.)
-    exchange VARCHAR(20),                         -- 거래소 (예: NMS, KSC)
-    sector VARCHAR(100),                          -- 섹터
-    industry VARCHAR(100),                        -- 산업
-    summary TEXT,                                 -- 회사 요약
-    info_json JSON,                               -- yfinance의 'info' 전체를 저장할 JSON 필드
-    last_info_update TIMESTAMP NULL,              -- 정보 마지막 업데이트 시각
-    data_last_update TIMESTAMP NULL,              -- 데이터 마지막 업데이트 시각
+    ticker VARCHAR(20) NOT NULL UNIQUE COMMENT '주식 티커 (예: AAPL, 005930.KS)',
+    name VARCHAR(255) COMMENT '회사명 (예: Apple Inc.)',
+    exchange VARCHAR(20) COMMENT '거래소 (예: NMS, KSC)',
+    sector VARCHAR(100) COMMENT '섹터',
+    industry VARCHAR(100) COMMENT '산업',
+    summary TEXT COMMENT '회사 요약',
+    info_json JSON COMMENT 'yfinance의 ''info'' 전체를 저장할 JSON 필드',
+    last_info_update TIMESTAMP NULL COMMENT '정보 마지막 업데이트 시각',
+    data_last_update TIMESTAMP NULL COMMENT '데이터 마지막 업데이트 시각',
     last_split_date DATE DEFAULT NULL COMMENT '최근 주가 분할/병합 날짜',
     last_split_ratio DECIMAL(10, 6) DEFAULT NULL COMMENT '최근 분할 비율 (2.0 = 1:2 분할, 0.1 = 10:1 병합)',
     splits_updated_at DATETIME DEFAULT NULL COMMENT '분할 정보 마지막 업데이트 시각',
@@ -69,15 +82,15 @@ CREATE TABLE stocks (
 -- - 고아 점검: backtest_be_fast/scripts/check_orphan_prices.py
 -- stock_news와 같은 방침이다 (아래 stock_news 주석 참고).
 CREATE TABLE daily_prices (
-    stock_id INT NOT NULL,                        -- stocks.id 논리 참조 (물리 FK 없음)
-    date DATE NOT NULL,                           -- 날짜
-    open DECIMAL(19, 4) NOT NULL,                 -- 시가
-    high DECIMAL(19, 4) NOT NULL,                 -- 고가
-    low DECIMAL(19, 4) NOT NULL,                  -- 저가
-    close DECIMAL(19, 4) NOT NULL,                -- 종가
-    adj_close DECIMAL(19, 4),                     -- 수정 종가
-    volume BIGINT UNSIGNED DEFAULT 0,             -- 거래량 (음수 없음)
-    data_quality ENUM('good', 'estimated', 'suspicious') DEFAULT 'good', -- 데이터 품질
+    stock_id INT NOT NULL COMMENT 'stocks.id 논리 참조 (물리 FK 없음)',
+    date DATE NOT NULL COMMENT '날짜',
+    open DECIMAL(19, 4) NOT NULL COMMENT '시가',
+    high DECIMAL(19, 4) NOT NULL COMMENT '고가',
+    low DECIMAL(19, 4) NOT NULL COMMENT '저가',
+    close DECIMAL(19, 4) NOT NULL COMMENT '종가',
+    adj_close DECIMAL(19, 4) COMMENT '수정 종가',
+    volume BIGINT UNSIGNED DEFAULT 0 COMMENT '거래량 (음수 없음)',
+    data_quality ENUM('good', 'estimated', 'suspicious') DEFAULT 'good' COMMENT '데이터 품질',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (stock_id, date),                 -- 복합 기본 키 (성능 최적화의 핵심)
     INDEX idx_date_range (date),                  -- 날짜 범위 조회 최적화
@@ -108,12 +121,12 @@ CREATE TABLE daily_prices (
 -- FK를 걸면 정상적인 뉴스 저장이 FK 위반으로 실패할 위험이 있다.
 CREATE TABLE stock_news (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    ticker VARCHAR(20) NOT NULL,                  -- 주식 티커 (예: AAPL, 005930.KS)
-    news_date DATE NOT NULL,                      -- 뉴스 날짜 (변동성 발생일)
-    title VARCHAR(500) NOT NULL,                  -- 뉴스 제목
-    link VARCHAR(1000),                           -- 뉴스 링크
-    description TEXT,                             -- 뉴스 요약
-    source VARCHAR(100),                          -- 뉴스 출처 (예: 네이버)
+    ticker VARCHAR(20) NOT NULL COMMENT '주식 티커 (예: AAPL, 005930.KS)',
+    news_date DATE NOT NULL COMMENT '뉴스 날짜 (변동성 발생일)',
+    title VARCHAR(500) NOT NULL COMMENT '뉴스 제목',
+    link VARCHAR(1000) COMMENT '뉴스 링크',
+    description TEXT COMMENT '뉴스 요약',
+    source VARCHAR(100) COMMENT '뉴스 출처 (예: 네이버)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '저장일',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '수정일',
     -- P3-10: idx_ticker를 제거했다. idx_ticker_date (ticker, news_date)가 이미
