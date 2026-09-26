@@ -46,7 +46,6 @@ describe('BacktestService (integration)', () => {
 
     const mockResponse: UnifiedBacktestResponse = {
       status: 'success',
-      backtest_type: 'single_stock',
       data: {
         ticker: 'AAPL',
         strategy: 'buy_hold_strategy',

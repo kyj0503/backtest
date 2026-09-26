@@ -171,6 +171,8 @@ export interface PortfolioBacktestResponse {
   strategy: string;
   sp500_benchmark?: Array<{ date: string; close: number; volume: number }>;
   nasdaq_benchmark?: Array<{ date: string; close: number; volume: number }>;
+  // 제외 종목·실패 종목 등 사용자 안내 (정상 응답은 빈 배열)
+  warnings?: string[];
 }
 
 // 전략 관련 타입
@@ -195,13 +197,12 @@ export interface StrategyParameter {
 // HTTP 메서드 타입
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
-// 통합 백테스트 응답 (새로운 /execute 엔드포인트용)
+// POST /api/v1/backtest 성공 응답. BE 최상위는 { status, data }뿐이다 (A-23).
+// 오류는 HTTP 상태와 detail로 오고, 경고는 data.warnings에만 실린다 —
+// 최상위에 warnings/message/backtest_type을 선언하지 않는다(항상 undefined).
 export interface UnifiedBacktestResponse {
   status: 'success' | 'error';
-  backtest_type: 'single_stock' | 'portfolio';
   data: ChartDataResponse | PortfolioBacktestResponse;
-  message?: string;
-  warnings?: string[];  // 상장일 경고 메시지 (백테스트 실행 전 검증 실패 시 반환되지 않음)
 }
 
 // 통합 백테스트 결과 (프론트엔드 처리용)

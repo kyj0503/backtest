@@ -127,7 +127,6 @@ export const makePortfolioResponse = (
   overrides: Partial<PortfolioData> = {}
 ): UnifiedBacktestResponse => ({
   status: 'success',
-  backtest_type: 'portfolio',
   // UnifiedBacktestResponse.data는 API 스키마 타입(PortfolioBacktestResponse)이지만
   // 화면은 결과 타입(PortfolioData)으로 읽는다. 두 타입이 따로 정의돼 있어 캐스팅한다.
   data: makePortfolioData(overrides) as unknown as UnifiedBacktestResponse['data'],
