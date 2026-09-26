@@ -568,9 +568,13 @@ class UnifiedDataService:
             "ticker_info", "price_history", "exchange_rates", "benchmarks", "news",
             "stock_data", "volatility_events", "supplemental_total",
         )
+        prices_timed_out = futures.get("price_history") in not_done
         parts = []
         for stage in order:
-            if stage in futures and futures[stage] in not_done:
+            timed_out = stage in futures and futures[stage] in not_done
+            # stock_data/volatility_events는 price_history 결과로 계산하는 파생 단계다
+            derived_timed_out = stage in ("stock_data", "volatility_events") and prices_timed_out
+            if timed_out or derived_timed_out:
                 parts.append(f"{stage}=timeout")
             elif stage in timings:
                 parts.append(f"{stage}={timings[stage]:.3f}")

@@ -195,6 +195,31 @@ class TestSlowSupplementalDoesNotBlockTheRest:
         assert result["supplemental_status"]["stock_data"] == "ok"
         assert _outcome_count("benchmarks", "timeout") == before + 1
 
+    def test_summary_log_marks_derived_stages_as_timeout_when_prices_time_out(
+        self, service, monkeypatch, caplog
+    ):
+        release = threading.Event()
+
+        def slow_prices(symbols, start_date, end_date):
+            release.wait(5)
+            return {}
+
+        monkeypatch.setattr(service, "_fetch_price_histories", slow_prices)
+        try:
+            with caplog.at_level("INFO", logger="app.services.unified_data_service"):
+                result = service.collect_all_unified_data(
+                    symbols=["AAPL"], start_date="2023-01-01", end_date="2023-01-05",
+                    timeout_seconds=0.2,
+                )
+        finally:
+            release.set()
+
+        assert result["supplemental_status"]["stock_data"] == "timeout"
+        summary = next(r.getMessage() for r in caplog.records if "단계별 소요" in r.getMessage())
+        assert "price_history=timeout" in summary
+        assert "stock_data=timeout" in summary, summary
+        assert "volatility_events=timeout" in summary, summary
+
     def test_unexpected_exception_in_one_section_is_contained(self, service, monkeypatch):
         def broken_exchange(start_date, end_date):
             raise RuntimeError("boom")
