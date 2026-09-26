@@ -5,7 +5,7 @@
 #   builder  - 컴파일 툴체인(gcc/g++/cargo/rustc 등) + venv 생성 + requirements.txt만 설치.
 #              최종 이미지에는 포함되지 않는다.
 #   test     - builder에서 갈라져 나와 requirements-test.txt를 추가 설치하고 pytest를 실행.
-#              품질 게이트 전용 (아래 설명 참고).
+#              배포 전 테스트 단계 전용 (아래 설명 참고).
 #   runtime  - 클린 python:3.11-slim 위에 /opt/venv만 복사. 컴파일러도, 테스트
 #              의존성도 없다. non-root 사용자로 실행된다.
 FROM python:3.11-slim AS builder
@@ -40,7 +40,7 @@ ENV PATH="${VENV_DIR}/bin:$PATH"
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.lock.txt
 
-# 품질 게이트
+# 배포 전 테스트 단계
 #
 # builder에서 갈라져 나오며 테스트 의존성을 추가 설치한다. runtime이 builder에서
 # (test를 거치지 않고) 직접 갈라져 나오므로 이 스테이지는 최종 이미지의 의존

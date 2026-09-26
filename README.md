@@ -186,14 +186,14 @@ docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # �
 docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # 테스트 코드
 ```
 
-### CI 게이트를 그대로 재현
+### CI 배포 전 테스트 단계를 그대로 재현
 
 ```bash
 docker build --target test ./backtest_fe        # lint → type-check ×2 → vitest
 docker build --target test ./backtest_be_fast   # pytest tests/unit
 ```
 
-현재 기준선은 BE 189건(`tests/unit`), FE 112건이며 모두 통과합니다. 실패가 보이면 회귀입니다. (BE에는 이 외에 DB가 필요한 `tests/integration` 스위트가 별도로 있으며, Quality Gate에는 포함되지 않습니다.)
+현재 기준선은 BE 189건(`tests/unit`), FE 112건이며 모두 통과합니다. 실패가 보이면 회귀입니다. (BE에는 이 외에 DB가 필요한 `tests/integration` 스위트가 별도로 있으며, 배포 전 테스트 단계(Jenkins `Quality Gate` 스테이지)에는 포함되지 않습니다.)
 
 ---
 
@@ -227,7 +227,7 @@ Jenkins의 `backtest-be`, `backtest-fe` Job을 수동 실행하고 `APP_ENV`를 
 - `dev`: `dev` 브랜치를 빌드해 `:dev` 이미지로 Push
 - `prod`: `main` 브랜치를 빌드해 `:latest` 이미지로 Push한 뒤 배포 및 헬스 체크
 
-Quality Gate가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 이 게이트는 **배포**를 막는 것이며 병합 자체를 막지는 않습니다.
+배포 전 테스트 단계(Jenkins `Quality Gate` 스테이지)가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 이 단계는 **배포**를 막는 것이며 병합 자체를 막지는 않습니다.
 
 ---
 

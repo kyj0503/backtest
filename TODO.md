@@ -11,7 +11,7 @@
 > 〔C〕 = Claude 단독 발견. 〔X〕 = Codex 단독 발견. 대괄호 안 `C-0n`/`X-0n`은
 > 원본 문서의 항목 번호로, 옛 커밋을 추적할 때 쓴다.
 >
-> **분업이 실제로 갈렸다**: Codex는 컨테이너를 띄워 게이트를 **실행**했고(그래서
+> **분업이 실제로 갈렸다**: Codex는 컨테이너를 띄워 검사 단계를 **실행**했고(그래서
 > P0를 찾았다), Claude는 실행 경로를 **정독**했다(그래서 계산 정확성 버그를 찾았다).
 > 겹치는 항목보다 서로 못 본 항목이 많으므로, 어느 한쪽만 보면 절반을 놓친다.
 
@@ -23,8 +23,8 @@
 | **P1** | 5 | A-04~A-08 — 동시성·자원 보호 3건, 가용성·API 결합도 2건 |
 | **P2** | 6 | A-09 · A-11 · A-12 · A-17~A-19 — API 계약·DB 2건, 지표 정의 1건, 테스트 1건, 제품 확인 2건 |
 | **P3** | 4 | A-13~A-16 — 죽은 코드, 문서 동기화, 대형 모듈 분리 |
-| 저장소 밖 | 4 | 배포 스크립트 태그, MySQL 8.4 실기동, Alembic baseline, 부하 튜닝 |
-| **합계** | **19** | |
+| 저장소 밖 | 3 | 배포 스크립트 태그, MySQL 8.4 실기동, 부하 튜닝 |
+| **합계** | **18** | |
 
 > 2026-09-26 배치7에서 A-01·A-02·A-03과 신규 발견 A-20(DCA MDD 축소 보고)을
 > 처리했다. 근거와 바뀐 사용자 노출 동작은 [HISTORY.md](HISTORY.md) 맨 위 섹션 참고.
@@ -327,7 +327,8 @@ Codex 세션이 배포 구성(`compose.dev-prod.yaml`)과 대조해 찾은 항�
 > 분석은 그 결정 이전의 판단 기록으로 남겨 둔다. 데드락 재시도(`_retry_on_deadlock`)는
 > FK와 무관한 동시 upsert 충돌 대비라 그대로 유지한다. 고아 점검은
 > `backtest_be_fast/scripts/check_orphan_prices.py`. 운영 DB 적용 후에는 아래
-> "운영 DB 확인 SQL"이 0행을 반환해야 한다.
+> "운영 DB 확인 SQL"이 0행을 반환해야 한다. → **2026-09-27 운영 DB 적용 완료**
+> (`7b2e9c4f1a30`, FK 0개, 고아 0건 — [HISTORY.md](HISTORY.md) 운영 반영 섹션).
 
 두 세션이 **독립적으로 동일한 결론**에 도달했다. 확신도 최상.
 
@@ -415,16 +416,14 @@ WHERE TABLE_SCHEMA = 'stock_data_cache'
 저장소 밖 시스템 또는 실제 DB 상태가 필요해 이번에도 검증하지 못했다.
 
 - [ ] **배포 스크립트가 `${BUILD_NUMBER}`를 실제 이미지 태그로 사용하도록 수정** 〔교차〕
-      — `Jenkinsfile:164-166`이 태그를 넘기지만 `/opt/home-server/scripts/deploy-app.sh`가
+      — Jenkinsfile이 태그를 넘기지만 `/opt/home-server/scripts/deploy-app.sh`가
       무시하고 `:latest`를 pull하는 것이 빌드 #21에서 실측됨. **롤백 지점이 없다.**
       이미지는 이미 `:${BUILD_NUMBER}`로 GHCR에 있으므로 저장소 쪽 준비는 끝났다.
+      2026-09-27 재확인: Jenkinsfile은 home-server 저장소
+      (`cicd/jenkins/pipeline/backtest-{be,fe}/`)로 옮겨졌고, 운영 배포 #27도 여전히
+      `latest`를 사용했다. 그래서 헬스체크 성공만으로는 새 이미지 가동을 판단할 수 없어,
+      새 코드에만 있는 동작(전략+DCA 요청 422)으로 확인했다. 수정 위치는 home-server 저장소다.
 - [ ] 기존 MySQL 8.0 데이터 볼륨을 8.4로 올리는 실기동 검증
-- [ ] `schema.sql`로 생성된 기존 DB에 Alembic baseline 적용 + FK 제거 리비전 반영
-      — **`alembic stamp head`를 쓰면 안 된다.** 배치8 이후 head(`7b2e9c4f1a30`)는
-      FK 제거 리비전이라, stamp head는 FK가 남은 DB를 "이미 제거됨"으로 기록해 버린다.
-      기존 DB(FK 있음)는 `alembic stamp d5c3763b29e6` → `alembic upgrade head` 순서로
-      적용하고, 부록 A의 확인 SQL이 0행인지 본다(dev DB에서 이 순서로 실측 확인).
-      배치8 이후 schema.sql로 새로 만든 DB는 FK가 없으므로 `stamp head`가 맞다.
 - [ ] 동시 실행 8건·60초 제한을 실제 부하로 튜닝 (A-04·A-05와 함께)
 
 ---

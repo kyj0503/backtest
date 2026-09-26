@@ -20,7 +20,7 @@ import { test, expect } from '@playwright/test';
  *   필요하다).
  * - 실행: `npm run test:e2e` (backtest_fe/ 안에서).
  *
- * CI Quality Gate(Jenkinsfile)에는 의도적으로 연결하지 않았다 - 그 게이트는
+ * CI 배포 전 테스트 단계(Jenkins `Quality Gate` 스테이지)에는 의도적으로 연결하지 않았다 - 그 단계는
  * 브라우저도 살아있는 백엔드도 없는 `docker build --target test`이기 때문이다.
  */
 
