@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, date
 from unittest.mock import Mock, AsyncMock, patch, MagicMock
-from backtesting import Strategy
+from backtesting import Backtest, Strategy
 
 from app.services.backtest_engine import BacktestEngine
 from app.schemas.requests import BacktestRequest, StrategyType
@@ -356,3 +356,60 @@ class TestBacktestEngineConvertResultToResponse:
         assert result.total_return_pct == 10.0
         assert result.annualized_return_pct == 0.0
         assert result.sharpe_ratio == 0.0
+
+    @pytest.mark.parametrize('raw', [np.nan, None, np.inf], ids=['nan', 'none', 'inf'])
+    def test_undefined_profit_factor_is_none_not_zero(self, engine, backtest_request, raw):
+        """backtesting.py 0.3.3은 손실 거래가 없거나 거래가 없으면 Profit Factor를
+        NaN으로 준다(`gross_loss or np.nan`). 과거에는 safe_float 기본값 때문에 0.0이
+        돼 '이익이 전혀 없음'처럼 보였다 — 포트폴리오 경로(A-09)와 같이 None으로 둔다."""
+        stats = pd.Series({
+            '# Trades': 2,
+            'Return [%]': 10.0,
+            'Equity Final [$]': 55000.0,
+            'Win Rate [%]': 100.0,
+            'Profit Factor': raw,
+        })
+
+        result = engine._convert_result_to_response(stats, backtest_request)
+
+        assert result.profit_factor is None
+
+    def test_missing_profit_factor_is_none(self, engine, backtest_request):
+        stats = pd.Series({'# Trades': 0, 'Return [%]': 0.0, 'Equity Final [$]': 50000.0})
+
+        result = engine._convert_result_to_response(stats, backtest_request)
+
+        assert result.profit_factor is None
+
+    # 하락일이 없어 backtesting.py가 Sortino 계산에서 내는 0 나눗셈 경고는 이 테스트와 무관하다
+    @pytest.mark.filterwarnings('ignore:divide by zero:RuntimeWarning')
+    def test_real_backtest_without_losing_trade_has_none_profit_factor(self, engine):
+        """실제 backtesting.py 0.3.3 실행: 오르기만 하는 가격에서 한 번 사고 판 거래만
+        있으면 손실 거래가 없어 Profit Factor를 정의할 수 없다."""
+        index = pd.bdate_range('2023-01-02', periods=40)
+        close = np.linspace(100.0, 140.0, len(index))
+        data = pd.DataFrame(
+            {'Open': close, 'High': close + 1, 'Low': close - 1, 'Close': close, 'Volume': 1000},
+            index=index,
+        )
+
+        class BuyThenSell(Strategy):
+            def init(self):
+                pass
+
+            def next(self):
+                if len(self.data) == 2:
+                    self.buy()
+                elif len(self.data) == 30 and self.position:
+                    self.position.close()
+
+        stats = Backtest(data, BuyThenSell, cash=10000, commission=0.0).run()
+        assert stats['# Trades'] == 1 and stats['Win Rate [%]'] == 100.0
+        request = BacktestRequest(
+            ticker='TSLA', start_date='2023-01-02', end_date='2023-02-24',
+            initial_cash=10000.0, strategy=StrategyType.SMA_STRATEGY, commission=0.0,
+        )
+
+        result = engine._convert_result_to_response(stats, request)
+
+        assert result.profit_factor is None
