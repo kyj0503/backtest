@@ -140,7 +140,15 @@ class PortfolioBacktestRequest(BaseModel):
     """포트폴리오 백테스트 요청 모델"""
     portfolio: List[PortfolioStock] = Field(..., min_length=1, max_length=settings.max_portfolio_items, description="포트폴리오 구성")
     start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
-    end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
+    end_date: str = Field(
+        ...,
+        description=(
+            f"종료 날짜 (YYYY-MM-DD). 종료일 - 시작일이 최소 "
+            f"{settings.min_backtest_period_days}일이어야 하며 미달 시 422 "
+            "(연환산 지표인 CAGR·샤프 지수 등은 그보다 짧은 기간에서 의미가 없다. "
+            "검증은 엔드포인트에서 한다)"
+        ),
+    )
     commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
     rebalance_frequency: str = Field("monthly_1", description="리밸런싱 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12, none)")
     strategy: str = Field("buy_hold_strategy", description="전략명")
