@@ -58,7 +58,8 @@ export interface BacktestStats {
   win_rate_pct: number;
   max_drawdown_pct: number;
   sharpe_ratio: number;
-  profit_factor: number;
+  // 계산 불가(이익 거래만 있거나 거래 없음)면 null — BE optional_finite_float
+  profit_factor: number | null;
   volatility_pct?: number;
   alpha?: number;
   beta?: number;

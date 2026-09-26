@@ -190,7 +190,7 @@ export interface StrategyStats {
   trade_log?: TradeLog[];
   total_trades?: number;
   win_rate_pct?: number;
-  profit_factor?: number;
+  profit_factor?: number | null;  // 계산 불가면 null
   sharpe_ratio?: number;
   max_drawdown_pct?: number;
   final_equity?: number;
