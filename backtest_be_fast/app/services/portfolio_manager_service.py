@@ -33,6 +33,10 @@ from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.portfolio.portfolio_simulation_engine import PortfolioSimulationEngine
 from app.services.portfolio.portfolio_data_loader import PortfolioDataLoader
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
+from app.services.portfolio.portfolio_execution import (
+    run_strategy_per_symbol,
+    simulate_buy_hold,
+)
 from app.services.portfolio.portfolio_inputs import (
     BuyHoldAllocationBuilder,
     drop_unloaded_symbols,
@@ -216,75 +220,17 @@ class PortfolioManagerService:
 
         Note: last_rebalance_date는 예정일 추적용, rebalance_history는 실제 거래만 기록
         """
-        # 현금 처리
-        cash_amount = 0
-        for unique_key, amount in amounts.items():
-            if unique_key in dca_info and dca_info[unique_key].asset_type == 'cash':
-                cash_amount += amount
-
-        stock_amounts = {k: v for k, v in amounts.items() if k in dca_info and dca_info[k].asset_type != 'cash'}
-
-        # 날짜 범위 설정
-        all_dates = set()
-        for unique_key, df in portfolio_data.items():
-            if unique_key in dca_info and dca_info[unique_key].asset_type != 'cash':
-                all_dates.update(df.index)
-
-        if not all_dates and cash_amount == 0:
-            raise ValueError("유효한 데이터가 없습니다.")
-
-        if not all_dates and cash_amount > 0:
-            today = datetime.now().date()
-            date_range = pd.DatetimeIndex([today])
-        else:
-            date_range = pd.DatetimeIndex(sorted(all_dates))
-
-        total_amount = sum(amounts.values())
-        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
-        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
-
-        # 각 종목의 currency 정보 및 환율 로드 (Data Loader 위임)
-        symbols = [dca_info[unique_key].symbol for unique_key in stock_amounts.keys()]
-        
-        # 1. Ticker Currencies 로드
-        ticker_currencies = await self.data_loader.load_ticker_currencies(symbols)
-        
-        # unique_key에 맵핑
-        keyed_ticker_currencies = {}
-        for unique_key in stock_amounts.keys():
-            symbol = dca_info[unique_key].symbol
-            keyed_ticker_currencies[unique_key] = ticker_currencies.get(symbol, 'USD')
-
-        # 2. Exchange Rates 로드
-        required_currencies = list(set(keyed_ticker_currencies.values()) - {'USD'})
-        
-        exchange_rates_by_currency = await self.data_loader.load_exchange_rates(
-            currencies=required_currencies,
-            start_date=start_date,
-            end_date=end_date,
-            date_range=date_range
+        return await simulate_buy_hold(
+            self.data_loader,
+            self.simulation_engine,
+            portfolio_data,
+            amounts,
+            dca_info,
+            start_date,
+            end_date,
+            rebalance_frequency,
+            commission,
         )
-
-        target_weights = RebalanceHelper.calculate_target_weights(amounts, dca_info)
-
-        # 포트폴리오 시뮬레이션 실행 (리팩터링됨)
-        result = await self.simulation_engine.execute_simulation(
-            date_range=date_range,
-            start_date_obj=start_date_obj,
-            end_date_obj=end_date_obj,
-            stock_amounts=stock_amounts,
-            amounts=amounts,
-            cash_amount=cash_amount,
-            total_amount=total_amount,
-            portfolio_data=portfolio_data,
-            dca_info=dca_info,
-            ticker_currencies=ticker_currencies,
-            exchange_rates_by_currency=exchange_rates_by_currency,
-            rebalance_frequency=rebalance_frequency,
-            commission=commission
-        )
-
-        return result
     
     
     async def run_portfolio_backtest(self, request: PortfolioBacktestRequest) -> Dict[str, Any]:
@@ -316,12 +262,8 @@ class PortfolioManagerService:
         try:
             # --- [Custom Metrics] Start Timer ---
             start_time = time.time()
-            strategy_label = str(request.strategy) if request.strategy else "unknown"
             # ------------------------------------
 
-            portfolio_results = {}
-            individual_returns = {}
-            total_portfolio_value = 0
             # amount/weight 동시 지원: amount가 없고 weight만 있으면 환산
             amounts, total_amount = resolve_strategy_amounts(request.portfolio)
 
@@ -335,110 +277,14 @@ class PortfolioManagerService:
 
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
             logger.info(f"전략 기반 백테스트: {strategy_name}, 총 투자금액: ${total_amount:,.2f}")
-            
-            # 각 종목별로 전략 백테스트 실행
-            failed_symbols = []
-            for idx, item in enumerate(request.portfolio):
-                symbol = item.symbol
-                # amount/weight 동시 지원
-                amount = amounts[symbol]
-                weight = amount / total_amount if total_amount > 0 else 0.0
 
-                # 현금 처리 (수익률 0%, 전략 적용 안함)
-                if item.asset_type == 'cash':
-                    logger.info(f"현금 자산 {symbol} 처리 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
-                    
-                    portfolio_results[symbol] = {
-                        'symbol': symbol,
-                        'initial_value': amount,
-                        'final_value': amount,  # 현금은 변동 없음
-                        'return_pct': 0.0,  # 현금 수익률 0%
-                        'weight': weight,
-                        'amount': amount,
-                        'strategy_stats': {
-                            'total_trades': 0,
-                            'win_rate_pct': 0.0,
-                            'max_drawdown_pct': 0.0,
-                            'sharpe_ratio': 0.0,
-                            'final_equity': amount
-                        }
-                    }
-                    
-                    individual_returns[symbol] = {
-                        'symbol': symbol,
-                        'weight': weight,
-                        'amount': amount,
-                        'return': 0.0,
-                        'initial_value': amount,
-                        'final_value': amount,
-                        'trades': 0,
-                        'win_rate': None  # 거래가 없으면 거래 승률은 계산 불가
-                    }
-                    
-                    total_portfolio_value += amount
-                    logger.info(f"현금 자산 완료: 0.00% 수익률")
-                    continue
-                
-                logger.info(f"종목 {symbol} (#{idx+1}) 전략 백테스트 실행 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
-                
-                # 개별 종목 백테스트 요청 생성
-                strategy_value = strategy_name  # 이미 위에서 변환한 strategy_name 사용
-                backtest_req = BacktestRequest(
-                    ticker=symbol,
-                    start_date=request.start_date,
-                    end_date=request.end_date,
-                    initial_cash=amount,
-                    strategy=strategy_value,
-                    strategy_params=request.strategy_params or {},
-                    commission=request.commission
-                )
-                
-                try:
-                    # 개별 종목 백테스트 실행
-                    result = await backtest_service.run_backtest(backtest_req)
-                    
-                    if result and hasattr(result, 'final_equity'):
-                        final_value = result.final_equity
-                        initial_value = amount
-                        stock_return = (final_value / initial_value - 1) * 100
-                        
-                        portfolio_results[symbol] = {
-                            'symbol': symbol,
-                            'initial_value': initial_value,
-                            'final_value': final_value,
-                            'return_pct': stock_return,
-                            'weight': weight,
-                            'amount': amount,
-                            'strategy_stats': result.__dict__  # 객체를 딕셔너리로 변환
-                        }
-                        
-                        individual_returns[symbol] = {
-                            'symbol': symbol,
-                            'weight': weight,
-                            'amount': amount,
-                            'return': stock_return,
-                            'initial_value': initial_value,
-                            'final_value': final_value,
-                            'trades': getattr(result, 'total_trades', 0),
-                            # backtesting.py는 거래가 없으면 승률을 NaN으로 주고 엔진이
-                            # 0.0으로 바꾼다. 0%(전부 패배)와 구분되도록 None으로 둔다
-                            'win_rate': (
-                                getattr(result, 'win_rate_pct', None)
-                                if getattr(result, 'total_trades', 0) else None
-                            )
-                        }
-                        
-                        total_portfolio_value += final_value
-                        
-                        logger.info(f"종목 {symbol} (#{idx+1}) 완료: {stock_return:.2f}% 수익률, 거래수: {getattr(result, 'total_trades', 0)}")
-                    else:
-                        logger.warning(f"종목 {symbol} 백테스트 실패: 결과가 없거나 final_equity 속성이 없음")
-                        
-                except Exception as e:
-                    logger.error(f"종목 {symbol} 백테스트 오류: {str(e)}")
-                    failed_symbols.append({'symbol': symbol, 'error': str(e)})
-                    continue
-            
+            # 각 종목별로 전략 백테스트 실행
+            outcome = await run_strategy_per_symbol(request, amounts, total_amount, strategy_name)
+            portfolio_results = outcome.portfolio_results
+            individual_returns = outcome.individual_returns
+            total_portfolio_value = outcome.total_portfolio_value
+            failed_symbols = outcome.failed_symbols
+
             if not portfolio_results:
                 raise ValueError("모든 종목의 백테스트가 실패했습니다.")
 
