@@ -9,6 +9,24 @@
 
 ---
 
+## 2026-09-27 운영 반영
+
+> 배치7·배치8·LF 정규화를 묶은 main `cb74a50`(PR #59)을 운영에 배포하고, 배치8의
+> 운영 DB 마이그레이션을 적용했다. TODO.md 「저장소 밖 운영 후속 작업」 중 완료된
+> 1건을 여기로 옮긴다. 나머지 3건(배포 태그, MySQL 8.4 실기동, 부하 튜닝)은 아직
+> 끝나지 않아 TODO.md에 남아 있다.
+
+- [x] **`schema.sql`로 생성된 기존 운영 DB에 Alembic baseline 적용 + FK 제거 리비전 반영** ✅ 2026-09-27
+  - 운영 DB 조회 결과: Alembic 리비전 `7b2e9c4f1a30`(head), 물리 FK 0개, `daily_prices` 고아 행 0건
+  - 적용 순서는 배치8의 "배포 주의"대로 `stamp d5c3763b29e6` → `upgrade head`다. `stamp head`를 쓰면 FK가 남은 DB가 "제거됨"으로 기록된다
+  - 이 DB는 이제 Alembic 관리 하에 있으므로, 다음 스키마 변경부터는 `alembic upgrade head`만 실행하면 된다. 다만 파이프라인과 운영 이미지에 Alembic이 없어 여전히 수동 실행이다
+- [x] **main `cb74a50` 운영 배포** ✅ 2026-09-27
+  - Jenkins `backtest-be` #27, `backtest-fe` #3 성공 (`APP_ENV=prod`)
+  - 배포 스크립트가 `latest` 태그를 쓰므로 헬스체크만으로는 새 이미지인지 알 수 없다. 운영 API에 전략+DCA 요청을 보내 배치7의 422 응답과 메시지를 받는 것으로 새 코드 가동을 확인했다
+  - 앞선 `backtest-be` #26은 코드 문제가 아니라 Jenkins 컨테이너의 Docker 소켓 연결 문제로 빌드 전에 실패했다(home-server 쪽 사안, Jenkins 컨테이너 재생성으로 복구)
+
+---
+
 ## 2026-09-26 라운드 (배치8 — 물리 FK 제거)
 
 > 정책 결정: 모든 테이블 간 참조를 논리 참조로 두고 물리 FK는 쓰지 않는다.
@@ -25,7 +43,7 @@
     - 빈 DB 두 개: schema.sql initdb 경로와 `alembic upgrade head` 경로 모두 FK 0개, COMMENT 절을 뺀 `SHOW CREATE TABLE` 3개 동일(컬럼 COMMENT 유무 차이는 기존부터 있던 것 — A-11)
     - FK 제거 후 신규 종목 저장(NVDA·GOOGL 각 502행) 정상, 고아 0
     - 고아 행 2개 주입 → 점검 exit 1 → `--delete` 2행 삭제 → 재점검 exit 0
-  - **배포 주의**: schema.sql로 만든 기존 운영 DB는 `alembic stamp head`가 아니라 `stamp d5c3763b29e6` → `upgrade head`로 적용해야 FK가 실제로 지워진다(TODO.md "저장소 밖 운영 후속 작업").
+  - **배포 주의**: schema.sql로 만든 기존 운영 DB는 `alembic stamp head`가 아니라 `stamp d5c3763b29e6` → `upgrade head`로 적용해야 FK가 실제로 지워진다(TODO.md "저장소 밖 운영 후속 작업"). → 2026-09-27 운영 적용 완료(위 운영 반영 섹션).
 
 ---
 
@@ -202,7 +220,7 @@
 
 - [ ] → **TODO.md 「저장소 밖 운영 후속 작업」** — **`/opt/home-server/scripts/deploy-app.sh`가 두 번째 인자(이미지 태그)를 실제로 사용하도록 갱신** — 빌드 #21에서 실측 확인됨(2026-08-03). Jenkinsfile이 `deploy-app.sh backtest-be 21`로 태그를 넘기는데, 스크립트는 **인자를 거부하지 않지만(배포 안 깨짐 ✅) 무시하고 `ghcr.io/kyj0503/backtest-be:latest`를 pull한다(목표 미달성 ❌)**. 로그 근거: `Image ghcr.io/kyj0503/backtest-be:latest Pulling`. 따라서 P2-26의 취지인 불변 태그 배포·롤백 지점은 아직 확보되지 않았다. 조치: 스크립트가 `$2`를 받아 해당 태그를 pull/기동하도록 수정(이미지는 이미 `:${BUILD_NUMBER}`로 GHCR에 푸시되어 있으므로 저장소 쪽 준비는 끝났다).
 - [ ] → **TODO.md 「저장소 밖 운영 후속 작업」** — **MySQL 8.4 실기동 확인** — compose 이미지 태그는 8.4로 올렸고 throwaway 컨테이너에서 `schema.sql` 초기화를 검증했지만, 기존 dev 볼륨(8.0 데이터 디렉터리)으로 8.4를 띄우는 것은 검증하지 못했다. 재시작 시 데이터 디렉터리 업그레이드가 필요할 수 있음.
-- [ ] → **TODO.md 「저장소 밖 운영 후속 작업」** — **Alembic 초기 마이그레이션과 기존 라이브 DB 정합** — 새 DB에서는 검증됐으나, 이미 `schema.sql`로 만들어진 기존 DB에는 `alembic stamp head`로 baseline을 찍어야 한다.
+- [x] ✅ 2026-09-27 운영 적용(맨 위 「2026-09-27 운영 반영」, `stamp head`가 아니라 `stamp d5c3763b29e6` → `upgrade head`로 정정) — **Alembic 초기 마이그레이션과 기존 라이브 DB 정합** — 새 DB에서는 검증됐으나, 이미 `schema.sql`로 만들어진 기존 DB에는 `alembic stamp head`로 baseline을 찍어야 한다.
 
 ### P3 — 여유 있을 때 (정리·폴리시)
 
