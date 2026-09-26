@@ -3,11 +3,12 @@
 포트폴리오 백테스트 실행 및 관련 데이터를 반환하는 FastAPI 엔드포인트입니다.
 """
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 import logging
 import asyncio
 from datetime import datetime
+from typing import Optional
 
 from ....schemas.schemas import PortfolioBacktestRequest
 from ....services.portfolio_manager_service import portfolio_manager_service
@@ -16,6 +17,8 @@ from ....services.unified_data_service import unified_data_service
 from ....services.news_service import news_service
 from ....core.config import settings
 from ....core.exceptions import ValidationError
+from ....core.client_ip import client_limit_key, parse_trusted_networks, resolve_client_ip
+from ....services.backtest_runner import BacktestRejected, get_backtest_runner
 from ..decorators import handle_portfolio_errors
 
 logger = logging.getLogger(__name__)
@@ -33,24 +36,20 @@ unified_data_service.news_service = news_service
 # 의도된 동작이다.
 MIN_BACKTEST_PERIOD_DAYS = settings.min_backtest_period_days
 
-# --- [P2-16] 동시 실행 제한 & 타임아웃 ---
-# 시뮬레이션은 asyncio.to_thread로 워커 스레드에 위임되므로 이벤트 루프는 막지
-# 않지만, 동시 요청이 많으면 프로세스 공유 스레드풀 슬롯을 오래 점유해 다른
-# 요청까지 밀린다. 값은 Settings에서 읽는다 (환경변수로 오버라이드 가능).
-MAX_CONCURRENT_BACKTESTS = settings.max_concurrent_backtests
-BACKTEST_TIMEOUT_SECONDS = settings.backtest_timeout_seconds
-# 세마포어는 모듈 임포트 시점의 MAX_CONCURRENT_BACKTESTS 값으로 크기가 고정된다
-# (asyncio.Semaphore는 동적으로 리사이즈할 수 없음). 테스트는 이 객체 자체를
-# monkeypatch로 교체해 작은 값으로 검증한다.
-_backtest_semaphore = asyncio.Semaphore(MAX_CONCURRENT_BACKTESTS)
+# --- 동시 실행 상한 · 타임아웃 · 취소 · IP별 상한 (P2-16 → A-04/A-05/A-06) ---
+# 슬롯 대기, 실행 시간 상한, 취소 전파, IP별 상한은 모두
+# app/services/backtest_runner.py가 처리한다(설계와 한계는 그 모듈 docstring).
+# 값은 Settings(max_concurrent_backtests, backtest_timeout_seconds,
+# backtest_queue_timeout_seconds, max_concurrent_backtests_per_client 등)에서 읽는다.
+_trusted_proxies = parse_trusted_networks(settings.trusted_proxy_cidrs)
 
 
 async def _execute_portfolio_backtest(request: PortfolioBacktestRequest) -> dict:
     """포트폴리오 백테스트 실행 본체 (주가/환율/뉴스/벤치마크 데이터 포함).
 
-    _backtest_semaphore + asyncio.wait_for(BACKTEST_TIMEOUT_SECONDS) 안에서
-    실행되는 실제 작업. 최소 기간 검증(MIN_BACKTEST_PERIOD_DAYS)은 이 함수
-    호출 전, 세마포어를 잡기도 전에 끝나 있어야 한다 (거부될 요청이 동시 실행
+    backtest_runner가 동시 실행 슬롯을 얻은 뒤 작업 전용 스레드·이벤트 루프에서
+    실행하는 실제 작업. 최소 기간 검증(MIN_BACKTEST_PERIOD_DAYS)은 이 함수
+    호출 전, 슬롯을 잡기도 전에 끝나 있어야 한다 (거부될 요청이 동시 실행
     슬롯을 점유하지 않도록).
     """
     # P2-09: 현금 자산은 symbol 문자열이 아니라 asset_type으로 판별한다.
@@ -146,23 +145,35 @@ async def _execute_portfolio_backtest(request: PortfolioBacktestRequest) -> dict
     return backtest_result
 
 
-async def _acquire_and_execute(request: PortfolioBacktestRequest) -> dict:
-    """동시 실행 한도(_backtest_semaphore) 안에서 실제 백테스트를 실행한다.
+def _client_key(http_request: Request) -> Optional[str]:
+    """IP별 동시 실행 상한에 쓸 클라이언트 키. 식별할 수 없으면 None(제한 미적용)."""
+    peer = http_request.client.host if http_request.client else None
+    client_ip = resolve_client_ip(
+        peer, http_request.headers.getlist("x-forwarded-for"), _trusted_proxies
+    )
+    return client_limit_key(client_ip)
 
-    한도를 초과한 요청은 거부되지 않고 세마포어 대기열에서 큐잉된다 (P2-16).
-    """
-    async with _backtest_semaphore:
-        return await _execute_portfolio_backtest(request)
+
+def _rejection_response(exc: BacktestRejected) -> JSONResponse:
+    headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
+    return JSONResponse(
+        status_code=exc.status_code, content={"detail": exc.detail}, headers=headers
+    )
 
 
 @router.post(
     "",
     status_code=status.HTTP_200_OK,
     summary="포트폴리오 백테스트 실행",
-    description="포트폴리오 백테스트 실행 및 관련 데이터 반환"
+    description="포트폴리오 백테스트 실행 및 관련 데이터 반환",
+    responses={
+        429: {"description": "같은 클라이언트(IP)의 동시 실행 상한 초과 — 대기 없이 즉시 거부"},
+        503: {"description": "동시 실행 슬롯 대기 시간 초과 — 작업을 시작하지 않음"},
+        504: {"description": "실행 시간 초과 — 작업에 취소 신호를 보냄"},
+    },
 )
 @handle_portfolio_errors
-async def run_portfolio_backtest(request: PortfolioBacktestRequest):
+async def run_portfolio_backtest(request: PortfolioBacktestRequest, http_request: Request):
     """포트폴리오 백테스트 실행 및 주가, 환율, 뉴스, 벤치마크 데이터 반환"""
     start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d').date()
     end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d').date()
@@ -173,31 +184,20 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest):
             f"(최소 {MIN_BACKTEST_PERIOD_DAYS}일 필요)"
         )
 
-    # [P2-16] 동시 실행 제한(세마포어 대기 포함) + 전체 처리 시간 상한.
-    # asyncio.TimeoutError를 여기서 잡아 JSONResponse를 직접 반환하는 이유:
-    # HTTPException을 raise하면 @handle_portfolio_errors의 wrapper가 알고 있는
-    # 예외 타입(ValidationError/DataNotFoundError/InvalidSymbolError/
-    # YfinanceRateLimitError)이 아니라서 catch-all에 걸려 500으로 뭉개진다.
-    # Response 객체를 직접 반환하면(=raise가 아니라 return) 데코레이터의
-    # try/except를 그대로 통과하므로 504 상태 코드가 유지된다.
+    # 거부(429)·대기 초과(503)·실행 시간 초과(504)는 예외를 raise하지 않고
+    # JSONResponse를 return한다. HTTPException을 raise하면 @handle_portfolio_errors의
+    # catch-all에 걸려 500으로 뭉개진다(P2-16). 작업 안에서 난 예외
+    # (ValidationError, DataNotFoundError 등)는 runner가 그대로 다시 던지므로
+    # 기존처럼 데코레이터가 상태 코드로 매핑한다.
+    symbols = [item.symbol for item in request.portfolio]
     try:
-        return await asyncio.wait_for(
-            _acquire_and_execute(request),
-            timeout=BACKTEST_TIMEOUT_SECONDS,
+        return await get_backtest_runner().run(
+            lambda: _execute_portfolio_backtest(request),
+            client_key=_client_key(http_request),
+            is_disconnected=http_request.is_disconnected,
+            label=",".join(symbols)[:200],
         )
-    except asyncio.TimeoutError:
-        logger.error(
-            f"백테스트 처리 시간 초과 ({BACKTEST_TIMEOUT_SECONDS}초): "
-            f"{[item.symbol for item in request.portfolio]}"
-        )
-        return JSONResponse(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            content={
-                "detail": (
-                    f"백테스트 처리 시간이 {BACKTEST_TIMEOUT_SECONDS:.0f}초를 초과하여 "
-                    "중단되었습니다. 기간을 줄이거나 잠시 후 다시 시도해주세요."
-                )
-            },
-            headers={"Retry-After": "30"},
-        )
+    except BacktestRejected as exc:
+        logger.warning(f"백테스트 거부/중단 ({exc.status_code}): {symbols} - {exc.detail}")
+        return _rejection_response(exc)
 

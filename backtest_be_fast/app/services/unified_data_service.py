@@ -18,6 +18,7 @@ from app.monitoring.custom_metrics import (
 )
 from app.repositories.stock_repository import get_stock_repository
 from ..core.config import settings
+from ..core.cancellation import CancelToken, bind_token, current_token, submit_with_context
 
 logger = logging.getLogger(__name__)
 
@@ -336,7 +337,8 @@ class UnifiedDataService:
         max_workers = min(len(symbols), self._MAX_PARALLEL_WORKERS)
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_symbol = {
-                executor.submit(self._fetch_price_history, symbol, start_date, end_date): symbol
+                # A-05: submit_with_context로 취소 토큰(ContextVar)을 수집 스레드에 넘긴다.
+                submit_with_context(executor, self._fetch_price_history, symbol, start_date, end_date): symbol
                 for symbol in symbols
             }
             for future in concurrent.futures.as_completed(future_to_symbol):
@@ -393,6 +395,15 @@ class UnifiedDataService:
             이미 시작된 조회 스레드는 취소할 수 없으므로 각자의 외부 API
             타임아웃(yfinance, 뉴스 10초)까지 백그라운드에서 돈 뒤 끝난다.
             시작 전이던 작업은 취소한다.
+
+        Note (A-05와의 결합):
+            수집 스레드는 작업 취소 토큰에 연결된 하위 토큰을 받는다
+            (submit_with_context). 작업이 취소되면 하위 토큰도 취소되고, 시간
+            예산을 넘기면 하위 토큰만 취소해 남은 스레드가 다음 확인 지점(재시도
+            대기, 외부 호출 직전)에서 곧바로 끝나게 한다. 이 함수는 그 스레드를
+            기다리지 않으므로, 이미 나가 있던 외부 HTTP 호출 한 건은 라이브러리
+            타임아웃까지 응답을 기다린 뒤 끝난다(CPU를 쓰지 않는 대기라 동시 계산
+            상한의 목적은 유지된다).
         """
         total_start = time.perf_counter()
         timings: Dict[str, float] = {}
@@ -408,32 +419,49 @@ class UnifiedDataService:
                 observe_stage(stage, elapsed)
 
         need_prices = include_stock_data or include_volatility_events
+        # A-05: 작업 취소 토큰에 연결된 하위 토큰. 시간 예산 초과 시 이것만 취소한다.
+        parent_token = current_token()
+        supplemental_token = CancelToken()
+        if parent_token is not None:
+            parent_token.add_callback(
+                lambda: supplemental_token.cancel(parent_token.reason or "cancelled")
+            )
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=self._MAX_PARALLEL_WORKERS)
         futures: Dict[str, concurrent.futures.Future] = {}
         try:
-            futures['ticker_info'] = executor.submit(
-                timed, "ticker_info", self.collect_ticker_info, symbols
-            )
-            if need_prices:
-                futures['price_history'] = executor.submit(
-                    timed, "price_history", self._fetch_price_histories, symbols, start_date, end_date
+            # submit_with_context가 제출 시점 컨텍스트(하위 토큰 바인딩)를 스레드로 넘긴다
+            with bind_token(supplemental_token):
+                futures['ticker_info'] = submit_with_context(
+                    executor, timed, "ticker_info", self.collect_ticker_info, symbols
                 )
-            if include_exchange_rates:
-                futures['exchange_rates'] = executor.submit(
-                    timed, "exchange_rates", self.collect_exchange_data, start_date, end_date
-                )
-            if include_benchmarks:
-                futures['benchmarks'] = executor.submit(
-                    timed, "benchmarks", self.collect_benchmark_data, start_date, end_date
-                )
-            if include_news:
-                futures['news'] = executor.submit(
-                    timed, "news", self.collect_latest_news, symbols, news_display_count
-                )
+                if need_prices:
+                    futures['price_history'] = submit_with_context(
+                        executor, timed, "price_history", self._fetch_price_histories,
+                        symbols, start_date, end_date
+                    )
+                if include_exchange_rates:
+                    futures['exchange_rates'] = submit_with_context(
+                        executor, timed, "exchange_rates", self.collect_exchange_data, start_date, end_date
+                    )
+                if include_benchmarks:
+                    futures['benchmarks'] = submit_with_context(
+                        executor, timed, "benchmarks", self.collect_benchmark_data, start_date, end_date
+                    )
+                if include_news:
+                    futures['news'] = submit_with_context(
+                        executor, timed, "news", self.collect_latest_news, symbols, news_display_count
+                    )
             _, not_done = concurrent.futures.wait(futures.values(), timeout=timeout_seconds)
+            if not_done:
+                # 예산을 넘긴 수집 스레드가 다음 확인 지점에서 멈추게 한다 (A-05)
+                supplemental_token.cancel("supplemental_timeout")
         finally:
             # 시간 예산을 넘긴 작업을 기다리지 않는다 (with 블록은 전부 기다린다).
             executor.shutdown(wait=False, cancel_futures=True)
+
+        # 작업 자체가 취소됐다면 부가 데이터를 조립하지 않고 멈춘다
+        if parent_token is not None:
+            parent_token.raise_if_cancelled()
 
         def outcome(key: str, default: Any):
             future = futures.get(key)
