@@ -19,7 +19,7 @@
 |:-----|:-----|
 | **Backend** | Python 3.11, FastAPI, SQLAlchemy, pandas, numpy, backtesting.py 0.3.3 |
 | **Frontend** | TypeScript 5, React 19, Vite 7, React hooks (`useState`/`useReducer`) + localStorage, Recharts 3, React Router 7, shadcn/ui, Tailwind CSS 4 |
-| **Database** | MySQL 8.0 |
+| **Database** | MySQL 8.4 (`compose.dev.yaml`의 `mysql:8.4`) |
 | **Infra** | Docker, Docker Compose, Nginx, Jenkins (`home-server`에서 중앙 관리) |
 | **Test** | Pytest (BE), Vitest 4, React Testing Library, Playwright (FE) |
 
@@ -193,7 +193,7 @@ docker build --target test ./backtest_fe        # lint → type-check ×2 → vi
 docker build --target test ./backtest_be_fast   # pytest tests/unit
 ```
 
-현재 기준선은 BE 189건(`tests/unit`), FE 112건이며 모두 통과합니다. 실패가 보이면 회귀입니다. (BE에는 이 외에 DB가 필요한 `tests/integration` 스위트가 별도로 있으며, 배포 전 테스트 단계(Jenkins `Pre-deploy Tests` 스테이지)에는 포함되지 않습니다.)
+테스트 개수는 작업마다 바뀌므로 이 문서에 고정하지 않습니다. 최신 실측 기준선과 측정일은 [AGENTS.md](AGENTS.md)의 Testing 절 `Current baseline`을 참고하십시오. 기준선의 테스트는 모두 통과해야 하며, 실패가 보이면 회귀입니다. (BE에는 이 외에 DB가 필요한 `tests/integration` 스위트가 별도로 있으며, 배포 전 테스트 단계(Jenkins `Pre-deploy Tests` 스테이지)에는 포함되지 않습니다.)
 
 ---
 

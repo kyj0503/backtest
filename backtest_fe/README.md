@@ -158,9 +158,8 @@ npm run test:ui           # UI 모드
 ```
 
 ### 현재 테스트 통계
-- **테스트 파일**: 17개
-- **테스트 케이스**: 112개
-- **통과율**: 100%
+- **테스트 수**: 작업마다 바뀌므로 여기에 고정하지 않는다. 최신 실측 기준선과 측정일은 저장소 루트 [AGENTS.md](../AGENTS.md)의 Testing 절 `Current baseline`을 참고한다.
+- **통과율**: 100% (기준선의 실패는 회귀다)
 - **커버리지**: `npm run test:coverage`로 직접 확인하세요 (테스트 파일/케이스 수가 자주 바뀌어 커버리지 수치를 여기 고정해 두지 않습니다).
 
 ### 테스트 격리에 관한 주의
@@ -225,7 +224,7 @@ npm run build:analyze
 
 ## CI
 
-`Jenkinsfile`의 `Pre-deploy Tests` 스테이지가 `docker build --target test ./backtest_fe`로 아래를 순서대로 실행한다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못한다.
+home-server 저장소의 중앙 Jenkinsfile(`cicd/jenkins/pipeline/backtest-fe/`, 이 저장소에는 Jenkinsfile이 없다)의 `Pre-deploy Tests` 스테이지가 이 저장소의 `docker build --target test ./backtest_fe`를 호출해 아래를 순서대로 실행한다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못한다.
 
 ```
 npm run lint → npm run type-check → npm run type-check:test → npm run test:run

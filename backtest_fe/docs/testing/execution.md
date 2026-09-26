@@ -81,7 +81,7 @@
 
 ## CI에서의 실행
 
-`Jenkinsfile`의 `Pre-deploy Tests` 스테이지가 `docker build --target test ./backtest_fe`로 아래를 순서대로 실행합니다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못합니다.
+home-server 저장소의 중앙 Jenkinsfile(`cicd/jenkins/pipeline/backtest-fe/`, 이 저장소에는 Jenkinsfile이 없습니다)의 `Pre-deploy Tests` 스테이지가 이 저장소의 `docker build --target test ./backtest_fe`를 호출해 아래를 순서대로 실행합니다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못합니다.
 
 ```
 npm run lint → npm run type-check → npm run type-check:test → npm run test:run
@@ -97,7 +97,7 @@ E2E는 이 단계에 포함되지 않습니다.
 
 ## 현재 기준선
 
-테스트 파일 17개 / 테스트 112건, 전부 통과. 실패가 보이면 회귀입니다.
+테스트 수는 작업마다 바뀌므로 여기에 고정하지 않습니다. 최신 실측값과 측정일은 저장소 루트 [AGENTS.md](../../../AGENTS.md)의 Testing 절 `Current baseline`을 참고하십시오. 기준선은 전부 통과해야 하며, 실패가 보이면 회귀입니다.
 
 ## 파일 구조
 
