@@ -262,7 +262,9 @@ class TestFormatIndividualResultsList:
         assert aapl_result['total_return_pct'] == 25.0
         assert aapl_result['sharpe_ratio'] == 0.0  # Not calculated in buy_hold
         assert aapl_result['trades'] == 1
-        assert aapl_result['win_rate'] == 100.0  # Positive return
+        # buy&hold 포지션은 청산된 거래가 없어 거래 승률을 정의할 수 없다.
+        # 과거에는 수익이면 100, 아니면 0을 지어냈다
+        assert aapl_result['win_rate'] is None
 
     def test_format_buy_hold_mode_with_negative_return(self):
         """Test buy_hold mode with negative return"""
@@ -282,7 +284,7 @@ class TestFormatIndividualResultsList:
         tsla_result = results[0]
         # final_equity = 10000 + (10000 * -10 / 100) = 10000 - 1000 = 9000
         assert tsla_result['final_equity'] == 9000.0
-        assert tsla_result['win_rate'] == 0.0  # Negative return
+        assert tsla_result['win_rate'] is None  # 손실이어도 0%가 아니라 계산 불가
 
     def test_format_buy_hold_mode_with_cash(self):
         """Test buy_hold mode with cash asset"""
@@ -311,7 +313,27 @@ class TestFormatIndividualResultsList:
         assert cash_result['total_return_pct'] == 0.0
         # Note: buy_hold mode sets trades=1 if symbol exists, even for cash (line 155)
         # This matches the actual implementation behavior
-        assert cash_result['win_rate'] == 0.0  # 0 return means win_rate is 0
+        assert cash_result['win_rate'] is None
+
+    def test_format_strategy_mode_without_trades_has_none_win_rate(self):
+        """거래가 없는 종목(신호 없음)과 현금은 거래 승률이 없다 — 0%가 아니라 None.
+        포트폴리오 Trade_Win_Rate(거래 없으면 None)와 같은 규칙이다."""
+        individual_returns = {
+            'NVDA': {
+                'symbol': 'NVDA', 'weight': 0.5, 'amount': 5000.0, 'return': 0.0,
+                'final_value': 5000.0, 'trades': 0, 'win_rate': 0.0,
+            },
+            'CASH': {
+                'symbol': 'CASH', 'weight': 0.5, 'amount': 5000.0, 'return': 0.0,
+                'final_value': 5000.0, 'trades': 0, 'win_rate': 0.0,
+            },
+        }
+
+        results = PortfolioManagerService._format_individual_results_list(
+            individual_returns, mode='strategy'
+        )
+
+        assert [r['win_rate'] for r in results] == [None, None]
 
     def test_format_strategy_mode_without_portfolio_results(self):
         """Test strategy mode without portfolio_results (sharpe defaults to 0)"""

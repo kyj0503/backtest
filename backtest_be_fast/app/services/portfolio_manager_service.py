@@ -179,7 +179,8 @@ class PortfolioManagerService:
                     'weight': returns['weight'],
                     'amount': returns['amount'],
                     'trades': returns.get('trades', 0),
-                    'win_rate': returns.get('win_rate', 0.0)
+                    # 거래 기준 승률. 거래가 없으면 None (Trade_Win_Rate와 같은 규칙)
+                    'win_rate': returns.get('win_rate') if returns.get('trades') else None
                 })
             else:  # buy_hold
                 results.append({
@@ -190,7 +191,9 @@ class PortfolioManagerService:
                     'weight': returns['weight'],
                     'amount': returns['amount'],
                     'trades': 1 if returns.get('symbol', '') != 'CASH' else 0,
-                    'win_rate': 100.0 if returns['return'] > 0 else 0.0
+                    # buy&hold 포지션은 청산된 거래가 없어 거래 승률을 정의할 수 없다.
+                    # 과거에는 수익이면 100, 아니면 0을 지어냈다(A-09 부류)
+                    'win_rate': None
                 })
         return results
 
@@ -376,7 +379,7 @@ class PortfolioManagerService:
                         'initial_value': amount,
                         'final_value': amount,
                         'trades': 0,
-                        'win_rate': 0.0
+                        'win_rate': None  # 거래가 없으면 거래 승률은 계산 불가
                     }
                     
                     total_portfolio_value += amount
@@ -424,7 +427,12 @@ class PortfolioManagerService:
                             'initial_value': initial_value,
                             'final_value': final_value,
                             'trades': getattr(result, 'total_trades', 0),
-                            'win_rate': getattr(result, 'win_rate_pct', 0)
+                            # backtesting.py는 거래가 없으면 승률을 NaN으로 주고 엔진이
+                            # 0.0으로 바꾼다. 0%(전부 패배)와 구분되도록 None으로 둔다
+                            'win_rate': (
+                                getattr(result, 'win_rate_pct', None)
+                                if getattr(result, 'total_trades', 0) else None
+                            )
                         }
                         
                         total_portfolio_value += final_value

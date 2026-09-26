@@ -100,7 +100,7 @@
         "total_return_pct": 10.525556633036913,
         "trades": 1,
         "weight": 1.0,
-        "win_rate": 100.0
+        "win_rate": null
       }
     ],
     "individual_returns": {

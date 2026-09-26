@@ -330,6 +330,32 @@ class TestStrategyAndBuyHoldShareDefinitions:
 
         assert stats['Trade_Win_Rate'] is None
 
+    def test_per_asset_win_rate_is_none_without_trades_on_strategy_path(self):
+        """종목별 win_rate도 거래 기준이다. 거래가 없는 종목과 현금은 0%가 아니라 None."""
+        request = _request([
+            {'symbol': 'AAPL', 'amount': 500.0},
+            {'symbol': 'MSFT', 'amount': 250.0},
+            {'symbol': 'CASH', 'amount': 250.0, 'asset_type': 'cash'},
+        ], strategy='sma_strategy')
+        data = _run_strategy(request, {
+            'AAPL': _hold_backtest_result(_zigzag_frame(), 500.0, total_trades=2, win_rate_pct=50.0),
+            'MSFT': _hold_backtest_result(_zigzag_frame(), 250.0, total_trades=0, win_rate_pct=0.0),
+        })['data']
+
+        by_ticker = {r['ticker']: r['win_rate'] for r in data['individual_results']}
+        assert by_ticker == {'AAPL': 50.0, 'MSFT': None, 'CASH': None}
+        assert {k: v['win_rate'] for k, v in data['individual_returns'].items()} == by_ticker
+
+    def test_per_asset_win_rate_is_none_on_buy_hold_path(self):
+        """buy&hold 포지션은 청산된 거래가 없다. 과거에는 수익이면 100, 아니면 0을 지어냈다."""
+        request = _request([
+            {'symbol': 'AAPL', 'amount': 700.0},
+            {'symbol': 'CASH', 'amount': 300.0, 'asset_type': 'cash'},
+        ])
+        data = _run_buy_hold(request, {'AAPL': _geometric_frame(0.0005)})['data']
+
+        assert [r['win_rate'] for r in data['individual_results']] == [None, None]
+
     def test_none_survives_json_serialization_as_null(self):
         _, strategy = self._both(_geometric_frame(0.0005))
 
