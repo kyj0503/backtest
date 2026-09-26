@@ -11,6 +11,19 @@
 - **리밸런싱 전략**: 주기적 자산 비중 조절 효과 검증
 - **상세 분석 리포트**: 수익률, 변동성, 샤프 지수 등 통계 지표 제공
 
+### 백테스트 기간 제약
+
+- **최소 기간 30일.** 종료일 - 시작일이 30일 미만이면 실행하지 않는다
+  (예: 2023-01-01 ~ 2023-01-31은 30일이라 허용, 2023-01-01 ~ 2023-01-30은 거부).
+  - 이유: CAGR·샤프 지수·연환산 변동성처럼 1년 단위로 환산하는 지표는 30일 미만 표본에서
+    며칠의 등락이 연 단위로 부풀려져 의미가 없다.
+  - 프론트엔드는 제출 전에 같은 규칙으로 막고, API(`POST /api/v1/backtest`)는
+    `422`로 거부한다. 두 쪽 모두 `백테스트 기간이 너무 짧습니다: N일 (최소 30일 필요)`라고 안내한다.
+  - 값의 출처는 백엔드 `Settings.min_backtest_period_days`(`backtest_be_fast/app/core/config.py`)이고,
+    프론트엔드는 같은 값을 `VALIDATION_RULES.MIN_BACKTEST_PERIOD_DAYS`
+    (`backtest_fe/src/features/backtest/model/constants/validation.ts`)로 둔다. 바꿀 때는 두 곳을 함께 바꾼다.
+- 종료일은 미래일 수 없고, 시작일보다 뒤여야 한다.
+
 ---
 
 ## 기술 스택
@@ -19,7 +32,7 @@
 |:-----|:-----|
 | **Backend** | Python 3.11, FastAPI, SQLAlchemy, pandas, numpy, backtesting.py 0.3.3 |
 | **Frontend** | TypeScript 5, React 19, Vite 7, React hooks (`useState`/`useReducer`) + localStorage, Recharts 3, React Router 7, shadcn/ui, Tailwind CSS 4 |
-| **Database** | MySQL 8.0 |
+| **Database** | MySQL 8.4 (`compose.dev.yaml`의 `mysql:8.4`) |
 | **Infra** | Docker, Docker Compose, Nginx, Jenkins (`home-server`에서 중앙 관리) |
 | **Test** | Pytest (BE), Vitest 4, React Testing Library, Playwright (FE) |
 
@@ -193,7 +206,7 @@ docker build --target test ./backtest_fe        # lint → type-check ×2 → vi
 docker build --target test ./backtest_be_fast   # pytest tests/unit
 ```
 
-현재 기준선은 BE 189건(`tests/unit`), FE 112건이며 모두 통과합니다. 실패가 보이면 회귀입니다. (BE에는 이 외에 DB가 필요한 `tests/integration` 스위트가 별도로 있으며, 배포 전 테스트 단계(Jenkins `Pre-deploy Tests` 스테이지)에는 포함되지 않습니다.)
+테스트 개수는 작업마다 바뀌므로 이 문서에 고정하지 않습니다. 최신 실측 기준선과 측정일은 [AGENTS.md](AGENTS.md)의 Testing 절 `Current baseline`을 참고하십시오. 기준선의 테스트는 모두 통과해야 하며, 실패가 보이면 회귀입니다. (BE에는 이 외에 DB가 필요한 `tests/integration` 스위트가 별도로 있으며, 배포 전 테스트 단계(Jenkins `Pre-deploy Tests` 스테이지)에는 포함되지 않습니다.)
 
 ---
 

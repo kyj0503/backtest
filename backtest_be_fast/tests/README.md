@@ -119,7 +119,7 @@ pytest -m "not integration"  # DB 없이 실행 가능한 테스트만
 
 ## 테스트 현황
 
-총 **141개 단위 테스트** (통합/E2E 제외), 전부 통과.
+테스트 수는 작업마다 바뀌므로 최신 실측 기준선과 측정일은 저장소 루트 [AGENTS.md](../../AGENTS.md)의 Testing 절 `Current baseline`을 참고하십시오. 아래 표는 단위 테스트가 **141건이던 시점의 스냅샷**이며, 이후 추가·삭제된 파일은 반영하지 않습니다(정확한 현재 목록은 `pytest tests/unit --collect-only -q`).
 
 | 카테고리 | 테스트 수 | 구성 |
 |---------|----------|------|
@@ -128,7 +128,7 @@ pytest -m "not integration"  # DB 없이 실행 가능한 테스트만
 | 스키마 테스트 | 20 | portfolio_schemas 12, request_models 8 |
 | 전략 테스트 | 18 | rsi 6, bollinger 4, sma·macd·ema·buy_hold 각 2 |
 
-CI의 `Pre-deploy Tests` 스테이지가 `docker build --target test ./backtest_be_fast`로 이 141건을 강제하므로, 실패는 회귀입니다.
+home-server 저장소의 중앙 Jenkinsfile(`cicd/jenkins/pipeline/backtest-be/`)의 `Pre-deploy Tests` 스테이지가 이 저장소의 `docker build --target test ./backtest_be_fast`를 호출해 `tests/unit` 전체를 강제하므로, 실패는 회귀입니다.
 
 ## 테스트 특징
 

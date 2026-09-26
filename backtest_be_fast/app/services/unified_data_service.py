@@ -22,8 +22,11 @@ class UnifiedDataService:
     # collect_all_unified_data()의 독립적인 I/O(심볼별 주가, 종목 메타데이터,
     # 환율, 벤치마크, 뉴스)를 병렬 실행할 때 사용하는 워커 수 상한. 무제한
     # fan-out은 외부 API(yfinance/Naver) 레이트리밋을 유발할 수 있으므로
-    # 작은 값으로 고정한다 (P2-12). DB 커넥션 풀(pool_size=40+overflow=80)
-    # 대비로도 충분히 작다.
+    # 작은 값으로 고정한다 (P2-12). 주의: 이 주석이 처음 쓰일 때의 DB 풀
+    # (pool_size=40+overflow=80)은 P2-27에서 프로세스당 6개(pool_config.py
+    # 기본값 4+2)로 줄었다. 바깥 풀(5)과 가격 조회용 안쪽 풀(최대 5)이 겹치면
+    # 한 요청이 6개를 넘는 스레드로 DB 캐시를 조회할 수 있으므로, 이 값을
+    # 올릴 때는 DATABASE_POOL_SIZE/DATABASE_MAX_OVERFLOW와 함께 검토한다.
     _MAX_PARALLEL_WORKERS = 5
 
     def __init__(self, news_service=None):
