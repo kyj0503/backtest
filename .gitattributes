@@ -1,0 +1,13 @@
+# 모든 텍스트 파일은 LF로 저장하고 LF로 체크아웃한다 (2026-09-26 정규화).
+# 로컬 core.autocrlf 설정과 무관하게 저장소 기준으로 강제된다.
+* text=auto eol=lf
+
+# 바이너리 (text=auto가 판별하지만 명시해 둔다)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary

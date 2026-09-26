@@ -19,19 +19,23 @@
 
 | 우선순위 | 남은 항목 | 내용 |
 |---|---:|---|
-| **P0** | 1 | A-01 — FE lock 파일 high 취약점. **현재 배포가 막혀 있다** |
-| **P1** | 7 | A-02~A-08 — 틀린 숫자 2건, 동시성·자원 보호 3건, 가용성·API 결합도 2건 |
-| **P2** | 6 | A-09~A-12 · A-17 · A-18 — API 계약·DB 3건, 테스트 1건, 제품 확인 2건 |
+| **P0** | 0 | — (A-01은 2026-09-26 해결, [HISTORY.md](HISTORY.md) 배치7) |
+| **P1** | 5 | A-04~A-08 — 동시성·자원 보호 3건, 가용성·API 결합도 2건 |
+| **P2** | 6 | A-09 · A-11 · A-12 · A-17~A-19 — API 계약·DB 2건, 지표 정의 1건, 테스트 1건, 제품 확인 2건 |
 | **P3** | 4 | A-13~A-16 — 죽은 코드, 문서 동기화, 대형 모듈 분리 |
 | 저장소 밖 | 4 | 배포 스크립트 태그, MySQL 8.4 실기동, Alembic baseline, 부하 튜닝 |
-| **합계** | **22** | |
+| **합계** | **19** | |
+
+> 2026-09-26 배치7에서 A-01·A-02·A-03과 신규 발견 A-20(DCA MDD 축소 보고)을
+> 처리했다. 근거와 바뀐 사용자 노출 동작은 [HISTORY.md](HISTORY.md) 맨 위 섹션 참고.
+> 같은 날 배치8에서 A-10(물리 FK)을 **FK 제거**로 닫았다 — 저장소의 물리 FK는 이제 0개다.
 
 ## 권장 처리 순서
 
-1. **A-01** — 배포 게이트 복구. 이게 빨간불인 동안은 무엇을 고쳐도 배포되지 않는다.
-2. **A-02, A-03** — 사용자에게 틀린 숫자가 나가는 두 건. 재현 테스트를 먼저 고정할 것.
+1. ~~A-01~~ · ~~A-02, A-03~~ — 2026-09-26 완료(HISTORY.md 배치7).
+2. **A-19** — DCA 연환산 수익률 정의. A-20(낙폭)과 같은 "납입금이 섞인 평가금" 문제의 남은 절반.
 3. **A-04, A-05** — 동시성 상한과 실제 작업 취소 보장. A-05는 A-04의 전제이기도 하다.
-4. **A-10** — 한 줄 변경이지만 Alembic 리비전 필요. 사고 예방 효과가 가장 크다.
+4. ~~A-10~~ — 2026-09-26 완료(물리 FK 제거, HISTORY.md 배치8).
 5. **A-07** — readiness 도입. 배포 신뢰성 직결.
 6. **A-09, A-12** — API 계약 통일 + 그 회귀망. 2번과 묶으면 효율적이다.
 7. **A-14, A-15, A-13** — 문서·죽은 코드 정리. 저비용, 다음 사람의 오판 방지.
@@ -57,6 +61,9 @@ Codex 세션이 Docker로 실제 실행해 얻은 값이다. 문서에 적힌 �
 | BE 의존성 감사 | 통과 (Bokeh 1건은 도달 불가로 기존 예외 처리) |
 | **FE 의존성 감사** | **실패 — high 2건. 현재 Jenkins 배포가 막혀 있다 → A-01** |
 
+**2026-09-26 재측정(배치7 후)**: BE 단위 **370개** · FE **188개** 통과, FE 감사 예외 없이 통과,
+BE 감사 bokeh 예외만으로 통과(tornado 6.5.8). 위 표는 08-08 기록으로 남겨 둔다.
+
 정적 계수(Claude 세션, 참고용): BE 앱 10,266줄 / 65파일, BE 테스트 10,557줄,
 FE 프로덕션 12,999줄, FE 테스트 3,725줄. 최대 파일 `portfolio_manager_service.py`
 1,010줄 · `dataSampling.ts` 736줄. 공개 라우트는 `POST /api/v1/backtest` 1개.
@@ -75,83 +82,6 @@ docker build --target audit --build-arg NPM_AUDIT_ALLOWLIST=GHSA-qwww-vcr4-c8h2 
 
 **실행하지 않은 것**: MySQL 통합 테스트, Playwright E2E, 실제 운영 DB/배포 스크립트.
 아래 항목 중 런타임 관측이 아니라 코드 구조에서 추론한 것은 해당 항목에 명시했다.
-
----
-
-## P0 — 현재 배포를 막는 문제
-
-- [ ] **A-01 [fe/infra]** FE lock 파일의 high 취약점 2건 해결 〔X-01, Claude 교차 확인〕
-
-  `scripts/audit-deps.sh fe`와 동일 조건으로 감사하면 Docker `audit` 타깃이 종료
-  코드 1을 반환한다. `Jenkinsfile:70-96`의 `Dependency Audit`은 실패를 무시하지
-  않으므로(`|| true` 없음) **현재 커밋은 배포에 도달하지 못한다.**
-
-  | 패키지 | 설치 버전 | Advisory | 의존 경로 |
-  |---|---:|---|---|
-  | `js-yaml` | 4.3.0 | `GHSA-5p4m-2wfm-xmqj` (high) | `shadcn → cosmiconfig → js-yaml` |
-  | `nanoid` | 3.3.16 | `GHSA-2v37-7h3g-55p8` (high) | `postcss → nanoid` |
-
-  `hono 4.12.33`의 moderate 건도 `shadcn → @modelcontextprotocol/sdk` 경로에 있으나
-  high 기준을 넘지 않아 차단하지는 않는다.
-
-  교차 확인(Claude): 세 버전 모두 `backtest_fe/package-lock.json`에 실재하고
-  (`:6355, :6762, :7560`), `scripts/audit-deps.sh`의 `NPM_ALLOWLIST`에는
-  react-router 1건(`GHSA-qwww-vcr4-c8h2`)만 있어 두 건은 예외 처리되지 않는다.
-
-  조치: `npm audit fix`가 제안하는 lock 변경을 먼저 검토하고, FE 품질 게이트 4종과
-  프로덕션 빌드를 다시 실행한다. **개발 도구 경로라는 이유만으로 곧장 allowlist에
-  넣지 말 것** — `postcss`는 실제 빌드 경로이며, allowlist는 "업그레이드 불가 +
-  도달 불가"가 둘 다 성립할 때만 쓴다(`scripts/audit-deps.sh` 상단 주석 참고).
-
-  완료 조건: 기존 react-router 예외만 유지한 상태에서 FE `audit` 타깃이 통과한다.
-
----
-
-## P1 — 사용자에게 틀린 숫자가 서빙됨
-
-두 건 모두 Claude 세션이 실행 경로를 정독해 찾았다. 표면적으로는 정상 200 응답이라
-테스트도 게이트도 잡지 못한다.
-
-- [ ] **A-02 [be/fe]** 전략 경로가 DCA·리밸런싱을 조용히 무시함 〔C-01 / 기존 P2-13의 잔여분〕
-
-  FE는 전략 종류와 무관하게 `investment_type`과 `rebalance_frequency`를 항상 전송한다
-  (`backtest_fe/src/features/backtest/components/PortfolioBacktestForm.tsx:54,68`).
-  그런데 `run_strategy_portfolio_backtest`(`portfolio_manager_service.py:310-556`)에는
-  `investment_type`을 읽는 코드가 **한 줄도 없고**, 응답의 `rebalance_history`는 빈
-  배열로 하드코딩된다(`:533`, 주석 "전략 포트폴리오는 리밸런싱 없음").
-
-  결과: **SMA + 매월 적립 + 분기 리밸런싱**을 설정하면 일시금·무리밸런싱 백테스트가
-  실행되고 경고가 전혀 가지 않는다. 사용자는 자신이 설정한 전략의 성과를 보고 있다고
-  믿는다.
-
-  조치(택1, 위쪽 선호):
-  - 스키마/엔드포인트에서 `strategy != buy_hold_strategy` && (`investment_type == 'dca'`
-    || `rebalance_frequency != 'none'`) 조합을 422로 거부 + FE에서 해당 컨트롤 비활성화
-  - 최소한 응답 `warnings`에 "이 전략에서는 DCA/리밸런싱이 적용되지 않습니다"를 실어 보냄
-
-  완료 조건: 위 조합이 조용히 통과하지 않는다(422이거나, 응답에 경고가 존재한다).
-
-- [ ] **A-03 [be]** buy&hold 경로의 데이터 로드 실패가 무경고 원금 증발로 나타남 〔C-02 / 기존 P2-06〕
-
-  `portfolio_data_loader.py:52-59`가 로드 실패·빈 결과 종목을 `logger.warning` 후
-  `continue`로 버린다. 그런데 그 종목의 금액은 `amounts`에 남아 `total_amount`
-  (= 수익률의 분모)에 계속 포함된다(`portfolio_manager_service.py:710`). 해당 종목은
-  `_pre_calculate_prices`에서 가격 시리즈가 만들어지지 않아
-  (`portfolio_simulation_engine.py:196-197`) 매수도 되지 않고 현금으로도 계상되지 않는다.
-
-  결과: **투자금이 사라진 것처럼 수익률이 과소보고된다.**
-
-  덧붙여 buy&hold 응답 dict에는 `warnings` 키 자체가 없다(전략 경로에만 존재 —
-  `portfolio_manager_service.py:534`). FE는 `'warnings' in data`로 분기하므로
-  (`BacktestResults.tsx:76`) 이 경로에서는 배너가 뜰 수 없다.
-
-  조치: 실패 종목 금액을 분모에서 제외하거나 현금으로 계상 + 두 경로의 `warnings` 계약 통일.
-
-  완료 조건: 종목 하나가 로드 실패한 요청에서 (a) 응답에 경고가 실리고, (b) 나머지
-  종목만으로 계산한 수익률과 일치한다.
-
-  > 이 항목은 [HISTORY.md](HISTORY.md)의 P2-06과 같은 건이다. 그쪽 체크박스가 `[x]`인데
-  > 본문은 "⏸ 미착수"였다 — 2026-08-08 통합 시 `[ ]`로 정정하고 여기로 이관했다.
 
 ---
 
@@ -242,30 +172,22 @@ Codex 세션이 배포 구성(`compose.dev-prod.yaml`)과 대조해 찾은 항�
   조치: 정의를 한쪽으로 통일(거래 기준/일 기준 중 택1, 필드명으로 구분하는 것도 방법)
   + 계산 불가 시 폴백 상수 대신 `None`.
 
-- [ ] **A-10 [db]** `daily_prices`의 `ON DELETE CASCADE` 정책 결정 〔교차: C-04 = X-10〕
+- [ ] **A-19 [be]** DCA의 연환산 수익률(CAGR)이 모든 납입금을 첫날 투자한 것으로 계산 〔2026-09-26 재감사〕
 
-  부록 A의 전수 조사 결과, 물리 FK는 1개뿐이고 그 자체는 이 규모에서 급히 제거할
-  이유가 약하다. **다만 `ON DELETE CASCADE`는 별도로 위험하다**:
+  `Annual_Return = final_value ** (365.25 / duration) - 1`(`portfolio_calculator_service.py`,
+  `portfolio_metrics.py` 두 구현 공통)에서 `final_value`는 **총 납입액 대비** 최종 평가금이다.
+  DCA는 마지막 납입금이 거의 투자되지 않았는데도 전 기간 복리를 적용받은 것처럼 나누므로
+  연환산 수익률이 실제보다 0에 가깝게 눌린다(상승장에서 과소, 하락장에서 과소 손실).
+  Sharpe도 이 값을 분자로 쓴다.
 
-  - `DELETE FROM stocks` 경로가 코드베이스에 없다 → CASCADE는 한 번도 발동한 적 없다
-  - 실제 삭제 경로는 CASCADE에 기대지 않고 자식을 명시적으로 지운다
-    (`scripts/manage_stock_splits.py:151,227`)
-  - 앞으로 `stocks` 삭제 기능이 추가되면 **코드에 드러나지 않은 채** 모든 일봉이 함께
-    삭제된다. 일괄 삭제 시 잠금·긴 트랜잭션·undo log 증가도 뒤따른다
+  A-20(낙폭)은 `Daily_Return` 누적곱으로 바꿔 해결했지만, 수익률은 **어떤 정의를 보여 줄지가
+  제품 결정**이라 코드만으로 고치지 않았다:
+  - 시간가중(TWR) — 전략·자산 자체의 성과. 낙폭과 정의가 일치한다
+  - 금액가중(MWR/XIRR) — 투자자가 실제로 경험한 수익률
+  - `Total_Return`(총 납입 대비 손익률)은 두 정의와 별개로 지금처럼 유지하는 것이 자연스럽다
 
-  즉 지금은 **쓰이지 않는데 사고 시 피해만 큰 조합**이다.
-
-  선택지:
-  1. FK 유지 + `ON DELETE RESTRICT/NO ACTION`으로 변경해 명시적 삭제만 허용 ← 최소 비용
-  2. 물리 FK 제거 + 애플리케이션이 삭제 순서와 고아 정리를 소유
-  3. 현 상태 유지 + 삭제 정책·데이터 규모 한계를 ADR로 기록
-
-  2번을 택한다면 아래를 **한 세트로** 처리해야 한다:
-  - `database/schema.sql` 갱신
-  - 기존 초기 리비전을 수정하지 말고 **새 Alembic 리비전 추가**
-  - `(stock_id, date)` PK 유지
-  - `daily_prices LEFT JOIN stocks ... WHERE stocks.id IS NULL` 고아 점검/정리 배치
-  - 부모 삭제 시 자식을 먼저 지우는 명시적 트랜잭션
+  완료 조건: 정의를 정하고 필드명/툴팁에 명시, 고정가·수수료 0 DCA에서 0%, 일정 상승률
+  가격에서 기대값과 일치하는 테스트.
 
 - [ ] **A-11 [db]** `schema.sql`과 Alembic의 스키마 정의 이중화 — 정합성 검증 부재 〔C-05〕
 
@@ -295,8 +217,9 @@ Codex 세션이 배포 구성(`compose.dev-prod.yaml`)과 대조해 찾은 항�
   - `ChartsSection` 하위 포트폴리오/벤치마크 조합
   - `reportGenerator`
 
-  **A-02·A-03이 정확히 이 구간에서 사용자에게 드러난다** — 경고 배너 미표시, 무시된
-  설정값 표시가 모두 여기다. 두 버그를 고칠 때 회귀망을 같이 까는 것이 효율적이다.
+  **A-02·A-03이 정확히 이 구간에서 사용자에게 드러났다** — 경고 배너 미표시, 무시된
+  설정값 표시가 모두 여기다. 배치7에서 두 버그는 BE·검증 로직 단위로 고쳤지만(HISTORY.md),
+  결과 화면이 `warnings` 배너를 실제로 띄우는지는 아직 컴포넌트 테스트로 고정되지 않았다.
 
   조치: 단순 스냅샷보다 정상 / 부분 데이터 / 빈 데이터 / 경고 / API 오류 시나리오를
   RTL로 검증. Playwright smoke는 전체 스택이 필요하므로 배포 전 별도 단계로 분리.
@@ -357,6 +280,10 @@ Codex 세션이 배포 구성(`compose.dev-prod.yaml`)과 대조해 찾은 항�
   - `README.md:22` 기술 스택은 MySQL **8.0**이지만 개발 Compose는 **8.4**
     (`compose.dev.yaml:47`, P2-24에서 올림).
   - 일부 내부 주석이 이미 변경된 값(과거 DB 풀 크기 등)을 참조한다.
+  - `Jenkinsfile`은 커밋 `44df5b9`에서 home-server 저장소
+    (`cicd/jenkins/pipeline/backtest-{be,fe}/`)로 이관됐는데 `CLAUDE.md`의 CI 섹션,
+    이 문서의 `Jenkinsfile:줄번호` 근거들, `docs/improvement_analysis.md`가 여전히 이 저장소의
+    파일로 가리킨다(2026-09-26 확인).
 
   조치: 변하기 쉬운 테스트 개수는 CI 배지/자동 생성으로 대체하거나 릴리스 체크리스트에
   문서 갱신을 넣는다.
@@ -393,6 +320,14 @@ Codex 세션이 배포 구성(`compose.dev-prod.yaml`)과 대조해 찾은 항�
 ---
 
 ## 부록 A — 물리 FK 전수 조사 (2026-08-08, 교차 검증됨)
+
+> **2026-09-26 갱신: 아래의 유일한 물리 FK(`daily_prices_ibfk_1`)는 배치8에서 제거했다**
+> (Alembic `7b2e9c4f1a30`, `schema.sql` 갱신). 제거는 "모든 테이블 간 참조를 논리
+> 참조로 둔다"는 정책 결정이며, 아래 "현재 FK가 즉시 결함은 아닌 이유"와 "락·데드락"
+> 분석은 그 결정 이전의 판단 기록으로 남겨 둔다. 데드락 재시도(`_retry_on_deadlock`)는
+> FK와 무관한 동시 upsert 충돌 대비라 그대로 유지한다. 고아 점검은
+> `backtest_be_fast/scripts/check_orphan_prices.py`. 운영 DB 적용 후에는 아래
+> "운영 DB 확인 SQL"이 0행을 반환해야 한다.
 
 두 세션이 **독립적으로 동일한 결론**에 도달했다. 확신도 최상.
 
@@ -484,7 +419,12 @@ WHERE TABLE_SCHEMA = 'stock_data_cache'
       무시하고 `:latest`를 pull하는 것이 빌드 #21에서 실측됨. **롤백 지점이 없다.**
       이미지는 이미 `:${BUILD_NUMBER}`로 GHCR에 있으므로 저장소 쪽 준비는 끝났다.
 - [ ] 기존 MySQL 8.0 데이터 볼륨을 8.4로 올리는 실기동 검증
-- [ ] `schema.sql`로 생성된 기존 DB에 Alembic baseline(`alembic stamp head`) 적용 절차 검증
+- [ ] `schema.sql`로 생성된 기존 DB에 Alembic baseline 적용 + FK 제거 리비전 반영
+      — **`alembic stamp head`를 쓰면 안 된다.** 배치8 이후 head(`7b2e9c4f1a30`)는
+      FK 제거 리비전이라, stamp head는 FK가 남은 DB를 "이미 제거됨"으로 기록해 버린다.
+      기존 DB(FK 있음)는 `alembic stamp d5c3763b29e6` → `alembic upgrade head` 순서로
+      적용하고, 부록 A의 확인 SQL이 0행인지 본다(dev DB에서 이 순서로 실측 확인).
+      배치8 이후 schema.sql로 새로 만든 DB는 FK가 없으므로 `stamp head`가 맞다.
 - [ ] 동시 실행 8건·60초 제한을 실제 부하로 튜닝 (A-04·A-05와 함께)
 
 ---

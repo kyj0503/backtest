@@ -57,8 +57,19 @@ CREATE TABLE stocks (
 --  (stock_id, date)를 커버하는 clustered index이고, InnoDB는 이를 역순으로도
 --  효율적으로 스캔하므로 "최신 N일" 조회(ORDER BY date DESC)에 별도 인덱스가
 --  필요 없다 — 모든 INSERT/UPDATE/DELETE에서 추가로 유지비용만 냈다.)
+--
+-- 물리 FK 없음 (A-10, 2026-09-26): stock_id는 stocks.id를 가리키는 논리 참조다.
+-- 과거의 FOREIGN KEY ... ON DELETE CASCADE는 한 번도 발동한 적이 없고(코드에
+-- DELETE FROM stocks 경로 없음), stocks 삭제 기능이 생기면 코드에 드러나지 않은
+-- 채 일봉 전체를 지우는 위험만 있었다. 참조 무결성은 애플리케이션이 맡는다:
+-- - 저장: save_ticker_data()가 한 트랜잭션에서 부모 upsert → id 조회 → 자식 저장
+-- - 삭제: stocks 행을 지우는 경로는 없다. 일봉은 명시적 DELETE로만 지운다
+--   (manage_stock_splits.py의 분할 재수집). stocks 삭제 기능을 추가한다면
+--   같은 트랜잭션에서 daily_prices를 먼저 지울 것
+-- - 고아 점검: backtest_be_fast/scripts/check_orphan_prices.py
+-- stock_news와 같은 방침이다 (아래 stock_news 주석 참고).
 CREATE TABLE daily_prices (
-    stock_id INT NOT NULL,                        -- stocks 테이블의 ID (Foreign Key)
+    stock_id INT NOT NULL,                        -- stocks.id 논리 참조 (물리 FK 없음)
     date DATE NOT NULL,                           -- 날짜
     open DECIMAL(19, 4) NOT NULL,                 -- 시가
     high DECIMAL(19, 4) NOT NULL,                 -- 고가
@@ -70,7 +81,6 @@ CREATE TABLE daily_prices (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (stock_id, date),                 -- 복합 기본 키 (성능 최적화의 핵심)
     INDEX idx_date_range (date),                  -- 날짜 범위 조회 최적화
-    FOREIGN KEY (stock_id) REFERENCES stocks(id) ON DELETE CASCADE,
     CONSTRAINT chk_prices_positive CHECK (open >= 0 AND high >= 0 AND low >= 0 AND close >= 0),
     CONSTRAINT chk_high_low CHECK (high >= low)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT '일별 주가 정보 (OHLCV)';

@@ -266,6 +266,42 @@ class PortfolioBacktestRequest(BaseModel):
         return v
     
     @model_validator(mode='after')
+    def validate_strategy_supports_dca_and_rebalancing(self):
+        """기술적 전략에 DCA/리밸런싱을 함께 요청하면 거부한다 (A-02)
+
+        전략 경로(run_strategy_portfolio_backtest)는 종목별 일시금 백테스트를
+        합산하는 구조라 investment_type과 rebalance_frequency를 읽지 않는다.
+        과거에는 이 조합이 조용히 통과해 사용자는 "SMA + 월 적립 + 분기
+        리밸런싱"의 성과를 보고 있다고 믿었지만 실제로는 일시금·무리밸런싱
+        결과였다.
+
+        rebalance_frequency는 기본값이 'monthly_1'이라, 값을 생략한 기존 API
+        호출까지 막지 않도록 명시적으로 보낸 경우(model_fields_set)만 검사한다.
+        """
+        if self.strategy == StrategyType.BUY_HOLD_STRATEGY.value:
+            return self
+
+        dca_symbols = [
+            item.symbol for item in self.portfolio
+            if item.investment_type == 'dca' and item.asset_type != 'cash'
+        ]
+        if dca_symbols:
+            raise ValueError(
+                f'{self.strategy}는 분할 매수(DCA)를 지원하지 않습니다 '
+                f'(DCA 종목: {", ".join(dca_symbols)}). '
+                'DCA는 buy_hold_strategy에서만 사용할 수 있습니다.'
+            )
+
+        if 'rebalance_frequency' in self.model_fields_set and self.rebalance_frequency != 'none':
+            raise ValueError(
+                f'{self.strategy}는 리밸런싱을 지원하지 않습니다 '
+                f'(rebalance_frequency={self.rebalance_frequency}). '
+                'rebalance_frequency를 none으로 보내거나 buy_hold_strategy를 사용하세요.'
+            )
+
+        return self
+
+    @model_validator(mode='after')
     def validate_dca_frequency_against_backtest_period(self):
         """DCA 주기가 백테스트 기간보다 짧거나 같은지 검증"""
         start = datetime.strptime(self.start_date, '%Y-%m-%d')

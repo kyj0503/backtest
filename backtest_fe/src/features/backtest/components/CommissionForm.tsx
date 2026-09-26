@@ -1,6 +1,10 @@
 import React from 'react';
 import { FormField, FinancialTermTooltip } from '@/shared/components';
-import { REBALANCE_OPTIONS } from '../model/strategyConfig';
+import {
+  REBALANCE_OPTIONS,
+  resolveRebalanceFrequency,
+  supportsDcaAndRebalancing,
+} from '../model/strategyConfig';
 
 export interface CommissionFormProps {
   rebalanceFrequency: string;
@@ -19,16 +23,9 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
   stockCount = 0,
   selectedStrategy = 'buy_hold_strategy'
 }) => {
-  // 기술적 전략 목록 (리밸런싱 불가)
-  const technicalStrategies = [
-    'sma_strategy',
-    'rsi_strategy',
-    'macd_strategy',
-    'ema_strategy',
-    'bollinger_strategy'
-  ];
-
-  const isTechnicalStrategy = technicalStrategies.includes(selectedStrategy);
+  // 기술적 전략은 리밸런싱 불가 (백엔드가 422로 거부)
+  const isTechnicalStrategy = !supportsDcaAndRebalancing(selectedStrategy);
+  const effectiveFrequency = resolveRebalanceFrequency(rebalanceFrequency, selectedStrategy, stockCount);
   const isRebalanceDisabled = stockCount < 2 || isTechnicalStrategy;
 
   // 비활성화 이유를 명확히 안내
@@ -51,7 +48,7 @@ const CommissionForm: React.FC<CommissionFormProps> = ({
           </FinancialTermTooltip>
         }
         type="select"
-        value={isRebalanceDisabled ? 'none' : rebalanceFrequency}
+        value={effectiveFrequency}
         onChange={(value) => setRebalanceFrequency(value as string)}
         options={REBALANCE_OPTIONS}
         disabled={isRebalanceDisabled}

@@ -706,9 +706,28 @@ class PortfolioManagerService:
                     end_date=request.end_date
                 )
 
+            # 데이터를 불러오지 못한 종목은 분모와 시뮬레이션에서 제외하고 경고로 알린다 (A-03)
+            #
+            # data_loader는 로드 실패·빈 결과 종목을 로그만 남기고 버린다. 과거에는
+            # 그 종목의 금액이 amounts에 남아 total_amount(= 수익률의 분모)에
+            # 포함됐는데, 가격 시리즈가 없어 매수도 현금 계상도 되지 않아 투자금이
+            # 증발한 것처럼 수익률이 과소보고됐다(AAPL + 없는 종목 반반 → 0.96%).
+            warnings = []
+            failed_keys = [
+                key for key, info in dca_info.items()
+                if info.asset_type != 'cash' and info.symbol not in portfolio_data
+            ]
+            for key in failed_keys:
+                warnings.append(
+                    f"종목 {dca_info[key].symbol}의 가격 데이터를 불러오지 못해 백테스트에서 "
+                    f"제외했습니다 (투자금 ${amounts[key]:,.2f}는 수익률 계산에 포함되지 않음)."
+                )
+                del amounts[key]
+                del dca_info[key]
+
             # 총 투자 금액 계산
             total_amount = sum(amounts.values())
-            
+
             # 현금만 있는 경우 처리
             if not portfolio_data and cash_amount > 0:
                 logger.info("현금만 있는 포트폴리오로 백테스트 실행")
@@ -772,7 +791,8 @@ class PortfolioManagerService:
                             {'symbol': 'CASH', 'weight': 1.0, 'amount': cash_amount, 'investment_type': 'lump_sum'}
                         ],
                         'equity_curve': equity_curve,
-                        'daily_returns': daily_returns
+                        'daily_returns': daily_returns,
+                        'warnings': warnings,
                     }
                 }
                 
@@ -982,10 +1002,12 @@ class PortfolioManagerService:
                     },
                     'strategy_details': strategy_details,  # 거래 로그 포함
                     'rebalance_history': rebalance_history,
-                    'weight_history': weight_history
+                    'weight_history': weight_history,
+                    # 전략 경로와 같은 계약 — FE는 'warnings' 키로 배너를 띄운다
+                    'warnings': warnings,
                 }
             }
-            
+
             logger.info(f"Buy & Hold 포트폴리오 백테스트 완료: 총 수익률 {statistics['Total_Return']:.2f}%")
             
             # --- [Custom Metrics] Record Success ---

@@ -9,6 +9,58 @@
 
 ---
 
+## 2026-09-26 라운드 (배치8 — 물리 FK 제거)
+
+> 정책 결정: 모든 테이블 간 참조를 논리 참조로 두고 물리 FK는 쓰지 않는다.
+> 저장소와 dev DB를 전수 조사한 결과 물리 FK는 `daily_prices_ibfk_1` 하나였다
+> (`stock_news`는 원래 FK 없음, ORM relationship 0건).
+
+- [x] **A-10 [db]** ✅ 2026-09-26 (선택지 2: 물리 FK 제거) — `daily_prices.stock_id → stocks.id ON DELETE CASCADE` 제거.
+  - `database/schema.sql`: FOREIGN KEY 줄 삭제, 논리 참조와 무결성 책임(저장 트랜잭션 순서, 명시적 삭제, 고아 점검)을 주석으로 명시
+  - Alembic `7b2e9c4f1a30`(down `d5c3763b29e6`): 초기 리비전은 수정하지 않고 새 리비전 추가. FK 이름은 `information_schema`에서 찾아 지운다(운영 DB의 자동 명명이 달라도 동작, FK가 이미 없으면 no-op). downgrade는 같은 CASCADE FK를 복원
+  - `(stock_id, date)` PK 유지 — stock_id 조회 인덱스를 이미 제공하므로 인덱스 변경 없음
+  - `scripts/check_orphan_prices.py`: 고아 일봉 점검(기본, 발견 시 종료 코드 1) / `--delete`로 정리
+  - 실측 검증(mysql:8.4):
+    - dev DB(FK·데이터 있음): `stamp d5c3763b29e6` → `upgrade head`(FK 0개) → `downgrade -1`(CASCADE FK 복원) → `upgrade head`, 행 수 불변(stocks 6 / daily_prices 4,815)
+    - 빈 DB 두 개: schema.sql initdb 경로와 `alembic upgrade head` 경로 모두 FK 0개, COMMENT 절을 뺀 `SHOW CREATE TABLE` 3개 동일(컬럼 COMMENT 유무 차이는 기존부터 있던 것 — A-11)
+    - FK 제거 후 신규 종목 저장(NVDA·GOOGL 각 502행) 정상, 고아 0
+    - 고아 행 2개 주입 → 점검 exit 1 → `--delete` 2행 삭제 → 재점검 exit 0
+  - **배포 주의**: schema.sql로 만든 기존 운영 DB는 `alembic stamp head`가 아니라 `stamp d5c3763b29e6` → `upgrade head`로 적용해야 FK가 실제로 지워진다(TODO.md "저장소 밖 운영 후속 작업").
+
+---
+
+## 2026-09-26 라운드 (배치7)
+
+> TODO.md의 권장 순서 1·2번(A-01~A-03)과, 재감사 중 새로 찾은 DCA 낙폭 버그를
+> 처리했다. 수정 전 상태를 Docker dev 스택 + 실데이터(yfinance) 요청으로 먼저
+> 재현하고, 각 버그는 수정 전 코드에서 실패하는 테스트로 고정했다
+> (`tests/unit/test_audit_batch7_fixes.py` — 수정 전 6건 실패, 수정 후 12건 통과).
+
+### 검증 기준선 (2026-09-26 실측)
+
+- [x] BE 단위 테스트 **370개** 통과 (358 → 370), Docker `--target test` 통과
+- [x] FE 테스트 **188개** 통과 (179 → 188), ESLint 경고 0 · type-check(prod·test) · 프로덕션 빌드 통과
+- [x] 의존성 감사: FE **예외 없이** 통과, BE 기존 bokeh 예외만으로 통과
+- [x] dev 스택(compose.dev.yaml) 기동 + FE 프록시 경유 실데이터 스모크 6종(일시금·DCA+리밸런싱·SMA·한국 종목 등) 정상
+
+### P0
+
+- [x] **A-01 [fe/infra]** ✅ 2026-09-26 (`npm update js-yaml nanoid browserslist fast-uri`, BE `tornado` 6.5.7→6.5.8) — 배포 게이트 복구. TODO 작성(08-08) 이후 권고가 늘어 **FE high 4건**(js-yaml·nanoid에 browserslist·fast-uri 추가), **BE도 tornado 3건**(PYSEC-2026-3928 등, bokeh 전이 의존성)으로 양쪽 게이트가 모두 막혀 있었다. `npm audit fix`는 npm 10.9 내부 오류(`Cannot read properties of null (reading 'edgesOut')`)로 중단되므로 대상 패키지를 직접 `npm update`했다. 이때 lock 파일에 남아 있던 `patch-package` 트리(package.json에서는 이미 제거된 잔재)가 함께 정리됐다. react-router 예외(`GHSA-qwww-vcr4-c8h2`)는 7.18.2가 더 이상 범위로 보고되지 않아 제거 — 예외 목록을 비운 상태로 FE audit 통과 확인.
+
+### P1 — 사용자에게 틀린 숫자
+
+- [x] **A-02 [be/fe]** ✅ 2026-09-26 (스키마 422 + FE 검증·전송값 정리) — 기술적 전략 + DCA/리밸런싱 조합이 조용히 일시금·무리밸런싱으로 실행되던 문제. `PortfolioBacktestRequest.validate_strategy_supports_dca_and_rebalancing`이 DCA 종목 또는 **명시적으로 보낸** `rebalance_frequency != 'none'`을 거부한다(기본값 `monthly_1` 때문에 필드를 생략한 기존 호출은 막지 않도록 `model_fields_set`만 검사). FE는 `supportsDcaAndRebalancing`/`resolveRebalanceFrequency`(`model/constants/rebalancing.ts`)로 판단을 한곳에 모았다 — 드롭다운은 `none`으로 보이는데 state의 `monthly_3`이 그대로 전송되던 불일치도 이것으로 해소. 기술적 전략 + DCA는 제출 전 검증 오류로 안내한다.
+- [x] **A-03 [be]** ✅ 2026-09-26 — 로드 실패 종목의 금액이 분모에 남아 수익률이 과소보고되던 문제(실데이터 재현: AAPL + 없는 종목 반반 → 0.96%, 경고 없음). 로드 후 가격 데이터가 없는 주식 항목을 `amounts`/`dca_info`에서 제외하고 `warnings`에 사유와 제외 금액을 싣는다. buy&hold 응답(현금 전용 결과 포함)에도 `warnings` 키가 항상 있어 전략 경로와 계약이 같아졌다.
+- [x] **A-20 [be]** ✅ 2026-09-26 (재감사 신규 발견) — **DCA의 MDD가 납입금에 가려 축소 보고됨.** 두 통계 구현(`PortfolioCalculator`, `PortfolioMetrics`)이 낙폭을 `Portfolio_Value`(평가금)로 쟀는데, DCA는 납입금이 평가금을 계속 신고점으로 밀어 올린다. 재현: 2년간 100→60(-40%) 꾸준히 하락하는 종목에 월 적립 → 총수익률 -24%인데 **MDD -2.85%**. 이미 납입금을 제외해 계산되는 `Daily_Return`의 누적곱(시간가중 지수)으로 낙폭을 재도록 `metrics_math.drawdown_from_returns`로 통합했다. 납입이 없으면 지수가 평가금과 비례하므로 일시금·전략 경로 결과는 불변(기존 테스트 전부 통과). 누적곱의 부동소수점 오차(완전 회복일이 0.9999…)가 가짜 낙폭일을 만들어 `Avg_Drawdown`을 반토막 내는 문제가 있어 `DRAWDOWN_EPSILON`으로 0 처리한다.
+
+### ⚠️ 이번 작업으로 바뀐 사용자 노출 동작
+
+- 기술적 전략(SMA·RSI·MACD·EMA·Bollinger)에 DCA 종목이나 명시적 리밸런싱 주기를 보내면 이제 **422**다. 이전에는 200으로 통과했지만 그 설정은 한 번도 적용된 적이 없다.
+- 데이터를 못 불러온 종목은 결과(`portfolio_composition` 포함)에서 빠지고 경고 배너로 안내된다. 수익률은 나머지 종목 기준으로 바뀐다.
+- DCA 포트폴리오의 MDD·평균 낙폭이 커진다(정확해진다). 일시금은 변화 없음.
+
+---
+
 ## 2026-08-02 라운드
 
 > 2026-08-02. 두 독립 분석의 통합본:
