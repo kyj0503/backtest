@@ -21,7 +21,7 @@
 # 재생성: `docker compose -f compose.dev.yaml exec -T backtest-be-fast pip freeze`
 # 를 다시 떠서 requirements.txt에 선언된 패키지들의 의존성 클로저만 갱신한다.
 # CRITICAL: backtesting==0.3.3 / bokeh==2.4.3 / numpy<2 는 backtesting.py 0.3.3의
-# 강제 요구사항이다 — 메이저 버전을 올리지 말 것 (CLAUDE.md 제약 #2 참고).
+# 강제 요구사항이다 — 메이저 버전을 올리지 말 것 (AGENTS.md 제약 #2 참고).
 #
 # alembic/Mako는 requirements.txt에 추가된 alembic==1.18.5(P2-28)의
 # 의존성이며, 이미 고정된 SQLAlchemy==2.0.51과 충돌 없이 해석됨을 확인했다.
