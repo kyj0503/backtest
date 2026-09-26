@@ -10,7 +10,7 @@ FastAPI 애플리케이션 메인 진입점
 **주요 기능**:
 1. CORS 설정: 프론트엔드(React)와의 크로스 오리진 요청 허용
 2. API 라우팅: /api/v1 경로로 모든 백테스트 API 제공
-3. 헬스 체크: /health 엔드포인트로 서버 상태 확인
+3. 헬스 체크: /health(liveness, 프로세스 생존만) + /health/ready(readiness, MySQL 포함, A-07)
 4. 에러 핸들링: 전역 예외 처리기 등록
 
 **연관 컴포넌트**:
@@ -31,7 +31,8 @@ from datetime import datetime
 
 from .core.config import settings
 from .api.v1.api import api_router
-from .schemas.responses import HealthResponse
+from .schemas.responses import HealthResponse, ReadinessResponse
+from .services.database import readiness
 
 # 로깅 설정
 logging.basicConfig(
@@ -99,9 +100,11 @@ async def root():
 @app.get("/health", response_model=HealthResponse, tags=["시스템"])
 async def health_check():
     """
-    시스템 헬스체크
-    
-    서버와 주요 서비스들의 상태를 확인합니다.
+    liveness: 프로세스가 살아서 요청을 받는지만 확인한다.
+
+    DB·외부 API를 보지 않는다(A-07). 재시작으로 고쳐지지 않는 의존성 장애를
+    여기 넣으면 DB가 내려갔을 때 멀쩡한 앱까지 재시작 대상이 된다. 의존성까지
+    포함한 "요청을 처리할 수 있는가"는 /health/ready가 담당한다.
     """
     try:
         # 외부 네트워크 호출 없이 경량 자체 점검
@@ -118,6 +121,32 @@ async def health_check():
     except Exception as e:
         logger.error(f"헬스체크 실패: {str(e)}")
         raise HTTPException(status_code=503, detail="서비스 상태 불량")
+
+
+@app.get(
+    "/health/ready",
+    response_model=ReadinessResponse,
+    responses={503: {"model": ReadinessResponse, "description": "의존성 준비 안 됨"}},
+    tags=["시스템"],
+)
+async def readiness_check():
+    """
+    readiness: MySQL에 제한 시간(readiness_db_timeout_seconds) 안에 `SELECT 1`.
+
+    실패·시간 초과면 같은 형식의 본문으로 503을 반환한다. 외부 Yahoo/Naver API는
+    조건에 넣지 않는다 — 외부 장애가 배포 실패로 번지지 않도록(A-07).
+    """
+    db_ok, db_reason = await readiness.database_readiness_probe.check()
+    body = ReadinessResponse(
+        status="ready" if db_ok else "not_ready",
+        timestamp=datetime.now(),
+        version=settings.version,
+        checks={"database": db_reason},
+    )
+    return JSONResponse(
+        status_code=200 if db_ok else 503,
+        content=body.model_dump(mode="json"),
+    )
 
 
 # 전역 예외 핸들러

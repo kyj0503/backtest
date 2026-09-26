@@ -110,6 +110,10 @@ class Settings(BaseSettings):
     database_user: Optional[str] = Field(default=None, env="DATABASE_USER")
     database_password: Optional[str] = Field(default=None, env="DATABASE_PASSWORD")
     database_name: Optional[str] = Field(default=None, env="DATABASE_NAME")
+
+    # readiness(/health/ready)가 MySQL `SELECT 1`을 기다리는 최대 시간(초) (A-07).
+    # 드라이버 connect/read 타임아웃도 이 값(올림, 최소 1초)으로 건다.
+    readiness_db_timeout_seconds: float = 2.0
     
     # pydantic v2 configuration
     model_config = {
