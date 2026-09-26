@@ -16,6 +16,7 @@ from datetime import datetime, date, timedelta
 from app.utils.data_fetcher import data_fetcher
 from app.services.database.connection_manager import DatabaseConnectionManager
 from app.core.exceptions import DataNotFoundError
+from app.core.cancellation import cancellable_sleep, check_cancelled
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class YFinanceRepository:
                 if '1213' in str(e) or 'Deadlock' in str(e) or 'Lock wait timeout' in str(e):
                     self.logger.warning(f"DB Deadlock/Timeout detected (Attempt {attempt+1}/{max_retries}): {e}")
                     last_error = e
-                    time.sleep(delay * (attempt + 1))  # Exponential backoff-ish
+                    cancellable_sleep(delay * (attempt + 1))  # Exponential backoff-ish (A-05: 취소 시 즉시 중단)
                 else:
                     raise e
             except Exception as e:
@@ -238,6 +239,7 @@ class YFinanceRepository:
         last_exception = None
 
         for attempt in range(1, max_retries + 1):
+            check_cancelled()  # A-05
             try:
                 self.logger.info(f"[시도 {attempt}/{max_retries}] {ticker} 데이터 로드 중... ({start_date} ~ {end_date})")
 
@@ -251,7 +253,7 @@ class YFinanceRepository:
                 if attempt < max_retries:
                     wait_time = retry_delay * attempt  # 점진적 증가 (2초, 4초, 6초...)
                     self.logger.info(f"[재시도 대기] {wait_time}초 후 {ticker} 데이터 재시도...")
-                    time.sleep(wait_time)
+                    cancellable_sleep(wait_time)  # A-05: 취소 시 대기를 끊고 중단
                 continue
 
             if df is not None and not df.empty:

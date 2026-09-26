@@ -17,6 +17,7 @@ from app.utils.currency_converter import currency_converter
 from app.constants.data_loading import TradingThresholds
 from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
+from app.core.cancellation import check_cancelled
 
 logger = logging.getLogger(__name__)
 
@@ -447,6 +448,9 @@ class PortfolioSimulationEngine:
 
         # 2. 메인 루프 실행
         for current_date in date_range:
+            # A-05: 타임아웃·연결 끊김 후 취소 신호를 하루 단위로 확인한다
+            # (토큰이 없으면 no-op).
+            check_cancelled()
             daily_cash_inflow = 0.0  # 당일 추가 투자금 (DCA)
             if current_date.date() < start_date_obj.date():
                 continue

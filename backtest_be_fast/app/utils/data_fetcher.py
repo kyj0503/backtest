@@ -10,6 +10,7 @@ from datetime import datetime, date
 import logging
 
 from app.core.exceptions import DataNotFoundError, InvalidSymbolError, YfinanceRateLimitError
+from app.core.cancellation import check_cancelled
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,9 @@ class DataFetcher:
 
         def _try_download(s_str, e_str, method='history'):
             nonlocal data
+            # A-05: 다운로드 시도(최대 6회) 사이의 취소 지점. BacktestCancelled는
+            # BaseException이라 아래 except Exception에 잡히지 않는다.
+            check_cancelled()
             try:
                 if method == 'history':
                     d = stock.history(start=s_str, end=e_str, auto_adjust=True, prepost=False)

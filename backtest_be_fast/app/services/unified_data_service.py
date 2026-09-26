@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional
 from .data_service import data_service
 from app.repositories.stock_repository import get_stock_repository
 from ..core.config import settings
+from ..core.cancellation import submit_with_context
 
 logger = logging.getLogger(__name__)
 
@@ -334,8 +335,9 @@ class UnifiedDataService:
         price_histories: Dict[str, pd.DataFrame] = {}
         max_workers = min(len(symbols), self._MAX_PARALLEL_WORKERS)
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # A-05: submit_with_context로 취소 토큰(ContextVar)을 수집 스레드에 넘긴다.
             future_to_symbol = {
-                executor.submit(self._fetch_price_history, symbol, start_date, end_date): symbol
+                submit_with_context(executor, self._fetch_price_history, symbol, start_date, end_date): symbol
                 for symbol in symbols
             }
             for future in concurrent.futures.as_completed(future_to_symbol):
@@ -375,14 +377,15 @@ class UnifiedDataService:
             번만 조회한다 (기존에는 심볼당 두 번 조회했다).
         """
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._MAX_PARALLEL_WORKERS) as executor:
-            price_histories_future = executor.submit(
-                self._fetch_price_histories, symbols, start_date, end_date
+            # A-05: submit_with_context로 취소 토큰(ContextVar)을 수집 스레드에 넘긴다.
+            price_histories_future = submit_with_context(
+                executor, self._fetch_price_histories, symbols, start_date, end_date
             )
-            ticker_info_future = executor.submit(self.collect_ticker_info, symbols)
-            exchange_future = executor.submit(self.collect_exchange_data, start_date, end_date)
-            benchmark_future = executor.submit(self.collect_benchmark_data, start_date, end_date)
+            ticker_info_future = submit_with_context(executor, self.collect_ticker_info, symbols)
+            exchange_future = submit_with_context(executor, self.collect_exchange_data, start_date, end_date)
+            benchmark_future = submit_with_context(executor, self.collect_benchmark_data, start_date, end_date)
             news_future = (
-                executor.submit(self.collect_latest_news, symbols, news_display_count)
+                submit_with_context(executor, self.collect_latest_news, symbols, news_display_count)
                 if include_news else None
             )
 
