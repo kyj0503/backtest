@@ -179,6 +179,26 @@ describe('PortfolioPage 결과 흐름', () => {
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
   })
 
+  it('성공 뒤 재실행이 실패하면 이전 결과를 지우고 오류만 보여 준다 (A-22)', async () => {
+    server.use(
+      http.post(ENDPOINT, () => HttpResponse.json(makePortfolioResponse()), { once: true }),
+      http.post(ENDPOINT, () => HttpResponse.json({ detail: '일시적 오류' }, { status: 503 }))
+    )
+    renderPage()
+    const user = await submit()
+    expect(await screen.findByRole('heading', { name: '백테스트 성과' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '백테스트 실행' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('일시적 오류')
+    expect(screen.queryByRole('heading', { name: '백테스트 성과' })).not.toBeInTheDocument()
+
+    // 닫기는 오류만 지운다 — 지울 결과가 없으니 시작 안내로 돌아간다.
+    await user.click(screen.getByRole('button', { name: '닫기' }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByText('나만의 투자 전략을 검증해보세요')).toBeInTheDocument()
+  })
+
   it('200이지만 포트폴리오 구성이 빠진 응답은 빈 결과 안내를 보여 준다', async () => {
     const response = makePortfolioResponse()
     const { portfolio_composition: _omit, ...rest } = response.data as unknown as Record<
