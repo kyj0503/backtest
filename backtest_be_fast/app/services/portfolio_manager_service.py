@@ -87,15 +87,25 @@ class PortfolioManagerService:
 
     @staticmethod
     def _calculate_weighted_stats(portfolio_results: Dict[str, Any]) -> Dict[str, float]:
-        """포트폴리오 결과에서 가중 평균 통계를 계산합니다."""
+        """포트폴리오 결과에서 종목별 전략 통계를 합산·가중평균합니다.
+
+        `trade_win_rate`는 전 종목의 거래를 합친 거래 기준 승률(%)이다 —
+        종목별 승률을 거래 수로 가중평균하면 "이긴 거래 수 / 전체 거래 수"와 같다.
+        과거에는 투자금 비중으로 가중평균해 거래가 없는 현금 비중만큼 승률이
+        깎였다(현금 50% → 승률 절반). 거래가 하나도 없으면 None.
+        """
         total_trades = sum(
             r.get('strategy_stats', {}).get('total_trades', 0)
             for r in portfolio_results.values()
         )
-        weighted_win_rate = sum(
-            r['weight'] * r.get('strategy_stats', {}).get('win_rate_pct', 0)
-            for r in portfolio_results.values()
-        )
+        winning_trades = 0.0
+        for r in portfolio_results.values():
+            stats = r.get('strategy_stats', {})
+            trades = stats.get('total_trades', 0) or 0
+            win_rate = stats.get('win_rate_pct', 0) or 0
+            if trades > 0 and np.isfinite(win_rate):
+                winning_trades += trades * win_rate / 100
+        trade_win_rate = winning_trades / total_trades * 100 if total_trades > 0 else None
         weighted_max_drawdown = sum(
             r['weight'] * abs(r.get('strategy_stats', {}).get('max_drawdown_pct', 0))
             for r in portfolio_results.values()
@@ -106,27 +116,9 @@ class PortfolioManagerService:
         )
         return {
             'total_trades': total_trades,
-            'weighted_win_rate': weighted_win_rate,
+            'trade_win_rate': trade_win_rate,
             'weighted_max_drawdown': weighted_max_drawdown,
             'weighted_sharpe_ratio': weighted_sharpe_ratio,
-        }
-
-    @staticmethod
-    def _calculate_daily_return_stats(daily_returns: Dict[str, float]) -> Dict[str, float]:
-        """일별 수익률에서 연간 변동성, 프로핏 팩터 등을 계산합니다."""
-        returns_list = list(daily_returns.values())
-        daily_volatility = np.std(returns_list) if len(returns_list) > 1 else 0.0
-        annual_volatility = daily_volatility * np.sqrt(252)
-        positive_returns = [r for r in returns_list if r > 0]
-        negative_returns = [r for r in returns_list if r < 0]
-        total_gains = sum(positive_returns) if positive_returns else 0.0
-        total_losses = abs(sum(negative_returns)) if negative_returns else 0.0
-        profit_factor = total_gains / total_losses if total_losses > 0 else 0.0
-        return {
-            'annual_volatility': annual_volatility,
-            'profit_factor': profit_factor,
-            'positive_days': len(positive_returns),
-            'negative_days': len(negative_returns),
         }
 
     @staticmethod
@@ -456,6 +448,8 @@ class PortfolioManagerService:
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
             duration_days = (end_date_obj - start_date_obj).days
+            # 전략 경로는 중도 납입이 없어(A-02: DCA 거부) 최종/원금 연환산이 곧
+            # 시간가중(TWR) 연환산과 같은 정의다 (A-19)
             annual_return = ((total_portfolio_value / total_amount) ** (365.25 / duration_days) - 1) * 100 if duration_days > 0 else 0
 
             # equity curve, daily returns, weight history 계산
@@ -463,12 +457,13 @@ class PortfolioManagerService:
                 request, portfolio_results, total_amount
             )
 
-            # daily_returns 기반 통계
-            dr_stats = self._calculate_daily_return_stats(daily_returns)
-
             # 집계된 equity curve에서 실제 포트폴리오 지표(Sharpe/MDD/AvgDD/Peak/
             # 거래일수)를 계산한다. 종목별 지표의 가중평균은 상관관계와 하락 시점
             # 차이를 무시하므로 포트폴리오 전체의 진짜 지표가 아니다 (P2-08).
+            # 일 기준 지표(변동성·상승/하락일·연속일·Win_Rate·Profit_Factor)도 모두
+            # 여기서 가져와 buy&hold 경로와 같은 정의를 쓴다 (A-09). 과거에는
+            # Win_Rate가 거래 승률의 금액 가중평균, Profit_Factor 폴백이 0.0이라
+            # 전략만 바꿔도 같은 필드의 의미가 달라졌다.
             true_portfolio_stats = self._calculate_true_portfolio_stats(
                 equity_curve, daily_returns, total_amount
             )
@@ -483,18 +478,20 @@ class PortfolioManagerService:
                 'Peak_Value': true_portfolio_stats['Peak_Value'],
                 'Total_Return': portfolio_return,
                 'Annual_Return': annual_return,
-                'Annual_Volatility': dr_stats['annual_volatility'],
+                'Annual_Volatility': true_portfolio_stats['Annual_Volatility'],
                 'Sharpe_Ratio': true_portfolio_stats['Sharpe_Ratio'],
                 'Max_Drawdown': true_portfolio_stats['Max_Drawdown'],
                 'Avg_Drawdown': true_portfolio_stats['Avg_Drawdown'],
-                'Max_Consecutive_Gains': 0,
-                'Max_Consecutive_Losses': 0,
+                'Max_Consecutive_Gains': true_portfolio_stats['Max_Consecutive_Gains'],
+                'Max_Consecutive_Losses': true_portfolio_stats['Max_Consecutive_Losses'],
                 'Total_Trading_Days': true_portfolio_stats['Total_Trading_Days'],
                 'Total_Trades': weighted_stats['total_trades'],
-                'Positive_Days': dr_stats['positive_days'],
-                'Negative_Days': dr_stats['negative_days'],
-                'Win_Rate': weighted_stats['weighted_win_rate'],
-                'Profit_Factor': dr_stats['profit_factor']
+                'Positive_Days': true_portfolio_stats['Positive_Days'],
+                'Negative_Days': true_portfolio_stats['Negative_Days'],
+                'Win_Rate': true_portfolio_stats['Win_Rate'],
+                # 거래 기준 승률(전 종목 거래 합산). 전략 경로에만 있다.
+                'Trade_Win_Rate': weighted_stats['trade_win_rate'],
+                'Profit_Factor': true_portfolio_stats['Profit_Factor'],
             }
 
             individual_results_list = self._format_individual_results_list(
@@ -756,7 +753,9 @@ class PortfolioManagerService:
                     'Total_Trading_Days': duration_days,
                     'Positive_Days': 0,
                     'Negative_Days': 0,
-                    'Win_Rate': 0.0
+                    'Win_Rate': 0.0,
+                    # 손실일이 없으니 정의되지 않는다 — 다른 경로와 같은 계약 (A-09)
+                    'Profit_Factor': None,
                 }
                 
                 individual_returns = {

@@ -12,8 +12,12 @@ import logging
 from app.schemas.schemas import PortfolioBacktestRequest
 from app.utils.metrics_math import (
     annualized_volatility,
+    daily_profit_factor,
     drawdown_from_returns,
     safe_sharpe_ratio,
+    time_weighted_annual_return,
+    twr_start_ratio,
+    up_day_ratio,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,7 +56,11 @@ class PortfolioCalculator:
         # 변동성 및 샤프 비율
         daily_returns = portfolio_data['Daily_Return']
         annual_volatility = annualized_volatility(daily_returns)
-        annual_return = ((final_value ** (365.25 / duration)) - 1) * 100 if duration > 0 else 0
+        # 연환산 수익률은 시간가중(TWR) — 납입금을 뺀 Daily_Return의 누적곱으로 구해
+        # DCA 납입 시점의 영향을 받지 않는다 (A-19, metrics_math 참고)
+        annual_return = time_weighted_annual_return(
+            daily_returns, duration, twr_start_ratio(portfolio_data)
+        )
 
         # 무위험 수익률을 0으로 가정한 샤프 비율
         sharpe_ratio = safe_sharpe_ratio(annual_return, annual_volatility)
@@ -62,13 +70,8 @@ class PortfolioCalculator:
         consecutive_gains = PortfolioCalculator._get_max_consecutive(daily_changes, True)
         consecutive_losses = PortfolioCalculator._get_max_consecutive(daily_changes, False)
 
-        # Profit Factor 계산 (이익일 수익률의 합 / 손실일 손실률의 절댓값 합)
-        positive_returns = daily_returns[daily_returns > 0]
-        negative_returns = daily_returns[daily_returns < 0]
-
-        gross_profit = positive_returns.sum() if len(positive_returns) > 0 else 0
-        gross_loss = abs(negative_returns.sum()) if len(negative_returns) > 0 else 0
-        profit_factor = (gross_profit / gross_loss) if gross_loss > 0 else (2.0 if gross_profit > 0 else 1.0)
+        # Profit Factor: 일간 이익 합 / 일간 손실 합. 손실일이 없으면 None (A-09)
+        profit_factor = daily_profit_factor(daily_returns)
 
         # 실제 거래 횟수 추출 (DataFrame 메타데이터에서)
         total_trades = portfolio_data.attrs.get('total_trades', 0)
@@ -92,7 +95,8 @@ class PortfolioCalculator:
             'Total_Trades': total_trades,
             'Positive_Days': len(daily_returns[daily_returns > 0]),
             'Negative_Days': len(daily_returns[daily_returns < 0]),
-            'Win_Rate': len(daily_returns[daily_returns > 0]) / len(daily_returns) * 100 if len(daily_returns) > 0 else 0,
+            # 일 기준 승률(상승일 비율). 전략 경로도 같은 정의를 쓴다 (A-09)
+            'Win_Rate': up_day_ratio(daily_returns),
             'Profit_Factor': profit_factor
         }
 

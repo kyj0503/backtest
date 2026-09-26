@@ -87,6 +87,7 @@ export interface PortfolioStatistics {
   Final_Value: number;
   Peak_Value: number;
   Total_Return: number;
+  /** 연환산 수익률(%) — 시간가중(TWR). DCA 납입 시점의 영향을 뺀 연평균 복리 수익률 */
   Annual_Return: number;
   Annual_Volatility: number;
   Sharpe_Ratio: number;
@@ -97,8 +98,12 @@ export interface PortfolioStatistics {
   Total_Trading_Days: number;
   Positive_Days: number;
   Negative_Days: number;
+  /** 일 기준 승률(%): 상승일 / 전체 거래일. 전략·buy&hold 경로 공통 정의 */
   Win_Rate: number;
-  Profit_Factor: number;
+  /** 거래 기준 승률(%): 전 종목 거래 합산. 전략 경로에만 있고, 거래가 없으면 null */
+  Trade_Win_Rate?: number | null;
+  /** 일간 수익 합 / 일간 손실 합. 손실일이 없으면 계산 불가라 null */
+  Profit_Factor: number | null;
 }
 
 export interface ChartData {
