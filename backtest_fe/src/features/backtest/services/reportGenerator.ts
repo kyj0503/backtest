@@ -23,6 +23,15 @@ interface SummaryStats {
   [key: string]: unknown;
 }
 
+// 계산 불가(null) 통계는 숫자 대신 N/A로 쓴다 — Profit_Factor는 손실일이 없으면 null이다 (A-09)
+const fixedOrNA = (value: number | null | undefined, digits = 2): string =>
+  typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'N/A';
+
+const percentOrNA = (value: number | null | undefined): string => {
+  const formatted = fixedOrNA(value);
+  return formatted === 'N/A' ? formatted : `${formatted}%`;
+};
+
 export const generateTextReport = (data: BacktestResultData, isPortfolio: boolean): string => {
   const lines: string[] = [];
   const timestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
@@ -56,7 +65,7 @@ export const generateTextReport = (data: BacktestResultData, isPortfolio: boolea
     lines.push(`  최고 자산가치       : $${stats.Peak_Value.toLocaleString()}`);
     lines.push('');
     lines.push(`  총 수익률           : ${stats.Total_Return.toFixed(2)}%`);
-    lines.push(`  연간 수익률         : ${stats.Annual_Return.toFixed(2)}%`);
+    lines.push(`  연환산 수익률(시간가중): ${stats.Annual_Return.toFixed(2)}%`);
     lines.push(`  연간 변동성         : ${stats.Annual_Volatility.toFixed(2)}%`);
     lines.push('');
     lines.push(`  샤프 비율           : ${stats.Sharpe_Ratio.toFixed(2)}`);
@@ -66,8 +75,11 @@ export const generateTextReport = (data: BacktestResultData, isPortfolio: boolea
     lines.push(`  총 거래일수         : ${stats.Total_Trading_Days}일`);
     lines.push(`  상승일수            : ${stats.Positive_Days}일`);
     lines.push(`  하락일수            : ${stats.Negative_Days}일`);
-    lines.push(`  승률                : ${stats.Win_Rate.toFixed(2)}%`);
-    lines.push(`  프로핏 팩터         : ${stats.Profit_Factor.toFixed(2)}`);
+    lines.push(`  승률(일 기준)       : ${stats.Win_Rate.toFixed(2)}%`);
+    if (stats.Trade_Win_Rate !== undefined) {
+      lines.push(`  거래 승률           : ${percentOrNA(stats.Trade_Win_Rate)}`);
+    }
+    lines.push(`  프로핏 팩터         : ${fixedOrNA(stats.Profit_Factor)}`);
     lines.push(`  연속 상승 최대      : ${stats.Max_Consecutive_Gains}일`);
     lines.push(`  연속 하락 최대      : ${stats.Max_Consecutive_Losses}일`);
     lines.push('');
@@ -192,7 +204,7 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
     csvRows.push(`최종 자산가치,$${stats.Final_Value.toLocaleString()}`);
     csvRows.push(`최고 자산가치,$${stats.Peak_Value.toLocaleString()}`);
     csvRows.push(`총 수익률,${stats.Total_Return.toFixed(2)}%`);
-    csvRows.push(`연간 수익률,${stats.Annual_Return.toFixed(2)}%`);
+    csvRows.push(`연환산 수익률(시간가중),${stats.Annual_Return.toFixed(2)}%`);
     csvRows.push(`연간 변동성,${stats.Annual_Volatility.toFixed(2)}%`);
     csvRows.push(`샤프 비율,${stats.Sharpe_Ratio.toFixed(2)}`);
     csvRows.push(`최대 낙폭(MDD),${stats.Max_Drawdown.toFixed(2)}%`);
@@ -200,8 +212,11 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
     csvRows.push(`총 거래일수,${stats.Total_Trading_Days}`);
     csvRows.push(`상승일수,${stats.Positive_Days}`);
     csvRows.push(`하락일수,${stats.Negative_Days}`);
-    csvRows.push(`승률,${stats.Win_Rate.toFixed(2)}%`);
-    csvRows.push(`프로핏 팩터,${stats.Profit_Factor.toFixed(2)}`);
+    csvRows.push(`승률(일 기준),${stats.Win_Rate.toFixed(2)}%`);
+    if (stats.Trade_Win_Rate !== undefined) {
+      csvRows.push(`거래 승률,${percentOrNA(stats.Trade_Win_Rate)}`);
+    }
+    csvRows.push(`프로핏 팩터,${fixedOrNA(stats.Profit_Factor)}`);
     csvRows.push(`연속 상승 최대,${stats.Max_Consecutive_Gains}`);
     csvRows.push(`연속 하락 최대,${stats.Max_Consecutive_Losses}`);
     csvRows.push('');
