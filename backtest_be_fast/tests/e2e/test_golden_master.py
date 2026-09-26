@@ -173,8 +173,11 @@ def test_golden_master_backtest_dca(mock_stock_repo, mock_currency_converter):
                     "dca_frequency": "weekly_1"
                 }
             ],
+            # 엔드포인트의 최소 기간(settings.min_backtest_period_days, 기본 30일)을
+            # 넘겨야 한다. 예전 11일 구간은 이 하한 도입 후 422로 실패했다.
+            # tests/e2e/data/AAPL.csv는 이 구간(2023-01-01~2023-02-28)을 모두 담는다.
             "start_date": "2023-01-01",
-            "end_date": "2023-01-12",
+            "end_date": "2023-02-28",
             "strategy": "buy_hold_strategy"
         }
         
