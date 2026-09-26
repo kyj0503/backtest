@@ -198,6 +198,18 @@ export interface StrategyStats {
   [key: string]: unknown;
 }
 
+// 부가 데이터 섹션별 수집 결과 (A-08, BE custom_metrics.SUPPLEMENTAL_SECTIONS/OUTCOMES).
+// empty = 끝났지만 데이터 없음, skipped = 요청하지 않음, timeout/error = 수집 실패.
+export type SupplementalSection =
+  | 'ticker_info'
+  | 'stock_data'
+  | 'volatility_events'
+  | 'exchange_rates'
+  | 'benchmarks'
+  | 'news';
+export type SupplementalOutcome = 'ok' | 'empty' | 'skipped' | 'timeout' | 'error';
+export type SupplementalStatus = Partial<Record<SupplementalSection, SupplementalOutcome>>;
+
 export interface PortfolioData {
   portfolio_statistics: PortfolioStatistics;
   individual_returns: Record<string, IndividualReturn>;
@@ -224,6 +236,9 @@ export interface PortfolioData {
   
   // 상장일 경고 메시지 (백테스트 실행 전 검증 실패 시 반환되지 않음)
   warnings?: string[];
+
+  // 부가 데이터 섹션별 수집 결과. 이 필드가 없던 구버전 응답도 있다.
+  supplemental_status?: SupplementalStatus;
 }
 
 export type BacktestResultData = ChartData | PortfolioData;

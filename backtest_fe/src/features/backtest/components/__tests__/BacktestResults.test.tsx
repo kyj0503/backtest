@@ -220,6 +220,57 @@ describe('BacktestResults — 빈 데이터', () => {
   })
 })
 
+describe('BacktestResults — 부가 데이터 수집 상태 (A-08 supplemental_status)', () => {
+  const notice = () => screen.queryByRole('status', { name: '부가 데이터 수집 상태' })
+
+  it('시간 초과·오류 섹션을 "데이터 없음"과 구분해 안내한다', async () => {
+    renderPortfolio(
+      makePortfolioData({
+        supplemental_status: {
+          ticker_info: 'ok',
+          stock_data: 'ok',
+          volatility_events: 'empty',
+          exchange_rates: 'skipped',
+          benchmarks: 'error',
+          news: 'timeout',
+        },
+      })
+    )
+    await waitForResults()
+
+    const box = notice() as HTMLElement
+    expect(box).toBeInTheDocument()
+    expect(box).toHaveTextContent('최신 뉴스(시간 초과)')
+    expect(box).toHaveTextContent('벤치마크 지수(오류)')
+    // 정상적으로 비었거나(empty) 요청하지 않은(skipped) 섹션은 안내하지 않는다
+    expect(box).not.toHaveTextContent('급등락')
+    expect(box).not.toHaveTextContent('환율')
+  })
+
+  it('모든 섹션이 ok/empty/skipped면 안내하지 않는다', async () => {
+    renderPortfolio(
+      makePortfolioData({
+        supplemental_status: {
+          ticker_info: 'ok',
+          stock_data: 'ok',
+          volatility_events: 'empty',
+          exchange_rates: 'skipped',
+          benchmarks: 'ok',
+          news: 'empty',
+        },
+      })
+    )
+    await waitForResults()
+    expect(notice()).not.toBeInTheDocument()
+  })
+
+  it('supplemental_status가 없는 구버전 응답도 안내 없이 결과를 보여 준다', async () => {
+    renderPortfolio(makePortfolioData())
+    await waitForResults()
+    expect(notice()).not.toBeInTheDocument()
+  })
+})
+
 describe('BacktestResults — ChartsSection 하위 조합', () => {
   it('S&P 500·NASDAQ 벤치마크가 있으면 벤치마크 비교와 수익률 비교 블록을 보여 준다', async () => {
     renderPortfolio(

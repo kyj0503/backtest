@@ -58,6 +58,9 @@ export type {
   TradeLog,
   StrategyStats,
   PortfolioData,
+  SupplementalSection,
+  SupplementalOutcome,
+  SupplementalStatus,
   BacktestResultsProps,
   StockDataItem,
   EquityChartDataItem

@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { toast } from 'sonner';
 import ChartsSection from './results/ChartsSection';
 import WarningBanner from './results/WarningBanner';
+import SupplementalStatusNotice from './results/SupplementalStatusNotice';
 import { BacktestResultsProps } from '../model/types/backtest-result-types';
 import { AlertCircle, FileDown, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
@@ -75,6 +76,10 @@ const BacktestResults: React.FC<BacktestResultsProps> = ({ data, isPortfolio }) 
     <div ref={resultsRef} className="mx-auto w-full lg:max-w-screen-2xl space-y-4 sm:space-y-6 mt-6 sm:mt-8">
       {isPortfolio && 'warnings' in data && data.warnings && data.warnings.length > 0 && (
         <WarningBanner warnings={data.warnings} />
+      )}
+
+      {isPortfolio && 'supplemental_status' in data && (
+        <SupplementalStatusNotice status={data.supplemental_status} />
       )}
 
       <div className="flex justify-end gap-2 px-1 sm:px-3 lg:px-0 mb-4 sm:mb-6">
