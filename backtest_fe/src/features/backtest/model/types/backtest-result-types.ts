@@ -7,11 +7,15 @@ export interface Stock {
   weight: number;
 }
 
+// BE individual_returns 항목. return은 이미 백분율(8 = 8%), weight는 0~1 비율이다.
+// 매수 후 보유 경로는 start_price/end_price를, 전략 경로는 initial_value/final_value를 싣는다.
 export interface IndividualReturn {
   weight: number;
   return: number;
-  start_price: number;
-  end_price: number;
+  start_price?: number;
+  end_price?: number;
+  initial_value?: number;
+  final_value?: number;
 }
 
 export interface OhlcPoint {
@@ -194,6 +198,18 @@ export interface StrategyStats {
   [key: string]: unknown;
 }
 
+// 부가 데이터 섹션별 수집 결과 (A-08, BE custom_metrics.SUPPLEMENTAL_SECTIONS/OUTCOMES).
+// empty = 끝났지만 데이터 없음, skipped = 요청하지 않음, timeout/error = 수집 실패.
+export type SupplementalSection =
+  | 'ticker_info'
+  | 'stock_data'
+  | 'volatility_events'
+  | 'exchange_rates'
+  | 'benchmarks'
+  | 'news';
+export type SupplementalOutcome = 'ok' | 'empty' | 'skipped' | 'timeout' | 'error';
+export type SupplementalStatus = Partial<Record<SupplementalSection, SupplementalOutcome>>;
+
 export interface PortfolioData {
   portfolio_statistics: PortfolioStatistics;
   individual_returns: Record<string, IndividualReturn>;
@@ -220,6 +236,9 @@ export interface PortfolioData {
   
   // 상장일 경고 메시지 (백테스트 실행 전 검증 실패 시 반환되지 않음)
   warnings?: string[];
+
+  // 부가 데이터 섹션별 수집 결과. 이 필드가 없던 구버전 응답도 있다.
+  supplemental_status?: SupplementalStatus;
 }
 
 export type BacktestResultData = ChartData | PortfolioData;

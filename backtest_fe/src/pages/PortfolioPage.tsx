@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert';
 import { Button } from '@/shared/ui/button';
 
 const PortfolioPage: React.FC = () => {
-  const { result: results, isLoading: loading, error, runBacktest, reset: clearError } = useBacktest();
+  const { result: results, isLoading: loading, error, runBacktest, clearError } = useBacktest();
 
   return (
     <div className="min-h-screen bg-background py-4 sm:py-8">

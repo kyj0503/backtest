@@ -47,6 +47,9 @@ export function useBacktest() {
         // 대체되거나 언마운트되어 취소된 요청의 실패는 공유 상태에 반영하지
         // 않는다 — 이미 최신 요청(또는 사라진 컴포넌트)이 그 책임을 넘겨받았다.
         setError(extractErrorMessage(err));
+        // 새 실행이 실패하면 직전 결과를 지운다 (A-22). 남겨 두면 오류 Alert
+        // 아래의 옛 결과가 방금 입력한 조건의 결과처럼 보인다.
+        setResult(null);
       }
       throw err;
     } finally {
@@ -67,6 +70,11 @@ export function useBacktest() {
     };
   }, []);
 
+  // 오류 Alert 닫기용: 오류만 지운다. 결과까지 지우는 reset과 구분한다 (A-22).
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
   const reset = useCallback(() => {
     setResult(null);
     setError(null);
@@ -78,6 +86,7 @@ export function useBacktest() {
     isLoading,
     error,
     runBacktest,
+    clearError,
     reset,
     lastRequest,
   };

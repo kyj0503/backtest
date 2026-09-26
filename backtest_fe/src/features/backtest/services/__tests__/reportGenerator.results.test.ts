@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest'
 import { generateCSVReport, generateTextReport } from '../reportGenerator'
 import type {
   BacktestResultData,
+  PortfolioData,
   TradeMarker,
 } from '../../model/types/backtest-result-types'
 import {
@@ -44,7 +45,7 @@ describe('generateTextReport — 포트폴리오', () => {
     expect(report).toContain('총 거래일수         : 8일')
   })
 
-  it('개별 종목 수익률을 퍼센트로 변환해 보여 준다', () => {
+  it('개별 종목 수익률은 BE가 준 백분율을 그대로, 비중은 비율을 퍼센트로 보여 준다', () => {
     expect(report).toContain('■ 개별 종목 수익률')
     expect(report).toMatch(/AAPL\s+- 수익률: 8\.00%\s+\|\s+비중: 60\.00%/)
     expect(report).toMatch(/시작가: \$125\.00\s+\|\s+종료가: \$135\.00/)
@@ -272,6 +273,28 @@ describe('generateCSVReport — 포트폴리오', () => {
     expect(csv).toContain('환율 정보 요약 (KRW/USD)')
     expect(csv).toContain('평균 환율,₩1250.00')
     expect(csv).toContain('환율 변동,8.33%')
+  })
+})
+
+describe('개별 종목 수익률 — BE 응답 형태 (전략 포트폴리오)', () => {
+  // run_strategy_portfolio_backtest의 individual_returns는 시작가·종료가 대신
+  // initial_value/final_value를 싣는다. return은 이미 백분율이다.
+  const strategyReturns = {
+    AAPL: { symbol: 'AAPL', weight: 0.6, amount: 6000, return: 12.5, initial_value: 6000, final_value: 6750, trades: 4, win_rate: 50 },
+    CASH: { symbol: 'CASH', weight: 0.4, amount: 4000, return: 0, initial_value: 4000, final_value: 4000, trades: 0, win_rate: 0 },
+  } as unknown as PortfolioData['individual_returns']
+
+  it('텍스트 리포트가 시작가 없는 항목에서 깨지지 않고 백분율을 그대로 쓴다', () => {
+    const text = generateTextReport(makePortfolioData({ individual_returns: strategyReturns }), true)
+    expect(text).toMatch(/AAPL\s+- 수익률: 12\.50%\s+\|\s+비중: 60\.00%/)
+    expect(text).toMatch(/CASH\s+- 수익률: 0\.00%\s+\|\s+비중: 40\.00%/)
+    expect(text).not.toContain('시작가: $undefined')
+    expect(text).toMatch(/투자금: \$6000\.00\s+\|\s+최종 가치: \$6750\.00/)
+  })
+
+  it('CSV도 시작가·종료가가 없으면 N/A로 쓴다', () => {
+    const csv = lines(generateCSVReport(makePortfolioData({ individual_returns: strategyReturns }), true))
+    expect(csv).toContain('AAPL,12.50,60.00,N/A,N/A')
   })
 })
 

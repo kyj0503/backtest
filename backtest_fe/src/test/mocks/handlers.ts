@@ -11,7 +11,6 @@ export const handlers = [
   http.post(`${API_BASE_URL}/api/v1/backtest`, () => {
     return HttpResponse.json({
       status: 'success',
-      backtest_type: 'single_stock',
       data: {
         ticker: 'AAPL',
         strategy: 'buy_hold_strategy',
