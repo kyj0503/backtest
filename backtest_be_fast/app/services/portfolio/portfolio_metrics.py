@@ -8,7 +8,11 @@ from typing import Dict, Any, Tuple
 from datetime import datetime
 import pandas as pd
 from app.domain.portfolio_domain import DcaStrategyInfo
-from app.utils.metrics_math import annualized_volatility, safe_sharpe_ratio
+from app.utils.metrics_math import (
+    annualized_volatility,
+    drawdown_from_returns,
+    safe_sharpe_ratio,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +122,9 @@ class PortfolioMetrics:
 
         total_return = (final_value - 1) * 100
 
-        # 드로우다운 계산
-        running_max = portfolio_returns['Portfolio_Value'].expanding().max()
-        drawdown = (portfolio_returns['Portfolio_Value'] - running_max) / running_max * 100
+        # 드로우다운 계산 — 평가금이 아니라 납입금을 제외한 시간가중 지수 기준
+        # (평가금 기준이면 DCA 납입이 하락을 가린다. metrics_math 참고)
+        drawdown = drawdown_from_returns(portfolio_returns['Daily_Return'])
         max_drawdown = drawdown.min()
         avg_drawdown = drawdown[drawdown < 0].mean() if len(drawdown[drawdown < 0]) > 0 else 0
 
