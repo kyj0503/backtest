@@ -55,6 +55,13 @@ A-04 / A-05 / A-06을 한곳에서 처리한다. 엔드포인트
 작업마다 `backtest job start`/`backtest job end` INFO 로그(벽시계 시각, 대기·실행
 시간, 결과)를 남긴다. 멀티 프로세스 부하 측정에서 실제 동시 실행 수는 이 로그의
 구간 겹침으로 계산한다.
+
+/metrics에는 두 게이지를 노출한다(app/monitoring/custom_metrics.py, livesum이라
+워커 값이 합쳐진다).
+- `backtest_jobs_running`: 전체 슬롯을 쥔 작업 스레드 수. `active_jobs()`와 같은
+  시점에 오르내리므로 504 뒤 멈추는 중인 작업도 포함한다.
+- `backtest_jobs_waiting`: 전체 슬롯을 기다리는 요청 수(IP별 상한 429는 대기하지
+  않으므로 세지 않는다).
 """
 from __future__ import annotations
 
@@ -72,6 +79,7 @@ from typing import Any, Awaitable, Callable, Dict, Optional, Set
 from ..core.cancellation import BacktestCancelled, CancelToken, bind_token
 from ..core.config import settings
 from ..core.file_slots import FileSlot, FileSlotPool
+from ..monitoring.custom_metrics import BACKTEST_JOBS_RUNNING, BACKTEST_JOBS_WAITING
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +162,16 @@ class BacktestJobRunner:
         with self._active_lock:
             return self._active
 
+    def _job_started(self) -> None:
+        with self._active_lock:
+            self._active += 1
+        BACKTEST_JOBS_RUNNING.inc()
+
+    def _job_finished(self) -> None:
+        with self._active_lock:
+            self._active -= 1
+        BACKTEST_JOBS_RUNNING.dec()
+
     def shutdown(self, wait: bool = True) -> None:
         self._executor.shutdown(wait=wait)
 
@@ -224,7 +242,8 @@ class BacktestJobRunner:
 
         wait_started = time.monotonic()
         try:
-            global_slot = await self._wait_for_global_slot(is_disconnected)
+            with BACKTEST_JOBS_WAITING.track_inprogress():
+                global_slot = await self._wait_for_global_slot(is_disconnected)
         except BaseException:
             if client_slot is not None:
                 client_slot.release()
@@ -233,8 +252,7 @@ class BacktestJobRunner:
 
         token = CancelToken()
         job_id = f"{os.getpid()}-{next(self._ids)}"
-        with self._active_lock:
-            self._active += 1
+        self._job_started()
         try:
             cf = self._executor.submit(
                 self._run_job_thread, job_factory, token, global_slot, client_slot, job_id, label, waited
@@ -243,8 +261,7 @@ class BacktestJobRunner:
             global_slot.release()
             if client_slot is not None:
                 client_slot.release()
-            with self._active_lock:
-                self._active -= 1
+            self._job_finished()
             raise
         fut = asyncio.wrap_future(cf)
         fut.add_done_callback(_consume_result)
@@ -343,8 +360,7 @@ class BacktestJobRunner:
             global_slot.release()
             if client_slot is not None:
                 client_slot.release()
-            with self._active_lock:
-                self._active -= 1
+            self._job_finished()
             logger.info(
                 "backtest job end id=%s t=%.3f elapsed=%.3fs outcome=%s",
                 job_id, ended_wall, elapsed, outcome,
