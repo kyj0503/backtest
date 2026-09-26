@@ -70,6 +70,28 @@ def observe_stage(stage: str, seconds: float) -> None:
         BACKTEST_STAGE_SECONDS.labels(stage=stage).observe(seconds)
 
 
+# 부가 데이터 섹션별 수집 결과 (A-08). 외부 Yahoo/Naver 장애를 readiness에 넣지 않는
+# 대신(A-07) 여기서 관측한다 — 수집기는 외부 오류를 삼키고 빈 값을 돌려주므로
+# "empty" 비율이 급증하면 외부 API 장애를 의심할 수 있다.
+#   ok: 데이터 있음 / empty: 끝났지만 비어 있음 / skipped: 요청에서 끔 /
+#   timeout: 시간 예산 초과 / error: 예상 못 한 예외
+SUPPLEMENTAL_SECTIONS = (
+    "ticker_info", "stock_data", "volatility_events", "exchange_rates", "benchmarks", "news",
+)
+SUPPLEMENTAL_OUTCOMES = ("ok", "empty", "skipped", "timeout", "error")
+BACKTEST_SUPPLEMENTAL_OUTCOME_TOTAL = Counter(
+    "backtest_supplemental_outcome_total",
+    "Outcome of each supplemental data section attached to a backtest response",
+    ["section", "outcome"],
+)
+
+
+def record_supplemental_outcome(section: str, outcome: str) -> None:
+    """부가 데이터 섹션 결과를 센다. 고정 집합 밖의 값은 무시한다."""
+    if section in SUPPLEMENTAL_SECTIONS and outcome in SUPPLEMENTAL_OUTCOMES:
+        BACKTEST_SUPPLEMENTAL_OUTCOME_TOTAL.labels(section=section, outcome=outcome).inc()
+
+
 # --- 카디널리티 상한 설정 (P2-15) ---
 _MAX_TRACKED_TICKERS = 200
 _OTHER_TICKER_LABEL = "other"

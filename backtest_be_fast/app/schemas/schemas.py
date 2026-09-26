@@ -145,7 +145,19 @@ class PortfolioBacktestRequest(BaseModel):
     rebalance_frequency: str = Field("monthly_1", description="리밸런싱 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12, none)")
     strategy: str = Field("buy_hold_strategy", description="전략명")
     strategy_params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="전략 파라미터")
-    
+
+    # 부가 데이터 포함 여부 (A-08). 기본값은 모두 True — 기존 호출자는 같은 응답을
+    # 받는다. False면 해당 섹션을 수집하지 않고 응답 키는 빈 값으로 남긴다.
+    include_stock_data: bool = Field(True, description="종목별 원본 주가(stock_data) 포함")
+    include_volatility_events: bool = Field(True, description="종목별 급등락 이벤트(volatility_events) 포함")
+    include_exchange_rates: bool = Field(True, description="원달러 환율(exchange_rates, exchange_stats) 포함")
+    include_benchmarks: bool = Field(
+        True,
+        description="S&P 500/NASDAQ 지수(sp500_benchmark, nasdaq_benchmark)와 "
+                    "portfolio_statistics의 sp500_total_return_pct/alpha_vs_sp500_pct 포함",
+    )
+    include_news: bool = Field(True, description="종목별 최신 뉴스(latest_news) 포함")
+
     @field_validator('portfolio')
     @classmethod
     def validate_portfolio(cls, v):

@@ -162,5 +162,7 @@ class TestFullPipelineShapeIsPreservedWithNews:
             "sp500_benchmark",
             "nasdaq_benchmark",
             "latest_news",
+            # A-08: 섹션별 수집 결과. 기존 키는 그대로 두고 추가만 했다.
+            "supplemental_status",
         }
         assert result["latest_news"]["AAPL"][0]["title"] == "뉴스"

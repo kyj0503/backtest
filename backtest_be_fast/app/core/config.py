@@ -114,6 +114,11 @@ class Settings(BaseSettings):
     # readiness(/health/ready)가 MySQL `SELECT 1`을 기다리는 최대 시간(초) (A-07).
     # 드라이버 connect/read 타임아웃도 이 값(올림, 최소 1초)으로 건다.
     readiness_db_timeout_seconds: float = 2.0
+
+    # 백테스트 응답의 부가 데이터(원본 주가·환율·벤치마크·뉴스) 수집 시간 예산(초) (A-08).
+    # 이 안에 끝나지 않은 섹션은 비워서 반환하고 핵심 결과는 그대로 돌려준다.
+    # 로컬 실측(워밍 상태) supplemental_total p95 약 2초, 콜드 벤치마크 조회 약 5.5초.
+    supplemental_data_timeout_seconds: float = 15.0
     
     # pydantic v2 configuration
     model_config = {

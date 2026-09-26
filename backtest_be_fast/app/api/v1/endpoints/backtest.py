@@ -100,15 +100,28 @@ async def _execute_portfolio_backtest(request: PortfolioBacktestRequest) -> dict
     # 이 지점에 도달했다면 항상 성공 결과다.
     backtest_result = await portfolio_manager_service.run_portfolio_backtest(request)
 
-    # 3. 추가 데이터 수집 (데이터 서비스 위임) — asyncio.to_thread로 이벤트 루프 블로킹 방지
-    unified_data = await asyncio.to_thread(
-        unified_data_service.collect_all_unified_data,
-        symbols=symbols,
-        start_date=request.start_date,
-        end_date=request.end_date,
-        include_news=True,
-        news_display_count=15
-    )
+    # 3. 부가 데이터 수집 (데이터 서비스 위임) — asyncio.to_thread로 이벤트 루프 블로킹 방지
+    # [A-08] 요청의 include_* 옵션(기본값 모두 True = 기존 응답과 동일)으로 섹션을
+    # 끌 수 있고, 시간 예산을 넘긴 섹션은 비워서 반환한다. 부가 수집이 통째로
+    # 실패해도 핵심 결과(시뮬레이션)는 버리지 않는다 — 섹션 결과는
+    # data.supplemental_status로 알린다.
+    try:
+        unified_data = await asyncio.to_thread(
+            unified_data_service.collect_all_unified_data,
+            symbols=symbols,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            include_news=request.include_news,
+            news_display_count=15,
+            include_stock_data=request.include_stock_data,
+            include_volatility_events=request.include_volatility_events,
+            include_exchange_rates=request.include_exchange_rates,
+            include_benchmarks=request.include_benchmarks,
+            timeout_seconds=settings.supplemental_data_timeout_seconds,
+        )
+    except Exception:
+        logger.exception("부가 데이터 수집 실패 — 핵심 결과만 반환")
+        unified_data = unified_data_service.empty_unified_data(symbols, outcome="error")
 
     # 4. S&P 500 벤치마크 통계 계산 및 추가
     sp500_benchmark = unified_data.get('sp500_benchmark', [])
