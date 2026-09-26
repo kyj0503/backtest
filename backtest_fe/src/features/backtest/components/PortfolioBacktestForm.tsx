@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Loader2, TrendingUp, AlertCircle } from 'lucide-react';
 import { extractErrorMessage } from '@/shared/api/client';
 import { BacktestRequest } from '../model/types/api-types';
-import { ASSET_TYPES } from '../model/strategyConfig';
+import { ASSET_TYPES, resolveRebalanceFrequency } from '../model/strategyConfig';
 import DateRangeForm from './DateRangeForm';
 import StrategyForm from './StrategyForm';
 import CommissionForm from './CommissionForm';
@@ -58,14 +58,18 @@ const PortfolioBacktestForm: React.FC<PortfolioBacktestFormProps> = ({ onSubmit,
       });
 
       const params = generateStrategyParams();
+      const strategy = state.strategy.selectedStrategy || 'buy_hold_strategy';
       await onSubmit({
         portfolio: portfolioData,
         start_date: state.dates.startDate,
         end_date: state.dates.endDate,
-        strategy: state.strategy.selectedStrategy || 'buy_hold_strategy',
+        strategy,
         strategy_params: params,
         commission: state.settings.commission / 100, // 퍼센트를 소수점으로 변환 (0.2 -> 0.002)
-        rebalance_frequency: state.settings.rebalanceFrequency
+        // 드롭다운이 'none'으로 보이는 조건이면 state에 남은 이전 선택값 대신 'none'을 보낸다
+        rebalance_frequency: resolveRebalanceFrequency(
+          state.settings.rebalanceFrequency, strategy, state.portfolio.length
+        )
       });
     } catch (error) {
       // 백엔드/네트워크 에러는 usePortfolioBacktest 훅이 extractErrorMessage로
