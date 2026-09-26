@@ -210,7 +210,7 @@ npm run type-check       # 프로덕션 코드 타입 체크 (tsconfig.build.jso
 npm run type-check:test  # 테스트 코드 타입 체크 (tsconfig.test.json)
 ```
 
-`type-check`는 테스트 파일을 제외한다. 테스트 코드는 `type-check:test`가 담당하며, 둘 다 CI 게이트에서 실행된다. 테스트만 따로 체크하는 설정이 없던 시절에 삭제된 함수를 import하는 테스트가 8개월간 방치된 적이 있어 분리해 두었다.
+`type-check`는 테스트 파일을 제외한다. 테스트 코드는 `type-check:test`가 담당하며, 둘 다 CI 배포 전 테스트 단계에서 실행된다. 테스트만 따로 체크하는 설정이 없던 시절에 삭제된 함수를 import하는 테스트가 8개월간 방치된 적이 있어 분리해 두었다.
 
 `lint`의 경고 상한 3은 현재 남아 있는 `react-hooks/exhaustive-deps` 3건을 고정한 래칫이다. 경고가 늘어나는 것을 막되, 의존성 배열을 강제로 바꾸면 런타임 동작이 달라질 수 있어 아직 해소하지 않았다. 해소하면서 상한도 함께 내리는 것이 목표다.
 
@@ -225,13 +225,13 @@ npm run build:analyze
 
 ## CI
 
-`Jenkinsfile`의 `Quality Gate` 스테이지가 `docker build --target test ./backtest_fe`로 아래를 순서대로 실행한다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못한다.
+`Jenkinsfile`의 `Pre-deploy Tests` 스테이지가 `docker build --target test ./backtest_fe`로 아래를 순서대로 실행한다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못한다.
 
 ```
 npm run lint → npm run type-check → npm run type-check:test → npm run test:run
 ```
 
-이 게이트는 **배포**를 막는다. main 브랜치 보호를 쓰지 않으므로 병합 자체를 막지는 않는다.
+이 단계는 **배포**를 막는다. main 브랜치 보호를 쓰지 않으므로 병합 자체를 막지는 않는다.
 
 ---
 

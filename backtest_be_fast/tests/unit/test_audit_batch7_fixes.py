@@ -2,7 +2,7 @@
 데이터 로드 실패 종목의 무경고 원금 증발(A-03)
 
 세 건 모두 수정 전에는 HTTP 200 + status=success로 **틀린 숫자**가 나가던
-문제라 게이트가 잡지 못했다. 각 테스트는 수정 전 코드에서 실패한다.
+문제라 배포 전 테스트 단계가 잡지 못했다. 각 테스트는 수정 전 코드에서 실패한다.
 """
 import asyncio
 from unittest.mock import AsyncMock, patch

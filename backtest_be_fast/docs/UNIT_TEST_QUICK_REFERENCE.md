@@ -7,7 +7,7 @@
 # From the repository root (the project runs in Docker)
 docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit -v
 
-# Same command CI runs as a gate
+# Same command CI runs before deploying
 docker build --target test ./backtest_be_fast
 ```
 
@@ -107,7 +107,7 @@ Counts below are `pytest tests/unit --collect-only` item counts (post-parametriz
 | `test_buy_hold_strategy.py` | 2 | Buy & Hold strategy requirements |
 | `test_backtest_engine_data_not_found_propagation.py` | 1 | DataNotFoundError propagates as HTTP 404, not re-wrapped as 500 |
 
-**Total: 189 tests** (all passing on `main`; a failure is a regression, not pre-existing noise). This is `tests/unit` only — `tests/integration` (DB-required) is a separate suite not covered by this table or by the CI Quality Gate.
+**Total: 189 tests** (all passing on `main`; a failure is a regression, not pre-existing noise). This is `tests/unit` only — `tests/integration` (DB-required) is a separate suite not covered by this table or by the CI pre-deploy test stage (Jenkins `Pre-deploy Tests`).
 
 ---
 
@@ -222,7 +222,7 @@ pytest tests/unit/test_backtest_engine.py -s
 
 이 저장소의 실제 구성입니다 (예시가 아님).
 
-`Dockerfile`에 `test` 스테이지가 있고, `Jenkinsfile`의 `Quality Gate` 스테이지가 이를 호출합니다.
+`Dockerfile`에 `test` 스테이지가 있고, `Jenkinsfile`의 `Pre-deploy Tests` 스테이지가 이를 호출합니다.
 
 ```dockerfile
 # backtest_be_fast/Dockerfile
@@ -235,7 +235,7 @@ RUN pytest tests/unit -q
 
 ```groovy
 // Jenkinsfile
-stage('Quality Gate') {
+stage('Pre-deploy Tests') {
     steps {
         script {
             parallel(
@@ -247,9 +247,9 @@ stage('Quality Gate') {
 }
 ```
 
-`test` 스테이지는 최종 이미지의 의존 경로 밖에 있으므로 `docker build`(타깃 미지정)로는 실행되지 않고, 배포 이미지에도 `tests/`가 포함되지 않습니다. DB가 필요한 `tests/integration`은 게이트에 포함하지 않습니다.
+`test` 스테이지는 최종 이미지의 의존 경로 밖에 있으므로 `docker build`(타깃 미지정)로는 실행되지 않고, 배포 이미지에도 `tests/`가 포함되지 않습니다. DB가 필요한 `tests/integration`은 이 단계에 포함하지 않습니다.
 
-게이트가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 다만 파이프라인이 `*/main`을 체크아웃하므로 이는 **배포 게이트**이지 병합 게이트가 아닙니다.
+이 단계가 실패하면 이미지 빌드와 배포에 도달하지 못합니다. 다만 파이프라인이 `*/main`을 체크아웃하므로 이 단계는 **배포**를 막을 뿐 병합을 막지는 않습니다.
 
 ---
 
@@ -301,7 +301,7 @@ with patch('app.utils.currency_converter.currency_converter'):
 - [pytest-asyncio documentation](https://pytest-asyncio.readthedocs.io/)
 - [unittest.mock documentation](https://docs.python.org/3/library/unittest.mock.html)
 - [Test Coverage Summary](./TEST_COVERAGE_SUMMARY.md)
-- [CLAUDE.md](../../CLAUDE.md) - Project overview and testing section
+- [AGENTS.md](../../AGENTS.md) - Project overview and testing section
 
 ---
 
