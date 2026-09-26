@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { BacktestFormState } from '../model/types/backtest-form-types';
 import { backtestFormHelpers } from '../model/backtestFormReducer';
-import { ASSET_TYPES, supportsDcaAndRebalancing } from '../model/strategyConfig';
+import { ASSET_TYPES, VALIDATION_RULES, supportsDcaAndRebalancing } from '../model/strategyConfig';
 
 export interface UseFormValidationReturn {
   errors: string[];
@@ -11,6 +11,27 @@ export interface UseFormValidationReturn {
   removeError: (error: string) => void;
   clearErrors: () => void;
   setErrors: (errors: string[]) => void;
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * 'YYYY-MM-DD' 두 날짜 사이의 일수(종료일 - 시작일).
+ * 백엔드 엔드포인트의 `(end_date - start_date).days`와 같은 정의다 — 예를 들어
+ * 2023-01-01 ~ 2023-01-31은 30일. 로컬 시간대/서머타임 영향을 받지 않도록 UTC 자정으로
+ * 해석한다. 형식이 잘못됐으면 null.
+ */
+export function getBacktestPeriodDays(startDate: string, endDate: string): number | null {
+  const toUtcMs = (value: string): number | null => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return null;
+    const ms = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return Number.isNaN(ms) ? null : ms;
+  };
+  const start = toUtcMs(startDate);
+  const end = toUtcMs(endDate);
+  if (start === null || end === null) return null;
+  return Math.round((end - start) / MS_PER_DAY);
 }
 
 /**
@@ -47,6 +68,14 @@ export function validateBacktestForm(formState: BacktestFormState): string[] {
   if (formState.dates.startDate && formState.dates.endDate &&
       formState.dates.startDate >= formState.dates.endDate) {
     errors.push('시작 날짜는 종료 날짜보다 이전이어야 합니다.');
+  } else if (formState.dates.startDate && formState.dates.endDate) {
+    // 최소 기간 (A-17). 백엔드가 422로 거부하기 전에 같은 규칙·같은 문구로 막는다.
+    // 문구는 backtest_be_fast/app/api/v1/endpoints/backtest.py의 ValidationError와 맞춘다.
+    const periodDays = getBacktestPeriodDays(formState.dates.startDate, formState.dates.endDate);
+    const minDays = VALIDATION_RULES.MIN_BACKTEST_PERIOD_DAYS;
+    if (periodDays !== null && periodDays < minDays) {
+      errors.push(`백테스트 기간이 너무 짧습니다: ${periodDays}일 (최소 ${minDays}일 필요)`);
+    }
   }
 
   // 수수료 검증
