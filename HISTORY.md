@@ -9,6 +9,26 @@
 
 ---
 
+## 2026-09-26 라운드 (배치8 — 물리 FK 제거)
+
+> 정책 결정: 모든 테이블 간 참조를 논리 참조로 두고 물리 FK는 쓰지 않는다.
+> 저장소와 dev DB를 전수 조사한 결과 물리 FK는 `daily_prices_ibfk_1` 하나였다
+> (`stock_news`는 원래 FK 없음, ORM relationship 0건).
+
+- [x] **A-10 [db]** ✅ 2026-09-26 (선택지 2: 물리 FK 제거) — `daily_prices.stock_id → stocks.id ON DELETE CASCADE` 제거.
+  - `database/schema.sql`: FOREIGN KEY 줄 삭제, 논리 참조와 무결성 책임(저장 트랜잭션 순서, 명시적 삭제, 고아 점검)을 주석으로 명시
+  - Alembic `7b2e9c4f1a30`(down `d5c3763b29e6`): 초기 리비전은 수정하지 않고 새 리비전 추가. FK 이름은 `information_schema`에서 찾아 지운다(운영 DB의 자동 명명이 달라도 동작, FK가 이미 없으면 no-op). downgrade는 같은 CASCADE FK를 복원
+  - `(stock_id, date)` PK 유지 — stock_id 조회 인덱스를 이미 제공하므로 인덱스 변경 없음
+  - `scripts/check_orphan_prices.py`: 고아 일봉 점검(기본, 발견 시 종료 코드 1) / `--delete`로 정리
+  - 실측 검증(mysql:8.4):
+    - dev DB(FK·데이터 있음): `stamp d5c3763b29e6` → `upgrade head`(FK 0개) → `downgrade -1`(CASCADE FK 복원) → `upgrade head`, 행 수 불변(stocks 6 / daily_prices 4,815)
+    - 빈 DB 두 개: schema.sql initdb 경로와 `alembic upgrade head` 경로 모두 FK 0개, COMMENT 절을 뺀 `SHOW CREATE TABLE` 3개 동일(컬럼 COMMENT 유무 차이는 기존부터 있던 것 — A-11)
+    - FK 제거 후 신규 종목 저장(NVDA·GOOGL 각 502행) 정상, 고아 0
+    - 고아 행 2개 주입 → 점검 exit 1 → `--delete` 2행 삭제 → 재점검 exit 0
+  - **배포 주의**: schema.sql로 만든 기존 운영 DB는 `alembic stamp head`가 아니라 `stamp d5c3763b29e6` → `upgrade head`로 적용해야 FK가 실제로 지워진다(TODO.md "저장소 밖 운영 후속 작업").
+
+---
+
 ## 2026-09-26 라운드 (배치7)
 
 > TODO.md의 권장 순서 1·2번(A-01~A-03)과, 재감사 중 새로 찾은 DCA 낙폭 버그를
