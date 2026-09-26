@@ -22,12 +22,10 @@ set -eu
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # --- 예외 목록 ---------------------------------------------------------------
-# GHSA-qwww-vcr4-c8h2 (react-router 7.12.0-8.2.0, high)
-#   RSC(React Server Components) 모드 전용 CSRF 우회. 이 앱은 BrowserRouter만
-#   쓰고 RSC를 쓰지 않는다. 7.x 라인에 수정 버전이 없어(현재 최신 7.18.2도
-#   범위 내) 업그레이드로 해결 불가.
-#   재검토: 8.x로 올리거나 7.x 패치가 나오면 제거할 것.
-NPM_ALLOWLIST="GHSA-qwww-vcr4-c8h2"
+# (FE 예외 없음) GHSA-qwww-vcr4-c8h2(react-router RSC 모드 CSRF)는 2026-09-26
+#   재감사에서 설치 버전 7.18.2가 더 이상 해당 범위로 보고되지 않아 제거했다
+#   — 예외 목록을 비운 상태로 FE audit 타깃이 통과함을 확인.
+NPM_ALLOWLIST=""
 
 # PYSEC-2026-1223 / CVE-2026-21883 (bokeh 2.4.3)
 #   bokeh 서버의 Origin 검증 우회. bokeh는 backtesting==0.3.3이 끌어오는 전이

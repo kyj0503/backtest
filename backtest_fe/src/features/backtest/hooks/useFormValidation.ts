@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { BacktestFormState } from '../model/types/backtest-form-types';
 import { backtestFormHelpers } from '../model/backtestFormReducer';
+import { ASSET_TYPES, supportsDcaAndRebalancing } from '../model/strategyConfig';
 
 export interface UseFormValidationReturn {
   errors: string[];
@@ -22,6 +23,19 @@ export function validateBacktestForm(formState: BacktestFormState): string[] {
 
   // 포트폴리오 검증 (중복/빈값/금액/DCA/비중 합계)
   errors.push(...backtestFormHelpers.validatePortfolio(formState.portfolio));
+
+  // 기술적 전략은 분할 매수를 지원하지 않는다 (백엔드가 422로 거부 — A-02)
+  if (!supportsDcaAndRebalancing(formState.strategy.selectedStrategy)) {
+    const dcaSymbols = formState.portfolio
+      .filter(stock => stock.investmentType === 'dca' && stock.assetType !== ASSET_TYPES.CASH)
+      .map(stock => stock.symbol.toUpperCase() || '(빈 종목)');
+    if (dcaSymbols.length > 0) {
+      errors.push(
+        `기술적 전략에서는 분할 매수(DCA)를 사용할 수 없습니다: ${dcaSymbols.join(', ')}. ` +
+        '일시불로 바꾸거나 Buy & Hold 전략을 선택해주세요.'
+      );
+    }
+  }
 
   // 날짜 검증
   if (!formState.dates.startDate) {
