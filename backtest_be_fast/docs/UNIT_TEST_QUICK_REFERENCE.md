@@ -107,7 +107,7 @@ Counts below are `pytest tests/unit --collect-only` item counts (post-parametriz
 | `test_buy_hold_strategy.py` | 2 | Buy & Hold strategy requirements |
 | `test_backtest_engine_data_not_found_propagation.py` | 1 | DataNotFoundError propagates as HTTP 404, not re-wrapped as 500 |
 
-**Total: 189 tests** (all passing on `main`; a failure is a regression, not pre-existing noise). This is `tests/unit` only — `tests/integration` (DB-required) is a separate suite not covered by this table or by the CI pre-deploy test stage (Jenkins `Quality Gate`).
+**Total: 189 tests** (all passing on `main`; a failure is a regression, not pre-existing noise). This is `tests/unit` only — `tests/integration` (DB-required) is a separate suite not covered by this table or by the CI pre-deploy test stage (Jenkins `Pre-deploy Tests`).
 
 ---
 
@@ -222,7 +222,7 @@ pytest tests/unit/test_backtest_engine.py -s
 
 이 저장소의 실제 구성입니다 (예시가 아님).
 
-`Dockerfile`에 `test` 스테이지가 있고, `Jenkinsfile`의 `Quality Gate` 스테이지가 이를 호출합니다.
+`Dockerfile`에 `test` 스테이지가 있고, `Jenkinsfile`의 `Pre-deploy Tests` 스테이지가 이를 호출합니다.
 
 ```dockerfile
 # backtest_be_fast/Dockerfile
@@ -235,7 +235,7 @@ RUN pytest tests/unit -q
 
 ```groovy
 // Jenkinsfile
-stage('Quality Gate') {
+stage('Pre-deploy Tests') {
     steps {
         script {
             parallel(

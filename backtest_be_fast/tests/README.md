@@ -128,7 +128,7 @@ pytest -m "not integration"  # DB 없이 실행 가능한 테스트만
 | 스키마 테스트 | 20 | portfolio_schemas 12, request_models 8 |
 | 전략 테스트 | 18 | rsi 6, bollinger 4, sma·macd·ema·buy_hold 각 2 |
 
-CI의 `Quality Gate` 스테이지가 `docker build --target test ./backtest_be_fast`로 이 141건을 강제하므로, 실패는 회귀입니다.
+CI의 `Pre-deploy Tests` 스테이지가 `docker build --target test ./backtest_be_fast`로 이 141건을 강제하므로, 실패는 회귀입니다.
 
 ## 테스트 특징
 

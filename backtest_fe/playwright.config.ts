@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // P2-38: 이 config는 사람이 의도적으로 돌리는 스모크 테스트 전용이다.
-// Jenkins 배포 전 테스트 단계(`Quality Gate` 스테이지)에는 연결하지 않았다 - 그 단계는
+// Jenkins 배포 전 테스트 단계(`Pre-deploy Tests` 스테이지)에는 연결하지 않았다 - 그 단계는
 // `docker build --target test`로 도는 순수 컨테이너 빌드라 브라우저도,
 // 살아있는 백엔드도 없다 (docker build로는 실행 불가능한 테스트를 CI에
 // 연결해봐야 "항상 통과"하거나 "항상 실패"하는 무의미한 스텝이 될 뿐이다).
