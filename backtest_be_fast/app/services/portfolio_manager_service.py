@@ -33,6 +33,11 @@ from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
 from app.services.portfolio.portfolio_simulation_engine import PortfolioSimulationEngine
 from app.services.portfolio.portfolio_data_loader import PortfolioDataLoader
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
+from app.services.portfolio.portfolio_inputs import (
+    BuyHoldAllocationBuilder,
+    drop_unloaded_symbols,
+    resolve_strategy_amounts,
+)
 from app.utils.serializers import recursive_serialize
 from app.core.exceptions import (
     DataNotFoundError,
@@ -318,20 +323,8 @@ class PortfolioManagerService:
             individual_returns = {}
             total_portfolio_value = 0
             # amount/weight 동시 지원: amount가 없고 weight만 있으면 환산
-            if all(item.amount is not None for item in request.portfolio):
-                total_amount = sum(item.amount for item in request.portfolio)
-                amounts = {item.symbol: item.amount for item in request.portfolio}
-            elif all(item.weight is not None for item in request.portfolio):
-                # weight만 입력된 경우, 100 단위를 기준으로 종목별 금액을 환산한다.
-                # 스키마는 비중 합계 95~105%를 허용하므로(PortfolioBacktestRequest
-                # validator), total_amount는 하드코딩된 100이 아니라 실제 환산된
-                # amounts의 합으로 계산해야 한다. 그렇지 않으면 비중 합계가 100%가
-                # 아닐 때 실제 투자 원금과 분모가 어긋나 수익률이 왜곡된다 (P1-03).
-                amounts = {item.symbol: 100.0 * (item.weight / 100.0) for item in request.portfolio}
-                total_amount = sum(amounts.values())
-            else:
-                raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
-            
+            amounts, total_amount = resolve_strategy_amounts(request.portfolio)
+
             # --- [Custom Metrics] Ticker Popularity (카디널리티 상한, P2-15) ---
             # 현금(asset_type='cash')은 "티커"가 아니므로 집계 대상에서 제외한다
             # -- 커스텀 현금 이름(예: "예금")이 라벨로 새어나가는 것도 막는다.
@@ -572,10 +565,6 @@ class PortfolioManagerService:
             start_time = time.time()
             # ------------------------------------
 
-            # 각 종목의 데이터 수집 (중복 종목 지원)
-            portfolio_data = {}
-            amounts = {}  # 실제 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
-
             # 백테스트 기간 계산 (주 수)
             start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d')
             end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d')
@@ -586,152 +575,32 @@ class PortfolioManagerService:
 
             logger.info(f"백테스트 기간: {request.start_date} ~ {request.end_date} ({backtest_days}일, {backtest_weeks}주)")
 
-            # 분할 매수 정보 수집 및 총 투자 금액 계산
-            dca_info = {}
-            cash_amount = 0
-
-            # Phase 1: 먼저 모든 종목의 투자 타입을 확인하고 dca_info 설정
-            symbols_to_load = []  # 데이터를 로드할 종목 리스트
-            cash_entry_counter = 0  # 현금 항목은 심볼 중복이 허용되므로 고유 키가 필요하다 (P2-07)
-
+            # Phase 1: 종목별 투자 금액·DCA 정보 (입력 변환)
+            builder = BuyHoldAllocationBuilder(start_date_obj, end_date_obj)
             for item in request.portfolio:
-                symbol = item.symbol
-
                 # --- [Custom Metrics] Ticker Popularity (카디널리티 상한, P2-15) ---
                 # 현금(asset_type='cash')은 "티커"가 아니므로 집계 대상에서 제외한다
                 # -- 커스텀 현금 이름(예: "예금")이 라벨로 새어나가는 것도 막는다.
                 if item.asset_type != 'cash':
-                    record_ticker_popularity(symbol)
+                    record_ticker_popularity(item.symbol)
                 # ------------------------------------------
-
-                investment_type = getattr(item, 'investment_type', 'lump_sum')
-                dca_frequency = getattr(item, 'dca_frequency', 'monthly_1')
-
-                # DCA 투자 횟수 계산 (Nth Weekday 방식)
-                #
-                # 시뮬레이션이 실제로 매수하는 날짜를 그대로 생성해서 센다.
-                # 과거에는 "월 = 30일" 근사로 추정했는데, 이 값이 총 투자금
-                # (= 수익률의 분모)이 되기 때문에 실제 집행 횟수와 어긋나면
-                # 집행되지 않은 납입금이 손실로 보고됐다. (2024년 전체·월간
-                # 기준 13회로 추정되지만 실제로는 12회 → -7.69%)
-                if investment_type == 'dca':
-                    period_info = FREQUENCY_MAP.get(dca_frequency, FREQUENCY_MAP['monthly_1'])
-                    period_type, interval = period_info
-
-                    # 초회 매수 1회 + 이후 정기 매수 예정일 수
-                    periodic_dates = generate_periodic_schedule(
-                        start_date=start_date_obj,
-                        end_date=end_date_obj,
-                        period_type=period_type,
-                        interval=interval,
-                    )
-                    dca_periods = 1 + len(periodic_dates)
-                else:
-                    dca_periods = 1
-
-                asset_type = getattr(item, 'asset_type', 'stock')
-
-                # amount 또는 weight 기반으로 회당 투자 금액 계산
-                if item.amount is not None:
-                    per_period_amount = item.amount  # 입력한 금액 = 회당 투자 금액
-                elif item.weight is not None:
-                    # weight 모드: STRATEGY 경로(run_strategy_portfolio_backtest)와
-                    # 동일하게 100 단위 기준으로 총 투자금액을 환산해 두 경로가 같은
-                    # 규칙을 따르도록 일치시킨다 (수정 전에는 여기서 0으로 고정되어
-                    # total_investment/total_amount가 모두 0이 되고, 시뮬레이션의
-                    # 정규화 단계에서 0으로 나누기가 발생해 스키마상 유효한 요청도
-                    # 크래시했다 - P1-04).
-                    # DCA의 경우 이 환산된 총액을 dca_periods로 나눠 회당 금액을
-                    # 구해야, 아래에서 재계산하는
-                    # "total_investment = per_period_amount * dca_periods"가
-                    # 원래 환산된 총액과 다시 일치한다.
-                    weight_based_total = 100.0 * (item.weight / 100.0)
-                    per_period_amount = (
-                        weight_based_total / dca_periods if investment_type == 'dca'
-                        else weight_based_total
-                    )
-                else:
-                    raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight를 입력해야 합니다.')
-
-                # 총 투자 금액 계산
-                if investment_type == 'dca':
-                    # 분할 매수: 회당 금액 × 횟수
-                    total_investment = per_period_amount * dca_periods
-                else:
-                    # 일시불: 회당 금액 = 총 금액
-                    total_investment = per_period_amount
-
-                # 고유 키 생성: 현금 자산은 schemas.py의 validate_portfolio가 중복
-                # 검증에서 의도적으로 제외하므로(같은 이름의 현금을 여러 개 추가할
-                # 수 있음) symbol을 그대로 키로 쓰면 amounts/dca_info에서 먼저 들어온
-                # 항목이 나중 항목에 덮어써진다. 그 결과 total_amount(=
-                # sum(amounts.values()))가 실제 현금 총액보다 작아지고, 별도로
-                # 누적되는 cash_amount와 어긋나 individual_returns['CASH']의 weight가
-                # 100%를 넘어서는 등 수치가 불일치했다 (P2-07). 주식 심볼은 스키마가
-                # 이미 중복을 거부하므로 그대로 symbol을 키로 사용해도 안전하고, 이후
-                # 코드가 unique_key로 symbol을 역참조(dca_info[unique_key].symbol)하는
-                # 구조와도 맞는다.
-                if asset_type == 'cash':
-                    cash_entry_counter += 1
-                    unique_key = f"{symbol}__cash_{cash_entry_counter}"
-                else:
-                    unique_key = symbol
-
-                amounts[unique_key] = total_investment
-
-                # 분할 매수 정보 저장
-                dca_info[unique_key] = DcaStrategyInfo(
-                    symbol=symbol,
-                    allocation=0.0, # Will be calculated if needed, or derived from amounts
-                    asset_type=asset_type,
-                    investment_type=investment_type,
-                    monthly_amount=per_period_amount,
-                    dca_frequency=dca_frequency,
-                    dca_periods=dca_periods
-                )
-
-                # 진짜 현금 자산 처리 (asset_type이 'cash'인 경우)
-                if asset_type == 'cash':
-                    # 현금 처리
-                    cash_amount += total_investment
-                    logger.info(f"현금 자산 {symbol} 추가 (금액: ${total_investment:,.2f})")
-                    continue
-
-                logger.info(f"종목 {symbol} 데이터 로드 예정 (총 투자금액: ${total_investment:,.2f}, 방식: {investment_type})")
-
-                if investment_type == 'dca':
-                    logger.info(f"분할 매수: {dca_periods}회에 걸쳐 회당 ${per_period_amount:,.2f}씩 (총 ${total_investment:,.2f})")
-                    logger.info(f"DCA 설정: frequency={dca_frequency}, dca_periods={dca_periods}")
-
-                # 로드할 종목 리스트에 추가
-                symbols_to_load.append(symbol)
+                builder.add(item)
+            allocation = builder.allocation
+            amounts = allocation.amounts  # 실제 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
+            dca_info = allocation.dca_info
+            cash_amount = allocation.cash_amount
 
             # Phase 2: 모든 종목 데이터를 병렬로 로드 (Data Loader 위임)
-            if symbols_to_load:
+            portfolio_data = {}
+            if allocation.symbols_to_load:
                 portfolio_data = await self.data_loader.load_stock_data_parallel(
-                    symbols_to_load=symbols_to_load,
+                    symbols_to_load=allocation.symbols_to_load,
                     start_date=request.start_date,
                     end_date=request.end_date
                 )
 
             # 데이터를 불러오지 못한 종목은 분모와 시뮬레이션에서 제외하고 경고로 알린다 (A-03)
-            #
-            # data_loader는 로드 실패·빈 결과 종목을 로그만 남기고 버린다. 과거에는
-            # 그 종목의 금액이 amounts에 남아 total_amount(= 수익률의 분모)에
-            # 포함됐는데, 가격 시리즈가 없어 매수도 현금 계상도 되지 않아 투자금이
-            # 증발한 것처럼 수익률이 과소보고됐다(AAPL + 없는 종목 반반 → 0.96%).
-            warnings = []
-            failed_keys = [
-                key for key, info in dca_info.items()
-                if info.asset_type != 'cash' and info.symbol not in portfolio_data
-            ]
-            for key in failed_keys:
-                warnings.append(
-                    f"종목 {dca_info[key].symbol}의 가격 데이터를 불러오지 못해 백테스트에서 "
-                    f"제외했습니다 (투자금 ${amounts[key]:,.2f}는 수익률 계산에 포함되지 않음)."
-                )
-                del amounts[key]
-                del dca_info[key]
+            warnings = drop_unloaded_symbols(allocation, portfolio_data)
 
             # 총 투자 금액 계산
             total_amount = sum(amounts.values())
