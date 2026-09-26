@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.npm \
 			npm install --no-audit --prefer-offline --no-fund; \
 		fi
 
-# Stage 2: 품질 게이트
+# Stage 2: 배포 전 테스트 단계
 #
 # 최종 이미지의 의존 경로에 없으므로 `docker build`(타깃 미지정)로는 실행되지
 # 않는다. CI가 `docker build --target test`로 명시적으로 호출한다.
@@ -42,7 +42,7 @@ RUN npm run test:run
 # 컨테이너 안에서 호스트 Docker 데몬에 붙어 sibling 컨테이너를 띄우는 구조라,
 # -v의 소스 경로가 "Jenkins 컨테이너 안의 경로"가 아니라 "호스트 경로"로
 # 해석되어 파일을 찾지 못한다. 빌드 컨텍스트는 데몬으로 스트리밍되므로
-# 그 문제가 없다 (Quality Gate가 동작하는 것과 같은 이유).
+# 그 문제가 없다 (test 스테이지가 동작하는 것과 같은 이유).
 FROM deps AS audit
 
 # npm audit는 어드바이저리 단위 allowlist를 지원하지 않으므로 JSON을 걸러낸다.

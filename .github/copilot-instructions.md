@@ -99,7 +99,7 @@ docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # p
 docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # test code
 docker compose -f compose.dev.yaml exec backtest-fe npm run test:run
 
-# Reproduce the CI gate exactly
+# Reproduce the CI pre-deploy test stage exactly
 docker build --target test ./backtest_fe
 docker build --target test ./backtest_be_fast
 

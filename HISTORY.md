@@ -63,7 +63,7 @@
 
 ### P0
 
-- [x] **A-01 [fe/infra]** ✅ 2026-09-26 (`npm update js-yaml nanoid browserslist fast-uri`, BE `tornado` 6.5.7→6.5.8) — 배포 게이트 복구. TODO 작성(08-08) 이후 권고가 늘어 **FE high 4건**(js-yaml·nanoid에 browserslist·fast-uri 추가), **BE도 tornado 3건**(PYSEC-2026-3928 등, bokeh 전이 의존성)으로 양쪽 게이트가 모두 막혀 있었다. `npm audit fix`는 npm 10.9 내부 오류(`Cannot read properties of null (reading 'edgesOut')`)로 중단되므로 대상 패키지를 직접 `npm update`했다. 이때 lock 파일에 남아 있던 `patch-package` 트리(package.json에서는 이미 제거된 잔재)가 함께 정리됐다. react-router 예외(`GHSA-qwww-vcr4-c8h2`)는 7.18.2가 더 이상 범위로 보고되지 않아 제거 — 예외 목록을 비운 상태로 FE audit 통과 확인.
+- [x] **A-01 [fe/infra]** ✅ 2026-09-26 (`npm update js-yaml nanoid browserslist fast-uri`, BE `tornado` 6.5.7→6.5.8) — 배포 전 검사 단계 복구. TODO 작성(08-08) 이후 권고가 늘어 **FE high 4건**(js-yaml·nanoid에 browserslist·fast-uri 추가), **BE도 tornado 3건**(PYSEC-2026-3928 등, bokeh 전이 의존성)으로 FE·BE 의존성 감사가 모두 배포를 막고 있었다. `npm audit fix`는 npm 10.9 내부 오류(`Cannot read properties of null (reading 'edgesOut')`)로 중단되므로 대상 패키지를 직접 `npm update`했다. 이때 lock 파일에 남아 있던 `patch-package` 트리(package.json에서는 이미 제거된 잔재)가 함께 정리됐다. react-router 예외(`GHSA-qwww-vcr4-c8h2`)는 7.18.2가 더 이상 범위로 보고되지 않아 제거 — 예외 목록을 비운 상태로 FE audit 통과 확인.
 
 ### P1 — 사용자에게 틀린 숫자
 
@@ -100,7 +100,7 @@
 - [x] BE 단위 테스트 **358개** + 통합 **12개** 통과 (분석 시점 141 → 358)
 - [x] FE 단위 테스트 **179개** 통과
 - [x] ESLint **경고 0개**, 예산 `--max-warnings 0` / 타입 검사(prod·test) 통과
-- [x] CI 품질 게이트 양쪽 재현 통과 (`docker build --target test`: BE 358 / FE 179)
+- [x] CI 배포 전 테스트 단계 양쪽 재현 통과 (`docker build --target test`: BE 358 / FE 179)
 - [x] E2E **1개** (Playwright config + 스모크 spec, dev 스택 대상 실제 통과 확인)
 - [x] 커버리지 재측정 (2026-08-03): **BE 71.55%** (분석 시점 ~42%), 핵심 금융 모듈은 82~98% — `portfolio_metrics` 98.6%, `portfolio_rebalancer` 95.0%, `portfolio_calculator_service` 97.0%, `portfolio_simulation_engine` 82.7%. **FE 구문 47.79% / 라인 48.9%** (분석 시점 21.8% / 22.62%). 남은 저커버리지: `data_fetcher` 41%, validators 23~32%(죽은 코드가 아니라 `backtest_engine.py:45`를 통해 살아 있는 경로 — 커버리지 공백), `currency_converter` 57%
 
@@ -180,12 +180,12 @@
 - [x] **P2-33 [fe]** ✅ 2026-08-02 수정 (렌더 시점 innerWidth 직독 → 뷰포트 관측, 회귀 테스트 추가) — 〔Codex, 코드 확인〕 차트 반응형이 렌더 시점 `window.innerWidth` 직독 — `StockPriceChart.tsx:248-257`, `BenchmarkIndexChart.tsx:207-216`(라이브 2개; `EquityChart.tsx:46-49`는 도달불가 서브트리 — P3-15에서 삭제 예정) → 리사이즈에 미반응. 조치: 반응형 훅/ResizeObserver로 교체.
 - [x] **P2-34 [fe]** ✅ 2026-08-02 수정 (`getParamLabel`을 순수 함수로 모듈 스코프 이동 → 의존성 경고 2건 소멸, 죽은 `useAsync.ts`+테스트 삭제 → 3번째 경고 소멸, `--max-warnings 0`. disable 주석 0개) 〔Codex, 실측 확인〕 lint 경고 3 → 0 — `useStrategyParams.ts:55,90`(getParamLabel 의존성 누락 2건; 함수를 useCallback화 또는 내부로), `useAsync.ts:85`(spread 의존성 — 죽은 코드라 파일 삭제가 정답, P3-15와 연계). 완료 시 `--max-warnings 3` → `0`(`package.json`).
 
-#### 테스트 / CI 게이트
+#### 테스트 / CI 검사 단계
 
 - [x] **P2-35 [test]** ✅ 2026-08-03 (chartDataTransform 30, dataSampling 23, useChartData 12 — 빈 입력·단일 포인트·NaN·비정렬·중복 날짜 포함) — FE 차트 데이터 파이프라인 테스트 — 커버리지 0%: `useChartData.ts`(506줄), `chartDataTransform.ts`(177줄), `dataSampling.ts`(736줄, src 최대). 조치: 순수 함수부터 픽스처 테스트(빈 입력/단일 포인트/NaN/비정렬).
 - [x] **P2-36 [test]** ✅ 2026-08-03 (P1-05 수정 시 회귀 테스트 포함, DCA 매니저 수수료 경계 테스트 추가) — 〔교차〕 수수료 경로 테스트 — 엔진 테스트는 `_execute_backtest` mock, 전략 테스트 전부 `commission=0` → "0.3.3 진입 시 수수료" 동작 무고정. 조치: commission>0 실백테스트 1건 + P1-05 회귀.
-- [x] **P2-37 [test]** ✅ 2026-08-03 (mock 저장소 + TestClient 스모크를 tests/unit으로 승격 — CI 게이트가 엔드포인트를 커버) — 메인 엔드포인트 스모크를 CI로 — `POST /api/v1/backtest`+`@handle_portfolio_errors`가 CI 미실행 경로. 조치: mock 저장소 + TestClient를 `tests/unit`으로 승격. 상태코드·응답 스키마 계약 검증 포함(Codex).
-- [x] **P2-38 [test]** ✅ 2026-08-03 (playwright.config.ts + 스모크 spec 1개, dev 스택 대상으로 실제 2회 통과 확인. Docker CI 게이트에는 넣지 않음 — 브라우저·백엔드가 없음) — 〔교차〕 E2E 결정 — Playwright 의존성·스크립트는 있는데 config 부재, 유일 spec은 100% 주석(0개 실행 가능). 조치: config + 스모크 spec(`입력→실행→결과/오류`) 작성 후 CI 연결, 또는 전면 제거 + CLAUDE.md 정정.
+- [x] **P2-37 [test]** ✅ 2026-08-03 (mock 저장소 + TestClient 스모크를 tests/unit으로 승격 — CI 테스트 단계가 엔드포인트를 커버) — 메인 엔드포인트 스모크를 CI로 — `POST /api/v1/backtest`+`@handle_portfolio_errors`가 CI 미실행 경로. 조치: mock 저장소 + TestClient를 `tests/unit`으로 승격. 상태코드·응답 스키마 계약 검증 포함(Codex).
+- [x] **P2-38 [test]** ✅ 2026-08-03 (playwright.config.ts + 스모크 spec 1개, dev 스택 대상으로 실제 2회 통과 확인. Docker CI 테스트 단계에는 넣지 않음 — 브라우저·백엔드가 없음) — 〔교차〕 E2E 결정 — Playwright 의존성·스크립트는 있는데 config 부재, 유일 spec은 100% 주석(0개 실행 가능). 조치: config + 스모크 spec(`입력→실행→결과/오류`) 작성 후 CI 연결, 또는 전면 제거 + CLAUDE.md 정정.
 - [x] **P2-39 [test]** ✅ 2026-08-03 (`chart_data_service` 자체가 죽은 코드로 삭제되어 테스트 파일 동반 삭제) — `tests/unit/test_chart_data_service.py:387-401` — 본문 `pass`인 placeholder가 CI에서 항상 초록불. `chart_data_service.py` 자체가 도달 불가(P3-19) — 모듈 거취와 함께 처리.
 - [x] **P2-40 [test]** ✅ 2026-08-03 (integration 마커 부여, print를 실제 단언으로 전환, 라이브 서버 의존 제거) — `test_nth_weekday_integration.py` — 마커 없음 + print만(단언 없음). 조치: `@pytest.mark.integration` + 기대 거래 수 단언.
 
@@ -231,13 +231,13 @@
 - [x] **P3-05 [infra]** ✅ 2026-08-02 수정 (node:22-alpine, nginx 고정 버전) — 베이스 이미지 수명 — `node:20.19.0-alpine` EOL → 22; `nginx:stable-alpine` 부동 태그 고정(운영 이미지는 digest 고정 검토, Codex).
 - [x] **P3-06 [infra]** ✅ 2026-08-02 수정 (`/app/requirements.txt`로 경로 교정, `|| true` 제거 — P2-18/20과 함께 처리) — `entrypoint.sh:10-13` 죽은 복구 경로 — `/requirements.txt`(실제 `/app/requirements.txt`) + `|| true`. 조치: 경로 수정, `|| true` 제거.
 - [x] **P3-07 [infra]** ✅ 2026-08-02 수정 (restart 정책·리소스 상한·npm ci) — compose 정리 — dev-prod FE 태그 충돌(`backtest-fe:dev`), mysql 서비스 부재로 dev 스택에 암묵 의존, restart 정책·리소스 제한 부재(17-worker BE), FE `Dockerfile.dev` `npm install`→`npm ci`.
-- [x] **P3-08 [infra]** ✅ 2026-08-02 부분 수정 (timeout·docker logout 적용, junit 아카이빙은 게이트 약화 위험으로 보류) — Jenkinsfile 위생 — 파이프라인 timeout 부재, junit 아카이빙 없음, `docker logout` 없음.
+- [x] **P3-08 [infra]** ✅ 2026-08-02 부분 수정 (timeout·docker logout 적용, junit 아카이빙은 검사 단계 약화 위험으로 보류) — Jenkinsfile 위생 — 파이프라인 timeout 부재, junit 아카이빙 없음, `docker logout` 없음.
 - [x] **P3-09 [db]** ✅ 2026-08-03 (`uq_ticker_date_link` UNIQUE 추가 — 중복 삽입이 1062로 거부됨을 실제 확인. FK는 뉴스/가격 저장이 독립 트랜잭션이라 미추가) — `stock_news` UNIQUE/FK 부재 — 중복 방지가 앱 delete-then-insert 의존(`schema.sql:78-92`). 조치: `UNIQUE (ticker, news_date, link(255))` 류.
 - [x] **P3-10 [db]** ✅ 2026-08-03 (중복 인덱스 3개 제거 — schema.sql과 Alembic 양쪽, `EXPLAIN`으로 Backward index scan 확인해 회귀 없음 검증) — 중복 인덱스 3개 제거 — `stocks.idx_ticker`, `daily_prices.idx_stock_date_desc`, `stock_news.idx_ticker`(`schema.sql:41,69,88`) — 쓰기 증폭만.
 - [x] **P3-11 [fe]** ✅ 2026-08-02 수정 — 메타데이터·의존성 정리 — `"license": "MIT"` vs 저장소 AGPL-3.0, placeholder repo URL, `@types/node`가 dependencies에, **미사용 `jsdom`(happy-dom 사용 중)·`patch-package`(patches/ 부재인데 postinstall 실행) 제거(Codex, 직접 확인)**.
 - [x] **P3-12 [be]** ✅ 2026-08-02 수정 — `config.py:90` 죽은 `secret_key` 기본값 제거.
 - [x] **P3-13 [infra]** ✅ 2026-08-02 수정 — nginx gzip + 해시된 `/assets/` 장기 Cache-Control.
-- [x] **P3-14 [ci]** ✅ 2026-08-03 (npm audit + pip-audit 차단 스테이지. 업그레이드 불가·도달 불가 건은 `scripts/audit-deps.sh` 예외 목록에서 근거와 함께 통과 — 빈 예외 목록으로 종료코드 1 확인해 "실패 가능한 게이트"임을 검증. trivy·커버리지는 근거와 함께 보류) — CI 선택 도입 — BE integration 테스트, 이미지 스캔, 의존성 감사, 커버리지 리포팅(핵심 모듈 우선 기준, Codex), SBOM.
+- [x] **P3-14 [ci]** ✅ 2026-08-03 (npm audit + pip-audit 차단 스테이지. 업그레이드 불가·도달 불가 건은 `scripts/audit-deps.sh` 예외 목록에서 근거와 함께 통과 — 빈 예외 목록으로 종료코드 1 확인해 "실제로 실패할 수 있는 검사 단계"임을 검증. trivy·커버리지는 근거와 함께 보류) — CI 선택 도입 — BE integration 테스트, 이미지 스캔, 의존성 감사, 커버리지 리포팅(핵심 모듈 우선 기준, Codex), SBOM.
 - [x] **P3-15 [fe]** ✅ 2026-08-02 부분 수정 (모듈 9개 삭제. 도달 불가 단일 종목 차트 서브트리는 제품 결정 필요로 보류) — FE 죽은 코드 정리 — ~~`useAsync`~~(✅ P2-34에서 삭제), ~~`NewsModal`/`UnifiedInfoSection`~~(✅ P1-01에서 삭제), 잔여: `useForm`/`use-mobile`, `useStrategies`+중복 상수, `ErrorMessage`/`LoadingSpinner` 미사용 export, `PerformanceMonitor` 미사용부, 미호출 `validateParams`, `getErrorTitle`, `shared/types/index.ts`의 고아 `AsyncState<T>`(useAsync 삭제로 발생), **도달불가 단일 종목 차트 서브트리 전체**(제품 결정 필요), 미호출 `Toaster`+`next-themes`.
 - [x] **P3-16 [fe]** ✅ 2026-08-02 수정 — 다크모드 하드코딩 팔레트 — `ChartsSection/index.tsx:84`, `BacktestResults.tsx:52,64`, `ErrorBoundary.tsx:136`, `PortfolioForm.tsx:71` → `dark:` 변형으로.
 - [x] **P3-17 [fe]** ✅ 2026-08-02 수정 — 숫자 입력 인체공학 — `parseFloat||0`으로 비울 수 없음, `strategy_params` 문자열 전송(BE가 캐스팅). 조치: 입력 중 문자열 유지, 제출 시 숫자.
@@ -262,7 +262,7 @@
 
 1. 저난이도·고효과 독립 수정 일괄: P1-02/03/05(1~수줄), P2-03, P1-11, P2-17, P2-19, P2-23 — 각각 회귀 테스트 동반
 2. P1-04/07/08/09/10 수정 + P1-12 테스트 신설(재현 사례를 테스트로 먼저 고정)
-3. P1-13/14 테스트 신뢰성 복구, P2-36/37 CI 게이트 강화
+3. P1-13/14 테스트 신뢰성 복구, P2-36/37 CI 검사 단계 강화
 4. P2-04(검증 통합)·P2-13/14(거래일 모델) — 구조 변경
 5. P2-18/20/22/26/27/28 인프라·배포 안전성
 6. P2-38 E2E, P2-29~34 FE 개선

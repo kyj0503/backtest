@@ -93,7 +93,7 @@ npm run lint → npm run type-check → npm run type-check:test → npm run test
 docker build --target test ./backtest_fe
 ```
 
-E2E는 이 게이트에 포함되지 않습니다.
+E2E는 이 단계에 포함되지 않습니다.
 
 ## 현재 기준선
 
