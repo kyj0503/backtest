@@ -26,7 +26,7 @@ const events: RebalanceEvent[] = [
     date: '2023-03-01',
     trades: [
       // 현금 조정: shares 없이 amount만 온다.
-      { symbol: 'CASH', action: 'increase', amount: 300, price: 1 } as unknown as RebalanceEvent['trades'][number],
+      { symbol: 'CASH', action: 'increase', amount: 300, price: 1 },
       { symbol: 'AAPL', action: 'sell', shares: 2, price: 150 },
     ],
     weights_before: { AAPL: 0.55, CASH: 0.45 },

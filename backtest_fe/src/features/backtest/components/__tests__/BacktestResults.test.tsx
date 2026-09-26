@@ -429,6 +429,31 @@ describe('BacktestResults — 리포트 다운로드', () => {
     expect(toastError).not.toHaveBeenCalled()
   })
 
+  it('주식+현금 리밸런싱 결과도 CSV로 내려받을 수 있다 (현금 조정 거래 포함)', async () => {
+    const user = userEvent.setup()
+    renderPortfolio(
+      makePortfolioData({
+        rebalance_history: [
+          {
+            date: RESULT_DATES[4],
+            trades: [
+              { symbol: 'AAPL', action: 'sell', shares: 2, price: 130 },
+              { symbol: 'CASH', action: 'increase', amount: 260, price: 1 },
+            ],
+            weights_before: { AAPL: 0.55, CASH: 0.45 },
+            weights_after: { AAPL: 0.5, CASH: 0.5 },
+          },
+        ],
+      })
+    )
+    await waitForResults()
+
+    await user.click(screen.getByRole('button', { name: /CSV 다운로드/ }))
+
+    expect(toastError).not.toHaveBeenCalled()
+    expect(await createdBlobs[0]!.text()).toContain('CASH,증가,260.00')
+  })
+
   it('텍스트 리포트는 .txt 파일을 내려받게 한다', async () => {
     const user = userEvent.setup()
     renderPortfolio(makePortfolioData())

@@ -191,6 +191,31 @@ describe('generateCSVReport — 포트폴리오', () => {
     expect(csv).toContain(`${RESULT_DATES[4]},MSFT,매수,196.00,0.8000,245.00,0.39`)
   })
 
+  it('현금 조정 거래(shares 없이 amount만 옴)도 CSV를 깨뜨리지 않는다', () => {
+    // 백엔드 portfolio_rebalancer.py는 현금 비중 조정을 action 'increase'/'decrease',
+    // shares 없이 amount·price(1.0)로 기록한다. 주식+현금 포트폴리오에 리밸런싱을
+    // 켜면 흔히 나오는 형태다.
+    const data = makePortfolioData({
+      rebalance_history: [
+        {
+          date: RESULT_DATES[4],
+          trades: [
+            { symbol: 'AAPL', action: 'sell', shares: 2, price: 130 },
+            { symbol: 'CASH', action: 'increase', amount: 260, price: 1 },
+            { symbol: 'USD', action: 'decrease', amount: 50, price: 1 },
+          ],
+          weights_before: { AAPL: 0.55, CASH: 0.45 },
+          weights_after: { AAPL: 0.5, CASH: 0.5 },
+        },
+      ],
+    })
+
+    const csv = lines(generateCSVReport(data, true))
+    expect(csv).toContain(`${RESULT_DATES[4]},AAPL,매도,260.00,2.0000,130.00,0.00`)
+    expect(csv).toContain(`${RESULT_DATES[4]},CASH,증가,260.00,N/A,1.00,0.00`)
+    expect(csv).toContain(`${RESULT_DATES[4]},USD,감소,50.00,N/A,1.00,0.00`)
+  })
+
   it('비중 변화는 첫날·마지막날·30일 간격으로 샘플링해 퍼센트로 쓴다', () => {
     const weightHistory = Array.from({ length: 65 }, (_, i) => ({
       date: `d${i}`,
