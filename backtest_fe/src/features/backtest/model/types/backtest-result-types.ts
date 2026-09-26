@@ -144,7 +144,9 @@ export interface NewsItem {
 export interface RebalanceTrade {
   symbol: string;
   action: 'buy' | 'sell' | 'increase' | 'decrease';
-  shares: number;
+  // 현금 조정(increase/decrease)에는 없다 — 백엔드 portfolio_rebalancer.py가
+  // shares 대신 amount만 싣는다.
+  shares?: number;
   price: number;
   amount?: number; // 현금 거래 시 사용
 }

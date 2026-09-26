@@ -32,6 +32,14 @@ const percentOrNA = (value: number | null | undefined): string => {
   return formatted === 'N/A' ? formatted : `${formatted}%`;
 };
 
+// RebalanceHistoryTable과 같은 표기. increase/decrease는 현금 비중 조정이다.
+const REBALANCE_ACTION_LABELS: Record<RebalanceTrade['action'], string> = {
+  buy: '매수',
+  sell: '매도',
+  increase: '증가',
+  decrease: '감소',
+};
+
 export const generateTextReport = (data: BacktestResultData, isPortfolio: boolean): string => {
   const lines: string[] = [];
   const timestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
@@ -236,8 +244,10 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
       data.rebalance_history.forEach((event: RebalanceEvent) => {
         const trades = event.trades || [];
         trades.forEach((trade: RebalanceTrade) => {
-          const value = trade.amount !== undefined ? trade.amount : (trade.shares * trade.price);
-          csvRows.push(`${event.date},${trade.symbol},${trade.action === 'buy' ? '매수' : '매도'},${Math.abs(value).toFixed(2)},${trade.shares.toFixed(4)},${trade.price.toFixed(2)},${(event.commission_cost || 0).toFixed(2)}`);
+          // 현금 조정(increase/decrease)은 shares 없이 amount만 온다.
+          const value = trade.amount !== undefined ? trade.amount : (trade.shares ?? 0) * trade.price;
+          const shares = trade.shares !== undefined ? trade.shares.toFixed(4) : 'N/A';
+          csvRows.push(`${event.date},${trade.symbol},${REBALANCE_ACTION_LABELS[trade.action] ?? trade.action},${Math.abs(value).toFixed(2)},${shares},${trade.price.toFixed(2)},${(event.commission_cost || 0).toFixed(2)}`);
         });
       });
       csvRows.push('');
