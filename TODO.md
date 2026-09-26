@@ -15,306 +15,105 @@
 > P0를 찾았다), Claude는 실행 경로를 **정독**했다(그래서 계산 정확성 버그를 찾았다).
 > 겹치는 항목보다 서로 못 본 항목이 많으므로, 어느 한쪽만 보면 절반을 놓친다.
 
+> **2026-09-27 배치9**: 위 두 세션이 남긴 A-04~A-19를 모두 처리했다(HISTORY.md 배치9).
+> 아래 항목은 배치9 작업 중 에이전트들이 **새로 발견한 것**과 저장소 밖 후속 작업이다.
+> 번호는 A-21부터 이어 붙인다.
+
 ## 작업 현황
 
 | 우선순위 | 남은 항목 | 내용 |
 |---|---:|---|
-| **P0** | 0 | — (A-01은 2026-09-26 해결, [HISTORY.md](HISTORY.md) 배치7) |
-| **P1** | 5 | A-04~A-08 — 동시성·자원 보호 3건, 가용성·API 결합도 2건 |
-| **P2** | 6 | A-09 · A-11 · A-12 · A-17~A-19 — API 계약·DB 2건, 지표 정의 1건, 테스트 1건, 제품 확인 2건 |
-| **P3** | 4 | A-13~A-16 — 죽은 코드, 문서 동기화, 대형 모듈 분리 |
-| 저장소 밖 | 3 | 배포 스크립트 태그, MySQL 8.4 실기동, 부하 튜닝 |
-| **합계** | **18** | |
-
-> 2026-09-26 배치7에서 A-01·A-02·A-03과 신규 발견 A-20(DCA MDD 축소 보고)을
-> 처리했다. 근거와 바뀐 사용자 노출 동작은 [HISTORY.md](HISTORY.md) 맨 위 섹션 참고.
-> 같은 날 배치8에서 A-10(물리 FK)을 **FK 제거**로 닫았다 — 저장소의 물리 FK는 이제 0개다.
+| **P0** | 0 | — |
+| **P1** | 0 | — |
+| **P2** | 8 | A-21~A-25, A-33, A-34, A-36 — 틀린 숫자·조작값 5건, 응답 형태 통일 1건, 부가 수집 성능 1건, 깨진 운영 스크립트 1건 |
+| **P3** | 9 | A-26~A-32, A-35, A-37 — 응답 크기, 스레드 풀 계측, 거부 사유 지표, FE/BE 상수 동기화, 특성화 테스트가 고정한 동작 판단, 모드 판정 통일, 정리 3건 |
+| 저장소 밖 | 6 | 배포 태그, home-server 권고 묶음, 운영 MySQL 확인, 운영 DB 마이그레이션, 운영 상한 재조정, 운영 지표 확인 |
+| **합계** | **23** | |
 
 ## 권장 처리 순서
 
-1. ~~A-01~~ · ~~A-02, A-03~~ — 2026-09-26 완료(HISTORY.md 배치7).
-2. **A-19** — DCA 연환산 수익률 정의. A-20(낙폭)과 같은 "납입금이 섞인 평가금" 문제의 남은 절반.
-3. **A-04, A-05** — 동시성 상한과 실제 작업 취소 보장. A-05는 A-04의 전제이기도 하다.
-4. ~~A-10~~ — 2026-09-26 완료(물리 FK 제거, HISTORY.md 배치8).
-5. **A-07** — readiness 도입. 배포 신뢰성 직결.
-6. **A-09, A-12** — API 계약 통일 + 그 회귀망. 2번과 묶으면 효율적이다.
-7. **A-14, A-15, A-13** — 문서·죽은 코드 정리. 저비용, 다음 사람의 오판 방지.
-8. **A-06, A-08, A-11, A-16** — 정책 결정·구조 개선(계측 선행).
-9. **A-17, A-18** — 이전 라운드가 바꾼 동작의 사후 확인. 코드 변경 없이 판단만 필요한
-   건이라 위 순서 어디에든 끼워 넣을 수 있다.
+1. **저장소 밖 1~2** — 배포 태그(롤백 지점)와 home-server 권고(헬스 체크 URL, nginx 앞단 방어). 배치9 기능이 운영에서 제대로 드러나려면 먼저 필요하다.
+2. **A-36** — 일봉 갱신 스크립트가 import 오류로 깨져 있다. 운영 cron에서 쓰고 있다면 가장 먼저.
+3. **A-33, A-34, A-21, A-22, A-23** — 사용자에게 나가는 틀린 숫자·조작값. A-33·A-34는 배치7 A-03·P2-07의 전략 경로판이다.
+4. **A-24** — 응답 형태 통일. FE 타입 불일치를 함께 정리한다.
+5. **A-25, A-26, A-27** — 부가 수집 성능·크기. 저장소 밖 6(운영 지표)으로 실측한 뒤 결정.
+6. 나머지 P3.
 
 ---
 
-## 검증 기준선 (2026-08-08 실측)
-
-Codex 세션이 Docker로 실제 실행해 얻은 값이다. 문서에 적힌 값이 아니라 실측값이다.
+## 검증 기준선 (2026-09-27 실측, 배치9 통합 후)
 
 | 항목 | 결과 |
 |---|---|
-| BE 단위 테스트 | **358개 통과** (경고 25개) |
-| BE 커버리지 | **72%** |
-| BE 통합 테스트 | 12개 수집 확인, 실행하지 않음 |
-| FE 테스트 | **179개 통과** |
-| FE 커버리지 | Statements 47.45% / Branches 35.85% / Functions 42.34% / Lines 48.53% |
-| FE 정적 검증 | ESLint · type-check · type-check:test 전부 통과 |
-| FE 프로덕션 빌드 | 통과 (`PortfolioPage` 청크 549.13kB, gzip 158.44kB) |
-| BE 의존성 감사 | 통과 (Bokeh 1건은 도달 불가로 기존 예외 처리) |
-| **FE 의존성 감사** | **실패 — high 2건. 현재 Jenkins 배포가 막혀 있다 → A-01** |
-
-**2026-09-26 재측정(배치7 후)**: BE 단위 **370개** · FE **188개** 통과, FE 감사 예외 없이 통과,
-BE 감사 bokeh 예외만으로 통과(tornado 6.5.8). 위 표는 08-08 기록으로 남겨 둔다.
-
-정적 계수(Claude 세션, 참고용): BE 앱 10,266줄 / 65파일, BE 테스트 10,557줄,
-FE 프로덕션 12,999줄, FE 테스트 3,725줄. 최대 파일 `portfolio_manager_service.py`
-1,010줄 · `dataSampling.ts` 736줄. 공개 라우트는 `POST /api/v1/backtest` 1개.
-
-실행한 검증:
-
-```bash
-docker build --target test ./backtest_be_fast
-docker build --target test ./backtest_fe
-docker run --rm <be-test-image> pytest tests/unit -q --cov=app --cov-report=term
-docker run --rm <fe-test-image> npm run test:coverage
-docker build --target build --output=type=cacheonly ./backtest_fe
-docker build --target audit --build-arg PIP_AUDIT_IGNORE=PYSEC-2026-1223 ./backtest_be_fast
-docker build --target audit --build-arg NPM_AUDIT_ALLOWLIST=GHSA-qwww-vcr4-c8h2 ./backtest_fe
-```
-
-**실행하지 않은 것**: MySQL 통합 테스트, Playwright E2E, 실제 운영 DB/배포 스크립트.
-아래 항목 중 런타임 관측이 아니라 코드 구조에서 추론한 것은 해당 항목에 명시했다.
+| BE 단위 테스트 | AGENTS.md Testing 절의 `Current baseline` 참고 |
+| BE e2e (골든 마스터) | 통과 — `pytest tests/e2e -m e2e` (네트워크·DB 불필요) |
+| FE 테스트 | AGENTS.md `Current baseline` 참고 |
+| FE 정적 검증 | ESLint(경고 0) · type-check · type-check:test 통과 |
+| 의존성 감사 | FE 예외 없이 통과, BE는 bokeh 1건 예외로 통과 |
+| 스키마 정합성 | `scripts/check-schema-parity.sh` 통과(initdb 경로 = Alembic head, COMMENT까지) |
 
 ---
 
-## P1 — 동시성·자원 보호
+## P2
 
-Codex 세션이 배포 구성(`compose.dev-prod.yaml`)과 대조해 찾은 항목들. 단일 프로세스만
-가정한 기존 안전장치가 멀티 워커에서 성립하지 않는다는 공통 주제를 가진다.
+- [ ] **A-21 [be]** 단일 종목 결과의 나머지 NaN → 0.0 폴백 〔배치9 be-followups〕
 
-- [ ] **A-04 [be/infra]** 백테스트 동시 실행 상한을 프로세스 전체 기준으로 재설계 〔X-02〕
+  `backtest_engine._convert_result_to_response`의 `win_rate_pct`·`sharpe`·`sortino`·`calmar`·
+  `avg/best/worst_trade`가 계산 불가일 때 `safe_float` 기본값 0.0이 된다. 응답의
+  `strategy_details`로 나간다. `profit_factor`는 배치9에서 `optional_finite_float`로 None 처리했으니
+  같은 방식으로 맞춘다. FE 타입(`StrategyStats`)도 null 허용으로.
 
-  `app/api/v1/endpoints/backtest.py:45`의 `asyncio.Semaphore(8)`은 **프로세스 로컬
-  객체**다. `compose.dev-prod.yaml`은 Uvicorn 워커 17개를 실행하므로 실제 상한은
-  8건이 아니라 최대 **17 × 8 = 136건**이다.
+- [ ] **A-22 [be]** buy&hold `individual_results`의 하드코딩 값 〔배치9 be-followups〕
 
-  각 백테스트는 통합 데이터 수집에서 다시 최대 5스레드를 쓴다
-  (`UnifiedDataService._MAX_PARALLEL_WORKERS = 5`). 요청 상한을 스레드·DB 커넥션·외부
-  API fan-out과 함께 **워커 수까지 곱해서** 계산해야 한다(기존 P2-27의 풀 크기 산정과
-  같은 축의 문제다).
+  `sharpe_ratio: 0.0` 고정, `trades`가 DCA 매수 횟수와 무관하게 1, 현금 판별이 `asset_type`이
+  아니라 `symbol == 'CASH'`(`portfolio_manager_service._format_individual_results_list`).
+  FE는 지금 이 필드들을 표시하지 않지만 API 계약상 틀린 값이다.
 
-  조치 후보: Redis/DB 기반 분산 세마포어 / 별도 작업 큐 + 고정 워커 풀 / 단일 API
-  프로세스 + 제한된 계산 프로세스 풀 / 최소한 `workers × MAX_CONCURRENT_BACKTESTS`를
-  운영 설정과 문서에 명시.
+- [ ] **A-23 [be]** buy&hold 종목별 수익률·최종 평가금이 수수료를 빼지 않은 것으로 보임 〔배치9 관찰, 원인 미검증〕
 
-  완료 조건: 멀티 프로세스 부하 테스트에서 실제 동시 계산 수가 설정 상한을 넘지 않는다.
+  골든 마스터에서 종목 10.53% vs 포트폴리오 10.30%, `final_equity` 9947.30 vs 9927.41.
+  `individual_returns.return`은 시작가·종료가 비율로만 계산한다(`portfolio_manager_service`). 재현
+  테스트로 원인을 확인하고, 종목별 값도 수수료 반영 기준으로 맞출지 결정.
 
-- [ ] **A-05 [be]** 60초 타임아웃 이후에도 동기 작업이 계속되는 문제 〔X-03〕
+- [ ] **A-24 [be/fe]** 응답 형태가 경로마다 다름 〔배치9 fe-followups〕
 
-  `asyncio.wait_for(..., timeout=60)`(`endpoints/backtest.py:171`)는 코루틴 대기를
-  취소할 뿐, `asyncio.to_thread()`에서 **이미 실행 중인** 시뮬레이션·DB·외부 API
-  스레드를 종료하지 못한다. 사용자는 504를 받지만 작업은 계속되고, 코루틴 취소로
-  세마포어가 먼저 반환되면 그 슬롯으로 새 요청이 추가 실행된다 — 즉 상한이 실효를 잃는다.
+  `individual_returns`의 키가 전략 경로는 심볼, buy&hold는 unique_key, 현금은 `CASH`이고 필드 구성도
+  다르다(가격 vs 금액). FE `api-types.ts`의 `PortfolioBacktestResponse`(`chart_data`, `stats` 등)는 실제
+  응답과 달라 화면이 `PortfolioData`로 캐스팅해 읽는다. BE 항목 형태를 하나로 정하고 FE 타입을 합친다.
 
-  FE의 `AbortController`(`client.ts:78-89`)도 브라우저 요청만 끊을 뿐 서버 스레드의
-  계산을 멈추지 못한다.
+- [ ] **A-25 [be]** 뉴스 수집이 종목별로 순차 실행 〔배치9 api〕
 
-  조치 후보: 계산 루프에 협력적 cancellation token 전달, 또는 강제 종료 가능한 프로세스
-  작업 단위/작업 큐로 격리.
+  종목당 10초 타임아웃, 20종목이면 최악 200초. 응답은 부가 수집 예산(15초)으로 막히고 남은 스레드는
+  하위 취소 토큰으로 다음 확인 지점에서 멈추지만, 그 전까지 뉴스 외부 호출이 순차로 이어진다.
+  병렬화 + 상한. 네이버 키가 있는 환경에서 실측 선행(배치9에서는 키가 없어 실측 못 함).
 
-  완료 조건: 타임아웃·클라이언트 취소 이후 계산과 외부 수집이 설정 시간 안에 종료되고,
-  동시 실행 슬롯이 실제 작업 종료 전에는 재사용되지 않는다. 타임아웃 테스트가 504
-  반환 속도뿐 아니라 **실행 중 작업 수 감소**까지 검증해야 한다.
+- [ ] **A-33 [be]** 전략 포트폴리오 경로의 실패 종목이 수익률 분모에 남음 〔배치9 A-16 발견〕
 
-- [ ] **A-06 [be/infra]** 공개 서비스라면 인증·rate limit 정책 결정 〔X-04〕
+  `portfolio_execution.run_strategy_per_symbol`에서 백테스트에 실패한 종목의 금액이 `total_amount`에
+  남아 수익률이 과소보고된다(스냅샷 `strategy_amount_mixed` −11.6%). buy&hold 경로는 배치7 A-03으로
+  분모에서 빼고 `warnings`에 싣는다. 같은 규칙으로 맞춘다.
 
-  백테스트 API에 인증도, 사용자/IP별 rate limit도 없고 프로세스 로컬 세마포어만 있다.
-  공개 배포를 유지한다면 고비용 요청의 악용 방지 정책이 필요하다. (A-04와 함께 결정)
+- [ ] **A-34 [be]** 전략 경로에서 같은 이름의 현금 항목이 서로 덮어씀 〔배치9 A-16 발견〕
 
----
+  `portfolio_inputs.resolve_strategy_amounts`가 종목 이름을 키로 써서 뒤 항목이 앞 항목을 덮어쓴다. amount
+  모드 총액은 입력값 합계라 dict 합계와 어긋난다. buy&hold 경로의 P2-07(현금마다 고유 키)과 같은 수정.
 
-## P1 — 가용성·API 결합도
+- [ ] **A-36 [infra]** `backtest_be_fast/scripts/daily_price_update.py`가 없는 `save_ticker_data`를 import해 실행되지 않는다 〔배치9 A-16 발견, 배치9 이전(4a4a8a3)부터 깨져 있었음〕
 
-- [ ] **A-07 [be/infra]** liveness와 readiness 분리 〔X-05〕
+  운영에서 이 스크립트로 일봉을 갱신하고 있다면 조용히 멈춰 있을 수 있다. 올바른 저장 경로로 고치고
+  실행 테스트를 추가한다. 운영 cron 사용 여부는 home-server 쪽에서 확인.
 
-  `/health`(`app/main.py:99-120`)는 `len(app.routes) > 0`만 검사한다. MySQL 연결이나
-  캐시 접근이 실패해도 `healthy`를 반환하므로, `Jenkinsfile:174-201`의 헬스 체크가
-  통과해도 실제 사용 가능성은 보장되지 않는다.
+## P3
 
-  조치: 프로세스 생존용 liveness는 현재처럼 가볍게 유지하고, MySQL에 제한 시간 내
-  `SELECT 1`을 수행하는 readiness를 별도로 둔다. 외부 Yahoo/Naver API는 readiness의
-  필수 조건으로 넣지 말고 별도 관측 지표로 다룬다(외부 장애가 배포 실패로 번지지 않도록).
-
-- [ ] **A-08 [be/fe]** 단일 백테스트 응답의 부가 데이터 결합 완화 〔X-06〕
-
-  `POST /api/v1/backtest` 한 요청이 시뮬레이션뿐 아니라 종목 메타데이터, 원본 주가,
-  환율, 변동성 이벤트, S&P 500/Nasdaq, 뉴스까지 수집해 한 번에 반환한다
-  (`endpoints/backtest.py:104-131`). 부가 외부 API가 느리면 핵심 결과도 함께 지연되고
-  전체가 같은 타임아웃 예산(A-05)을 나눠 쓴다.
-
-  조치 후보: 요청의 `include_*` 옵션 / 핵심 결과와 부가 데이터 API 분리 / 비동기 작업
-  결과 조회 모델. **먼저 응답 크기와 각 수집 단계의 p50/p95를 계측할 것** — 계측 없이
-  분리하면 실제 병목이 아닌 곳을 자를 수 있다.
-
----
-
-## P2 — API 계약 / DB
-
-- [ ] **A-09 [be]** 같은 응답 필드가 실행 경로마다 다른 의미를 가짐 〔C-03〕
-
-  | 필드 | 전략 경로 | buy&hold 경로 |
-  |---|---|---|
-  | `Win_Rate` | 거래 승률의 금액 가중평균 (`portfolio_manager_service.py:496`) | **상승일 비율** (`portfolio_calculator_service.py:91`) |
-  | `Profit_Factor` (손실일 0일 때) | `0.0` (`portfolio_manager_service.py:124`) | `2.0` (`portfolio_calculator_service.py:67`) |
-
-  FE는 두 경로의 응답을 같은 키로 같은 컴포넌트에 렌더하므로 **전략만 바꾸면 지표의
-  정의가 바뀐다.** 특히 `2.0 if gross_profit > 0 else 1.0` 폴백은 [HISTORY.md](HISTORY.md)의 P3-21에서
-  걷어낸 "조작된 통계"와 같은 부류의 잔재다.
-
-  조치: 정의를 한쪽으로 통일(거래 기준/일 기준 중 택1, 필드명으로 구분하는 것도 방법)
-  + 계산 불가 시 폴백 상수 대신 `None`.
-
-- [ ] **A-19 [be]** DCA의 연환산 수익률(CAGR)이 모든 납입금을 첫날 투자한 것으로 계산 〔2026-09-26 재감사〕
-
-  `Annual_Return = final_value ** (365.25 / duration) - 1`(`portfolio_calculator_service.py`,
-  `portfolio_metrics.py` 두 구현 공통)에서 `final_value`는 **총 납입액 대비** 최종 평가금이다.
-  DCA는 마지막 납입금이 거의 투자되지 않았는데도 전 기간 복리를 적용받은 것처럼 나누므로
-  연환산 수익률이 실제보다 0에 가깝게 눌린다(상승장에서 과소, 하락장에서 과소 손실).
-  Sharpe도 이 값을 분자로 쓴다.
-
-  A-20(낙폭)은 `Daily_Return` 누적곱으로 바꿔 해결했지만, 수익률은 **어떤 정의를 보여 줄지가
-  제품 결정**이라 코드만으로 고치지 않았다:
-  - 시간가중(TWR) — 전략·자산 자체의 성과. 낙폭과 정의가 일치한다
-  - 금액가중(MWR/XIRR) — 투자자가 실제로 경험한 수익률
-  - `Total_Return`(총 납입 대비 손익률)은 두 정의와 별개로 지금처럼 유지하는 것이 자연스럽다
-
-  완료 조건: 정의를 정하고 필드명/툴팁에 명시, 고정가·수수료 0 DCA에서 0%, 일정 상승률
-  가격에서 기대값과 일치하는 테스트.
-
-- [ ] **A-11 [db]** `schema.sql`과 Alembic의 스키마 정의 이중화 — 정합성 검증 부재 〔C-05〕
-
-  `database/schema.sql`(최초 부팅 initdb)과 `alembic/versions/`(이후 변경)가 같은 DDL을
-  각각 들고 있다. 의도된 설계이고 이유도 문서화돼 있지만
-  (`622933e2fe2e_initial_schema.py` docstring), autogenerate용 `target_metadata`가 없어
-  (ORM 미사용) **두 파일의 정합은 순전히 사람 손에 달려 있다.**
-
-  실제로 초기 리비전은 이미 어긋난다 — `idx_ticker`, `idx_stock_date_desc`를
-  만들었다가(`:79,103`) 다음 리비전 `d5c3763b29e6`에서 지운다. 최종 상태는 같지만
-  빈 DB에 `upgrade head`를 돌리는 경로와 initdb 경로가 중간 상태에서 다르다.
-
-  조치: 빈 DB에 initdb 적용한 결과와 `upgrade head` 적용한 결과의 `SHOW CREATE TABLE`을
-  비교하는 CI 검증 추가, 또는 장기적으로 단일 소스 통합.
-
----
-
-## P2 — 테스트
-
-- [ ] **A-12 [fe]** 결과 화면의 사용자 흐름 테스트 강화 〔X-07〕
-
-  FE statement 커버리지 47.45%. 계산 유틸과 API 클라이언트는 비교적 잘 검증되지만
-  결과 조합 컴포넌트에 0% 구간이 많다:
-
-  - `BacktestResults`, `StatsSummary`, `TradesChart`
-  - `PortfolioTable`, `RebalanceHistoryTable`, `WeightHistoryChart`
-  - `ChartsSection` 하위 포트폴리오/벤치마크 조합
-  - `reportGenerator`
-
-  **A-02·A-03이 정확히 이 구간에서 사용자에게 드러났다** — 경고 배너 미표시, 무시된
-  설정값 표시가 모두 여기다. 배치7에서 두 버그는 BE·검증 로직 단위로 고쳤지만(HISTORY.md),
-  결과 화면이 `warnings` 배너를 실제로 띄우는지는 아직 컴포넌트 테스트로 고정되지 않았다.
-
-  조치: 단순 스냅샷보다 정상 / 부분 데이터 / 빈 데이터 / 경고 / API 오류 시나리오를
-  RTL로 검증. Playwright smoke는 전체 스택이 필요하므로 배포 전 별도 단계로 분리.
-
----
-
-## P2 — 2026-08-02 라운드가 바꾼 사용자 노출 동작 (제품 확인 필요)
-
-두 건 다 **이전 라운드에서 의도적으로 넣은 제약**이고 코드는 이미 그렇게 동작한다.
-남은 것은 "이 값이 맞는가"라는 판단뿐이다. 근거 기록은 [HISTORY.md](HISTORY.md)의
-"⚠️ 이번 작업으로 바뀐 사용자 노출 동작"에 있다.
-
-- [ ] **A-17 [be]** 백테스트 최소 기간 30일 제약이 적절한지 제품 판단 〔2026-08-02 라운드 이월〕
-
-  P2-04(검증 통합)에서 `MIN_BACKTEST_PERIOD_DAYS = 30`을 도입해 **30일 미만 요청이
-  이제 422로 거부된다.** 연환산 지표(Sharpe·CAGR)가 30일 미만에서 무의미해지므로
-  방어 가능한 규칙이지만, **기존에 되던 요청이 거부되는 변경**이다.
-
-  검증 위치가 스키마가 아니라 엔드포인트인 것도 의도적이다 — DCA/시뮬레이션 내부를
-  3~14일 구간으로 검증하는 기존 단위 테스트가 스키마 레벨 하한과 충돌한다
-  (HTTP 요청 정책 vs 데이터 형태 검증의 분리로도 설명된다).
-
-  조치: 30일이 과한지 판단하고, 조정한다면 `Settings.min_backtest_period_days`로 값만
-  바꾼다. 유지하기로 하면 이 항목을 닫고 제약을 README/API 문서에 명시한다.
-
-  완료 조건: 값이 확정되고 사용자 문서에 하한이 적혀 있다.
-
-- [ ] **A-18 [be/infra]** Prometheus 티커 라벨 상한 200개의 메트릭 품질 저하 〔2026-08-02 라운드 이월〕
-
-  P2-15에서 카디널리티 폭증을 막으려고 알려진 티커 200개 + `other` 버킷으로 상한을
-  걸었다. 문제는 **LRU가 없는 first-N-seen 방식**이라는 것이다 — 초반에 무작위 티커가
-  슬롯을 채우면 이후 실제 인기 티커가 전부 `other`로 묶인다.
-
-  카디널리티 위험은 해소됐으므로 급하지 않지만, 지금 상태의 티커 인기 메트릭은
-  신뢰하고 쓸 수 없다.
-
-  조치 후보: 주기적 슬롯 리셋 / 사전 화이트리스트 / 실제 LRU. 어느 쪽이든 먼저
-  현재 `other` 비율을 확인해 실제로 품질이 나빠졌는지부터 볼 것.
-
----
-
-## P3 — 정리 / 문서
-
-- [ ] **A-13 [be]** 죽은 코드가 테스트에 붙잡혀 있음 〔C-06〕
-
-  `BacktestEngine._create_fallback_result`(`backtest_engine.py:195-275`, 80줄)는
-  프로덕션 호출부가 0인데 `tests/unit/test_backtest_engine.py:363-425`가 계속 테스트한다.
-  `tests/unit/test_validation_service_fallback_stats.py:14-18`이 "테스트가 참조하니
-  `create_fallback_stats`를 통째로 지울 수 없다"고 스스로 적어두고 있다 —
-  **테스트가 삭제를 막고 있는 구조.**
-
-  조치: 프로덕션 메서드와 그것만을 위한 테스트를 함께 삭제.
-
-- [ ] **A-14 [docs]** 기준선·운영 문서 동기화 〔교차: C-07 ⊂ X-08〕
-
-  - `README.md:197`: "BE 189개 / FE 112개" — 실측은 358 / 179. 감사 전(141/113)도
-    후(358/179)도 아닌 값이라 어느 시점 기준인지도 불명이다.
-  - `README.md:22` 기술 스택은 MySQL **8.0**이지만 개발 Compose는 **8.4**
-    (`compose.dev.yaml:47`, P2-24에서 올림).
-  - 일부 내부 주석이 이미 변경된 값(과거 DB 풀 크기 등)을 참조한다.
-  - `Jenkinsfile`은 커밋 `44df5b9`에서 home-server 저장소
-    (`cicd/jenkins/pipeline/backtest-{be,fe}/`)로 이관됐는데 이 문서의 `Jenkinsfile:줄번호` 근거들, `docs/improvement_analysis.md`가 여전히 이 저장소의
-    파일로 가리킨다(2026-09-26 확인).
-
-  조치: 변하기 쉬운 테스트 개수는 CI 배지/자동 생성으로 대체하거나 릴리스 체크리스트에
-  문서 갱신을 넣는다.
-
-- [ ] **A-15 [docs]** `docs/improvement_analysis.md:282`가 코드베이스 결론과 정반대로 유도 〔C-08〕
-
-  > **Fix:** Add `FOREIGN KEY (ticker) REFERENCES stocks(ticker) ON DELETE CASCADE`.
-
-  `stock_news`에 FK를 **추가하라**는 2026-02 시점 권고다. 이후 `schema.sql:91-98`에서
-  정확히 그 반대 결론을 근거와 함께 내렸다(뉴스/가격 저장이 독립 트랜잭션이라 FK를 걸면
-  정상 저장이 실패할 수 있음). 이 문서를 보고 작업하면 의도적으로 피한 FK를 되살리게 된다.
-
-  조치: 해당 항목에 "채택하지 않음 + 사유 + `schema.sql:91-98` 참조"를 달거나 삭제.
-  문서 상단 historical 스탬프도 방법.
-
-- [ ] **A-16 [be/fe]** 대형 모듈의 책임 분리 〔교차: C-09 ⊂ X-09〕
-
-  | 파일 | 줄 수 |
-  |---|---:|
-  | `portfolio_manager_service.py` | 1,010 |
-  | `yfinance_repository.py` | 767 |
-  | `portfolio_simulation_engine.py` | 660 |
-  | `dataSampling.ts` | 736 |
-  | `useChartData.ts` | 510 |
-
-  특히 `portfolio_manager_service.py`는 buy&hold 시뮬레이터 경로와 전략 합산 경로가
-  한 파일에 있고 amount/weight 환산·현금 처리·통계 조립 규칙이 각각 따로 구현돼 있다
-  (weight→금액 환산만 해도 `:334`와 `:640`에 중복). **A-02와 A-09가 이 구조에서
-  파생된다.**
-
-  기능 변경과 분리를 한 번에 하지 말 것. 기존 테스트로 동작을 고정한 뒤 입력 변환 →
-  실행 → 통계 조립 → 응답 직렬화 순으로 단계적으로 추출한다.
+- [ ] **A-26 [be/fe]** 벤치마크 응답을 주말까지 날짜별로 채움 — `fill_missing_dates` 때문에 5년 기준 두 지수 합쳐 약 264KiB. 거래일만 보내거나 FE에서 맞춘다.
+- [ ] **A-27 [be]** `collect_all_unified_data`의 스레드 풀 겹침 — 바깥 풀(5)과 가격 조회용 안쪽 풀(최대 5)이 겹쳐 한 요청이 프로세스당 DB 풀(4+2=6)보다 많은 스레드로 조회할 수 있다. `backtest_stage_duration_seconds`로 실제 풀 대기가 있는지 먼저 확인.
+- [ ] **A-28 [be]** 백테스트 거부 사유별 카운터 — 429/503/504/499가 지금은 경고 로그뿐. 실행 중·대기 중 게이지(`backtest_jobs_running`/`waiting`)는 배치9에서 추가됨.
+- [ ] **A-29 [be/fe]** 최소 기간 30일이 BE 설정(`min_backtest_period_days`)과 FE 상수(`VALIDATION_RULES.MIN_BACKTEST_PERIOD_DAYS`) 두 곳에 있다. 설정 노출 API나 빌드 시 주입으로 한 곳에서 관리할지 검토.
+- [ ] **A-30 [fe]** A-16 특성화 테스트가 "현재 동작"으로 고정한 두 가지가 의도인지 판단 — (1) 월간 가격 샘플링에서 목표일이 휴장일이라 다음 날로 밀리면 이후 달의 기준 요일이 바뀐다. (2) 월간 수익률 집계에서 60개월 넘는 공백을 만나면 그 경계를 넘는 항목이 빠진다. 고치면 해당 특성화 테스트 기대값도 바꾼다.
+- [ ] **A-31 [fe]** 정리 — 호출처가 없어진 `useBacktest.reset`, 쓰이지 않는 `PortfolioStats.win_rate`.
+- [ ] **A-35 [be]** 금액/비중 모드 판정이 경로마다 다름 — 전략 경로는 포트폴리오 전체가 한 모드여야 하고 buy&hold는 종목마다 판정하며 거부 메시지도 다르다. 스키마는 "비중 합계 95~105%이면서 일부 종목만 amount·weight를 둘 다 비운" 요청을 통과시킨다. 스키마에서 거부할지 결정.
+- [ ] **A-37 [infra]** `backtest_be_fast/.dockerignore`의 `__pycache__/`가 루트에만 적용돼 하위 폴더의 호스트 `.pyc`가 test 이미지에 복사된다(`**/__pycache__`로). 테스트 결과에는 영향 없음.
+- [ ] **A-32 [db]** 기존 DB(운영·dev)의 COMMENT 정리 — schema.sql 초기화 당시 initdb 클라이언트 문자셋(latin1) 때문에 테이블 COMMENT 3개·컬럼 5개가 이중 인코딩돼 있고 나머지 컬럼은 COMMENT가 없다(배치9 A-11에서 원인 수정). 기능 영향 없음. 운영 `SHOW CREATE TABLE`을 저장소 정의와 비교한 뒤 결정.
 
 ---
 
@@ -409,21 +208,35 @@ WHERE TABLE_SCHEMA = 'stock_data_cache'
 
 ---
 
+
+---
+
 ## 저장소 밖 운영 후속 작업
 
-두 세션 모두 동일하게 지목했고, [HISTORY.md](HISTORY.md)의 "저장소 밖 필수 후속 조치"와도 이어진다.
-저장소 밖 시스템 또는 실제 DB 상태가 필요해 이번에도 검증하지 못했다.
+저장소 밖 시스템(home-server, 운영 서버·DB)이 필요해 이 저장소에서 검증할 수 없는 항목이다.
 
-- [ ] **배포 스크립트가 `${BUILD_NUMBER}`를 실제 이미지 태그로 사용하도록 수정** 〔교차〕
-      — Jenkinsfile이 태그를 넘기지만 `/opt/home-server/scripts/deploy-app.sh`가
-      무시하고 `:latest`를 pull하는 것이 빌드 #21에서 실측됨. **롤백 지점이 없다.**
-      이미지는 이미 `:${BUILD_NUMBER}`로 GHCR에 있으므로 저장소 쪽 준비는 끝났다.
-      2026-09-27 재확인: Jenkinsfile은 home-server 저장소
-      (`cicd/jenkins/pipeline/backtest-{be,fe}/`)로 옮겨졌고, 운영 배포 #27도 여전히
-      `latest`를 사용했다. 그래서 헬스체크 성공만으로는 새 이미지 가동을 판단할 수 없어,
-      새 코드에만 있는 동작(전략+DCA 요청 422)으로 확인했다. 수정 위치는 home-server 저장소다.
-- [ ] 기존 MySQL 8.0 데이터 볼륨을 8.4로 올리는 실기동 검증
-- [ ] 동시 실행 8건·60초 제한을 실제 부하로 튜닝 (A-04·A-05와 함께)
+- [ ] **1. 배포 스크립트가 `${BUILD_NUMBER}`를 실제 이미지 태그로 사용하도록 수정** 〔교차〕
+      — Jenkinsfile이 태그를 넘기지만 `/opt/home-server/scripts/deploy-app.sh`가 무시하고 `:latest`를
+      pull한다(빌드 #21 실측, 2026-09-27 운영 배포 #27에서도 재확인). **롤백 지점이 없고** 헬스 체크
+      성공만으로 새 이미지 가동을 판단할 수 없다. 수정 위치는 home-server 저장소.
+- [ ] **2. home-server 권고 묶음** (배치9 결과)
+      - Jenkins 배포 후 헬스 체크 URL을 `/health` → `/health/ready`로(DB까지 확인, 실패 시 503). 컨테이너
+        HEALTHCHECK는 재시작 폭주를 막으려 `/health` 유지.
+      - nginx 앞단 방어: `/api/v1/backtest`에 `limit_req`(IP당 예: 10r/m, burst). `X-Forwarded-For`를
+        `$proxy_add_x_forwarded_for`로 넘기는지 확인 — 안 넘기면 BE의 IP별 동시 실행 제한(A-06)이 꺼진다.
+      - `scripts/check-schema-parity.sh`를 BE 파이프라인 단계로 연결(Docker·인터넷 필요, 약 20초).
+      - 지표 알림: `backtest_supplemental_outcome_total{outcome=~"empty|timeout|error"}` 비율,
+        `backtest_jobs_waiting`.
+- [ ] **3. 운영 MySQL 서버 버전·인증 플러그인 확인** — `SELECT VERSION(); SELECT user,host,plugin FROM mysql.user;`.
+      8.0이면 `database/README.md` 절차(덤프 → 정상 종료 → 8.4)로 올린다. 8.4는 `mysql_native_password`
+      계정 로그인이 1524로 실패하므로 먼저 `caching_sha2_password`로 바꾼다(로컬 8.0.46→8.4.11 재현 완료).
+- [ ] **4. 운영 DB에 `alembic upgrade head`** — 배치9 리비전 `1f574a9ba22e`(stock_id COMMENT만 변경,
+      INSTANT) 적용. 기능 영향 없어 선택. 파이프라인·운영 이미지에 Alembic이 없어 수동.
+- [ ] **5. 운영 동시 실행 상한 재조정** — 운영 BE의 워커 수·CPU 한도를 확인하고 `MAX_CONCURRENT_BACKTESTS`를
+      "CPU 수 × 2" 기준으로 맞춘다(로컬 17 workers/4 CPU에서 8~12 포화, 16은 실행 p95 45초).
+      BE 컨테이너를 여러 개 띄우면 상한이 컨테이너마다 따로라는 점도 재검토.
+- [ ] **6. 운영 지표 확인** — 배포 후 `backtest_stage_duration_seconds`로 단계별 p50/p95(뉴스 포함),
+      `ticker_popularity_total`의 `other` 비율을 본다. A-25~A-27 결정의 근거.
 
 ---
 
