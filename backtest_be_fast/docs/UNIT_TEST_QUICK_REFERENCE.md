@@ -301,7 +301,7 @@ with patch('app.utils.currency_converter.currency_converter'):
 - [pytest-asyncio documentation](https://pytest-asyncio.readthedocs.io/)
 - [unittest.mock documentation](https://docs.python.org/3/library/unittest.mock.html)
 - [Test Coverage Summary](./TEST_COVERAGE_SUMMARY.md)
-- [CLAUDE.md](../../CLAUDE.md) - Project overview and testing section
+- [AGENTS.md](../../AGENTS.md) - Project overview and testing section
 
 ---
 

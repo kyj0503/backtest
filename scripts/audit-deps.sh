@@ -29,7 +29,7 @@ NPM_ALLOWLIST=""
 
 # PYSEC-2026-1223 / CVE-2026-21883 (bokeh 2.4.3)
 #   bokeh 서버의 Origin 검증 우회. bokeh는 backtesting==0.3.3이 끌어오는 전이
-#   의존성이고(CLAUDE.md 제약 2에 따라 의도적으로 고정), 이 앱은 .plot()을
+#   의존성이고(AGENTS.md 제약 2에 따라 의도적으로 고정), 이 앱은 .plot()을
 #   호출하지 않아 bokeh 서버를 띄우지 않는다.
 #   재검토: backtesting 핀을 풀면 함께 제거할 것.
 PIP_IGNORE="PYSEC-2026-1223"

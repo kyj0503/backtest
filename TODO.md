@@ -281,8 +281,7 @@ Codex 세션이 배포 구성(`compose.dev-prod.yaml`)과 대조해 찾은 항�
     (`compose.dev.yaml:47`, P2-24에서 올림).
   - 일부 내부 주석이 이미 변경된 값(과거 DB 풀 크기 등)을 참조한다.
   - `Jenkinsfile`은 커밋 `44df5b9`에서 home-server 저장소
-    (`cicd/jenkins/pipeline/backtest-{be,fe}/`)로 이관됐는데 `CLAUDE.md`의 CI 섹션,
-    이 문서의 `Jenkinsfile:줄번호` 근거들, `docs/improvement_analysis.md`가 여전히 이 저장소의
+    (`cicd/jenkins/pipeline/backtest-{be,fe}/`)로 이관됐는데 이 문서의 `Jenkinsfile:줄번호` 근거들, `docs/improvement_analysis.md`가 여전히 이 저장소의
     파일로 가리킨다(2026-09-26 확인).
 
   조치: 변하기 쉬운 테스트 개수는 CI 배지/자동 생성으로 대체하거나 릴리스 체크리스트에
