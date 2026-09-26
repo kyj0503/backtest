@@ -20,6 +20,10 @@ Prometheus Counter는 한 번 생성된 라벨 조합을 프로세스 생명주�
 현금 항목(asset_type='cash')은 애초에 "티커"가 아니므로
 portfolio_manager_service.py에서 record_ticker_popularity() 호출 자체를
 건너뛴다.
+
+**A-18 이후**: first-N-seen 대신 TickerLabelPolicy(허용 목록 + 보장 횟수 기반
+승격, tests/unit/test_ticker_label_policy.py)로 라벨을 정한다. 이 파일의 세 테스트는
+"카디널리티 상한"이라는 P2-15의 원래 계약을 새 정책에 대해 그대로 확인한다.
 """
 import pytest
 
@@ -30,13 +34,11 @@ pytestmark = pytest.mark.unit
 
 
 @pytest.fixture(autouse=True)
-def isolate_seen_tickers():
-    """다른 테스트(또는 이전 실행)가 전역 _seen_tickers에 남긴 상태로부터
-    격리한다. 모듈 레벨 카디널리티 상한은 프로세스 생명주기 동안 유지되는
-    의도된 설계이므로, 테스트에서만 명시적으로 리셋한다."""
-    custom_metrics._seen_tickers.clear()
-    yield
-    custom_metrics._seen_tickers.clear()
+def isolate_label_policy(monkeypatch):
+    """다른 테스트(또는 이전 실행)가 전역 라벨 정책에 남긴 상태로부터 격리한다.
+    모듈 레벨 정책 상태는 프로세스 생명주기 동안 유지되는 의도된 설계이므로,
+    테스트에서만 새 인스턴스로 바꾼다."""
+    monkeypatch.setattr(custom_metrics, "_ticker_label_policy", custom_metrics.TickerLabelPolicy())
 
 
 def _distinct_labels_with_prefix(prefix: str) -> set:
@@ -54,7 +56,7 @@ class TestTickerPopularityCardinalityBound:
         (TICKER_POPULARITY_TOTAL.labels(ticker=item.symbol).inc()를 직접 호출)로
         동일한 정크 티커들을 넣으면 cap보다 훨씬 많은(overflow개) 고유 라벨이
         생겨 이 assert가 실패했을 것이다."""
-        cap = custom_metrics._MAX_TRACKED_TICKERS
+        cap = custom_metrics._MAX_DYNAMIC_TICKERS
         overflow = 300
         junk_tickers = [f"JUNKTICKER{i:06d}" for i in range(cap + overflow)]
 
@@ -80,12 +82,14 @@ class TestTickerPopularityCardinalityBound:
         assert TICKER_POPULARITY_TOTAL.labels(ticker="AAPL")._value.get() >= 50
 
     def test_ticker_already_tracked_keeps_own_label_even_after_cap_reached(self):
-        """캡이 다 찬 뒤에도, 이미 추적 중이던 티커는 계속 자기 라벨로 집계된다
-        (인기 티커가 정크에 밀려 'other'로 뭉개지지 않는다)."""
-        cap = custom_metrics._MAX_TRACKED_TICKERS
-        record_ticker_popularity("MSFT")  # 캡을 채우기 전에 먼저 등록
+        """동적 슬롯이 다 찬 뒤에도, 이미 추적 중이던 티커는 계속 자기 라벨로
+        집계된다 (인기 티커가 정크에 밀려 'other'로 뭉개지지 않는다)."""
+        cap = custom_metrics._MAX_DYNAMIC_TICKERS
+        min_count = custom_metrics._PROMOTION_MIN_COUNT
+        record_ticker_popularity("MSFT")  # 허용 목록 티커
         for i in range(cap + 50):
-            record_ticker_popularity(f"FILLER{i:06d}")
+            for _ in range(min_count):  # 승격 기준을 채워 동적 슬롯을 다 쓴다
+                record_ticker_popularity(f"FILLER{i:06d}")
 
         # MSFT는 캡이 다 찬 뒤에도 여전히 자기 라벨로 집계되어야 한다
         record_ticker_popularity("MSFT")
