@@ -88,7 +88,7 @@ Counts below are `pytest tests/unit --collect-only` item counts (post-parametriz
 | `test_data_repository.py` | 14 | YfinanceDataRepository: get_stock_data (3-tier cache), invalidate_cache, TTLCache behavior |
 | `test_dca_schedule_alignment.py` | 14 | DCA payment count matches the actual Nth-weekday purchase schedule, not a "month = 30 days" approximation |
 | `test_chart_data_service.py` | 12 | Chart data assembly |
-| `test_backtest_engine.py` | 10 | BacktestEngine: run_backtest, _build_strategy, _convert_result_to_response, _create_fallback_result |
+| `test_backtest_engine.py` | 8 | BacktestEngine: run_backtest, _build_strategy, _convert_result_to_response |
 | `test_strategy_service.py` | 9 | Strategy resolution and parameter validation |
 | `test_nth_weekday_edge_cases.py` | 9 | Nth-weekday boundary cases |
 | `test_request_models.py` | 8 | Backtest request model validation |
@@ -117,7 +117,6 @@ Counts below are `pytest tests/unit --collect-only` item counts (post-parametriz
 - `TestBacktestEngineRunBacktest` (3 tests) - Main execution flow
 - `TestBacktestEngineBuildStrategy` (3 tests) - Strategy parameter overrides
 - `TestBacktestEngineConvertResultToResponse` (2 tests) - Stats mapping
-- `TestBacktestEngineCreateFallbackResult` (2 tests) - Fallback generation
 
 ### test_currency_converter.py
 - `TestGetConversionMultiplier` (8 tests) - Currency-specific multipliers
