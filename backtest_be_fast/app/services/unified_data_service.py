@@ -6,10 +6,12 @@
 import asyncio
 import concurrent.futures
 import logging
+import time
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import Callable, List, Dict, Any, Optional
 
 from .data_service import data_service
+from app.monitoring.custom_metrics import observe_stage
 from app.repositories.stock_repository import get_stock_repository
 from ..core.config import settings
 
@@ -374,15 +376,32 @@ class UnifiedDataService:
             collect_stock_data/collect_volatility_events 양쪽이 공유하도록 한
             번만 조회한다 (기존에는 심볼당 두 번 조회했다).
         """
+        total_start = time.perf_counter()
+        timings: Dict[str, float] = {}
+
+        def timed(stage: str, fn: Callable, *args, **kwargs):
+            """단계 소요 시간을 히스토그램과 요약 로그용 dict에 기록한다 (A-08)."""
+            start = time.perf_counter()
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                elapsed = time.perf_counter() - start
+                timings[stage] = elapsed
+                observe_stage(stage, elapsed)
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=self._MAX_PARALLEL_WORKERS) as executor:
             price_histories_future = executor.submit(
-                self._fetch_price_histories, symbols, start_date, end_date
+                timed, "price_history", self._fetch_price_histories, symbols, start_date, end_date
             )
-            ticker_info_future = executor.submit(self.collect_ticker_info, symbols)
-            exchange_future = executor.submit(self.collect_exchange_data, start_date, end_date)
-            benchmark_future = executor.submit(self.collect_benchmark_data, start_date, end_date)
+            ticker_info_future = executor.submit(timed, "ticker_info", self.collect_ticker_info, symbols)
+            exchange_future = executor.submit(
+                timed, "exchange_rates", self.collect_exchange_data, start_date, end_date
+            )
+            benchmark_future = executor.submit(
+                timed, "benchmarks", self.collect_benchmark_data, start_date, end_date
+            )
             news_future = (
-                executor.submit(self.collect_latest_news, symbols, news_display_count)
+                executor.submit(timed, "news", self.collect_latest_news, symbols, news_display_count)
                 if include_news else None
             )
 
@@ -393,12 +412,18 @@ class UnifiedDataService:
             latest_news = news_future.result() if news_future else {}
 
         # 이미 조회한 주가 히스토리를 공유해 중복 조회 없이 파생 데이터를 계산한다
-        stock_data = self.collect_stock_data(
+        stock_data = timed(
+            "stock_data", self.collect_stock_data,
             symbols, start_date, end_date, price_histories=price_histories
         )
-        volatility_events = self.collect_volatility_events(
+        volatility_events = timed(
+            "volatility_events", self.collect_volatility_events,
             symbols, start_date, end_date, price_histories=price_histories
         )
+
+        total = time.perf_counter() - total_start
+        timings["supplemental_total"] = total
+        observe_stage("supplemental_total", total)
 
         logger.info(
             f"통합 데이터 수집 완료: "
@@ -406,6 +431,7 @@ class UnifiedDataService:
             f"{len(exchange_rates)}개 환율 데이터, "
             f"{len(latest_news)}개 종목 뉴스"
         )
+        logger.info("부가 데이터 단계별 소요(초): " + self._format_timings(timings))
 
         return {
             'ticker_info': ticker_info,
@@ -421,6 +447,18 @@ class UnifiedDataService:
     # ========================================
     # Private Helper Methods
     # ========================================
+
+    @staticmethod
+    def _format_timings(timings: Dict[str, float]) -> str:
+        """요약 로그용 `stage=0.123` 나열 (실행되지 않은 단계는 skipped)."""
+        order = (
+            "ticker_info", "price_history", "exchange_rates", "benchmarks", "news",
+            "stock_data", "volatility_events", "supplemental_total",
+        )
+        return " ".join(
+            f"{stage}={timings[stage]:.3f}" if stage in timings else f"{stage}=skipped"
+            for stage in order
+        )
     
     def _transform_stock_data(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
         """주가 DataFrame을 딕셔너리 리스트로 변환"""

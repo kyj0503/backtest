@@ -40,6 +40,36 @@ BACKTEST_PROCESSING_SECONDS = Histogram(
     buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0]
 )
 
+# 백테스트 요청의 단계별 소요 시간 (A-08 계측)
+# stage 라벨은 코드가 정하는 고정 집합(BACKTEST_STAGES)이다 — 사용자 입력이 아니므로
+# 카디널리티 걱정이 없다. simulation은 BACKTEST_PROCESSING_SECONDS와 같은 구간을
+# 재지만, 부가 데이터 단계와 한 메트릭에서 나란히 비교하려고 여기에도 기록한다.
+# 부가 데이터 단계는 병렬로 돌므로 단계별 합이 supplemental_total보다 클 수 있다.
+BACKTEST_STAGES = (
+    "simulation",          # 시뮬레이션(전략/Buy&Hold 계산, 입력 주가 로드 포함)
+    "ticker_info",         # 종목 메타데이터(DB 일괄 조회)
+    "price_history",       # 원본 주가 히스토리 조회(심볼별 병렬)
+    "exchange_rates",      # 환율 조회 + 통계
+    "benchmarks",          # S&P 500 / NASDAQ 지수 조회
+    "news",                # 뉴스(DB 캐시 우선, 없으면 네이버 API)
+    "stock_data",          # 원본 주가를 응답 형식으로 변환
+    "volatility_events",   # 급등락 이벤트 계산
+    "supplemental_total",  # 부가 데이터 수집 전체(병렬 구간 + 후처리)
+)
+BACKTEST_STAGE_SECONDS = Histogram(
+    "backtest_stage_duration_seconds",
+    "Time spent in each stage of a single backtest request",
+    ["stage"],
+    buckets=[0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 60.0],
+)
+
+
+def observe_stage(stage: str, seconds: float) -> None:
+    """단계 소요 시간을 기록한다. 알 수 없는 stage는 무시한다(라벨 폭증 방지)."""
+    if stage in BACKTEST_STAGES:
+        BACKTEST_STAGE_SECONDS.labels(stage=stage).observe(seconds)
+
+
 # --- 카디널리티 상한 설정 (P2-15) ---
 _MAX_TRACKED_TICKERS = 200
 _OTHER_TICKER_LABEL = "other"

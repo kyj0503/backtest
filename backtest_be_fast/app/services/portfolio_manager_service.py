@@ -46,6 +46,7 @@ from app.utils.currency_converter import currency_converter, CurrencyConverter
 from app.monitoring.custom_metrics import (
     BACKTEST_EXECUTION_TOTAL,
     BACKTEST_PROCESSING_SECONDS,
+    observe_stage,
     record_ticker_popularity,
 )
 
@@ -540,6 +541,8 @@ class PortfolioManagerService:
             # --- [Custom Metrics] Record Success ---
             duration = time.time() - start_time
             BACKTEST_PROCESSING_SECONDS.labels(strategy_type="strategy_portfolio").observe(duration)
+            observe_stage("simulation", duration)  # A-08: 부가 데이터 단계와 나란히 비교
+            logger.info(f"백테스트 단계 소요(초): simulation={duration:.3f}")
             BACKTEST_EXECUTION_TOTAL.labels(strategy_type="strategy_portfolio", status="success").inc()
             # ---------------------------------------
             
@@ -1013,6 +1016,8 @@ class PortfolioManagerService:
             # --- [Custom Metrics] Record Success ---
             duration = time.time() - start_time
             BACKTEST_PROCESSING_SECONDS.labels(strategy_type="buy_and_hold").observe(duration)
+            observe_stage("simulation", duration)  # A-08: 부가 데이터 단계와 나란히 비교
+            logger.info(f"백테스트 단계 소요(초): simulation={duration:.3f}")
             BACKTEST_EXECUTION_TOTAL.labels(strategy_type="buy_and_hold", status="success").inc()
             # ---------------------------------------
 
