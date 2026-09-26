@@ -60,11 +60,11 @@ class DcaCalculator:
             투자 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12, 기본값: monthly_1)
         commission : float, optional
             거래 수수료율 (0.002 = 0.2%, 기본값: 0.0).
-            [주의] 현재 유일한 호출자인 portfolio_manager_service.py는 아직 이
-            인자를 넘기지 않는다(하위 호환을 위해 기본값 0.0으로 둠). 실제
-            요청의 commission을 반영하려면 그 호출부가 request.commission을
-            넘기도록 바뀌어야 한다 (이 배치에서는 portfolio_manager_service.py를
-            수정할 수 없어 후속 작업으로 남김).
+            [주의] 현재 유일한 호출자인 portfolio_response_builder.py의
+            build_buy_hold_individual_returns()는 아직 이 인자를 넘기지 않는다
+            (하위 호환을 위해 기본값 0.0으로 둠). 실제 요청의 commission을
+            반영하려면 그 호출부가 request.commission을 넘기도록 바뀌어야 한다
+            (후속 작업).
 
         Returns
         -------

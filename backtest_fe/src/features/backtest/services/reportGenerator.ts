@@ -23,6 +23,28 @@ interface SummaryStats {
   [key: string]: unknown;
 }
 
+// 계산 불가(null) 통계는 숫자 대신 N/A로 쓴다 — Profit_Factor는 손실일이 없으면 null이다 (A-09)
+const fixedOrNA = (value: number | null | undefined, digits = 2): string =>
+  typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'N/A';
+
+const percentOrNA = (value: number | null | undefined): string => {
+  const formatted = fixedOrNA(value);
+  return formatted === 'N/A' ? formatted : `${formatted}%`;
+};
+
+const dollarOrNA = (value: number | null | undefined): string => {
+  const formatted = fixedOrNA(value);
+  return formatted === 'N/A' ? formatted : `$${formatted}`;
+};
+
+// RebalanceHistoryTable과 같은 표기. increase/decrease는 현금 비중 조정이다.
+const REBALANCE_ACTION_LABELS: Record<RebalanceTrade['action'], string> = {
+  buy: '매수',
+  sell: '매도',
+  increase: '증가',
+  decrease: '감소',
+};
+
 export const generateTextReport = (data: BacktestResultData, isPortfolio: boolean): string => {
   const lines: string[] = [];
   const timestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
@@ -56,7 +78,7 @@ export const generateTextReport = (data: BacktestResultData, isPortfolio: boolea
     lines.push(`  최고 자산가치       : $${stats.Peak_Value.toLocaleString()}`);
     lines.push('');
     lines.push(`  총 수익률           : ${stats.Total_Return.toFixed(2)}%`);
-    lines.push(`  연간 수익률         : ${stats.Annual_Return.toFixed(2)}%`);
+    lines.push(`  연환산 수익률(시간가중): ${stats.Annual_Return.toFixed(2)}%`);
     lines.push(`  연간 변동성         : ${stats.Annual_Volatility.toFixed(2)}%`);
     lines.push('');
     lines.push(`  샤프 비율           : ${stats.Sharpe_Ratio.toFixed(2)}`);
@@ -66,8 +88,11 @@ export const generateTextReport = (data: BacktestResultData, isPortfolio: boolea
     lines.push(`  총 거래일수         : ${stats.Total_Trading_Days}일`);
     lines.push(`  상승일수            : ${stats.Positive_Days}일`);
     lines.push(`  하락일수            : ${stats.Negative_Days}일`);
-    lines.push(`  승률                : ${stats.Win_Rate.toFixed(2)}%`);
-    lines.push(`  프로핏 팩터         : ${stats.Profit_Factor.toFixed(2)}`);
+    lines.push(`  승률(일 기준)       : ${stats.Win_Rate.toFixed(2)}%`);
+    if (stats.Trade_Win_Rate !== undefined) {
+      lines.push(`  거래 승률           : ${percentOrNA(stats.Trade_Win_Rate)}`);
+    }
+    lines.push(`  프로핏 팩터         : ${fixedOrNA(stats.Profit_Factor)}`);
     lines.push(`  연속 상승 최대      : ${stats.Max_Consecutive_Gains}일`);
     lines.push(`  연속 하락 최대      : ${stats.Max_Consecutive_Losses}일`);
     lines.push('');
@@ -76,8 +101,14 @@ export const generateTextReport = (data: BacktestResultData, isPortfolio: boolea
       lines.push('■ 개별 종목 수익률');
       lines.push('-'.repeat(80));
       Object.entries(data.individual_returns).forEach(([symbol, info]) => {
-        lines.push(`  ${symbol.padEnd(10)} - 수익률: ${(info.return * 100).toFixed(2)}%  |  비중: ${(info.weight * 100).toFixed(2)}%`);
-        lines.push(`               시작가: $${info.start_price.toFixed(2)}  |  종료가: $${info.end_price.toFixed(2)}`);
+        // return은 BE가 이미 백분율로 준다. weight만 0~1 비율이라 100을 곱한다.
+        lines.push(`  ${symbol.padEnd(10)} - 수익률: ${percentOrNA(info.return)}  |  비중: ${(info.weight * 100).toFixed(2)}%`);
+        if (info.start_price !== undefined || info.end_price !== undefined) {
+          lines.push(`               시작가: ${dollarOrNA(info.start_price)}  |  종료가: ${dollarOrNA(info.end_price)}`);
+        } else if (info.initial_value !== undefined || info.final_value !== undefined) {
+          // 전략 포트폴리오 경로는 가격 대신 투자 금액과 최종 가치를 준다.
+          lines.push(`               투자금: ${dollarOrNA(info.initial_value)}  |  최종 가치: ${dollarOrNA(info.final_value)}`);
+        }
       });
       lines.push('');
     }
@@ -192,7 +223,7 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
     csvRows.push(`최종 자산가치,$${stats.Final_Value.toLocaleString()}`);
     csvRows.push(`최고 자산가치,$${stats.Peak_Value.toLocaleString()}`);
     csvRows.push(`총 수익률,${stats.Total_Return.toFixed(2)}%`);
-    csvRows.push(`연간 수익률,${stats.Annual_Return.toFixed(2)}%`);
+    csvRows.push(`연환산 수익률(시간가중),${stats.Annual_Return.toFixed(2)}%`);
     csvRows.push(`연간 변동성,${stats.Annual_Volatility.toFixed(2)}%`);
     csvRows.push(`샤프 비율,${stats.Sharpe_Ratio.toFixed(2)}`);
     csvRows.push(`최대 낙폭(MDD),${stats.Max_Drawdown.toFixed(2)}%`);
@@ -200,8 +231,11 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
     csvRows.push(`총 거래일수,${stats.Total_Trading_Days}`);
     csvRows.push(`상승일수,${stats.Positive_Days}`);
     csvRows.push(`하락일수,${stats.Negative_Days}`);
-    csvRows.push(`승률,${stats.Win_Rate.toFixed(2)}%`);
-    csvRows.push(`프로핏 팩터,${stats.Profit_Factor.toFixed(2)}`);
+    csvRows.push(`승률(일 기준),${stats.Win_Rate.toFixed(2)}%`);
+    if (stats.Trade_Win_Rate !== undefined) {
+      csvRows.push(`거래 승률,${percentOrNA(stats.Trade_Win_Rate)}`);
+    }
+    csvRows.push(`프로핏 팩터,${fixedOrNA(stats.Profit_Factor)}`);
     csvRows.push(`연속 상승 최대,${stats.Max_Consecutive_Gains}`);
     csvRows.push(`연속 하락 최대,${stats.Max_Consecutive_Losses}`);
     csvRows.push('');
@@ -210,7 +244,7 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
       csvRows.push('개별 종목 수익률');
       csvRows.push('종목,수익률(%),비중(%),시작가($),종료가($)');
       Object.entries(data.individual_returns).forEach(([symbol, info]) => {
-        csvRows.push(`${symbol},${(info.return * 100).toFixed(2)},${(info.weight * 100).toFixed(2)},${info.start_price.toFixed(2)},${info.end_price.toFixed(2)}`);
+        csvRows.push(`${symbol},${fixedOrNA(info.return)},${(info.weight * 100).toFixed(2)},${fixedOrNA(info.start_price)},${fixedOrNA(info.end_price)}`);
       });
       csvRows.push('');
     }
@@ -221,8 +255,10 @@ export const generateCSVReport = (data: BacktestResultData, isPortfolio: boolean
       data.rebalance_history.forEach((event: RebalanceEvent) => {
         const trades = event.trades || [];
         trades.forEach((trade: RebalanceTrade) => {
-          const value = trade.amount !== undefined ? trade.amount : (trade.shares * trade.price);
-          csvRows.push(`${event.date},${trade.symbol},${trade.action === 'buy' ? '매수' : '매도'},${Math.abs(value).toFixed(2)},${trade.shares.toFixed(4)},${trade.price.toFixed(2)},${(event.commission_cost || 0).toFixed(2)}`);
+          // 현금 조정(increase/decrease)은 shares 없이 amount만 온다.
+          const value = trade.amount !== undefined ? trade.amount : (trade.shares ?? 0) * trade.price;
+          const shares = trade.shares !== undefined ? trade.shares.toFixed(4) : 'N/A';
+          csvRows.push(`${event.date},${trade.symbol},${REBALANCE_ACTION_LABELS[trade.action] ?? trade.action},${Math.abs(value).toFixed(2)},${shares},${trade.price.toFixed(2)},${(event.commission_cost || 0).toFixed(2)}`);
         });
       });
       csvRows.push('');

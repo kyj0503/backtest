@@ -25,7 +25,7 @@ class PortfolioRebalancer:
         예: 이름이 같은 현금 항목을 두 개 추가하면(스키마가 현금은 이름 중복
         검증에서 제외) 'CASH__cash_1'과 'CASH__cash_2'가 둘 다 symbol='CASH'를
         가리킨다 -- 이 경우 {'CASH'}가 반환된다. 주식은 unique_key가 항상
-        symbol과 동일하므로(portfolio_manager_service.py) 실제로는 충돌이
+        symbol과 동일하므로(portfolio_inputs.py) 실제로는 충돌이
         생기지 않는다.
         """
         symbol_counts: Dict[str, int] = {}

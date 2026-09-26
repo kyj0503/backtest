@@ -125,7 +125,12 @@ RUN mkdir -p ${PROMETHEUS_MULTIPROC_DIR} \
     && chown app:app ${PROMETHEUS_MULTIPROC_DIR} \
     && chmod 0755 ${PROMETHEUS_MULTIPROC_DIR}
 
-# 헬스체크 추가
+# 헬스체크: liveness(/health)에 건다. readiness(/health/ready)가 아니다 (A-07).
+# 컨테이너 헬스 상태는 "이 컨테이너를 재시작하면 나아지는가"를 뜻해야 한다.
+# DB 장애를 여기 걸면 MySQL이 잠깐 내려가거나 재기동 중일 때 멀쩡한 BE 컨테이너가
+# 전부 unhealthy가 되고, 재시작 도구(autoheal, 오케스트레이터)가 붙어 있으면 복구에
+# 도움 없이 재시작만 반복한다. "지금 요청을 처리할 수 있는가"(DB 포함)는 배포 후
+# 확인 단계가 /health/ready로 직접 확인한다.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 

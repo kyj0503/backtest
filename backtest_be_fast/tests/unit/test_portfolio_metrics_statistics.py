@@ -138,10 +138,10 @@ class TestSharpeRatioAndVolatility:
         # 따라서 Sharpe가 폭발하지 않는다 (수정 전 실측: 3.57e17).
         assert stats['Sharpe_Ratio'] == pytest.approx(0.0, abs=1e-9)
 
-    def test_flat_zero_return_series_has_zero_sharpe_and_profit_factor_one(self, calc_statistics):
+    def test_flat_zero_return_series_has_zero_sharpe_and_undefined_profit_factor(self, calc_statistics):
         """가격이 전혀 움직이지 않는(진짜 flat) 경우: 변동성 0, 수익률 0,
-        gross_profit/gross_loss 모두 0 -> Profit_Factor는 1.0(이익도 손실도
-        없을 때의 디폴트)이어야 한다."""
+        gross_profit/gross_loss 모두 0 -> Profit_Factor는 정의되지 않으므로 None.
+        (A-09 이전에는 1.0이라는 폴백 상수를 반환했다.)"""
         df = _df([f'2024-01-{i + 1:02d}' for i in range(5)], [1.0] * 5, returns=[0.0] * 5)
 
         stats = calc_statistics(df, total_amount=1000.0)
@@ -149,7 +149,7 @@ class TestSharpeRatioAndVolatility:
         assert stats['Total_Return'] == pytest.approx(0.0)
         assert stats['Annual_Volatility'] == pytest.approx(0.0)
         assert stats['Sharpe_Ratio'] == 0
-        assert stats['Profit_Factor'] == 1.0
+        assert stats['Profit_Factor'] is None
         assert stats['Positive_Days'] == 0
         assert stats['Negative_Days'] == 0
         assert stats['Win_Rate'] == 0
@@ -227,10 +227,10 @@ class TestWinRateConsecutiveStreaksAndProfitFactor:
         assert stats['Max_Consecutive_Gains'] == 2
         assert stats['Max_Consecutive_Losses'] == 2
 
-    def test_all_gains_profit_factor_defaults_to_two(self, calc_statistics):
+    def test_all_gains_profit_factor_is_none(self, calc_statistics):
         """손실일이 하나도 없으면 gross_loss==0이 되어 일반적인 비율 계산이
-        불가능하다. 코드는 이 경우 (이익이 있는 한) Profit_Factor를 2.0으로
-        디폴트한다."""
+        불가능하다. A-09 이전에는 (이익이 있는 한) 2.0이라는 지어낸 값을
+        반환했고 전략 경로는 같은 상황에서 0.0을 냈다. 이제 두 경로 모두 None."""
         returns = [0.01, 0.02, 0.03]
         values = [1.0]
         for r in returns:
@@ -240,7 +240,7 @@ class TestWinRateConsecutiveStreaksAndProfitFactor:
 
         stats = calc_statistics(df, total_amount=1000.0)
 
-        assert stats['Profit_Factor'] == 2.0
+        assert stats['Profit_Factor'] is None
         assert stats['Negative_Days'] == 0
 
 

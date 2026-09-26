@@ -9,6 +9,75 @@
 
 ---
 
+## 2026-09-27 라운드 (배치9)
+
+> TODO.md에 남아 있던 A-04~A-19(A-10 제외, 배치8 완료)와 저장소 밖 항목 중 로컬에서 재현
+> 가능한 두 건(MySQL 8.4 업그레이드, 부하 튜닝)을 처리했다. 서브 에이전트 여러 개가 격리된
+> worktree에서 병렬로 작업하고(1차 6개, 2차 3개, 3차 1개) `integration/batch9`에서 통합했다.
+> 1차 작업 중 새로 발견된 버그는 2차에서 고쳤고, 나머지는 TODO.md A-21 이후로 남겼다.
+> 사용자 위임 결정: A-19 시간가중, A-09 일 기준 통일, A-06 인증 없이 IP별 제한, A-17 30일 유지.
+
+### 검증 기준선 (통합 후 실측)
+
+- [x] BE 단위 테스트 전부 통과(370 → AGENTS.md `Current baseline`), 골든 마스터 e2e 통과
+- [x] FE 테스트 전부 통과(188 → AGENTS.md `Current baseline`), statements 커버리지 약 48% → 74%
+- [x] ESLint 경고 0, type-check(prod·test), 프로덕션 빌드, Docker `--target test` 양쪽, 운영 이미지 빌드
+- [x] `scripts/check-schema-parity.sh` 통과, dev 스택 기동 + 실데이터 스모크
+
+### P1 — 동시성·자원 보호
+
+- [x] **A-04 [be/infra]** ✅ 2026-09-27 (락 파일 슬롯, `app/core/file_slots.py`) — 프로세스 로컬 `Semaphore(8)` × 17 workers = 최대 136건이던 상한을 같은 컨테이너 워커들이 공유하는 N개 `fcntl.flock` 락 파일 슬롯으로 교체. 프로세스가 죽으면 OS가 해제. MySQL `GET_LOCK`은 작업 내내 커넥션을 점유하고 끊기면 풀려서 기각. 로컬 17 workers 부하: 옛 코드 동시 약 32건 → 새 코드 정확히 8건.
+- [x] **A-05 [be]** ✅ 2026-09-27 (작업 전용 이벤트 루프 + 협력적 취소 토큰, `app/services/backtest_runner.py`, `app/core/cancellation.py`) — 타임아웃·연결 끊김 시 전용 루프의 태스크를 취소(모든 await가 취소 지점)하고, 스레드 안 긴 구간(시뮬레이션 일별 루프, Yahoo·DB·뉴스 재시도 대기)에 확인 지점을 뒀다. 병렬 수집에는 `submit_with_context`로 토큰을 넘긴다. `BacktestCancelled`는 `except Exception`에 삼켜지지 않도록 `BaseException`. 슬롯은 작업이 만든 스레드가 모두 끝난 뒤에만 반환. 60초는 실행 시간만(대기는 30초 후 503). 실측 취소 후 종료 p50 1.1초/최대 2.1초. 끊을 수 없는 구간: `bt.run()` 한 번(약 0.04초), 외부 HTTP·DB 호출 한 번.
+  - 통합 시 A-08과의 결합: 부가 수집 시간 예산을 넘긴 스레드가 슬롯 반환 뒤에도 계속 돌 수 있어, 수집 스레드에 작업 토큰과 연결된 하위 토큰을 주고 예산 초과 시 하위 토큰만 취소한다(`test_supplemental_cancellation.py`, 하위 토큰 취소를 빼면 2건 실패).
+- [x] **A-06 [be/infra]** ✅ 2026-09-27 (공개 유지, 인증 없음, IP별 동시 2건 → 429, `app/core/client_ip.py`) — `X-Forwarded-For`를 오른쪽부터 읽어 신뢰 대역(`TRUSTED_PROXY_CIDRS`) 밖의 첫 주소를 클라이언트로 본다. 비신뢰 피어는 헤더 무시, 식별 불가 시 IP별 제한 미적용(전체 사용자가 프록시 주소 하나로 묶이는 사고 방지), IPv6는 /64. nginx 레벨 rate limit은 home-server 후속(TODO 저장소 밖 2).
+- [x] **(저장소 밖) 동시 실행 8건·60초 부하 튜닝** ✅ 2026-09-27 (로컬 측정) — 17 workers/4 CPU에서 상한 4/8/12/16의 처리량 0.63/0.91/0.95/0.64 rps, 16은 실행 p95 45초. 기본값 8·60초·대기 30초 유지, 기준 "CPU 수 × 2". 운영 재조정은 TODO 저장소 밖 5.
+
+### P1 — 가용성·API 결합도
+
+- [x] **A-07 [be/infra]** ✅ 2026-09-27 — `/health`는 liveness로 그대로 두고 `GET /health/ready` 추가(운영 풀과 별개인 전용 연결 + 드라이버 타임아웃으로 `SELECT 1`, 기본 2초, 실패 시 503 `checks.database=timeout|unavailable`, 한 번에 하나만 실행). 외부 API는 조건에서 제외. Dockerfile HEALTHCHECK는 재시작 폭주를 막으려 liveness 유지. 로컬 mysql:8.4 pause/stop/재시작으로 200→503→200 실측.
+- [x] **A-08 [be/fe]** ✅ 2026-09-27 — 계측 먼저: `backtest_stage_duration_seconds{stage}`와 요청당 요약 로그. 워밍 실측에서 부가 데이터가 응답의 67~74%, 시뮬레이션+부가 시간의 p50 60%. 하위 호환 `include_*` 5개(기본 True), 부가 수집 시간 예산 `SUPPLEMENTAL_DATA_TIMEOUT_SECONDS`=15초, `data.supplemental_status`와 `backtest_supplemental_outcome_total{section,outcome}` 추가, 부가 수집 전체 실패도 핵심 결과는 200. 전부 끄면 응답 64~70%, 소요 p50 51~69% 감소. FE는 timeout/error 섹션을 결과 상단에 한 줄로 안내.
+
+### P2 — API 계약 / 지표
+
+- [x] **A-19 [be]** ✅ 2026-09-27 (시간가중) — DCA 연환산 수익률이 총 납입액을 첫날 투자한 것처럼 계산돼, 매 영업일 0.05% 오르는 종목에 월 적립하면 가격 연환산 13.96%가 7.16%로 보고됐다. `Daily_Return` 누적곱으로 연환산하도록 `metrics_math.time_weighted_annual_return`으로 통합(Sharpe도 이 값). 첫날 매수 수수료는 엔진이 `attrs['twr_start_ratio']`로 넘긴다. 일시금·전략 경로 결과 불변, `Total_Return` 유지, FE에 "연환산 수익률 (시간가중)" 카드.
+- [x] **A-09 [be]** ✅ 2026-09-27 (일 기준 통일) — 전략 경로도 `Win_Rate`(상승일 비율)·`Profit_Factor`(일간 이익 합/손실 합)·변동성·상승/하락일·연속일(0 하드코딩이었음)을 buy&hold와 같은 계산에서 가져온다. `Profit_Factor`는 손실일이 없으면 폴백 상수 대신 null. 거래 기준 승률은 `Trade_Win_Rate`로 분리하면서 투자금 비중 대신 거래 수로 가중(현금 비중만큼 깎이던 문제 수정). FE는 null을 "—"/N/A로 표시.
+- [x] **A-11 [db]** ✅ 2026-09-27 — 빈 DB 두 개 실측에서 인덱스·제약은 같고 COMMENT만 달랐다. initdb 쪽은 컬럼 COMMENT 24개가 없었고, 있던 한글 COMMENT 8개는 **공식 이미지 initdb 클라이언트의 연결 문자셋(latin1) 때문에 이중 인코딩**돼 있었다. schema.sql에 Alembic과 같은 COMMENT 절 + `SET NAMES utf8mb4`, 새 리비전 `1f574a9ba22e`(stock_id COMMENT '(Foreign Key)' → '논리 참조 (물리 FK 없음)', INSTANT). 검사 스크립트 `scripts/check-schema-parity.sh`(바인드 마운트·호스트 포트 없이 동작, 차이 있으면 exit 1). 가이드 `database/README.md`.
+- [x] **(저장소 밖) MySQL 8.0 → 8.4 실기동** ✅ 2026-09-27 (로컬 재현) — 8.0.46 볼륨(FK 있는 이전 스키마)으로 8.4.11 기동 시 DD 80023→80300, 서버 80046→80411 자동 업그레이드, 데이터·제약 보존, 이어 `stamp d5c3763b29e6` → `upgrade head`로 FK 제거까지 확인. `caching_sha2_password` 계정은 영향 없고 `mysql_native_password` 계정은 1524로 로그인 실패. 8.4 볼륨으로 8.0 기동은 거부 → 업그레이드 전 덤프 필수. 운영 확인은 TODO 저장소 밖 3.
+
+### P2 — 테스트 / 제품 확인 / 지표 품질
+
+- [x] **A-12 [fe]** ✅ 2026-09-27 — 결과 화면 조합 컴포넌트(BacktestResults·StatsSummary·TradesChart·PortfolioTable·RebalanceHistoryTable·WeightHistoryChart·ChartsSection 하위·reportGenerator)와 PortfolioPage(실제 useBacktest + MSW)를 정상/부분/빈 데이터/warnings 배너/API 오류 시나리오로 RTL 고정. 테스트 중 **주식+현금 리밸런싱 결과의 CSV 다운로드가 TypeError로 실패하던 버그**(현금 조정 거래에 `shares` 없음)를 찾아 수정.
+- [x] **A-17 [be/fe]** ✅ 2026-09-27 (30일 유지) — README·OpenAPI에 하한과 근거 명시, FE `VALIDATION_RULES.MIN_BACKTEST_PERIOD_DAYS` + 제출 전 검증(BE와 같은 셈법·문구). 30일 미만은 서버 422 전에 FE에서 안내.
+- [x] **A-18 [be/infra]** ✅ 2026-09-27 — first-N-seen 대신 허용 목록 102개 + 빈도 기반 승격(보장 횟수 3 이상, 워커당 동적 30개, 회수 없음 — multiprocess 모드는 라벨 삭제 미지원). 17 workers 상한 3401 → 613. 시뮬레이션 `other` 96.9% → 26.4%, 인기 티커 라벨 0/26 → 26/26.
+
+### P3 — 정리 / 문서 / 구조
+
+- [x] **A-13 [be]** ✅ 2026-09-27 — 호출부 없는 `BacktestEngine._create_fallback_result`·`ValidationService.create_fallback_stats`와 그 전용 테스트 8건 삭제. `app/validators/`는 살아 있는 경로라 유지.
+- [x] **A-14 [docs]** ✅ 2026-09-27 — 테스트 개수 고정값을 AGENTS.md `Current baseline` 참조로, README MySQL 8.4, Jenkinsfile 서술을 home-server 중앙 Jenkinsfile·`Pre-deploy Tests` 기준으로, 낡은 DB 풀 주석과 FE README lint 상한(3 → 0) 정정.
+- [x] **A-15 [docs]** ✅ 2026-09-27 — `docs/improvement_analysis.md` 상단에 과거 분석 표기, stock_news FK 권고에 "채택하지 않음 + 사유", Jenkinsfile·풀 권고에 반영 현황.
+- [x] **A-16 [be/fe]** ✅ 2026-09-27 — FE: 특성화 테스트 28개로 동작을 먼저 고정한 뒤 `dataSampling.ts`(736줄)를 `dataSampling/` 디렉터리 5개 모듈 + 공개 `index.ts`로, `useChartData.ts`(510줄)를 훅 267줄 + `chartDataSelectors`·`chartSeriesBuilders`로 나눴다. 네 곳에 복제돼 있던 수익률 버킷 재구성을 `alignToReturnBuckets` 하나로. 특성화 테스트가 고정한 애매한 동작 2개는 TODO A-30. BE: 응답 스냅샷 특성화 테스트(두 경로 7개 시나리오, 키 순서까지)와 yfinance 특성화 테스트를 먼저 추가한 뒤, `portfolio_manager_service.py`(1,044줄)를 흐름 조율만 남기고(365줄) `portfolio_inputs`(입력 변환) / `portfolio_execution`(실행) / `portfolio_statistics_builder`(통계 조립) / `portfolio_response_builder`(응답 구성)로 나눴다. weight→금액 환산 중복은 `weight_to_amount` 하나로. `portfolio_simulation_engine.py`(684→547줄)에서 가격·환율·거래 가능 마스크 사전 정렬을 `portfolio_price_alignment`로, `yfinance_repository.py`(769→511줄)에서 티커 메타데이터·뉴스 캐시를 믹스인으로 뺐다. 기존 공개 이름과 테스트 patch 경로는 그대로 동작하고, 분리 전후 응답은 스냅샷 시나리오에서 바이트까지 같았다. 두 경로가 실제로 다른 규칙(금액/비중 모드 판정, 같은 이름 현금 키, 실패 종목 분모)은 합치지 않고 TODO A-33~A-35로 남겼다.
+
+### 배치9 중 새로 발견해 고친 것
+
+- [x] **리포트 개별 종목 수익률 100배 표기** ✅ 2026-09-27 — BE `individual_returns.return`은 이미 백분율인데 리포트가 다시 ×100(8% → 800%). 테스트 픽스처도 0.08로 버그를 고정하고 있었다. 전략 경로는 `start_price`/`end_price`가 없어 리포트 다운로드가 TypeError로 실패하던 것도 수정.
+- [x] **null `Profit_Factor`에서 리포트 다운로드 실패** ✅ 2026-09-27 — A-09로 null이 가능해지면서 `.toFixed()`가 TypeError. N/A로 표기.
+- [x] **실패 시 이전 결과 잔존 / 오류 닫기가 결과까지 삭제** ✅ 2026-09-27 — 새 실행이 실패하면 결과를 지우고(요청 식별 표시가 없어 "이전 결과" 라벨보다 혼동이 적다), Alert 닫기는 오류만 지우는 `clearError`로 분리.
+- [x] **응답 타입 최상위 필드 정리** ✅ 2026-09-27 — BE가 보내지 않는 최상위 `warnings`/`message`/`backtest_type`을 타입에서 삭제, `warnings`는 `data`에 선언.
+- [x] **골든 마스터 e2e 복구** ✅ 2026-09-27 — 최소 기간 30일 이후 422로 실패하던 것을 58일 구간으로 늘리고 기대 출력 재생성(차이는 A-03 warnings 키, A-20 부동소수점, A-19 Annual_Return·Sharpe, 납입일 수수료 귀속으로 설명됨).
+- [x] **DCA 납입일 수수료 귀속** ✅ 2026-09-27 — `(V−P−F)/P`가 새 납입금의 매수 수수료를 기존 자본 P만으로 나눠, 첫 매수가 늦어진 10+990 포트폴리오에서 가격 불변인데 하루 −19.84%, 연환산 −20.2%였다. 유입 시점 재평가 TWR `(V_pre/P)·(V/(V_pre+F)) − 1`로 교체. `P+F` 분모는 종가 체결 모델에서 납입일 시장 수익률을 희석해 불채택. 일시금·수수료 0 DCA 불변식 유지.
+- [x] **A-09 잔여 조작값** ✅ 2026-09-27 — 단일 종목 `profit_factor`가 NaN이면 0.0이던 것을 None으로, 종목별 `win_rate`(buy&hold 100/0 지어낸 값)를 None으로. 나머지 폴백은 TODO A-21·A-22.
+- [x] **동시 실행 게이지** ✅ 2026-09-27 — `backtest_jobs_running`/`backtest_jobs_waiting`(livesum). uvicorn에는 죽은 워커 정리 훅이 없어 모듈 임포트 시 죽은 pid와 자기 pid의 live 게이지 파일을 정리.
+
+### ⚠️ 이번 작업으로 바뀐 사용자 노출 동작
+
+- 동시 실행 초과 응답: 같은 IP 동시 3건째는 즉시 **429**(Retry-After 10), 슬롯 대기 30초 초과는 **503**, 실행 60초 초과는 **504**. 60초는 이제 실행 시간만 센다.
+- DCA 결과의 `Annual_Return`·`Sharpe_Ratio`가 시간가중 기준으로 바뀐다(일시금·전략 경로는 불변). 수수료가 있는 DCA는 납입일 수익률·MDD도 바뀐다(손실이 작아지는 방향).
+- 전략 경로 `Win_Rate`가 거래 기준에서 일 기준으로 바뀌고 거래 기준은 `Trade_Win_Rate`로 분리. `Profit_Factor`는 null일 수 있다.
+- 새 엔드포인트 `GET /health/ready`, 새 요청 필드 `include_*` 5개(기본 True), 새 응답 필드 `data.supplemental_status`.
+- FE: 30일 미만 기간은 제출 전 오류, 실패 시 이전 결과 숨김, 부가 데이터 실패 안내.
+
+---
+
 ## 2026-09-27 운영 반영
 
 > 배치7·배치8·LF 정규화를 묶은 main `cb74a50`(PR #59)을 운영에 배포하고, 배치8의

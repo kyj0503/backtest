@@ -16,6 +16,7 @@ from typing import List, Dict, Any
 from datetime import datetime
 
 from ..core.config import settings
+from ..core.cancellation import cancellable_sleep
 from ..constants import TICKER_TO_COMPANY_NAME
 
 logger = logging.getLogger(__name__)
@@ -174,7 +175,7 @@ class NewsService:
             except (urllib.error.URLError, socket.gaierror, socket.timeout) as e:
                 if attempt < max_retries - 1:
                     logger.warning(f"네트워크 오류 발생 (시도 {attempt + 1}/{max_retries}): {e}")
-                    time.sleep(retry_delay)
+                    cancellable_sleep(retry_delay)  # A-05: 취소 시 대기를 끊고 중단
                     retry_delay *= 2  # 지수 백오프
                     continue
                 else:

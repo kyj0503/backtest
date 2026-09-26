@@ -4,6 +4,21 @@
 **Date:** 2026-02-06
 **Scope:** Frontend, Backend, Architecture, Database, Infrastructure
 
+> **과거 분석 문서 — 2026-02-06 작성 시점의 코드베이스 기준이다.** 아래의 위치(`파일:줄`),
+> 수치, 권고는 작성 당시 기준이며 이후 대부분 처리되었거나 방향이 바뀌었다. 이 문서를
+> 작업 지시로 쓰지 말 것. 남은 작업은 [TODO.md](../TODO.md), 처리 이력과 근거는
+> [HISTORY.md](../HISTORY.md)를 기준으로 한다. 특히 다음 두 가지는 현재 방침과 반대다
+> (2026-09-27 표기):
+>
+> - **물리 FK는 쓰지 않는다.** 2026-09-26 배치8(A-10)에서 저장소의 물리 FK를 모두
+>   제거했다. 테이블 간 참조는 논리 참조이고 무결성은 애플리케이션이 맡는다
+>   (`database/schema.sql`의 `daily_prices`·`stock_news` 주석, AGENTS.md의 DB schema 설명).
+>   5.1의 `stock_news` FK 추가 권고는 **채택하지 않았다** — 해당 항목의 주석 참고.
+> - **이 저장소에는 Jenkinsfile이 없다.** 파이프라인은 커밋 `44df5b9`(2026-08-09)에서
+>   home-server 저장소의 중앙 Jenkinsfile(`cicd/jenkins/pipeline/backtest-{be,fe}/`)로
+>   이관됐다. 아래의 `Jenkinsfile` 위치 표기는 이관 전 기준이며, 지적된 테스트 단계
+>   부재와 헬스 체크 실패 처리는 각각 `Pre-deploy Tests` 단계와 P1-11(`exit 1`)로 반영됐다.
+
 ---
 
 ## Table of Contents
@@ -30,7 +45,7 @@
 | 3 | Backend | Sequential per-stock backtest execution | `portfolio_manager_service.py:231` |
 | 4 | Database | Unbounded in-memory cache (OOM risk) | `data_repository.py:45` |
 | 5 | Infra | Secrets exposed in Git (.env committed) | `.env` |
-| 6 | Infra | No test stage in CI/CD pipeline | `Jenkinsfile` |
+| 6 | Infra | No test stage in CI/CD pipeline | `Jenkinsfile` (당시 이 저장소, 현재 home-server — 상단 표기 참고) |
 | 7 | Frontend | Missing test coverage for core utilities | `dataSampling.ts`, `useChartData.ts` |
 
 ### Statistics
@@ -182,6 +197,8 @@
 - **Location:** `pool_config.py:22-23` — `pool_size=40`, `max_overflow=80` = 120 connections
 - **Problem:** MySQL default `max_connections=151`. With 17 workers = 2,040 potential connections.
 - **Fix:** Reduce to `pool_size=5`, `max_overflow=15` (dev) / `pool_size=10`, `max_overflow=30` (prod).
+- **현황 (2026-09-27 표기):** P2-27에서 이 권고값이 아니라 프로세스당 `pool_size=4`,
+  `max_overflow=2`(17 workers x 6 = 102 <= 151)로 줄였다. `pool_config.py` docstring 참고.
 
 ### 3.3 Code Quality
 
@@ -280,6 +297,13 @@ The single most impactful performance bottleneck. 20-stock portfolio = 20 serial
 - **Location:** `schema.sql`
 - **Problem:** No referential integrity between `stock_news` and `stocks`.
 - **Fix:** Add `FOREIGN KEY (ticker) REFERENCES stocks(ticker) ON DELETE CASCADE`.
+- **결정 (2026-09-27 표기): 채택하지 않음.** 가격 저장(`stocks`/`daily_prices`)과 뉴스
+  저장(`stock_news`)은 `collect_all_unified_data()`에서 서로 독립된 병렬 작업·독립
+  트랜잭션으로 실행되어 순서가 보장되지 않는다. 가격 조회가 실패했거나 아직 커밋되지
+  않은 티커의 뉴스 저장도 정상 동작이므로, FK를 걸면 정상 저장이 FK 위반으로 실패한다.
+  근거는 `database/schema.sql`의 `stock_news` 테이블 주석("FK는 추가하지 않았다",
+  2026-09-27 기준 101-108행). 이후 배치8(A-10)에서 `daily_prices`의 FK까지 제거해
+  **저장소 전체가 물리 FK 없이 논리 참조로 운영된다** — 이 권고를 되살리지 말 것.
 
 #### [MINOR] Redundant Indexes
 - `stocks.idx_ticker` — redundant with UNIQUE constraint
@@ -340,11 +364,16 @@ The single most impactful performance bottleneck. 20-stock portfolio = 20 serial
 
 #### [CRITICAL] No Test Stage in Pipeline
 - **Location:** `Jenkinsfile` goes from checkout → build → deploy. No `pytest` or `npm test`.
+- **현황 (2026-09-27 표기):** 반영됨. 파이프라인은 home-server 저장소
+  (`cicd/jenkins/pipeline/backtest-{be,fe}/`)로 이관됐고, `Pre-deploy Tests` 단계가 이
+  저장소의 `docker build --target test`를 호출한다.
 - **Fix:** Add test stages before build. Fail pipeline on test failure.
 
 #### [CRITICAL] Health Check Doesn't Fail Pipeline
 - **Location:** `Jenkinsfile:98` — exits 0 on timeout, deployment stays.
 - **Fix:** `exit 1` on health check failure. Add rollback mechanism.
+- **현황 (2026-09-27 표기):** `exit 1`은 P1-11에서 반영됐다(당시 이 저장소의 Jenkinsfile,
+  현재 home-server 저장소). 롤백·readiness 분리는 TODO.md에 남아 있다.
 
 ### 6.3 Docker
 
@@ -449,8 +478,8 @@ The single most impactful performance bottleneck. 20-stock portfolio = 20 serial
 - [ ] Use `with engine.connect() as conn:` everywhere
 
 **CI/CD:**
-- [ ] Add `pytest tests/unit` stage to Jenkinsfile
-- [ ] Add `npm test` stage to Jenkinsfile
+- [ ] Add `pytest tests/unit` stage to Jenkinsfile — (표기) 반영됨, 현재 home-server 중앙 Jenkinsfile의 `Pre-deploy Tests`
+- [ ] Add `npm test` stage to Jenkinsfile — (표기) 반영됨, 위와 같음
 - [ ] Fix health check failure logic (`exit 1` on timeout)
 
 ### Phase 2: Performance & Quality (Weeks 2-3)
@@ -458,7 +487,7 @@ The single most impactful performance bottleneck. 20-stock portfolio = 20 serial
 **Backend Performance:**
 - [ ] Parallelize strategy portfolio backtests with `asyncio.gather()`
 - [ ] Vectorize currency conversion (remove Python for-loop)
-- [ ] Reduce connection pool to `pool_size=10, max_overflow=30`
+- [ ] Reduce connection pool to `pool_size=10, max_overflow=30` — (표기) P2-27에서 4+2로 반영, 위 3.2 항목 참고
 - [ ] Add circuit breaker for yfinance
 
 **Backend Refactoring:**

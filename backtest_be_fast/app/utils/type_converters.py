@@ -22,8 +22,10 @@ count = safe_int(stats.get('trades'), default=0)
 - Backend: app/services/backtest_engine.py (백테스트 결과 변환)
 - Backend: app/services/chart_data_service.py (차트 데이터 변환)
 """
+import math
+
 import pandas as pd
-from typing import Any
+from typing import Any, Optional
 
 
 def safe_float(value: Any, default: float = 0.0) -> float:
@@ -55,6 +57,31 @@ def safe_float(value: Any, default: float = 0.0) -> float:
         return float(value)
     except (ValueError, TypeError):
         return default
+
+
+def optional_finite_float(value: Any) -> Optional[float]:
+    """
+    계산 불가를 None으로 보존하는 float 변환 (None, NaN, ±inf, 변환 실패 → None)
+
+    safe_float는 계산 불가 값을 기본값(0.0)으로 바꾼다. Profit Factor처럼 0이
+    "이익이 전혀 없음"이라는 실제 의미를 갖는 지표에서는 그 폴백이 지어낸 값이
+    되므로(A-09), 이 함수를 써서 JSON null로 내보낸다.
+
+    Examples:
+        >>> optional_finite_float(2.5)
+        2.5
+        >>> optional_finite_float(float('nan')) is None
+        True
+        >>> optional_finite_float(float('inf')) is None
+        True
+    """
+    try:
+        if value is None or pd.isna(value):
+            return None
+        result = float(value)
+    except (ValueError, TypeError):
+        return None
+    return result if math.isfinite(result) else None
 
 
 def safe_int(value: Any, default: int = 0) -> int:

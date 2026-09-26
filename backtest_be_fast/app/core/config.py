@@ -86,8 +86,45 @@ class Settings(BaseSettings):
     # 위임돼 이벤트 루프를 막지는 않으나, 동시 요청이 많으면 공유 스레드풀을
     # 점유해 다른 요청까지 밀린다.
     min_backtest_period_days: int = 30  # 이보다 짧으면 연환산 지표가 무의미하다
+
+    # --- 동시 실행 상한 / 대기열 / 취소 (A-04 · A-05 · A-06) ---
+    # 자세한 동작은 app/services/backtest_runner.py 모듈 docstring 참고.
+    #
+    # max_concurrent_backtests는 **컨테이너 전체** 상한이다(A-04). uvicorn
+    # 워커 프로세스들이 backtest_slot_dir 아래 N개 락 파일(fcntl.flock)을 슬롯으로
+    # 공유하므로 워커 수와 무관하다. 과거(P2-16)에는 프로세스 로컬
+    # asyncio.Semaphore라서 실제 상한이 워커 수 x 8이었다.
+    # 슬롯 디렉터리는 같은 상한을 공유할 프로세스끼리만 같아야 한다 — 컨테이너의
+    # /tmp는 컨테이너마다 따로이므로 기본값이 곧 "컨테이너 단위"다.
+    # 기본값 8의 근거(2026-09-27 로컬 부하 측정, 17 workers / cpus 4, 캐시 워밍 후,
+    # 10년 5종목 SMA): 상한 4/8/12/16에서 처리량 0.63/0.91/0.95/0.64 rps.
+    # 8~12에서 포화하고 16에서는 CPU 경합으로 실행 시간 p95가 45초까지 늘어 60초
+    # 타임아웃에 근접했다. 대략 "CPU 수 x 2"로 잡고, CPU 한도를 바꾸면 함께 조정한다.
     max_concurrent_backtests: int = 8
+    # 슬롯을 얻은 뒤의 실행 시간 상한(초). 넘으면 504를 반환하고 작업에 취소
+    # 신호를 보낸다. 슬롯은 작업 스레드가 실제로 끝날 때 반환된다(A-05).
+    # P2-16 시절에는 "대기 + 실행" 합계였으나 대기 시간은 아래
+    # backtest_queue_timeout_seconds로 분리했다.
     backtest_timeout_seconds: float = 60.0
+    # 슬롯 대기 상한(초). 넘으면 503 + Retry-After (작업은 시작도 하지 않음).
+    # 대기 + 실행 최대 합계(30 + 60 = 90초)는 nginx proxy_read_timeout(180초)과
+    # FE axios 타임아웃(185초)보다 짧아야 한다.
+    backtest_queue_timeout_seconds: float = 30.0
+    # 취소 신호 후 이 시간 안에 작업이 멈추지 않으면 ERROR 로그를 남긴다(감시용).
+    # 슬롯은 이 시간이 지나도 강제 반환하지 않는다 — 실제로 도는 작업이 있는 동안
+    # 슬롯을 내주면 상한이 다시 무력화되기 때문이다.
+    backtest_cancel_grace_seconds: float = 15.0
+    # 클라이언트(IP)별 동시 실행 상한(A-06). 대기 중인 요청도 포함해 센다.
+    # 초과 요청은 대기열에 넣지 않고 즉시 429. 0 이하이면 비활성화.
+    max_concurrent_backtests_per_client: int = 2
+    # 락 파일 디렉터리. 같은 컨테이너의 워커들이 공유해야 한다.
+    backtest_slot_dir: str = "/tmp/backtest-slots"
+    # X-Forwarded-For를 덧붙일 수 있는 "신뢰하는 프록시" 대역(쉼표 구분 CIDR).
+    # 클라이언트 IP는 XFF를 오른쪽부터 읽으며 이 대역이 아닌 첫 주소로 정한다
+    # (app/core/client_ip.py). 기본값은 루프백 + 사설망(도커 네트워크 포함).
+    trusted_proxy_cidrs: str = (
+        "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
+    )
     max_symbol_length: int = 10  # 심볼 최대 길이
     default_dca_periods: int = 12  # DCA 기본 기간 (개월)
     max_dca_periods: int = 60  # DCA 최대 기간 (개월)
@@ -110,6 +147,15 @@ class Settings(BaseSettings):
     database_user: Optional[str] = Field(default=None, env="DATABASE_USER")
     database_password: Optional[str] = Field(default=None, env="DATABASE_PASSWORD")
     database_name: Optional[str] = Field(default=None, env="DATABASE_NAME")
+
+    # readiness(/health/ready)가 MySQL `SELECT 1`을 기다리는 최대 시간(초) (A-07).
+    # 드라이버 connect/read 타임아웃도 이 값(올림, 최소 1초)으로 건다.
+    readiness_db_timeout_seconds: float = 2.0
+
+    # 백테스트 응답의 부가 데이터(원본 주가·환율·벤치마크·뉴스) 수집 시간 예산(초) (A-08).
+    # 이 안에 끝나지 않은 섹션은 비워서 반환하고 핵심 결과는 그대로 돌려준다.
+    # 로컬 실측(워밍 상태) supplemental_total p95 약 2초, 콜드 벤치마크 조회 약 5.5초.
+    supplemental_data_timeout_seconds: float = 15.0
     
     # pydantic v2 configuration
     model_config = {

@@ -158,9 +158,8 @@ npm run test:ui           # UI 모드
 ```
 
 ### 현재 테스트 통계
-- **테스트 파일**: 17개
-- **테스트 케이스**: 112개
-- **통과율**: 100%
+- **테스트 수**: 작업마다 바뀌므로 여기에 고정하지 않는다. 최신 실측 기준선과 측정일은 저장소 루트 [AGENTS.md](../AGENTS.md)의 Testing 절 `Current baseline`을 참고한다.
+- **통과율**: 100% (기준선의 실패는 회귀다)
 - **커버리지**: `npm run test:coverage`로 직접 확인하세요 (테스트 파일/케이스 수가 자주 바뀌어 커버리지 수치를 여기 고정해 두지 않습니다).
 
 ### 테스트 격리에 관한 주의
@@ -204,7 +203,7 @@ npm run test:ui           # UI 모드
 
 ### 린트 및 타입 체크
 ```bash
-npm run lint             # ESLint (에러 0 강제, 경고 상한 3)
+npm run lint             # ESLint (에러·경고 모두 0 강제, --max-warnings 0)
 npm run lint:fix         # 자동 수정
 npm run type-check       # 프로덕션 코드 타입 체크 (tsconfig.build.json)
 npm run type-check:test  # 테스트 코드 타입 체크 (tsconfig.test.json)
@@ -212,7 +211,7 @@ npm run type-check:test  # 테스트 코드 타입 체크 (tsconfig.test.json)
 
 `type-check`는 테스트 파일을 제외한다. 테스트 코드는 `type-check:test`가 담당하며, 둘 다 CI 배포 전 테스트 단계에서 실행된다. 테스트만 따로 체크하는 설정이 없던 시절에 삭제된 함수를 import하는 테스트가 8개월간 방치된 적이 있어 분리해 두었다.
 
-`lint`의 경고 상한 3은 현재 남아 있는 `react-hooks/exhaustive-deps` 3건을 고정한 래칫이다. 경고가 늘어나는 것을 막되, 의존성 배열을 강제로 바꾸면 런타임 동작이 달라질 수 있어 아직 해소하지 않았다. 해소하면서 상한도 함께 내리는 것이 목표다.
+`lint`의 경고 상한은 0이다. 예전에는 남아 있던 `react-hooks/exhaustive-deps` 경고 3건을 고정하는 래칫으로 상한을 3에 두었으나, P2-34에서 세 건을 모두 해소하고 상한을 0으로 내렸다(disable 주석 없이). 새 경고는 곧 lint 실패다.
 
 ### 빌드 분석
 ```bash
@@ -225,7 +224,7 @@ npm run build:analyze
 
 ## CI
 
-`Jenkinsfile`의 `Pre-deploy Tests` 스테이지가 `docker build --target test ./backtest_fe`로 아래를 순서대로 실행한다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못한다.
+home-server 저장소의 중앙 Jenkinsfile(`cicd/jenkins/pipeline/backtest-fe/`, 이 저장소에는 Jenkinsfile이 없다)의 `Pre-deploy Tests` 스테이지가 이 저장소의 `docker build --target test ./backtest_fe`를 호출해 아래를 순서대로 실행한다. 하나라도 실패하면 이미지 빌드와 배포에 도달하지 못한다.
 
 ```
 npm run lint → npm run type-check → npm run type-check:test → npm run test:run

@@ -88,7 +88,7 @@ Counts below are `pytest tests/unit --collect-only` item counts (post-parametriz
 | `test_data_repository.py` | 14 | YfinanceDataRepository: get_stock_data (3-tier cache), invalidate_cache, TTLCache behavior |
 | `test_dca_schedule_alignment.py` | 14 | DCA payment count matches the actual Nth-weekday purchase schedule, not a "month = 30 days" approximation |
 | `test_chart_data_service.py` | 12 | Chart data assembly |
-| `test_backtest_engine.py` | 10 | BacktestEngine: run_backtest, _build_strategy, _convert_result_to_response, _create_fallback_result |
+| `test_backtest_engine.py` | 8 | BacktestEngine: run_backtest, _build_strategy, _convert_result_to_response |
 | `test_strategy_service.py` | 9 | Strategy resolution and parameter validation |
 | `test_nth_weekday_edge_cases.py` | 9 | Nth-weekday boundary cases |
 | `test_request_models.py` | 8 | Backtest request model validation |
@@ -107,7 +107,7 @@ Counts below are `pytest tests/unit --collect-only` item counts (post-parametriz
 | `test_buy_hold_strategy.py` | 2 | Buy & Hold strategy requirements |
 | `test_backtest_engine_data_not_found_propagation.py` | 1 | DataNotFoundError propagates as HTTP 404, not re-wrapped as 500 |
 
-**Total: 189 tests** (all passing on `main`; a failure is a regression, not pre-existing noise). This is `tests/unit` only — `tests/integration` (DB-required) is a separate suite not covered by this table or by the CI pre-deploy test stage (Jenkins `Pre-deploy Tests`).
+**Total:** not pinned here — the table above is a partial snapshot and the suite keeps growing. For the current measured baseline and its date see the repo-root [AGENTS.md](../../AGENTS.md) Testing section (`Current baseline`); every test in it must pass, and a failure is a regression, not pre-existing noise. This is `tests/unit` only — `tests/integration` (DB-required) is a separate suite not covered by this table or by the CI pre-deploy test stage (Jenkins `Pre-deploy Tests`).
 
 ---
 
@@ -117,7 +117,6 @@ Counts below are `pytest tests/unit --collect-only` item counts (post-parametriz
 - `TestBacktestEngineRunBacktest` (3 tests) - Main execution flow
 - `TestBacktestEngineBuildStrategy` (3 tests) - Strategy parameter overrides
 - `TestBacktestEngineConvertResultToResponse` (2 tests) - Stats mapping
-- `TestBacktestEngineCreateFallbackResult` (2 tests) - Fallback generation
 
 ### test_currency_converter.py
 - `TestGetConversionMultiplier` (8 tests) - Currency-specific multipliers
@@ -184,8 +183,9 @@ def test_float_comparison(self):
 
 ### Successful Run
 ```
-======================= 189 passed, 10 warnings in 0.62s ========================
+======================= N passed, M warnings in 3.00s ========================
 ```
+(`N` is the current `tests/unit` count — see AGENTS.md `Current baseline`.)
 
 ### Failed Test Example
 ```
@@ -222,11 +222,13 @@ pytest tests/unit/test_backtest_engine.py -s
 
 이 저장소의 실제 구성입니다 (예시가 아님).
 
-`Dockerfile`에 `test` 스테이지가 있고, `Jenkinsfile`의 `Pre-deploy Tests` 스테이지가 이를 호출합니다.
+`Dockerfile`에 `test` 스테이지가 있고, home-server 저장소의 중앙 Jenkinsfile(`cicd/jenkins/pipeline/backtest-be/`, 이 저장소에는 Jenkinsfile이 없습니다)의 `Pre-deploy Tests` 스테이지가 이를 호출합니다. 아래 groovy는 그 단계의 개략이며, 실제 정의는 home-server 저장소에 있습니다.
 
 ```dockerfile
-# backtest_be_fast/Dockerfile
-FROM base AS test
+# backtest_be_fast/Dockerfile (발췌)
+FROM builder AS test
+COPY requirements-test.lock.txt .
+RUN pip install -r requirements-test.lock.txt
 COPY app ./app
 COPY tests ./tests
 COPY pytest.ini ./
@@ -234,15 +236,11 @@ RUN pytest tests/unit -q
 ```
 
 ```groovy
-// Jenkinsfile
+// home-server: cicd/jenkins/pipeline/backtest-be/ (개략)
 stage('Pre-deploy Tests') {
     steps {
-        script {
-            parallel(
-                'Frontend': { sh 'docker build --target test ./backtest_fe' },
-                'Backend':  { sh 'docker build --target test ./backtest_be_fast' }
-            )
-        }
+        // backtest-fe 파이프라인은 같은 이름의 단계에서 ./backtest_fe를 빌드한다
+        sh 'docker build --target test ./backtest_be_fast'
     }
 }
 ```
@@ -305,6 +303,6 @@ with patch('app.utils.currency_converter.currency_converter'):
 
 ---
 
-**Last Updated:** 2026-08-02
-**Test Count:** 189
+**Last Updated:** 2026-09-27
+**Test Count:** AGENTS.md `Current baseline` 참고
 **Status:** ✅ All Passing

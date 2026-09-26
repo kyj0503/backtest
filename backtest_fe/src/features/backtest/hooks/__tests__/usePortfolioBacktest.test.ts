@@ -105,6 +105,52 @@ describe('useBacktest 에러 처리 (usePortfolioBacktest.ts)', () => {
 
     expect(result.current.error).toBeNull()
   })
+
+  it('성공 뒤 새 실행이 실패하면 이전 결과를 지운다 (A-22)', async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/api/v1/backtest`, () =>
+        HttpResponse.json({ status: 'success', data: { call: 1 } }), { once: true }
+      ),
+      http.post(`${TEST_BASE_URL}/api/v1/backtest`, () =>
+        HttpResponse.json({ detail: '일시적 오류' }, { status: 503 })
+      )
+    )
+
+    const { result } = renderHook(() => useBacktest())
+
+    await act(async () => {
+      await result.current.runBacktest(baseRequest)
+    })
+    expect(result.current.result).not.toBeNull()
+
+    await act(async () => {
+      await expect(result.current.runBacktest(baseRequest)).rejects.toBeTruthy()
+    })
+
+    // 이전 결과가 남아 있으면 오류 Alert 아래에 옛 결과가 새 결과처럼 보인다.
+    expect(result.current.error).toBe('일시적 오류')
+    expect(result.current.result).toBeNull()
+  })
+
+  it('clearError는 오류만 지우고 결과는 건드리지 않는다 (A-22)', async () => {
+    server.use(
+      http.post(`${TEST_BASE_URL}/api/v1/backtest`, () =>
+        HttpResponse.json({ status: 'success', data: { call: 1 } })
+      )
+    )
+
+    const { result } = renderHook(() => useBacktest())
+
+    await act(async () => {
+      await result.current.runBacktest(baseRequest)
+    })
+    act(() => {
+      result.current.clearError()
+    })
+
+    expect(result.current.error).toBeNull()
+    expect(result.current.result).toEqual({ status: 'success', data: { call: 1 } })
+  })
 })
 
 /**

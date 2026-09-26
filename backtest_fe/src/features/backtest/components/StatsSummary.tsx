@@ -43,6 +43,24 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
     }
   };
 
+  // 계산 불가(null)를 숫자 폴백으로 바꾸지 않는다 — 지어낸 숫자가 된다 (A-09)
+  const optionalNumber = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+  const NOT_AVAILABLE = '—';
+
+  // 단일 종목 결과(summary_stats)는 backtesting.py의 거래 기준 승률(win_rate_pct)을,
+  // 포트폴리오 결과는 일 기준 승률(Win_Rate, 상승일 비율)을 준다.
+  const hasTradeBasedWinRate = stats.win_rate_pct !== undefined;
+  const winRate = numberValue(stats.win_rate_pct ?? stats.Win_Rate);
+  const annualReturn = optionalNumber(stats.Annual_Return ?? stats.cagr_pct);
+  const profitFactor = optionalNumber(stats.profit_factor ?? stats.Profit_Factor);
+
   const statItems: StatItem[] = [
     {
       label: '총 수익률',
@@ -52,6 +70,18 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
       ),
       description: '투자 원금 대비 총 수익률',
     },
+  ];
+
+  if (annualReturn !== null) {
+    statItems.push({
+      label: '연환산 수익률 (시간가중)',
+      value: formatPercent(annualReturn),
+      tone: mapVariantToTone(getStatVariant(annualReturn, 'return')),
+      description: '분할 매수 납입 시점의 영향을 뺀 연평균 복리 수익률 (TWR)',
+    });
+  }
+
+  statItems.push(
     {
       label: '거래일 수',
       value: String(numberValue(stats.Total_Trading_Days, 0)),
@@ -64,14 +94,19 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
       tone: 'neutral',
       description: '실제 매수/매도가 발생한 총 거래 횟수',
     },
-    {
-      label: '승률',
-      value: formatPercent(numberValue(stats.win_rate_pct ?? stats.Win_Rate)),
-      tone: mapVariantToTone(
-        getStatVariant(numberValue(stats.win_rate_pct ?? stats.Win_Rate), 'winRate'),
-      ),
-      description: '전체 거래 중 이익을 기록한 비율',
-    },
+    hasTradeBasedWinRate
+      ? {
+          label: '거래 승률',
+          value: formatPercent(winRate),
+          tone: mapVariantToTone(getStatVariant(winRate, 'winRate')),
+          description: '전체 거래 중 이익을 기록한 비율',
+        }
+      : {
+          label: '승률 (일 기준)',
+          value: formatPercent(winRate),
+          tone: mapVariantToTone(getStatVariant(winRate, 'winRate')),
+          description: '전체 거래일 중 수익이 난 날의 비율',
+        },
     {
       label: '최대 손실',
       value: formatPercent(numberValue(stats.max_drawdown_pct ?? stats.Max_Drawdown)),
@@ -102,16 +137,38 @@ const StatsSummary: React.FC<{ stats: Record<string, unknown> | null | undefined
     },
     {
       label: '프로핏 팩터',
-      value: numberValue(stats.profit_factor ?? stats.Profit_Factor, 1).toFixed(2),
+      value: profitFactor === null ? NOT_AVAILABLE : profitFactor.toFixed(2),
       tone:
-        numberValue(stats.profit_factor ?? stats.Profit_Factor, 1) >= 1.5
+        profitFactor === null
+          ? 'neutral'
+          : profitFactor >= 1.5
           ? 'positive'
-          : numberValue(stats.profit_factor ?? stats.Profit_Factor, 1) >= 1
+          : profitFactor >= 1
           ? 'neutral'
           : 'negative',
-      description: '이익과 손실의 비율 (Profit Factor)',
+      description:
+        profitFactor === null
+          ? '손실이 없어 계산할 수 없음 (Profit Factor)'
+          : '이익과 손실의 비율 (Profit Factor)',
     },
-  ];
+  );
+
+  // 전략 경로는 일 기준 Win_Rate와 별도로 거래 기준 승률을 준다 (거래가 없으면 null)
+  if (!hasTradeBasedWinRate && 'Trade_Win_Rate' in stats) {
+    const tradeWinRate = optionalNumber(stats.Trade_Win_Rate);
+    statItems.push({
+      label: '거래 승률',
+      value: tradeWinRate === null ? NOT_AVAILABLE : formatPercent(tradeWinRate),
+      tone:
+        tradeWinRate === null
+          ? 'neutral'
+          : mapVariantToTone(getStatVariant(tradeWinRate, 'winRate')),
+      description:
+        tradeWinRate === null
+          ? '체결된 거래가 없음'
+          : '전 종목의 거래를 합쳐 이익을 낸 거래의 비율',
+    });
+  }
 
   if (typeof stats.benchmark_total_return_pct === 'number') {
     const tickerLabel =

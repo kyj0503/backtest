@@ -6,12 +6,19 @@
 import asyncio
 import concurrent.futures
 import logging
+import time
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import Callable, List, Dict, Any, Optional
 
 from .data_service import data_service
+from app.monitoring.custom_metrics import (
+    SUPPLEMENTAL_SECTIONS,
+    observe_stage,
+    record_supplemental_outcome,
+)
 from app.repositories.stock_repository import get_stock_repository
 from ..core.config import settings
+from ..core.cancellation import CancelToken, bind_token, current_token, submit_with_context
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +29,11 @@ class UnifiedDataService:
     # collect_all_unified_data()의 독립적인 I/O(심볼별 주가, 종목 메타데이터,
     # 환율, 벤치마크, 뉴스)를 병렬 실행할 때 사용하는 워커 수 상한. 무제한
     # fan-out은 외부 API(yfinance/Naver) 레이트리밋을 유발할 수 있으므로
-    # 작은 값으로 고정한다 (P2-12). DB 커넥션 풀(pool_size=40+overflow=80)
-    # 대비로도 충분히 작다.
+    # 작은 값으로 고정한다 (P2-12). 주의: 이 주석이 처음 쓰일 때의 DB 풀
+    # (pool_size=40+overflow=80)은 P2-27에서 프로세스당 6개(pool_config.py
+    # 기본값 4+2)로 줄었다. 바깥 풀(5)과 가격 조회용 안쪽 풀(최대 5)이 겹치면
+    # 한 요청이 6개를 넘는 스레드로 DB 캐시를 조회할 수 있으므로, 이 값을
+    # 올릴 때는 DATABASE_POOL_SIZE/DATABASE_MAX_OVERFLOW와 함께 검토한다.
     _MAX_PARALLEL_WORKERS = 5
 
     def __init__(self, news_service=None):
@@ -53,15 +63,7 @@ class UnifiedDataService:
         except Exception as e:
             logger.warning(f"티커 정보 일괄 조회 실패: {str(e)}")
             # 실패 시 기본값 반환
-            ticker_info = {
-                symbol: {
-                    'symbol': symbol,
-                    'currency': 'USD',
-                    'company_name': symbol,
-                    'exchange': 'Unknown'
-                }
-                for symbol in symbols
-            }
+            ticker_info = self._fallback_ticker_info(symbols)
 
         return ticker_info
 
@@ -335,7 +337,8 @@ class UnifiedDataService:
         max_workers = min(len(symbols), self._MAX_PARALLEL_WORKERS)
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_symbol = {
-                executor.submit(self._fetch_price_history, symbol, start_date, end_date): symbol
+                # A-05: submit_with_context로 취소 토큰(ContextVar)을 수집 스레드에 넘긴다.
+                submit_with_context(executor, self._fetch_price_history, symbol, start_date, end_date): symbol
                 for symbol in symbols
             }
             for future in concurrent.futures.as_completed(future_to_symbol):
@@ -350,7 +353,12 @@ class UnifiedDataService:
         start_date: str,
         end_date: str,
         include_news: bool = True,
-        news_display_count: int = 20
+        news_display_count: int = 20,
+        include_stock_data: bool = True,
+        include_volatility_events: bool = True,
+        include_exchange_rates: bool = True,
+        include_benchmarks: bool = True,
+        timeout_seconds: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         모든 통합 데이터를 한 번에 수집
@@ -361,9 +369,16 @@ class UnifiedDataService:
             end_date: 종료 날짜 (YYYY-MM-DD)
             include_news: 뉴스 포함 여부
             news_display_count: 종목당 뉴스 개수
+            include_stock_data: 원본 주가(stock_data) 포함 여부 (A-08)
+            include_volatility_events: 급등락 이벤트 포함 여부 (A-08)
+            include_exchange_rates: 환율·환율 통계 포함 여부 (A-08)
+            include_benchmarks: S&P 500/NASDAQ 포함 여부 (A-08)
+            timeout_seconds: 병렬 수집 구간의 시간 예산. None이면 무제한 (A-08)
 
         Returns:
-            모든 통합 데이터를 포함하는 딕셔너리
+            모든 통합 데이터를 포함하는 딕셔너리. 끈 섹션·시간 초과 섹션도 키는
+            남기고 값만 비운다. supplemental_status에 섹션별 결과
+            (ok/empty/skipped/timeout/error)를 싣는다.
 
         Note (P2-12):
             서로 독립적인 I/O(심볼별 주가 히스토리, 종목 메타데이터, 환율,
@@ -373,38 +388,155 @@ class UnifiedDataService:
             아니라 스레드 기반 병렬화를 사용한다. 심볼별 주가 히스토리는
             collect_stock_data/collect_volatility_events 양쪽이 공유하도록 한
             번만 조회한다 (기존에는 심볼당 두 번 조회했다).
-        """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self._MAX_PARALLEL_WORKERS) as executor:
-            price_histories_future = executor.submit(
-                self._fetch_price_histories, symbols, start_date, end_date
-            )
-            ticker_info_future = executor.submit(self.collect_ticker_info, symbols)
-            exchange_future = executor.submit(self.collect_exchange_data, start_date, end_date)
-            benchmark_future = executor.submit(self.collect_benchmark_data, start_date, end_date)
-            news_future = (
-                executor.submit(self.collect_latest_news, symbols, news_display_count)
-                if include_news else None
-            )
 
-            price_histories = price_histories_future.result()
-            ticker_info = ticker_info_future.result()
-            exchange_rates, exchange_stats = exchange_future.result()
-            sp500_benchmark, nasdaq_benchmark = benchmark_future.result()
-            latest_news = news_future.result() if news_future else {}
+        Note (A-08):
+            timeout_seconds 안에 끝나지 않은 섹션은 기다리지 않고 비워서
+            반환한다 — 부가 데이터 지연이 핵심 결과를 막지 않게 하기 위함이다.
+            이미 시작된 조회 스레드는 취소할 수 없으므로 각자의 외부 API
+            타임아웃(yfinance, 뉴스 10초)까지 백그라운드에서 돈 뒤 끝난다.
+            시작 전이던 작업은 취소한다.
+
+        Note (A-05와의 결합):
+            수집 스레드는 작업 취소 토큰에 연결된 하위 토큰을 받는다
+            (submit_with_context). 작업이 취소되면 하위 토큰도 취소되고, 시간
+            예산을 넘기면 하위 토큰만 취소해 남은 스레드가 다음 확인 지점(재시도
+            대기, 외부 호출 직전)에서 곧바로 끝나게 한다. 이 함수는 그 스레드를
+            기다리지 않으므로, 이미 나가 있던 외부 HTTP 호출 한 건은 라이브러리
+            타임아웃까지 응답을 기다린 뒤 끝난다(CPU를 쓰지 않는 대기라 동시 계산
+            상한의 목적은 유지된다).
+        """
+        total_start = time.perf_counter()
+        timings: Dict[str, float] = {}
+
+        def timed(stage: str, fn: Callable, *args, **kwargs):
+            """단계 소요 시간을 히스토그램과 요약 로그용 dict에 기록한다 (A-08)."""
+            start = time.perf_counter()
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                elapsed = time.perf_counter() - start
+                timings[stage] = elapsed
+                observe_stage(stage, elapsed)
+
+        need_prices = include_stock_data or include_volatility_events
+        # A-05: 작업 취소 토큰에 연결된 하위 토큰. 시간 예산 초과 시 이것만 취소한다.
+        parent_token = current_token()
+        supplemental_token = CancelToken()
+        if parent_token is not None:
+            parent_token.add_callback(
+                lambda: supplemental_token.cancel(parent_token.reason or "cancelled")
+            )
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=self._MAX_PARALLEL_WORKERS)
+        futures: Dict[str, concurrent.futures.Future] = {}
+        try:
+            # submit_with_context가 제출 시점 컨텍스트(하위 토큰 바인딩)를 스레드로 넘긴다
+            with bind_token(supplemental_token):
+                futures['ticker_info'] = submit_with_context(
+                    executor, timed, "ticker_info", self.collect_ticker_info, symbols
+                )
+                if need_prices:
+                    futures['price_history'] = submit_with_context(
+                        executor, timed, "price_history", self._fetch_price_histories,
+                        symbols, start_date, end_date
+                    )
+                if include_exchange_rates:
+                    futures['exchange_rates'] = submit_with_context(
+                        executor, timed, "exchange_rates", self.collect_exchange_data, start_date, end_date
+                    )
+                if include_benchmarks:
+                    futures['benchmarks'] = submit_with_context(
+                        executor, timed, "benchmarks", self.collect_benchmark_data, start_date, end_date
+                    )
+                if include_news:
+                    futures['news'] = submit_with_context(
+                        executor, timed, "news", self.collect_latest_news, symbols, news_display_count
+                    )
+            _, not_done = concurrent.futures.wait(futures.values(), timeout=timeout_seconds)
+            if not_done:
+                # 예산을 넘긴 수집 스레드가 다음 확인 지점에서 멈추게 한다 (A-05)
+                supplemental_token.cancel("supplemental_timeout")
+        finally:
+            # 시간 예산을 넘긴 작업을 기다리지 않는다 (with 블록은 전부 기다린다).
+            executor.shutdown(wait=False, cancel_futures=True)
+
+        # 작업 자체가 취소됐다면 부가 데이터를 조립하지 않고 멈춘다
+        if parent_token is not None:
+            parent_token.raise_if_cancelled()
+
+        def outcome(key: str, default: Any):
+            future = futures.get(key)
+            if future is None:
+                return 'skipped', default
+            if future in not_done:
+                logger.warning(f"부가 데이터 시간 초과({timeout_seconds}초): {key} — 비워서 반환")
+                return 'timeout', default
+            try:
+                return 'ok', future.result()
+            except Exception as e:
+                logger.warning(f"부가 데이터 수집 중 예외: {key} - {type(e).__name__}: {e}")
+                return 'error', default
+
+        status: Dict[str, str] = {}
+
+        status['ticker_info'], ticker_info = outcome(
+            'ticker_info', self._fallback_ticker_info(symbols)
+        )
+        price_outcome, price_histories = outcome('price_history', {})
+        status['exchange_rates'], (exchange_rates, exchange_stats) = outcome(
+            'exchange_rates', ([], {})
+        )
+        status['benchmarks'], (sp500_benchmark, nasdaq_benchmark) = outcome(
+            'benchmarks', ([], [])
+        )
+        status['news'], latest_news = outcome('news', {})
 
         # 이미 조회한 주가 히스토리를 공유해 중복 조회 없이 파생 데이터를 계산한다
-        stock_data = self.collect_stock_data(
-            symbols, start_date, end_date, price_histories=price_histories
-        )
-        volatility_events = self.collect_volatility_events(
-            symbols, start_date, end_date, price_histories=price_histories
-        )
+        stock_data: Dict[str, Any] = {}
+        volatility_events: Dict[str, Any] = {}
+        status['stock_data'] = price_outcome if include_stock_data else 'skipped'
+        status['volatility_events'] = price_outcome if include_volatility_events else 'skipped'
+        if include_stock_data and price_outcome == 'ok':
+            stock_data = timed(
+                "stock_data", self.collect_stock_data,
+                symbols, start_date, end_date, price_histories=price_histories
+            )
+        if include_volatility_events and price_outcome == 'ok':
+            volatility_events = timed(
+                "volatility_events", self.collect_volatility_events,
+                symbols, start_date, end_date, price_histories=price_histories
+            )
+
+        # 끝났지만 데이터가 없는 섹션은 'empty'로 구분한다 — 수집기가 외부 API
+        # 오류를 삼키고 빈 값을 돌려주므로, 이 구분이 없으면 외부 장애가 'ok'에 묻힌다.
+        # (급등락 이벤트는 변동이 작은 종목이면 정상적으로도 비어 있을 수 있다.)
+        present = {
+            'ticker_info': bool(ticker_info),
+            'stock_data': any(stock_data.values()),
+            'volatility_events': any(volatility_events.values()),
+            'exchange_rates': bool(exchange_rates),
+            'benchmarks': bool(sp500_benchmark or nasdaq_benchmark),
+            'news': any(latest_news.values()),
+        }
+        ordered_status: Dict[str, str] = {}
+        for section in SUPPLEMENTAL_SECTIONS:
+            result = status[section]
+            if result == 'ok' and not present[section]:
+                result = 'empty'
+            ordered_status[section] = result
+            record_supplemental_outcome(section, result)
+
+        total = time.perf_counter() - total_start
+        timings["supplemental_total"] = total
+        observe_stage("supplemental_total", total)
 
         logger.info(
             f"통합 데이터 수집 완료: "
             f"{len(symbols)}개 종목, "
             f"{len(exchange_rates)}개 환율 데이터, "
             f"{len(latest_news)}개 종목 뉴스"
+        )
+        logger.info(
+            "부가 데이터 단계별 소요(초): " + self._format_timings(timings, futures, not_done)
         )
 
         return {
@@ -415,13 +547,72 @@ class UnifiedDataService:
             'volatility_events': volatility_events,
             'sp500_benchmark': sp500_benchmark,
             'nasdaq_benchmark': nasdaq_benchmark,
-            'latest_news': latest_news
+            'latest_news': latest_news,
+            'supplemental_status': ordered_status,
         }
-    
+
+    @staticmethod
+    def _fallback_ticker_info(symbols: List[str]) -> Dict[str, Dict[str, str]]:
+        """메타데이터 조회 실패·시간 초과 시 기본값."""
+        return {
+            symbol: {
+                'symbol': symbol,
+                'currency': 'USD',
+                'company_name': symbol,
+                'exchange': 'Unknown'
+            }
+            for symbol in symbols
+        }
+
+    @classmethod
+    def empty_unified_data(cls, symbols: List[str], outcome: str) -> Dict[str, Any]:
+        """부가 수집 전체가 실패했을 때 엔드포인트가 쓰는 빈 응답 조각 (A-08)."""
+        return {
+            'ticker_info': cls._fallback_ticker_info(symbols),
+            'stock_data': {},
+            'exchange_rates': [],
+            'exchange_stats': {},
+            'volatility_events': {},
+            'sp500_benchmark': [],
+            'nasdaq_benchmark': [],
+            'latest_news': {},
+            'supplemental_status': {section: outcome for section in SUPPLEMENTAL_SECTIONS},
+        }
+
     # ========================================
     # Private Helper Methods
     # ========================================
-    
+
+    @staticmethod
+    def _format_timings(
+        timings: Dict[str, float],
+        futures: Optional[Dict[str, concurrent.futures.Future]] = None,
+        not_done: Optional[set] = None,
+    ) -> str:
+        """요약 로그용 `stage=0.123` 나열.
+
+        시간 예산을 넘긴 단계는 timeout, 실행하지 않은 단계는 skipped로 적는다.
+        """
+        futures = futures or {}
+        not_done = not_done or set()
+        order = (
+            "ticker_info", "price_history", "exchange_rates", "benchmarks", "news",
+            "stock_data", "volatility_events", "supplemental_total",
+        )
+        prices_timed_out = futures.get("price_history") in not_done
+        parts = []
+        for stage in order:
+            timed_out = stage in futures and futures[stage] in not_done
+            # stock_data/volatility_events는 price_history 결과로 계산하는 파생 단계다
+            derived_timed_out = stage in ("stock_data", "volatility_events") and prices_timed_out
+            if timed_out or derived_timed_out:
+                parts.append(f"{stage}=timeout")
+            elif stage in timings:
+                parts.append(f"{stage}={timings[stage]:.3f}")
+            else:
+                parts.append(f"{stage}=skipped")
+        return " ".join(parts)
+
     def _transform_stock_data(self, df: pd.DataFrame) -> List[Dict[str, Any]]:
         """주가 DataFrame을 딕셔너리 리스트로 변환"""
         return [

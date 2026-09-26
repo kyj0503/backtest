@@ -71,7 +71,9 @@ class BacktestResult(BaseModel):
     # 거래 통계
     total_trades: int = Field(..., description="총 거래 수")
     win_rate_pct: float = Field(..., description="승률 (%)")
-    profit_factor: float = Field(..., description="수익 팩터")
+    profit_factor: Optional[float] = Field(
+        None, description="수익 팩터 (총이익 / 총손실). 손실 거래나 거래가 없으면 계산 불가라 null"
+    )
     avg_trade_pct: float = Field(..., description="평균 거래 수익률 (%)")
     best_trade_pct: float = Field(..., description="최고 거래 수익률 (%)")
     worst_trade_pct: float = Field(..., description="최악 거래 수익률 (%)")
@@ -207,6 +209,26 @@ class HealthResponse(BaseModel):
                 "status": "healthy",
                 "timestamp": "2024-01-15T10:30:00",
                 "version": "1.0.0"
+            }
+        }
+
+
+class ReadinessResponse(BaseModel):
+    """readiness 응답 모델 (A-07). 준비 안 됨이면 같은 형식으로 503을 반환한다."""
+    status: str = Field(..., description="ready / not_ready")
+    timestamp: datetime = Field(..., description="체크 시간")
+    version: str = Field(..., description="API 버전")
+    checks: Dict[str, str] = Field(
+        ..., description="의존성별 결과 (database: ok / timeout / unavailable)"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "ready",
+                "timestamp": "2024-01-15T10:30:00",
+                "version": "1.0.0",
+                "checks": {"database": "ok"}
             }
         }
 
