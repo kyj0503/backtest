@@ -17,6 +17,7 @@ from app.utils.currency_converter import currency_converter
 from app.constants.data_loading import TradingThresholds
 from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
+from app.utils.metrics_math import TWR_START_RATIO_ATTR
 
 logger = logging.getLogger(__name__)
 
@@ -444,6 +445,10 @@ class PortfolioSimulationEngine:
             date_range, stock_amounts, portfolio_data, dca_info
         )
         last_valid_exchange_rates = {} # 루프 내 캐싱용
+        # 첫 평가일의 "평가금 / 투입 원금" (A-19). 전일 평가금이 없는 날의 수익률은
+        # 0으로 기록되므로 그날 매수 수수료만큼의 손실이 Daily_Return에 잡히지 않는다.
+        # 연환산 수익률(TWR)이 이 손실을 빠뜨리지 않도록 따로 넘긴다.
+        twr_start_ratio = None
 
         # 2. 메인 루프 실행
         for current_date in date_range:
@@ -630,6 +635,12 @@ class PortfolioSimulationEngine:
                 dca_info=dca_info
             )
 
+            if twr_start_ratio is None and state.prev_portfolio_value <= 0 and normalized_value > 0:
+                # 현금 자산은 초기 available_cash로 들어가 납입(inflow)으로 잡히지 않는다
+                invested = cash_amount + daily_cash_inflow
+                if invested > 0:
+                    twr_start_ratio = normalized_value * total_amount / invested
+
             state.portfolio_values.append(normalized_value)
             state.daily_returns.append(daily_return)
             state.weight_history.append(current_weights)
@@ -656,5 +667,7 @@ class PortfolioSimulationEngine:
         result.attrs['total_trades'] = state.total_trades
         result.attrs['rebalance_history'] = state.rebalance_history
         result.attrs['weight_history'] = state.weight_history
+        if twr_start_ratio is not None:
+            result.attrs[TWR_START_RATIO_ATTR] = twr_start_ratio
 
         return result
