@@ -12,7 +12,7 @@
  * (날짜 경계 계산이 정확한지) 직접 확인한다 -- 이런 종류의 날짜 경계
  * 오류가 바로 이번 감사가 찾아낸 "잘못된 날짜에 값이 새는" 버그 계열이다.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   smartSampleByPeriod,
   sampleData,
@@ -271,5 +271,182 @@ describe('filterRebalanceMarkers', () => {
     const result = filterRebalanceMarkers(markers, 2);
 
     expect(result.map((m) => m.date)).toEqual(['2024-04-01', '2024-05-01']);
+  });
+});
+
+/**
+ * 특성화 테스트 (A-16).
+ *
+ * dataSampling.ts를 책임 단위 모듈로 쪼개기 전에, 기존 테스트가 닿지 않던
+ * 분기(월간 샘플링의 N번째 요일 폴백/연도 경계/휴장일 탐색, 입력 날짜 검증,
+ * 기간 경계값, 월간 수익률 집계의 공백 구간 처리, 적응형 샘플링의 비폴백
+ * 경로)의 "현재" 동작을 그대로 고정한다. 일부는 명세라기보다 현재 구현의
+ * 부산물이며(예: 휴장일로 밀린 뒤 요일이 바뀌는 현상, 60개월 넘는 공백에서
+ * 포인트가 빠지는 현상) 그런 경우 테스트 이름과 주석에 그렇게 적었다.
+ * 분리 작업은 이 동작을 바꾸지 않아야 한다.
+ */
+describe('characterization: monthly price sampling calendar edge cases', () => {
+  const MONTHLY_START = '2015-01-01';
+  const MONTHLY_END = '2021-01-01'; // ~6년 -> monthly 버킷
+
+  function monthlyDates(dates: string[]): string[] {
+    return smartSampleByPeriod(dates.map((date) => ({ date })), MONTHLY_START, MONTHLY_END)
+      .data.map((d) => d.date);
+  }
+
+  it('falls back to the last matching weekday when the Nth weekday does not exist in the next month', () => {
+    // 2024-01-29는 1월의 5번째 월요일. 2월·3월에는 5번째 월요일이 없으므로
+    // 각 달의 마지막 월요일(2/26, 3/25)로 폴백하고, 4월은 5번째 월요일(4/29)이 있다.
+    const dates = sequentialDates('2024-01-29', 93); // ~ 2024-04-30
+
+    expect(monthlyDates(dates)).toEqual([
+      '2024-01-29', '2024-02-26', '2024-03-25', '2024-04-29', '2024-04-30',
+    ]);
+  });
+
+  it('rolls over December into January of the next year', () => {
+    // 2023-11-01은 11월의 첫 번째 수요일 -> 12/6, 1/3, 2/7(각 달 첫 번째 수요일).
+    const dates = sequentialDates('2023-11-01', 107); // ~ 2024-02-15
+
+    expect(monthlyDates(dates)).toEqual([
+      '2023-11-01', '2023-12-06', '2024-01-03', '2024-02-07', '2024-02-15',
+    ]);
+  });
+
+  it('skips weekends while still landing on each month\'s Nth weekday', () => {
+    const weekdaysOnly = sequentialDates('2024-01-01', 100).filter((d) => {
+      const [y, m, day] = d.split('-').map(Number) as [number, number, number];
+      const w = new Date(y, m - 1, day).getDay();
+      return w !== 0 && w !== 6;
+    });
+
+    expect(monthlyDates(weekdaysOnly)).toEqual([
+      '2024-01-01', '2024-02-05', '2024-03-04', '2024-04-01', '2024-04-09',
+    ]);
+  });
+
+  it('moves forward to the next available day when the target is missing (current behavior: the weekday then drifts)', () => {
+    // 2/5(첫 번째 월요일)를 빼면 다음 날 2/6(화)을 쓴다. 이후 경계 계산은
+    // "현재 날짜의 요일"을 기준으로 하므로 3월부터는 첫 번째 화요일(3/5, 4/2)이 된다.
+    // 명세라기보다 현재 구현의 부산물이지만, 분리 과정에서 바뀌면 안 된다.
+    const dates = sequentialDates('2024-01-01', 100).filter((d) => d !== '2024-02-05');
+
+    expect(monthlyDates(dates)).toEqual([
+      '2024-01-01', '2024-02-06', '2024-03-05', '2024-04-02', '2024-04-09',
+    ]);
+  });
+
+  it('stops sampling at a data gap longer than a week and only appends the last point', () => {
+    const dates = [...sequentialDates('2024-01-01', 10), ...sequentialDates('2024-05-15', 6)];
+
+    expect(monthlyDates(dates)).toEqual(['2024-01-01', '2024-05-20']);
+  });
+
+  it.each([
+    ['2024/01/01', /형식/],
+    ['2024-13-01', /날짜 값/],
+    ['2024-02-30', /존재하지 않는 날짜/],
+  ])('rejects the malformed date %s on the monthly path', (bad, message) => {
+    expect(() => smartSampleByPeriod([{ date: bad }], MONTHLY_START, MONTHLY_END)).toThrow(message);
+  });
+
+  it('does not validate data dates on the daily/weekly paths', () => {
+    const data = [{ date: '2024/01/01' }];
+    expect(smartSampleByPeriod(data, '2020-01-01', '2023-01-01').data).toEqual(data);
+  });
+});
+
+describe('characterization: smartSampleByPeriod range inputs', () => {
+  it('accepts Date objects for the range', () => {
+    const data = sequentialDates('2024-01-01', 10).map((date) => ({ date }));
+    const result = smartSampleByPeriod(data, new Date(2020, 0, 1), new Date(2023, 0, 1));
+
+    expect(result.aggregationType).toBe('weekly');
+  });
+
+  it('throws for an invalid end date', () => {
+    expect(() => smartSampleByPeriod([{ date: '2024-01-01' }], '2024-01-01', 'nope'))
+      .toThrow(/종료 날짜/);
+  });
+
+  it('treats exactly 2 and 5 years as inclusive upper bounds of the daily/weekly buckets', () => {
+    const data = [{ date: '2024-01-01' }];
+    // 2년 = 730.5일, 5년 = 1826.25일 (1년 = 365.25일 기준)
+    const bucket = (end: string) => smartSampleByPeriod(data, '2020-01-01T00:00:00Z', end).aggregationType;
+
+    expect(bucket('2021-12-31T12:00:00Z')).toBe('daily');
+    expect(bucket('2021-12-31T12:00:01Z')).toBe('weekly');
+    expect(bucket('2024-12-31T06:00:00Z')).toBe('weekly');
+    expect(bucket('2024-12-31T06:00:01Z')).toBe('monthly');
+  });
+});
+
+describe('characterization: monthly return aggregation gaps', () => {
+  const round = (rows: ReturnPoint[]) => rows.map((r) => [r.date, Number(r.return_pct.toFixed(10))]);
+  const ones = (dates: string[]): ReturnPoint[] => dates.map((date) => ({ date, return_pct: 1 }));
+
+  it('skips empty months across a multi-month gap', () => {
+    const dates = [...sequentialDates('2024-01-01', 10), ...sequentialDates('2024-05-15', 6)];
+
+    expect(round(aggregateReturns(ones(dates), 'monthly'))).toEqual([
+      ['2024-01-10', 10.4622125411], // 1.01^10 - 1
+      ['2024-05-20', 6.1520150601], // 1.01^6 - 1
+    ]);
+  });
+
+  it('opens a new single-day bucket when the last item lands exactly on a boundary', () => {
+    const dates = sequentialDates('2024-01-01', 36); // 마지막 2/5 = 2월 첫 번째 월요일
+
+    expect(round(aggregateReturns(ones(dates), 'monthly'))).toEqual([
+      ['2024-02-04', 41.6602756031], // 1.01^35 - 1
+      ['2024-02-05', 1],
+    ]);
+  });
+
+  it('logs and drops the crossing point when a gap exceeds the 60-month safety limit (current behavior)', () => {
+    // 60개월 넘는 공백을 만나면 while 루프가 안전장치로 중단되고, 그 시점의
+    // 항목(2010-01-04)은 어느 버킷에도 들어가지 않는다. 다음 항목에서 경계
+    // 이동이 이어져 2010-01-05는 단독 버킷이 된다.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const data = ones(['2000-01-03', '2000-01-04', '2010-01-04', '2010-01-05']);
+
+      expect(round(aggregateReturns(data, 'monthly'))).toEqual([['2000-01-04', 2.01], ['2010-01-05', 1]]);
+      expect(errorSpy).toHaveBeenCalledWith('[dataSampling] Monthly aggregation exceeded safety limit');
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('returns the input unchanged for an unknown aggregation type', () => {
+    const data = ones(['2024-01-01']);
+    expect(aggregateReturns(data, 'yearly' as never)).toBe(data);
+  });
+
+  it('keeps extra fields of the bucket\'s last day and only overwrites return_pct', () => {
+    const data = sequentialDates('2024-01-01', 3).map((date, i) => ({ date, return_pct: 0, tag: `t${i}` }));
+
+    expect(aggregateReturns(data, 'weekly')).toEqual([{ date: '2024-01-03', return_pct: 0, tag: 't2' }]);
+  });
+});
+
+describe('characterization: adaptiveSampleData branches', () => {
+  it('keeps the adaptive result (no fallback) when enough points change beyond the threshold', () => {
+    const data = Array.from({ length: 20 }, (_, i) => ({ value: i % 2 ? 100 : 0 }));
+    const result = adaptiveSampleData(data, 10, 'value');
+
+    // 모든 변화(100)가 임계값(0.5 표준편차 = 25)을 넘으므로 maxPoints-1개에서
+    // 멈추고 마지막 점을 더해 정확히 maxPoints개가 된다.
+    expect(result).toHaveLength(10);
+    expect(result.slice(0, 9)).toEqual(data.slice(0, 9));
+    expect(result[9]).toBe(data[19]);
+  });
+
+  it('falls back to equal-interval sampling when the values are all NaN', () => {
+    const data = Array.from({ length: 20 }, (_, i) => ({ value: NaN, i }));
+    const result = adaptiveSampleData(data, 10, 'value');
+
+    expect(result).toEqual(sampleData(data, 10));
+    expect(result.map((d) => d.i)).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 19]);
   });
 });

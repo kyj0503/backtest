@@ -7,11 +7,15 @@ export interface Stock {
   weight: number;
 }
 
+// BE individual_returns 항목. return은 이미 백분율(8 = 8%), weight는 0~1 비율이다.
+// 매수 후 보유 경로는 start_price/end_price를, 전략 경로는 initial_value/final_value를 싣는다.
 export interface IndividualReturn {
   weight: number;
   return: number;
-  start_price: number;
-  end_price: number;
+  start_price?: number;
+  end_price?: number;
+  initial_value?: number;
+  final_value?: number;
 }
 
 export interface OhlcPoint {
@@ -87,6 +91,7 @@ export interface PortfolioStatistics {
   Final_Value: number;
   Peak_Value: number;
   Total_Return: number;
+  /** 연환산 수익률(%) — 시간가중(TWR). DCA 납입 시점의 영향을 뺀 연평균 복리 수익률 */
   Annual_Return: number;
   Annual_Volatility: number;
   Sharpe_Ratio: number;
@@ -97,8 +102,12 @@ export interface PortfolioStatistics {
   Total_Trading_Days: number;
   Positive_Days: number;
   Negative_Days: number;
+  /** 일 기준 승률(%): 상승일 / 전체 거래일. 전략·buy&hold 경로 공통 정의 */
   Win_Rate: number;
-  Profit_Factor: number;
+  /** 거래 기준 승률(%): 전 종목 거래 합산. 전략 경로에만 있고, 거래가 없으면 null */
+  Trade_Win_Rate?: number | null;
+  /** 일간 수익 합 / 일간 손실 합. 손실일이 없으면 계산 불가라 null */
+  Profit_Factor: number | null;
 }
 
 export interface ChartData {
@@ -139,7 +148,9 @@ export interface NewsItem {
 export interface RebalanceTrade {
   symbol: string;
   action: 'buy' | 'sell' | 'increase' | 'decrease';
-  shares: number;
+  // 현금 조정(increase/decrease)에는 없다 — 백엔드 portfolio_rebalancer.py가
+  // shares 대신 amount만 싣는다.
+  shares?: number;
   price: number;
   amount?: number; // 현금 거래 시 사용
 }
@@ -179,13 +190,25 @@ export interface StrategyStats {
   trade_log?: TradeLog[];
   total_trades?: number;
   win_rate_pct?: number;
-  profit_factor?: number;
+  profit_factor?: number | null;  // 계산 불가면 null
   sharpe_ratio?: number;
   max_drawdown_pct?: number;
   final_equity?: number;
   // 백엔드가 전략별로 추가 통계를 덧붙일 수 있어 열려 있는 형태를 유지한다.
   [key: string]: unknown;
 }
+
+// 부가 데이터 섹션별 수집 결과 (A-08, BE custom_metrics.SUPPLEMENTAL_SECTIONS/OUTCOMES).
+// empty = 끝났지만 데이터 없음, skipped = 요청하지 않음, timeout/error = 수집 실패.
+export type SupplementalSection =
+  | 'ticker_info'
+  | 'stock_data'
+  | 'volatility_events'
+  | 'exchange_rates'
+  | 'benchmarks'
+  | 'news';
+export type SupplementalOutcome = 'ok' | 'empty' | 'skipped' | 'timeout' | 'error';
+export type SupplementalStatus = Partial<Record<SupplementalSection, SupplementalOutcome>>;
 
 export interface PortfolioData {
   portfolio_statistics: PortfolioStatistics;
@@ -213,6 +236,9 @@ export interface PortfolioData {
   
   // 상장일 경고 메시지 (백테스트 실행 전 검증 실패 시 반환되지 않음)
   warnings?: string[];
+
+  // 부가 데이터 섹션별 수집 결과. 이 필드가 없던 구버전 응답도 있다.
+  supplemental_status?: SupplementalStatus;
 }
 
 export type BacktestResultData = ChartData | PortfolioData;

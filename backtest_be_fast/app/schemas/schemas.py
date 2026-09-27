@@ -140,12 +140,32 @@ class PortfolioBacktestRequest(BaseModel):
     """포트폴리오 백테스트 요청 모델"""
     portfolio: List[PortfolioStock] = Field(..., min_length=1, max_length=settings.max_portfolio_items, description="포트폴리오 구성")
     start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
-    end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
+    end_date: str = Field(
+        ...,
+        description=(
+            f"종료 날짜 (YYYY-MM-DD). 종료일 - 시작일이 최소 "
+            f"{settings.min_backtest_period_days}일이어야 하며 미달 시 422 "
+            "(연환산 지표인 CAGR·샤프 지수 등은 그보다 짧은 기간에서 의미가 없다. "
+            "검증은 엔드포인트에서 한다)"
+        ),
+    )
     commission: float = Field(0.002, ge=0, lt=0.1, description="수수료율 (0 ~ 0.1)")
     rebalance_frequency: str = Field("monthly_1", description="리밸런싱 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12, none)")
     strategy: str = Field("buy_hold_strategy", description="전략명")
     strategy_params: Optional[Dict[str, Any]] = Field(default_factory=dict, description="전략 파라미터")
-    
+
+    # 부가 데이터 포함 여부 (A-08). 기본값은 모두 True — 기존 호출자는 같은 응답을
+    # 받는다. False면 해당 섹션을 수집하지 않고 응답 키는 빈 값으로 남긴다.
+    include_stock_data: bool = Field(True, description="종목별 원본 주가(stock_data) 포함")
+    include_volatility_events: bool = Field(True, description="종목별 급등락 이벤트(volatility_events) 포함")
+    include_exchange_rates: bool = Field(True, description="원달러 환율(exchange_rates, exchange_stats) 포함")
+    include_benchmarks: bool = Field(
+        True,
+        description="S&P 500/NASDAQ 지수(sp500_benchmark, nasdaq_benchmark)와 "
+                    "portfolio_statistics의 sp500_total_return_pct/alpha_vs_sp500_pct 포함",
+    )
+    include_news: bool = Field(True, description="종목별 최신 뉴스(latest_news) 포함")
+
     @field_validator('portfolio')
     @classmethod
     def validate_portfolio(cls, v):

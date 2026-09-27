@@ -43,7 +43,7 @@ docker build --target test ./backtest_be_fast
 
 **FE (Feature-Sliced Design):** `shared` ← `features` ← `pages` (no reverse imports). State: React hooks (`useState`/`useReducer`) + localStorage — there is no Zustand or other global-state library in this codebase despite what some older docs claim. UI: shadcn/ui + Tailwind + Recharts.
 
-**DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through Alembic (`backtest_be_fast/alembic/`). There are **no physical foreign keys** — cross-table references are logical, integrity is owned by the app (A-10). A DB created from schema.sql **before** revision `7b2e9c4f1a30` still has the old FK: baseline it with `alembic stamp d5c3763b29e6` then `alembic upgrade head` (plain `stamp head` would skip the FK drop). A DB created from the current schema.sql is already at head (`alembic stamp head`). Migrations are NOT run by the Jenkins pipeline or the runtime image — apply them manually.
+**DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through Alembic (`backtest_be_fast/alembic/`). There are **no physical foreign keys** — cross-table references are logical, integrity is owned by the app (A-10). A DB created from schema.sql **before** revision `7b2e9c4f1a30` still has the old FK: baseline it with `alembic stamp d5c3763b29e6` then `alembic upgrade head` (plain `stamp head` would skip the FK drop). A DB created from the current schema.sql is already at head (`alembic stamp head`). Migrations are NOT run by the Jenkins pipeline or the runtime image — apply them manually. schema.sql and the Alembic head must stay identical (COMMENTs included): change both together and run `scripts/check-schema-parity.sh`. Keep the `SET NAMES utf8mb4;` at the top of schema.sql — the official image runs initdb with a latin1 client and would double-encode Korean COMMENTs. Upgrade/baseline procedures and the MySQL 8.0 → 8.4 notes live in `database/README.md`.
 
 **API:** POST `/api/v1/backtest` — main endpoint. Errors: `@handle_portfolio_errors` decorator.
 
@@ -77,14 +77,22 @@ docker build --target test ./backtest_be_fast
 
 14. **`apiClient` pins `adapter: 'fetch'`.** Reverting to the default xhr adapter breaks the timeout/cancellation tests — happy-dom + MSW do not faithfully implement XHR timeout/abort. Real browsers do, so this is a test-environment constraint, not a production one.
 
+15. **Backtest jobs run under a cancel token (A-05).** `BacktestCancelled` derives from `BaseException` on purpose — never catch it with `except BaseException` and never convert it to an error result. Inside the job path, submit thread-pool work with `submit_with_context()` (plain `executor.submit()` drops the token's ContextVar), and put `check_cancelled()` / `cancellable_sleep()` in new long loops or retry waits. Concurrency limits are container-wide lock-file slots (`app/core/file_slots.py`), not an in-process semaphore.
+
+16. **Metric definitions are shared across execution paths (A-09/A-19/A-20).** `Win_Rate` is day-based (up-day ratio) on every path; trade-based win rate is `Trade_Win_Rate`. `Profit_Factor` and other not-computable metrics are `None`, never a fallback constant. `Annual_Return` and drawdowns are time-weighted from `Daily_Return` (inflow-adjusted) via `app/utils/metrics_math.py` — do not compute them from `Portfolio_Value`, which DCA inflows inflate. `Total_Return` stays total-contribution based.
+
+17. **Minimum backtest period (30 days) is defined twice** — BE `Settings.min_backtest_period_days` and FE `VALIDATION_RULES.MIN_BACKTEST_PERIOD_DAYS`. Change both together (TODO A-29).
+
+18. **Liveness vs readiness.** `/health` is liveness (no DB) and backs the Dockerfile HEALTHCHECK; `/health/ready` checks MySQL with its own short-timeout connection. Supplemental data (`include_*`, `data.supplemental_status`) has its own time budget and must never block or fail the core result.
+
 ## Testing
 
 - **Verify in Docker** (`docker compose exec`, or `docker build --target test`) before declaring work complete.
 - **BE markers:** `@pytest.mark.unit` (no DB), `@pytest.mark.integration` (DB), `@pytest.mark.external` (real API)
 - **FE:** Vitest + React Testing Library. Playwright E2E exists (`backtest_fe/playwright.config.ts`, one smoke spec) and needs the dev stack running — it is deliberately NOT in the Docker CI test stage (no browser, no live backend there).
-- **Current baseline (2026-09-26):** BE 370 unit tests + 12 integration, FE 188 tests — all green. Any failure is a regression, not pre-existing noise.
+- **Current baseline (2026-09-27):** BE 492 unit tests + 12 integration + 1 e2e golden master (`pytest tests/e2e -m e2e`, no network/DB), FE 344 tests — all green. Any failure is a regression, not pre-existing noise.
 - **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
-- **Coverage (2026-08-03):** BE 71.6%, FE 47.8% statements. Core financial modules are 82-98%; the remaining gaps are `data_fetcher` (41%), the `app/validators/` package (23-32%), and `currency_converter` (57%). The validators look dead but are reached via `backtest_engine.py` → `validation_service` — do not delete them.
+- **Coverage (BE 2026-08-03 / FE 2026-09-27):** BE 71.6%, FE about 74% statements. Core financial modules are 82-98%; the remaining gaps are `data_fetcher` (41%), the `app/validators/` package (23-32%), and `currency_converter` (57%). The validators look dead but are reached via `backtest_engine.py` → `validation_service` — do not delete them.
 
 ## CI
 
@@ -98,7 +106,7 @@ These checks block **deployment**, not merging — the pipeline checks out `*/ma
 
 ## Outstanding Work
 
-`TODO.md` (repo root) holds **only the open backlog** — P0/P1/P2/P3 with `file:line` evidence per item, plus a status summary and recommended order at the top. Consult it before starting work in an area; several known-broken behaviors (DCA denominator, delisted-stock rebalancing, 200-with-error responses) are documented there rather than in code comments.
+`TODO.md` (repo root) holds **only the open backlog** — P0/P1/P2/P3 with `file:line` evidence per item, plus a status summary and recommended order at the top. Consult it before starting work in an area; known-wrong values that are not fixed yet (e.g. remaining NaN→0.0 fallbacks, per-symbol hardcoded fields) are documented there rather than in code comments.
 
 `HISTORY.md` (repo root) holds **completed work**, grouped by audit round, with the reasoning behind each fix. When you finish a TODO item, move it to HISTORY.md rather than leaving a checked box in TODO.md. Read HISTORY.md before "fixing" something that looks wrong — several counter-intuitive choices (validators kept despite low coverage, no physical FKs by policy, pure-string HTML entity decode) are recorded there with the evidence that produced them.
 
@@ -107,4 +115,5 @@ These checks block **deployment**, not merging — the pipeline checks out `*/ma
 Detailed improvement history and architectural decisions in `docs/`:
 - `docs/CHANGELOG-improvement-2026-02-06.md` — Full changelog (Phases 1-5 + follow-up fixes)
 - `docs/VERIFICATION-REPORT-2026-02-06.md` — Independent verification & regression analysis
-- `docs/improvement_analysis.md` — Initial codebase analysis
+- `docs/improvement_analysis.md` — Initial codebase analysis (historical; some recommendations were deliberately not adopted — see its header)
+- `database/README.md` — DB schema paths, parity check, Alembic baseline, MySQL 8.0 → 8.4 upgrade

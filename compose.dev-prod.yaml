@@ -52,6 +52,20 @@ services:
       # 바꾸면 이 값도 함께 재계산해야 한다.
       - DATABASE_POOL_SIZE=${DATABASE_POOL_SIZE:-4}
       - DATABASE_MAX_OVERFLOW=${DATABASE_MAX_OVERFLOW:-2}
+      # A-04/A-05/A-06: 백테스트 동시 실행 상한은 워커 수와 무관한 **컨테이너
+      # 전체** 기준이다. 워커 프로세스들이 BACKTEST_SLOT_DIR 아래 락 파일
+      # (fcntl.flock)을 슬롯으로 공유한다 — 과거 프로세스 로컬 세마포어 시절에는
+      # 17 workers x 8 = 136건까지 동시에 돌았다. 슬롯 디렉터리는 컨테이너의 /tmp
+      # (컨테이너마다 따로)라서 BE 컨테이너를 여러 개 띄우면 상한도 컨테이너마다
+      # 따로 적용된다. 초과 요청은 BACKTEST_QUEUE_TIMEOUT_SECONDS까지 대기 후 503,
+      # 실행이 BACKTEST_TIMEOUT_SECONDS를 넘으면 504(작업에 취소 신호, 슬롯은
+      # 작업이 실제로 멈출 때 반환), 같은 IP의 동시 요청이
+      # MAX_CONCURRENT_BACKTESTS_PER_CLIENT를 넘으면 즉시 429.
+      # 기본값 근거: 2026-09-27 로컬 부하 측정(이 파일과 같은 17 workers / cpus 4).
+      - MAX_CONCURRENT_BACKTESTS=${MAX_CONCURRENT_BACKTESTS:-8}
+      - BACKTEST_TIMEOUT_SECONDS=${BACKTEST_TIMEOUT_SECONDS:-60}
+      - BACKTEST_QUEUE_TIMEOUT_SECONDS=${BACKTEST_QUEUE_TIMEOUT_SECONDS:-30}
+      - MAX_CONCURRENT_BACKTESTS_PER_CLIENT=${MAX_CONCURRENT_BACKTESTS_PER_CLIENT:-2}
     # P2-25: 바인드 마운트/venv 볼륨 없음 — Dockerfile(runtime 스테이지)이 COPY한
     # 코드와 /opt/venv를 그대로 실행해야 이 파일의 목적(프로덕션 이미지 검증)이
     # 성립한다. 코드를 바꿨다면 재빌드(`docker compose -f compose.dev-prod.yaml

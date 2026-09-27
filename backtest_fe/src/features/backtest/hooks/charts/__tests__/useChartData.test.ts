@@ -9,7 +9,7 @@
  * 검증한다. 이 재구성 로직이 잘못되면 "엉뚱한 날짜에 오래된 값이 새어
  * 들어가는" 바로 그 버그 클래스가 발생한다.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useChartData } from '../useChartData';
 import type {
@@ -266,5 +266,185 @@ describe('useChartData: statsPayload extraction', () => {
     const { result } = renderHook(() => useChartData(data, false));
 
     expect(result.current.statsPayload).toEqual({ Sharpe_Ratio: 1.5 });
+  });
+});
+
+/**
+ * 특성화 테스트 (A-16).
+ *
+ * useChartData.ts를 차트별 변환 모듈로 나누기 전에, 기존 테스트가 닿지
+ * 않던 경로(단일 종목·벤치마크의 주간 집계 재구성, OHLC/환율 샘플링,
+ * equity가 없는 버킷의 폴백, 날짜 범위가 없는 응답, 단일 종목의 stock_data,
+ * 월간 집계와 10년 초과 경고, memo 참조 안정성)의 현재 동작을 고정한다.
+ */
+describe('characterization: single-ticker weekly aggregation', () => {
+  const dates = sequentialDates('2024-01-01', 10); // 1/1 ~ 1/10
+
+  function buildSingle(): ChartData {
+    return {
+      ticker: 'AAPL', start_date: '2020-01-01', end_date: '2023-01-01', // 3년 -> weekly
+      equity_data: dates.map((date, i) => ({ date, value: 100 + i, return_pct: 1, drawdown_pct: -i })),
+      ohlc_data: dates.map((date, i) => ({ date, open: i, high: i, low: i, close: i, volume: i })),
+      exchange_rates: dates.map((date, i) => ({ date, rate: 1300 + i })),
+      // S&P 500은 1/7을 빼서, 인덱스 기반 주간 버킷의 태그 날짜가 1/8로 밀리게 한다.
+      sp500_benchmark: dates.filter((d) => d !== '2024-01-07')
+        .map((date, i) => ({ date, close: 4000 + i, return_pct: 1 })) as ChartData['sp500_benchmark'],
+      nasdaq_benchmark: dates
+        .map((date, i) => ({ date, close: 15000 + i, return_pct: 2 })) as ChartData['nasdaq_benchmark'],
+      trade_markers: [
+        { date: '2024-01-02', price: 101, type: 'entry' },
+        { date: '2024-01-05', price: 104, type: 'sell' as never },
+      ],
+    };
+  }
+
+  it('re-tags single-ticker equity to each compounded return bucket, keeping that day\'s value/drawdown', () => {
+    const { result } = renderHook(() => useChartData(buildSingle(), false));
+
+    expect(result.current.aggregationType).toBe('weekly');
+    expect(result.current.samplingWarning).toBeUndefined();
+    const points = result.current.singleEquityData;
+    expect(points.map((p) => [p.date, p.value, p.drawdown_pct])).toEqual([
+      ['2024-01-07', 106, -6],
+      ['2024-01-10', 109, -9],
+    ]);
+    expect(points[0]!.return_pct).toBeCloseTo(7.213535210700983, 9); // 1.01^7 - 1
+    expect(points[1]!.return_pct).toBeCloseTo(3.030099999999991, 9); // 1.01^3 - 1
+  });
+
+  it('samples OHLC and exchange rates by index (price sampling, not compounding)', () => {
+    const { result } = renderHook(() => useChartData(buildSingle(), false));
+
+    expect(result.current.singleOhlcData.map((p) => p.date)).toEqual(['2024-01-01', '2024-01-08', '2024-01-10']);
+    expect(result.current.exchangeRates).toEqual([
+      { date: '2024-01-01', rate: 1300 },
+      { date: '2024-01-08', rate: 1307 },
+      { date: '2024-01-10', rate: 1309 },
+    ]);
+  });
+
+  it('compounds benchmark returns per bucket and keeps the bucket day\'s close', () => {
+    const { result } = renderHook(() => useChartData(buildSingle(), false));
+    const sp = result.current.sp500Benchmark;
+    const nq = result.current.nasdaqBenchmark;
+
+    expect(sp.map((p) => [p.date, p.close])).toEqual([['2024-01-08', 4006], ['2024-01-10', 4008]]);
+    expect(sp[0]!.return_pct).toBeCloseTo(7.213535210700983, 9);
+    expect(sp[1]!.return_pct).toBeCloseTo(2.0100000000000007, 9);
+    expect(nq.map((p) => [p.date, p.close])).toEqual([['2024-01-07', 15006], ['2024-01-10', 15009]]);
+    expect(nq[0]!.return_pct).toBeCloseTo(14.868566764928005, 9); // 1.02^7 - 1
+    expect(nq[1]!.return_pct).toBeCloseTo(6.120799999999993, 9); // 1.02^3 - 1
+    // *WithReturn은 같은 배열의 별칭이다.
+    expect(result.current.sp500BenchmarkWithReturn).toBe(sp);
+    expect(result.current.nasdaqBenchmarkWithReturn).toBe(nq);
+  });
+
+  it('normalizes trade marker types to entry/exit', () => {
+    const { result } = renderHook(() => useChartData(buildSingle(), false));
+
+    expect(result.current.singleTrades.map((t) => t.type)).toEqual(['entry', 'exit']);
+  });
+
+  it('returns identical references on rerender with the same input (memoized)', () => {
+    const data = buildSingle();
+    const { result, rerender } = renderHook(() => useChartData(data, false));
+    const first = result.current;
+
+    rerender();
+
+    expect(result.current.singleEquityData).toBe(first.singleEquityData);
+    expect(result.current.singleOhlcData).toBe(first.singleOhlcData);
+    expect(result.current.sp500Benchmark).toBe(first.sp500Benchmark);
+    expect(result.current.exchangeRates).toBe(first.exchangeRates);
+    expect(result.current.stocksData).toBe(first.stocksData);
+  });
+});
+
+describe('characterization: portfolio equity fallback and monthly aggregation', () => {
+  it('emits a value-less point and warns when no equity exists on or before a return bucket', () => {
+    const dates = sequentialDates('2024-01-01', 10);
+    const data = makePortfolioData({
+      portfolio_statistics: makeStats({ Start: '2020-01-01', End: '2023-01-01' }), // weekly
+      // equity는 1/9부터만 있다 -> 첫 버킷(1/7)에는 on-or-before 값도 없다.
+      equity_curve: Object.fromEntries(dates.slice(8).map((d) => [d, 1000])),
+      daily_returns: Object.fromEntries(dates.map((d) => [d, 1])),
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { result } = renderHook(() => useChartData(data, true));
+      const points = result.current.portfolioEquityData;
+
+      expect(points).toHaveLength(2);
+      expect(points[0]).toEqual({
+        date: '2024-01-07', value: undefined, return_pct: expect.closeTo(7.213535210700983, 9), drawdown_pct: 0,
+      });
+      expect(points[1]).toEqual({
+        date: '2024-01-10', value: 1000, return_pct: expect.closeTo(3.030099999999991, 9), drawdown_pct: 0,
+      });
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0]![0]).toContain('[포트폴리오 차트] 2024-01-07');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('aggregates monthly with the >10y warning and samples every series on the same month boundaries', () => {
+    const dates = sequentialDates('2024-01-01', 40); // 1/1 ~ 2/9
+    const data = makePortfolioData({
+      portfolio_statistics: makeStats({ Start: '2010-01-01', End: '2021-01-01' }), // 11년
+      equity_curve: Object.fromEntries(dates.map((d, i) => [d, 1000 + i])),
+      daily_returns: Object.fromEntries(dates.map((d) => [d, 0.5])),
+      weight_history: dates.map((d) => ({ date: d, A: 1 })),
+      stock_data: { A: dates.map((d, i) => ({ date: d, price: i, volume: 0 })) },
+      exchange_rates: dates.map((d, i) => ({ date: d, rate: i })),
+    });
+
+    const { result } = renderHook(() => useChartData(data, true));
+    const r = result.current;
+
+    expect(r.aggregationType).toBe('monthly');
+    expect(r.samplingWarning).toBe('10년 초과 백테스트는 월간 데이터로 표시됩니다.');
+    // 수익률 버킷은 경계 하루 전(2/4)과 마지막 날(2/9)에 마감된다.
+    expect(r.portfolioEquityData.map((p) => [p.date, p.value])).toEqual([['2024-02-04', 1034], ['2024-02-09', 1039]]);
+    expect(r.portfolioEquityData[0]!.return_pct).toBeCloseTo(19.072689037155687, 9); // 1.005^35 - 1
+    expect(r.portfolioEquityData[1]!.return_pct).toBeCloseTo(2.5251253128124374, 9); // 1.005^5 - 1
+    // 가격류 시계열은 경계 당일(2/5)을 샘플링한다.
+    const priceDates = ['2024-01-01', '2024-02-05', '2024-02-09'];
+    expect(r.weightHistory.map((w) => w.date)).toEqual(priceDates);
+    expect(r.stocksData[0]!.data.map((p) => p.date)).toEqual(priceDates);
+    expect(r.exchangeRates.map((p) => p.date)).toEqual(priceDates);
+  });
+});
+
+describe('characterization: responses without a date range or with single-ticker stock_data', () => {
+  it('returns transformed single-ticker series unsampled when start/end dates are absent', () => {
+    const data: ChartData = {
+      ticker: 'X',
+      equity_data: [{ date: '2024-01-01', value: 1, return_pct: 1, drawdown_pct: 0 }],
+      ohlc_data: [{ date: '2024-01-01', open: 1, high: 1, low: 1, close: 1, volume: undefined as never }],
+    };
+
+    const { result } = renderHook(() => useChartData(data, false));
+
+    expect(result.current.aggregationType).toBe('daily');
+    expect(result.current.singleEquityData).toEqual([{ date: '2024-01-01', value: 1, return_pct: 1, drawdown_pct: 0 }]);
+    expect(result.current.singleOhlcData).toEqual([
+      { date: '2024-01-01', open: 1, high: 1, low: 1, close: 1, volume: 0 },
+    ]);
+  });
+
+  it('picks only the ticker\'s own series from stock_data on a single-ticker response', () => {
+    const data = {
+      ticker: 'AAPL', start_date: '2024-01-01', end_date: '2024-01-02',
+      stock_data: { AAPL: [{ date: '2024-01-01', price: 1, volume: 1 }], MSFT: [] },
+    } as ChartData;
+
+    const { result } = renderHook(() => useChartData(data, false));
+
+    expect(result.current.stocksData).toEqual([
+      { symbol: 'AAPL', data: [{ date: '2024-01-01', price: 1, volume: 1 }] },
+    ]);
+    expect(result.current.tradeLogs).toEqual({});
+    expect(result.current.rebalanceHistory).toEqual([]);
   });
 });

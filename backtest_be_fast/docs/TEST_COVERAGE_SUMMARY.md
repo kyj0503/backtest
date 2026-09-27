@@ -4,9 +4,9 @@
 
 Comprehensive unit tests have been created for the following backend modules, following pytest best practices with `@pytest.mark.unit` and `@pytest.mark.asyncio` markers. All external I/O (yfinance, DB) is mocked.
 
-**Total Tests Created: 59** (이 문서가 다루는 4개 모듈 기준)
+**Total Tests: 57** (이 문서가 다루는 4개 모듈 기준. 작성 당시 59건이었으나 프로덕션 호출부가 없던 `_create_fallback_result` 테스트 2건을 메서드와 함께 삭제했다 — A-13)
 
-> 현재 `tests/unit` 전체는 **189건**입니다 (이 숫자도 계속 늘어나는 중이므로 정확한 현재 값은 `pytest tests/unit --collect-only`로 확인하십시오). 이 문서는 아래 4개 모듈에 한정된 보고서이며, 전체 목록은 [UNIT_TEST_QUICK_REFERENCE.md](./UNIT_TEST_QUICK_REFERENCE.md)를 참고하십시오.
+> `tests/unit` 전체 개수는 작업마다 바뀌므로 여기에 고정하지 않습니다. 최신 실측 기준선과 측정일은 저장소 루트 [AGENTS.md](../../AGENTS.md)의 Testing 절 `Current baseline`을, 정확한 현재 목록은 `pytest tests/unit --collect-only -q`를 참고하십시오. 이 문서는 아래 4개 모듈에 한정된 보고서이며, 전체 목록은 [UNIT_TEST_QUICK_REFERENCE.md](./UNIT_TEST_QUICK_REFERENCE.md)를 참고하십시오.
 **Test Files: 4**
 **All Tests: PASSING ✅**
 
@@ -14,7 +14,7 @@ Comprehensive unit tests have been created for the following backend modules, fo
 
 ## Test Files Created
 
-### 1. tests/unit/test_backtest_engine.py (10 tests)
+### 1. tests/unit/test_backtest_engine.py (8 tests)
 
 Tests the core `BacktestEngine` that wraps backtesting.py library.
 
@@ -33,13 +33,9 @@ Tests the core `BacktestEngine` that wraps backtesting.py library.
   - `test_convert_result_properly_maps_all_stats_fields` - Maps all backtesting.py stats to BacktestResult
   - `test_convert_result_handles_missing_optional_fields` - Handles missing optional fields gracefully with defaults
 
-- **TestBacktestEngineCreateFallbackResult** (2 tests)
-  - `test_create_fallback_result_returns_valid_backtest_result` - Returns valid BacktestResult with correct ticker/dates
-  - `test_create_fallback_result_handles_exception_gracefully` - Handles exceptions and returns minimal result
-
 #### Key Coverage:
 - Successful backtest execution path
-- Fallback logic for invalid results
+- Invalid results raise instead of returning fabricated fallback stats
 - Strategy parameter overrides
 - Stats mapping to response format
 - Error handling and re-raising
@@ -174,7 +170,7 @@ docker compose -f compose.dev.yaml exec backtest-be-fast \
 
 ### Results:
 ```
-======================== 59 passed, 2 warnings in 0.39s ========================
+======================== 57 passed, 2 warnings in 0.39s ========================
 ```
 
 ---
@@ -216,7 +212,6 @@ docker compose -f compose.dev.yaml exec backtest-be-fast \
    - `run_backtest()` - Main execution flow
    - `_build_strategy()` - Strategy parameter overrides
    - `_convert_result_to_response()` - Stats mapping
-   - `_create_fallback_result()` - Fallback generation
 
 2. `app/utils/currency_converter.py`
    - `get_conversion_multiplier()` - Currency-specific multipliers
@@ -248,7 +243,7 @@ docker compose -f compose.dev.yaml exec backtest-be-fast \
 ## Key Testing Principles Applied
 
 1. **Unit Testing Best Practices**
-   - Tests are fast (<0.5s total for these 59 tests; 전체 `tests/unit`도 1초 내)
+   - Tests are fast (<0.5s total for these 57 tests; 전체 `tests/unit`도 1초 내)
    - Tests are isolated (no shared state)
    - Tests are deterministic (no random data)
    - Each test has a single responsibility
@@ -289,6 +284,6 @@ docker compose -f compose.dev.yaml exec backtest-be-fast \
 
 ## Summary
 
-이 문서가 다루는 4개 모듈의 59건은 모두 통과합니다. `tests/unit` 전체(현재 **189건**)도 모두 통과하며, CI의 `Pre-deploy Tests` 스테이지(`docker build --target test ./backtest_be_fast`)가 이를 강제합니다. 실패가 보이면 회귀입니다.
+이 문서가 다루는 4개 모듈의 57건은 모두 통과합니다. `tests/unit` 전체(개수는 AGENTS.md `Current baseline` 참고)도 모두 통과해야 하며, home-server 저장소 중앙 Jenkinsfile(`cicd/jenkins/pipeline/backtest-be/`)의 `Pre-deploy Tests` 스테이지가 이 저장소의 `docker build --target test ./backtest_be_fast`를 호출해 이를 강제합니다. 실패가 보이면 회귀입니다.
 
 **Status: ✅ COMPLETE AND PASSING**

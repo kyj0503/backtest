@@ -251,3 +251,25 @@ def log_test_name(request):
     yield
     if request.config.getoption("verbose") > 0:
         print(f"✓ Completed: {request.node.name}")
+
+
+@pytest.fixture(autouse=True, scope="session")
+def isolate_backtest_slot_dir(tmp_path_factory):
+    """백테스트 동시 실행 슬롯(락 파일) 디렉터리를 테스트 세션 전용으로 격리한다.
+
+    슬롯은 파일 락이라, 같은 호스트의 다른 pytest 실행(여러 작업 트리, 병렬 CI)과
+    기본 디렉터리(/tmp/backtest-slots)를 공유하면 서로의 상한을 잡아먹어 무작위로
+    429/503이 난다 (A-04).
+    """
+    try:
+        from app.core.config import settings as app_settings
+        import app.services.backtest_runner as runner_module
+    except ImportError:
+        yield
+        return
+    original = app_settings.backtest_slot_dir
+    app_settings.backtest_slot_dir = str(tmp_path_factory.mktemp("backtest-slots"))
+    runner_module.reset_backtest_runner()
+    yield
+    runner_module.reset_backtest_runner()
+    app_settings.backtest_slot_dir = original
