@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 !.env.production.example
+!.env.database.example
 
 # Nginx config (실제 설정 파일, 예제는 커밋)
 nginx-backtest.conf

@@ -40,6 +40,7 @@ CI 취약점 검사는 기존 bokeh 예외 근거를 유지합니다. 신규 차
 
 - PR(main/dev): Docker 단위 테스트, 의존성 감사, 스키마 정합성, 런타임 빌드.
 - main: production, dev: development. 개발 환경은 운영과 다른 DB·계정을 준비해야 합니다.
+- 개발 DB 전용 `compose.database.yaml`은 `/opt/backtest/development/database.env`와 초기 스키마 경로를 사용합니다. 호스트 포트를 열지 않고 데이터는 `backtest-development-mysql` 볼륨에 보관합니다. 운영 DB는 이 파일로 관리하지 않습니다.
 - 게시 이미지: `ghcr.io/kyj0503/backtest`, 아키텍처: ARM64.
 - 실행 커밋의 revision과 이미지 digest를 확인한 뒤 Tailscale을 통해 OCI에 배포합니다.
 - 컨테이너는 운영 `backtest-be`, 개발 `backtest-be-dev`이며 공개 호스트 포트는 없습니다.
@@ -56,6 +57,21 @@ CI 취약점 검사는 기존 bokeh 예외 근거를 유지합니다. 신규 차
 앱 배포에서 운영 DB 마이그레이션을 자동 실행하지 않습니다.
 스키마 변경은 `database/schema.sql`과 `backtest_be_fast/alembic/`를 함께 갱신하고 검증합니다.
 기존 DB의 baseline, Alembic 적용, MySQL 버전 변경은 [database/README.md](database/README.md)를 따릅니다.
+
+OCI 개발 DB는 `backtest-db-dev`(MySQL 8.4)이며 메모리 1 GiB·CPU 1개로 제한합니다.
+`database.env`는 `.env.database.example`을 참고해 서버에서 수동 관리합니다.
+앱 `.env`의 `DATABASE_PASSWORD`와 DB 파일의 `MYSQL_PASSWORD`는 같아야 합니다.
+`DATABASE_ENV_FILE`과 `DATABASE_SCHEMA_FILE` 경로를 기록한 서버의 `database-deployment.env`로 관리합니다.
+
+```bash
+cd /opt/backtest/development
+docker compose --env-file database-deployment.env -f compose.database.yaml config --quiet
+docker compose --env-file database-deployment.env -f compose.database.yaml up -d --wait
+```
+
+초기 SQL은 빈 볼륨에서만 적용됩니다. 기존 DB에 `schema.sql`을 다시 실행하거나 `down -v`로 볼륨을 삭제하지 마세요.
+개발 DB는 운영 데이터를 복사하지 않은 독립 스키마이며, 초기 스키마와 같은 Alembic head로 baseline합니다.
+Naver 개발 키는 별도로 수동 설정할 때까지 비워 둡니다.
 
 ## API와 프론트엔드 계약
 

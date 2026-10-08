@@ -16,6 +16,7 @@
 - 서버의 기존 backtest 이미지를 그대로 유지하면서 /opt/backtest/production으로 옮겼다. 공통 게이트웨이는 /opt/gateway로 분리했고 실행 컨테이너의 home-server 참조는 없어졌다. 새 코드의 첫 Actions 운영 배포는 병합 후 별도 검증이 필요하다.
 - BE urllib3 2.8.0 / tornado 6.5.9 갱신 후 단위 테스트 492개와 기존 예외를 적용한 취약점 감사가 통과했다. 스키마 정합성, 배포 rollback, 자격 증명 정리 검증도 통과했다.
 - 저장소 밖 배포 태그 문제는 digest 배포로 대체했다. 기존 Docker liveness는 유지하고 새 배포 스크립트에서 DB readiness를 추가 검증한다.
+- 개발 DB용 Compose를 추가하고 OCI에 독립 MySQL 8.4.11·계정·볼륨을 준비했다. 공개 포트 없이 TCP 인증·3개 테이블·Alembic baseline 1f574a9ba22e를 확인했다. 개발 앱의 첫 배포는 아직 필요하다.
 
 ## 2026-09-27 라운드 (배치9)
 
