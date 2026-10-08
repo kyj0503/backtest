@@ -27,12 +27,12 @@
 | **P1** | 0 | — |
 | **P2** | 8 | A-21~A-25, A-33, A-34, A-36 — 틀린 숫자·조작값 5건, 응답 형태 통일 1건, 부가 수집 성능 1건, 깨진 운영 스크립트 1건 |
 | **P3** | 9 | A-26~A-32, A-35, A-37 — 응답 크기, 스레드 풀 계측, 거부 사유 지표, FE/BE 상수 동기화, 특성화 테스트가 고정한 동작 판단, 모드 판정 통일, 정리 3건 |
-| 저장소 밖 | 6 | 배포 태그, home-server 권고 묶음, 운영 MySQL 확인, 운영 DB 마이그레이션, 운영 상한 재조정, 운영 지표 확인 |
-| **합계** | **23** | |
+| 저장소 밖 | 5 | 공통 게이트웨이 권고 묶음, 운영 MySQL 확인, 운영 DB 마이그레이션, 운영 상한 재조정, 운영 지표 확인 |
+| **합계** | **22** | |
 
 ## 권장 처리 순서
 
-1. **저장소 밖 1~2** — 배포 태그(롤백 지점)와 home-server 권고(헬스 체크 URL, nginx 앞단 방어). 배치9 기능이 운영에서 제대로 드러나려면 먼저 필요하다.
+1. **저장소 밖 2** — 공통 게이트웨이 방어와 운영 지표. 배포 태그는 Actions digest 배포로 대체했다(HISTORY.md 2026-10-09).
 2. **A-36** — 일봉 갱신 스크립트가 import 오류로 깨져 있다. 운영 cron에서 쓰고 있다면 가장 먼저.
 3. **A-33, A-34, A-21, A-22, A-23** — 사용자에게 나가는 틀린 숫자·조작값. A-33·A-34는 배치7 A-03·P2-07의 전략 경로판이다.
 4. **A-24** — 응답 형태 통일. FE 타입 불일치를 함께 정리한다.
@@ -213,18 +213,11 @@ WHERE TABLE_SCHEMA = 'stock_data_cache'
 
 ## 저장소 밖 운영 후속 작업
 
-저장소 밖 시스템(home-server, 운영 서버·DB)이 필요해 이 저장소에서 검증할 수 없는 항목이다.
+저장소 밖 시스템(공통 게이트웨이, 운영 서버·DB)이 필요해 이 저장소에서 검증할 수 없는 항목이다.
 
-- [ ] **1. 배포 스크립트가 `${BUILD_NUMBER}`를 실제 이미지 태그로 사용하도록 수정** 〔교차〕
-      — Jenkinsfile이 태그를 넘기지만 `/opt/home-server/scripts/deploy-app.sh`가 무시하고 `:latest`를
-      pull한다(빌드 #21 실측, 2026-09-27 운영 배포 #27에서도 재확인). **롤백 지점이 없고** 헬스 체크
-      성공만으로 새 이미지 가동을 판단할 수 없다. 수정 위치는 home-server 저장소.
-- [ ] **2. home-server 권고 묶음** (배치9 결과)
-      - Jenkins 배포 후 헬스 체크 URL을 `/health` → `/health/ready`로(DB까지 확인, 실패 시 503). 컨테이너
-        HEALTHCHECK는 재시작 폭주를 막으려 `/health` 유지.
+- [ ] **2. 공통 게이트웨이·관측 권고 묶음** (배치9 결과)
       - nginx 앞단 방어: `/api/v1/backtest`에 `limit_req`(IP당 예: 10r/m, burst). `X-Forwarded-For`를
         `$proxy_add_x_forwarded_for`로 넘기는지 확인 — 안 넘기면 BE의 IP별 동시 실행 제한(A-06)이 꺼진다.
-      - `scripts/check-schema-parity.sh`를 BE 파이프라인 단계로 연결(Docker·인터넷 필요, 약 20초).
       - 지표 알림: `backtest_supplemental_outcome_total{outcome=~"empty|timeout|error"}` 비율,
         `backtest_jobs_waiting`.
 - [ ] **3. 운영 MySQL 서버 버전·인증 플러그인 확인** — `SELECT VERSION(); SELECT user,host,plugin FROM mysql.user;`.
@@ -247,9 +240,9 @@ WHERE TABLE_SCHEMA = 'stock_data_cache'
 
 ```bash
 docker compose -f compose.dev.yaml exec -T backtest-be-fast pytest tests/unit -q
-docker compose -f compose.dev.yaml exec -T backtest-fe npm run lint
-docker compose -f compose.dev.yaml exec -T backtest-fe npm run type-check
-docker compose -f compose.dev.yaml exec -T backtest-fe npm run type-check:test
-docker compose -f compose.dev.yaml exec -T backtest-fe npm run test:run
-docker compose -f compose.dev.yaml exec -T backtest-fe npm run build
+docker compose -f ../backtest-console/compose.dev.yaml exec -T console npm run lint
+docker compose -f ../backtest-console/compose.dev.yaml exec -T console npm run type-check
+docker compose -f ../backtest-console/compose.dev.yaml exec -T console npm run type-check:test
+docker compose -f ../backtest-console/compose.dev.yaml exec -T console npm run test:run
+docker compose -f ../backtest-console/compose.dev.yaml exec -T console npm run build
 ```

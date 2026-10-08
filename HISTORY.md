@@ -9,6 +9,14 @@
 
 ---
 
+## 2026-10-09 저장소 분리와 GitHub Actions 전환 준비
+
+- 프론트엔드를 kyj0503/backtest-console로 분리했다. 관련 커밋 456개와 소스 트리 일치를 확인했으며 기존 저장소의 전체 이력은 유지한다.
+- 앱별 Compose·배포 스크립트·Actions를 추가했다. PR Docker 검증, ARM64 GHCR 이미지, Tailscale OIDC와 pinned SSH, digest/revision 검증 및 실패 복구를 구성했다.
+- 서버의 기존 backtest 이미지를 그대로 유지하면서 /opt/backtest/production으로 옮겼다. 공통 게이트웨이는 /opt/gateway로 분리했고 실행 컨테이너의 home-server 참조는 없어졌다. 새 코드의 첫 Actions 운영 배포는 병합 후 별도 검증이 필요하다.
+- BE urllib3 2.8.0 / tornado 6.5.9 갱신 후 단위 테스트 492개와 기존 예외를 적용한 취약점 감사가 통과했다. 스키마 정합성, 배포 rollback, 자격 증명 정리 검증도 통과했다.
+- 저장소 밖 배포 태그 문제는 digest 배포로 대체했다. 기존 Docker liveness는 유지하고 새 배포 스크립트에서 DB readiness를 추가 검증한다.
+
 ## 2026-09-27 라운드 (배치9)
 
 > TODO.md에 남아 있던 A-04~A-19(A-10 제외, 배치8 완료)와 저장소 밖 항목 중 로컬에서 재현

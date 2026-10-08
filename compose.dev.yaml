@@ -83,49 +83,8 @@ services:
           cpus: "0.5"
           memory: 512M
 
-  backtest-fe:
-    build:
-      context: ./backtest_fe
-      dockerfile: Dockerfile.dev
-    image: backtest-fe:dev
-    container_name: backtest-fe-dev
-    networks:
-      - backtest-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    depends_on:
-      backtest-be-fast:
-        condition: service_started
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./backtest_fe:/app
-      - backtest_fe_node_modules:/app/node_modules
-    env_file:
-      - .env
-    environment:
-      # 비워 두어야 한다. 서비스 레이어가 전체 경로(/api/v1/...)를 넘기므로
-      # /api를 넣으면 /api/api/v1/backtest가 되어 프록시에 매칭되지 않는다.
-      # ':-'가 아닌 '-'를 써서 빈 값이 그대로 유지되도록 한다.
-      - "VITE_API_BASE_URL=${VITE_API_BASE_URL-}"
-      - "API_PROXY_TARGET=${API_PROXY_TARGET:-http://backtest-be-fast:8000}"
-      - "FASTAPI_PROXY_TARGET=${FASTAPI_PROXY_TARGET:-http://backtest-be-fast:8000}"
-    # 런타임에 node_modules 동기화 후 vite 시작
-    command: [ "sh", "-c", "npm install && npm run dev" ]
-    # P3-07: 크래시 시 자동 재기동 + 리소스 상한(공유 개발 호스트에서 폭주 방지).
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 2G
-        reservations:
-          cpus: "0.25"
-          memory: 256M
-
 volumes:
   backtest_mysql_data:
-  backtest_fe_node_modules:
   backtest_be_fast_venv:
 
 

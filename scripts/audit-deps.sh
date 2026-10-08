@@ -16,17 +16,12 @@
 # 빌드 #20이 실패했다). 빌드 컨텍스트는 데몬으로 스트리밍되므로 두 환경에서
 # 모두 동작한다.
 #
-# 사용: scripts/audit-deps.sh [fe|be|all]
+# 사용: scripts/audit-deps.sh [be|all]
 set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # --- 예외 목록 ---------------------------------------------------------------
-# (FE 예외 없음) GHSA-qwww-vcr4-c8h2(react-router RSC 모드 CSRF)는 2026-09-26
-#   재감사에서 설치 버전 7.18.2가 더 이상 해당 범위로 보고되지 않아 제거했다
-#   — 예외 목록을 비운 상태로 FE audit 타깃이 통과함을 확인.
-NPM_ALLOWLIST=""
-
 # PYSEC-2026-1223 / CVE-2026-21883 (bokeh 2.4.3)
 #   bokeh 서버의 Origin 검증 우회. bokeh는 backtesting==0.3.3이 끌어오는 전이
 #   의존성이고(AGENTS.md 제약 2에 따라 의도적으로 고정), 이 앱은 .plot()을
@@ -34,13 +29,6 @@ NPM_ALLOWLIST=""
 #   재검토: backtesting 핀을 풀면 함께 제거할 것.
 PIP_IGNORE="PYSEC-2026-1223"
 # -----------------------------------------------------------------------------
-
-audit_frontend() {
-  echo "== FE: npm audit (high 이상, 예외: ${NPM_ALLOWLIST:-없음}) =="
-  docker build --target audit --output=type=cacheonly \
-    --build-arg "NPM_AUDIT_ALLOWLIST=${NPM_ALLOWLIST}" \
-    "${REPO_ROOT}/backtest_fe"
-}
 
 audit_backend() {
   echo "== BE: pip-audit (예외: ${PIP_IGNORE:-없음}) =="
@@ -50,8 +38,7 @@ audit_backend() {
 }
 
 case "${1:-all}" in
-  fe) audit_frontend ;;
   be) audit_backend ;;
-  all) audit_frontend; audit_backend ;;
-  *) echo "사용법: $0 [fe|be|all]" >&2; exit 2 ;;
+  all) audit_backend ;;
+  *) echo "사용법: $0 [be|all]" >&2; exit 2 ;;
 esac
