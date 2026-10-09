@@ -39,14 +39,14 @@ CI 취약점 검사는 기존 bokeh 예외 근거를 유지합니다. 신규 차
 ## GitHub Actions 배포
 
 - PR(main/dev): Docker 단위 테스트, 의존성 감사, 스키마 정합성, 런타임 빌드.
-- main: production, dev: development. 개발 환경은 운영과 다른 DB·계정을 준비해야 합니다.
-- 개발 DB 전용 `compose.database.yaml`은 `/opt/backtest/development/database.env`와 초기 스키마 경로를 사용합니다. 호스트 포트를 열지 않고 데이터는 `backtest-development-mysql` 볼륨에 보관합니다. 운영 DB는 이 파일로 관리하지 않습니다.
+- main push/수동 실행: 검증 후 이미지를 게시하고 production에 배포합니다.
+- dev push/수동 실행: CI 검증만 수행합니다. 별도의 OCI 개발 앱·DB는 운영하지 않으며 로컬 개발 Compose를 사용합니다.
 - 게시 이미지: `ghcr.io/kyj0503/backtest`, 아키텍처: ARM64.
 - 실행 커밋의 revision과 이미지 digest를 확인한 뒤 Tailscale을 통해 OCI에 배포합니다.
-- 컨테이너는 운영 `backtest-be`, 개발 `backtest-be-dev`이며 공개 호스트 포트는 없습니다.
-- 서버 경로는 `/opt/backtest/{production,development}`입니다.
+- OCI 컨테이너는 `backtest-be` 하나이며 공개 호스트 포트는 없습니다.
+- 서버 경로는 `/opt/backtest/production`입니다.
 - 서버 `.env`는 수동 관리하고 배포가 덮어쓰지 않습니다. `.env.production.example`에 필요한 항목을 기록했습니다.
-- GitHub Environment에는 `OCI_SSH_KEY` Secret 및 `OCI_HOST`, `OCI_USER`, `OCI_KNOWN_HOSTS`, `TS_CLIENT_ID`, `TS_AUDIENCE` Variables를 등록합니다.
+- GitHub의 production Environment에는 `OCI_SSH_KEY` Secret 및 `OCI_HOST`, `OCI_USER`, `OCI_KNOWN_HOSTS`, `TS_CLIENT_ID`, `TS_AUDIENCE` Variables를 등록합니다.
 - GHCR 인증은 자동 `GITHUB_TOKEN`, Tailscale 연결은 저장소·환경·브랜치·workflow로 제한한 OIDC를 사용합니다.
 - Docker liveness `/health`와 DB readiness `/health/ready`를 모두 확인합니다. 실패하면 이전 릴리스를 복원하고 실행은 실패로 유지합니다.
 - 공통 Nginx는 별도 `/opt/gateway`에서 관리합니다. 배포 후 `nginx-gateway` 설정 검사와 reload가 필요합니다.
@@ -58,20 +58,8 @@ CI 취약점 검사는 기존 bokeh 예외 근거를 유지합니다. 신규 차
 스키마 변경은 `database/schema.sql`과 `backtest_be_fast/alembic/`를 함께 갱신하고 검증합니다.
 기존 DB의 baseline, Alembic 적용, MySQL 버전 변경은 [database/README.md](database/README.md)를 따릅니다.
 
-OCI 개발 DB는 `backtest-db-dev`(MySQL 8.4)이며 메모리 1 GiB·CPU 1개로 제한합니다.
-`database.env`는 `.env.database.example`을 참고해 서버에서 수동 관리합니다.
-앱 `.env`의 `DATABASE_PASSWORD`와 DB 파일의 `MYSQL_PASSWORD`는 같아야 합니다.
-`DATABASE_ENV_FILE`과 `DATABASE_SCHEMA_FILE` 경로를 기록한 서버의 `database-deployment.env`로 관리합니다.
-
-```bash
-cd /opt/backtest/development
-docker compose --env-file database-deployment.env -f compose.database.yaml config --quiet
-docker compose --env-file database-deployment.env -f compose.database.yaml up -d --wait
-```
-
-초기 SQL은 빈 볼륨에서만 적용됩니다. 기존 DB에 `schema.sql`을 다시 실행하거나 `down -v`로 볼륨을 삭제하지 마세요.
-개발 DB는 운영 데이터를 복사하지 않은 독립 스키마이며, 초기 스키마와 같은 Alembic head로 baseline합니다.
-Naver 개발 키는 별도로 수동 설정할 때까지 비워 둡니다.
+개발 DB는 로컬 `compose.dev.yaml`에서만 실행합니다. 초기 SQL은 빈 볼륨에서만 적용됩니다.
+기존 DB에 `schema.sql`을 다시 실행하거나 `down -v`로 보관할 데이터를 삭제하지 마세요.
 
 ## API와 프론트엔드 계약
 

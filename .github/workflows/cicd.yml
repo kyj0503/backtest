@@ -33,7 +33,7 @@ jobs:
 
   publish:
     needs: verify
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 40
     permissions:
@@ -69,11 +69,12 @@ jobs:
 
   deploy:
     needs: publish
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment:
-      name: ${{ github.ref_name == 'main' && 'production' || 'development' }}
-      url: ${{ github.ref_name == 'main' && 'https://backtest-be.yeonjae.kr/health/ready' || 'https://backtest-dev-be.yeonjae.kr/health/ready' }}
+      name: production
+      url: https://backtest-be.yeonjae.kr/health/ready
     permissions:
       contents: read
       packages: read
