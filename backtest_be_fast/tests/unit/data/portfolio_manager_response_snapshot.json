@@ -4289,13 +4289,13 @@
     "Start": "2024-01-02",
     "End": "2024-04-30",
     "Duration": "119 days",
-    "Initial_Value": 12000.0,
+    "Initial_Value": 10000.0,
     "Final_Value": 10603.835461574465,
-    "Peak_Value": 10800.202770395643,
-    "Total_Return": -11.634704486879466,
-    "Annual_Return": -31.589772131341597,
+    "Peak_Value": 10800.202770395645,
+    "Total_Return": 6.0383546157446455,
+    "Annual_Return": 19.716560607856447,
     "Annual_Volatility": 17.240513189861993,
-    "Sharpe_Ratio": -1.832298829127521,
+    "Sharpe_Ratio": 1.143617964890409,
     "Max_Drawdown": -11.56539585144346,
     "Avg_Drawdown": -5.944851107099882,
     "Max_Consecutive_Gains": 13,
@@ -4311,7 +4311,7 @@
    "individual_returns": {
     "AAPL": {
      "symbol": "AAPL",
-     "weight": 0.5,
+     "weight": 0.6,
      "amount": 6000.0,
      "return": 9.651085226342392,
      "initial_value": 6000.0,
@@ -4321,7 +4321,7 @@
     },
     "MSFT": {
      "symbol": "MSFT",
-     "weight": 0.25,
+     "weight": 0.3,
      "amount": 3000.0,
      "return": 0.825678266464025,
      "initial_value": 3000.0,
@@ -4331,7 +4331,7 @@
     },
     "현금": {
      "symbol": "현금",
-     "weight": 0.08333333333333333,
+     "weight": 0.1,
      "amount": 1000.0,
      "return": 0.0,
      "initial_value": 1000.0,
@@ -4346,7 +4346,7 @@
      "final_equity": 6579.065113580544,
      "total_return_pct": 9.651085226342392,
      "sharpe_ratio": 1.2,
-     "weight": 0.5,
+     "weight": 0.6,
      "amount": 6000.0,
      "trades": 4,
      "win_rate": 75.0
@@ -4356,7 +4356,7 @@
      "final_equity": 3024.7703479939205,
      "total_return_pct": 0.825678266464025,
      "sharpe_ratio": 0.0,
-     "weight": 0.25,
+     "weight": 0.3,
      "amount": 3000.0,
      "trades": 0,
      "win_rate": null
@@ -4366,7 +4366,7 @@
      "final_equity": 1000.0,
      "total_return_pct": 0.0,
      "sharpe_ratio": 0.0,
-     "weight": 0.08333333333333333,
+     "weight": 0.1,
      "amount": 1000.0,
      "trades": 0,
      "win_rate": null
@@ -4374,22 +4374,22 @@
    ],
    "portfolio_result": {
     "total_equity": 10603.835461574465,
-    "total_return_pct": -11.634704486879466
+    "total_return_pct": 6.0383546157446455
    },
    "portfolio_composition": [
     {
      "symbol": "AAPL",
-     "weight": 0.5,
+     "weight": 0.6,
      "amount": 6000.0
     },
     {
      "symbol": "MSFT",
-     "weight": 0.25,
+     "weight": 0.3,
      "amount": 3000.0
     },
     {
      "symbol": "현금",
-     "weight": 0.08333333333333333,
+     "weight": 0.1,
      "amount": 1000.0
     }
    ],

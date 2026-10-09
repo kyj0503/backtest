@@ -9,7 +9,7 @@ from sqlalchemy import text
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.services.database.connection_manager import DatabaseConnectionManager
-from app.repositories.yfinance_repository import save_ticker_data
+from app.repositories.yfinance_repository import YFinanceRepository
 from app.utils.data_fetcher import data_fetcher
 from app.core.exceptions import YfinanceRateLimitError
 
@@ -29,6 +29,7 @@ def update_all_stock_data(batch_size: int = 50, limit: int = None):
     logger.info("Starting daily stock data update...")
     
     engine = DatabaseConnectionManager.get_engine()
+    repository = YFinanceRepository()
     conn = engine.connect()
     
     try:
@@ -63,7 +64,7 @@ def update_all_stock_data(batch_size: int = 50, limit: int = None):
                 
                 if df is not None and not df.empty:
                     # Save to DB (upsert)
-                    rows_updated = save_ticker_data(ticker, df)
+                    rows_updated = repository.save_ticker_data(ticker, df)
                     logger.info(f"✓ {ticker}: {rows_updated} rows updated/inserted")
                     success_count += 1
                     # Be polite to the API
@@ -72,12 +73,6 @@ def update_all_stock_data(batch_size: int = 50, limit: int = None):
                     logger.warning(f"⚠ {ticker}: No data fetched")
                     fail_count += 1
                     
-            except data_fetcher.YfinanceRateLimitError as e:
-                logger.error(f"⚠ Rate limit reached for {ticker}: {e}")
-                logger.info("Pausing for 60 seconds...")
-                time.sleep(60)
-                fail_count += 1
-                continue
             except YfinanceRateLimitError as e:
                 logger.error(f"⚠ Rate limit reached for {ticker}: {e}")
                 logger.info("Pausing for 60 seconds...")

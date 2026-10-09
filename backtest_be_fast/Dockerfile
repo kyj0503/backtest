@@ -55,6 +55,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY app ./app
 COPY tests ./tests
+COPY scripts ./scripts
 COPY pytest.ini ./
 
 RUN pytest tests/unit -q
