@@ -12,9 +12,11 @@
   - 에이전트는 PR 생성과 본문 작성까지만 하고 링크를 전달한다. 머지를 요청받은 것처럼 보여도 이 규칙을 알리고 사용자에게 맡긴다.
 - 브랜치 흐름: feature 브랜치(`dev`에서 분기) → 사용자 요청 시 `dev`에 `--no-ff` 병합·푸시 → `dev` → `main` PR 생성 → **사용자가 수동 머지**.
 - 커밋·푸시·병합은 사용자가 그 단계를 요청했을 때만 한다.
-- `main`이 곧 운영이다. Jenkins `APP_ENV=prod`가 `main`을 빌드·배포하고, `dev`는 이미지 푸시만 한다(트리거는 수동).
+- `main`이 운영, `dev`가 별도 개발 환경이다. GitHub Actions가 Docker 검증 후 ARM64 이미지를 digest로 배포한다. 환경별 서버 설정·DB·OIDC 연결을 먼저 준비한다.
 
 ## Project Overview
+
+Frontend moved to the independent `kyj0503/backtest-console` repository; this repository owns the backend, database schema, and backend deployment.
 
 **라고할때살걸** — Korean trading strategy backtesting platform (SMA, RSI, MACD, Bollinger, EMA, Buy&Hold). Supports portfolios, DCA, rebalancing.
 
@@ -24,16 +26,8 @@
 # Docker (full stack)
 docker compose -f compose.dev.yaml up -d --build
 docker compose -f compose.dev.yaml exec backtest-be-fast pytest tests/unit -v
-docker compose -f compose.dev.yaml exec backtest-fe npm test
 
-# FE quality checks (all four run in CI)
-docker compose -f compose.dev.yaml exec backtest-fe npm run lint
-docker compose -f compose.dev.yaml exec backtest-fe npm run type-check       # prod code
-docker compose -f compose.dev.yaml exec backtest-fe npm run type-check:test  # test code
-docker compose -f compose.dev.yaml exec backtest-fe npm run test:run
-
-# Reproduce the CI pre-deploy test stage exactly (Jenkins stage named 'Pre-deploy Tests')
-docker build --target test ./backtest_fe
+# Backend pre-deploy verification
 docker build --target test ./backtest_be_fast
 ```
 
@@ -43,7 +37,7 @@ docker build --target test ./backtest_be_fast
 
 **FE (Feature-Sliced Design):** `shared` ← `features` ← `pages` (no reverse imports). State: React hooks (`useState`/`useReducer`) + localStorage — there is no Zustand or other global-state library in this codebase despite what some older docs claim. UI: shadcn/ui + Tailwind + Recharts.
 
-**DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through Alembic (`backtest_be_fast/alembic/`). There are **no physical foreign keys** — cross-table references are logical, integrity is owned by the app (A-10). A DB created from schema.sql **before** revision `7b2e9c4f1a30` still has the old FK: baseline it with `alembic stamp d5c3763b29e6` then `alembic upgrade head` (plain `stamp head` would skip the FK drop). A DB created from the current schema.sql is already at head (`alembic stamp head`). Migrations are NOT run by the Jenkins pipeline or the runtime image — apply them manually. schema.sql and the Alembic head must stay identical (COMMENTs included): change both together and run `scripts/check-schema-parity.sh`. Keep the `SET NAMES utf8mb4;` at the top of schema.sql — the official image runs initdb with a latin1 client and would double-encode Korean COMMENTs. Upgrade/baseline procedures and the MySQL 8.0 → 8.4 notes live in `database/README.md`.
+**DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through Alembic (`backtest_be_fast/alembic/`). There are **no physical foreign keys** — cross-table references are logical, integrity is owned by the app (A-10). A DB created from schema.sql **before** revision `7b2e9c4f1a30` still has the old FK: baseline it with `alembic stamp d5c3763b29e6` then `alembic upgrade head` (plain `stamp head` would skip the FK drop). A DB created from the current schema.sql is already at head (`alembic stamp head`). Migrations are NOT run by the GitHub Actions pipeline or the runtime image — apply them manually. schema.sql and the Alembic head must stay identical (COMMENTs included): change both together and run `scripts/check-schema-parity.sh`. Keep the `SET NAMES utf8mb4;` at the top of schema.sql — the official image runs initdb with a latin1 client and would double-encode Korean COMMENTs. Upgrade/baseline procedures and the MySQL 8.0 → 8.4 notes live in `database/README.md`.
 
 **API:** POST `/api/v1/backtest` — main endpoint. Errors: `@handle_portfolio_errors` decorator.
 
@@ -89,16 +83,16 @@ docker build --target test ./backtest_be_fast
 
 - **Verify in Docker** (`docker compose exec`, or `docker build --target test`) before declaring work complete.
 - **BE markers:** `@pytest.mark.unit` (no DB), `@pytest.mark.integration` (DB), `@pytest.mark.external` (real API)
-- **FE:** Vitest + React Testing Library. Playwright E2E exists (`backtest_fe/playwright.config.ts`, one smoke spec) and needs the dev stack running — it is deliberately NOT in the Docker CI test stage (no browser, no live backend there).
+- **FE:** Vitest + React Testing Library. Playwright E2E exists in `backtest-console` (`playwright.config.ts`, one smoke spec) and needs the dev stack running — it is deliberately NOT in the Docker CI test stage (no browser, no live backend there).
 - **Current baseline (2026-09-27):** BE 492 unit tests + 12 integration + 1 e2e golden master (`pytest tests/e2e -m e2e`, no network/DB), FE 344 tests — all green. Any failure is a regression, not pre-existing noise.
 - **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
 - **Coverage (BE 2026-08-03 / FE 2026-09-27):** BE 71.6%, FE about 74% statements. Core financial modules are 82-98%; the remaining gaps are `data_fetcher` (41%), the `app/validators/` package (23-32%), and `currency_converter` (57%). The validators look dead but are reached via `backtest_engine.py` → `validation_service` — do not delete them.
 
 ## CI
 
-The Jenkins pipelines live in the **home-server** repo (`cicd/jenkins/pipeline/backtest-{be,fe}/`) since commit `44df5b9`; they call back into this repo's `scripts/audit-deps.sh` and the Dockerfile `test` targets. They run a `Pre-deploy Tests` stage and a `Dependency Audit` stage before building images. The audit blocks deployment on high-severity findings; unfixable-and-unreachable advisories are allowlisted with a documented reason in `scripts/audit-deps.sh` (FE list is currently empty; BE keeps the bokeh entry — emptying it makes the BE audit fail, which is how you verify it still can). Each Dockerfile has a `test` stage that CI invokes with `--target test`; those stages are outside the final image's dependency chain, so a plain `docker build` does not run them and produces the same artifacts as before.
+GitHub Actions lives in `.github/workflows/cicd.yml`. PRs to main/dev run Docker tests, dependency audit, runtime build, and schema parity checks. Pushes to main/dev publish an ARM64 `ghcr.io/kyj0503/backtest` image and deploy its immutable digest through Tailscale and pinned SSH. Runtime credentials stay in `/opt/backtest/{production,development}/.env` and are never committed.
 
-These checks block **deployment**, not merging — the pipeline checks out `*/main` and the repo uses no branch protection or GitHub checks.
+The dependency audit retains the documented bokeh exception in `scripts/audit-deps.sh`; do not weaken it. Deployment checks `/health/ready` after Docker liveness succeeds and restores the previous release on failure. CI does not automatically migrate a deployed DB. Shared gateway configuration is managed outside this repository at `/opt/gateway`.
 
 ## Commit Convention
 
