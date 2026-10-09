@@ -7,14 +7,13 @@ image=${3:?}
 revision=${4:?}
 registry_user=${5:?}
 case "$app" in backtest) container=backtest-be ;; backtest-console) container=backtest-fe ;; *) exit 2 ;; esac
-case "$environment" in production|development) ;; *) exit 2 ;; esac
+case "$environment" in production) ;; *) echo 'Only production may deploy' >&2; exit 2 ;; esac
 [[ "$image" =~ ^ghcr\.io/kyj0503/$app@sha256:[a-f0-9]{64}$ ]] || exit 2
 [[ "$revision" =~ ^[a-f0-9]{40}$ ]] || exit 2
 root="/opt/$app/$environment"
 release=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 [[ "$release" == "$root"/releases/release.* ]] || exit 2
 backend=backtest-be
-if [[ "$environment" == development ]]; then container+="-dev"; backend+="-dev"; fi
 project="$app-$environment"
 exec 9>"$root/deploy.lock"
 flock -w 300 9

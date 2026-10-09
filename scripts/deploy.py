@@ -14,9 +14,9 @@ APP = "backtest"
 
 def main():
     branch = os.environ["GITHUB_REF_NAME"]
-    if branch not in {"main", "dev"}:
-        raise ValueError("Only main/dev may deploy")
-    environment = "production" if branch == "main" else "development"
+    if branch != "main":
+        raise ValueError("Only main may deploy")
+    environment = "production"
     image = os.environ["APP_IMAGE"]
     if not re.fullmatch(rf"ghcr\.io/kyj0503/{APP}@sha256:[0-9a-f]{{64}}", image):
         raise ValueError("Expected an immutable application image")

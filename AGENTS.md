@@ -12,7 +12,7 @@
   - 에이전트는 PR 생성과 본문 작성까지만 하고 링크를 전달한다. 머지를 요청받은 것처럼 보여도 이 규칙을 알리고 사용자에게 맡긴다.
 - 브랜치 흐름: feature 브랜치(`dev`에서 분기) → 사용자 요청 시 `dev`에 `--no-ff` 병합·푸시 → `dev` → `main` PR 생성 → **사용자가 수동 머지**.
 - 커밋·푸시·병합은 사용자가 그 단계를 요청했을 때만 한다.
-- `main`이 운영, `dev`가 별도 개발 환경이다. GitHub Actions가 Docker 검증 후 ARM64 이미지를 digest로 배포한다. 환경별 서버 설정·DB·OIDC 연결을 먼저 준비한다.
+- `main`만 운영 환경에 배포하고 `dev`는 CI 검증만 수행한다. GitHub Actions가 Docker 검증 후 ARM64 이미지를 digest로 배포한다. 개발 앱·DB는 로컬 Compose에서 실행한다.
 
 ## Project Overview
 
@@ -90,7 +90,7 @@ docker build --target test ./backtest_be_fast
 
 ## CI
 
-GitHub Actions lives in `.github/workflows/cicd.yml`. PRs to main/dev run Docker tests, dependency audit, runtime build, and schema parity checks. Pushes to main/dev publish an ARM64 `ghcr.io/kyj0503/backtest` image and deploy its immutable digest through Tailscale and pinned SSH. Runtime credentials stay in `/opt/backtest/{production,development}/.env` and are never committed.
+GitHub Actions lives in `.github/workflows/cicd.yml`. PRs to main/dev and pushes to either branch run Docker tests, dependency audit, runtime build, and schema parity checks. Only main publishes an ARM64 `ghcr.io/kyj0503/backtest` image and deploys its immutable digest through Tailscale and pinned SSH. dev has no OCI deployment. Runtime credentials stay in `/opt/backtest/production/.env` and are never committed.
 
 The dependency audit retains the documented bokeh exception in `scripts/audit-deps.sh`; do not weaken it. Deployment checks `/health/ready` after Docker liveness succeeds and restores the previous release on failure. CI does not automatically migrate a deployed DB. Shared gateway configuration is managed outside this repository at `/opt/gateway`.
 
