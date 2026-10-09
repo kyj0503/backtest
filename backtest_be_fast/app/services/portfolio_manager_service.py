@@ -186,6 +186,13 @@ class PortfolioManagerService:
             if not portfolio_results:
                 raise ValueError("모든 종목의 백테스트가 실패했습니다.")
 
+            total_amount = sum(result['amount'] for result in portfolio_results.values())
+            if total_amount <= 0:
+                raise ValueError("성공한 종목의 투자금액이 없습니다.")
+            for key, result in portfolio_results.items():
+                result['weight'] = result['amount'] / total_amount
+                outcome.individual_returns[key]['weight'] = result['weight']
+
             # 포트폴리오 전체 통계 계산
             portfolio_return, duration_days, annual_return = strategy_headline_returns(
                 request, total_amount, total_portfolio_value

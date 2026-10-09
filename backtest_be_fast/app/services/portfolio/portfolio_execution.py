@@ -18,6 +18,7 @@ from app.domain.portfolio_domain import DcaStrategyInfo
 from app.schemas.requests import BacktestRequest
 from app.schemas.schemas import PortfolioBacktestRequest
 from app.services.backtest_service import backtest_service
+from app.services.portfolio.portfolio_inputs import strategy_asset_key
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +42,11 @@ class StrategyRunOutcome:
     failed_symbols: List[Dict[str, str]] = field(default_factory=list)
 
 
-def _cash_result(outcome: StrategyRunOutcome, symbol: str, amount: float, weight: float) -> None:
+def _cash_result(outcome: StrategyRunOutcome, key: str, symbol: str, amount: float, weight: float) -> None:
     """현금 처리 (수익률 0%, 전략 적용 안함)"""
     logger.info(f"현금 자산 {symbol} 처리 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
 
-    outcome.portfolio_results[symbol] = {
+    outcome.portfolio_results[key] = {
         'symbol': symbol,
         'initial_value': amount,
         'final_value': amount,  # 현금은 변동 없음
@@ -61,7 +62,7 @@ def _cash_result(outcome: StrategyRunOutcome, symbol: str, amount: float, weight
         }
     }
 
-    outcome.individual_returns[symbol] = {
+    outcome.individual_returns[key] = {
         'symbol': symbol,
         'weight': weight,
         'amount': amount,
@@ -84,19 +85,19 @@ async def run_strategy_per_symbol(
 ) -> StrategyRunOutcome:
     """각 종목에 같은 전략을 적용해 개별 백테스트를 실행한다.
 
-    한 종목의 예외는 failed_symbols에 기록하고 다음 종목으로 넘어간다. 결과가
-    없거나 final_equity가 없는 종목은 경고 로그만 남기고 빠진다.
+    예외 또는 평가금 누락으로 실패한 종목은 failed_symbols에 기록한다.
     """
     outcome = StrategyRunOutcome()
 
     for idx, item in enumerate(request.portfolio):
         symbol = item.symbol
         # amount/weight 동시 지원
-        amount = amounts[symbol]
+        key = strategy_asset_key(item, idx, request.portfolio)
+        amount = amounts[key]
         weight = amount / total_amount if total_amount > 0 else 0.0
 
         if item.asset_type == 'cash':
-            _cash_result(outcome, symbol, amount, weight)
+            _cash_result(outcome, key, symbol, amount, weight)
             continue
 
         logger.info(f"종목 {symbol} (#{idx+1}) 전략 백테스트 실행 (투자금액: ${amount:,.2f}, 비중: {weight:.3f})")
@@ -152,6 +153,7 @@ async def run_strategy_per_symbol(
                 logger.info(f"종목 {symbol} (#{idx+1}) 완료: {stock_return:.2f}% 수익률, 거래수: {getattr(result, 'total_trades', 0)}")
             else:
                 logger.warning(f"종목 {symbol} 백테스트 실패: 결과가 없거나 final_equity 속성이 없음")
+                outcome.failed_symbols.append({'symbol': symbol, 'error': '백테스트 평가금 누락'})
 
         except Exception as e:
             logger.error(f"종목 {symbol} 백테스트 오류: {str(e)}")

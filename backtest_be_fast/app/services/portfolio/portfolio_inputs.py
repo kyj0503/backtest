@@ -38,25 +38,31 @@ def weight_to_amount(weight: float) -> float:
 # 전략 경로
 # ---------------------------------------------------------------------------
 
+def strategy_asset_key(item, index: int, portfolio) -> str:
+    """중복 현금 이름만 구분하고 나머지 응답 키는 유지한다."""
+    if item.asset_type != 'cash' or sum(entry.symbol == item.symbol for entry in portfolio) == 1:
+        return item.symbol
+    key = f"{item.symbol}__cash_{index + 1}"
+    names = {entry.symbol for entry in portfolio}
+    while key in names:
+        key += '_'
+    return key
+
+
 def resolve_strategy_amounts(portfolio) -> Tuple[Dict[str, float], float]:
     """전략 경로의 종목별 금액과 총 투자금을 구한다.
 
     포트폴리오 전체가 amount 모드이거나 전체가 weight 모드여야 한다(하나라도
-    둘 다 비었으면 거부). 키는 symbol이다.
-
-    total_amount는 amount 모드에서는 입력 금액의 합, weight 모드에서는 환산된
-    금액(dict 값)의 합이다 — 같은 이름의 현금 항목이 여러 개면 dict에서 나중
-    항목이 앞 항목을 덮어쓰므로 두 모드의 합계 방식이 다르게 동작한다(기존 동작).
+    둘 다 비었으면 거부). 중복 현금 이름에는 입력 순서를 붙인다.
     """
     if all(item.amount is not None for item in portfolio):
-        total_amount = sum(item.amount for item in portfolio)
-        amounts = {item.symbol: item.amount for item in portfolio}
+        amounts = {strategy_asset_key(item, i, portfolio): item.amount for i, item in enumerate(portfolio)}
     elif all(item.weight is not None for item in portfolio):
-        amounts = {item.symbol: weight_to_amount(item.weight) for item in portfolio}
-        total_amount = sum(amounts.values())
+        amounts = {strategy_asset_key(item, i, portfolio): weight_to_amount(item.weight)
+                   for i, item in enumerate(portfolio)}
     else:
         raise ValidationError('포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다.')
-    return amounts, total_amount
+    return amounts, sum(amounts.values())
 
 
 # ---------------------------------------------------------------------------
