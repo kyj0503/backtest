@@ -1,0 +1,23 @@
+name: backtest-${APP_ENV:?}
+
+services:
+  app:
+    image: ${APP_IMAGE:?}
+    container_name: ${APP_CONTAINER:?}
+    restart: unless-stopped
+    env_file:
+      - path: ${APP_ENV_FILE:?}
+        required: true
+        format: raw
+    networks:
+      - backend-net
+    healthcheck:
+      test: [CMD, curl, -fsS, 'http://localhost:8000/health']
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 6
+
+networks:
+  backend-net:
+    external: true
