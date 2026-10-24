@@ -71,7 +71,10 @@ class BacktestEngine:
                 data,
                 strategy_class,
                 cash=request.initial_cash,
-                commission=request.commission,
+                # 기존 진입 시 1회 수수료 모델 유지
+                spread=request.commission,
+                commission=0.0,
+                finalize_trades=True,
             )
             self.logger.debug("백테스트 객체 생성 완료")
             

@@ -54,7 +54,7 @@ class TestSmaRequirements:
         df = self.create_fixture_data(data)
 
         # Run with short=5, long=10
-        bt = Backtest(df, SmaCrossStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, SmaCrossStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(short_window=5, long_window=10)
 
         trades = stats['_trades']
@@ -77,7 +77,7 @@ class TestSmaRequirements:
         data = np.linspace(100, 200, 60).tolist()
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, SmaCrossStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, SmaCrossStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(short_window=5, long_window=10)
 
         trades = stats['_trades']

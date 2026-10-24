@@ -52,6 +52,15 @@ class TestLogInfoDoesNotPrintToStdout:
 
 
 class TestLogInfoStillLogsViaLogger:
+    def test_url_encoded_password_is_masked(self, config):
+        config.database_url = 'mysql+pymysql://user:secret%40value%21@db/test'
+        config.database_password = 'secret@value!'
+        assert config.get_masked_url() == 'mysql+pymysql://user:***@db/test'
+
+    def test_invalid_url_is_not_logged(self, config):
+        config.database_url = 'not-a-url-with-secret'
+        assert config.get_masked_url() == '<invalid database URL>'
+
     def test_log_info_logs_connection_metadata_via_logger(self, config, caplog):
         with caplog.at_level(logging.INFO, logger='app.services.database.database_config'):
             config.log_info()

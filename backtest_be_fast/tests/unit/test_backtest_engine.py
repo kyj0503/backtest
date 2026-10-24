@@ -403,7 +403,7 @@ class TestBacktestEngineConvertResultToResponse:
                 elif len(self.data) == 30 and self.position:
                     self.position.close()
 
-        stats = Backtest(data, BuyThenSell, cash=10000, commission=0.0).run()
+        stats = Backtest(data, BuyThenSell, cash=10000, commission=0.0, finalize_trades=True).run()
         assert stats['# Trades'] == 1 and stats['Win Rate [%]'] == 100.0
         request = BacktestRequest(
             ticker='TSLA', start_date='2023-01-02', end_date='2023-02-24',

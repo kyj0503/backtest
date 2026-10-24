@@ -2,22 +2,22 @@
 # 아니라 requirements.lock.txt(전 의존성 고정본)를 설치한다. 여기를 바꾼 뒤에는
 # `docker compose -f compose.dev.yaml exec -T backtest-be-fast pip freeze`로
 # requirements.lock.txt를 재생성할 것 (락 파일 상단 주석에 방법 설명).
-fastapi==0.141.1
-uvicorn[standard]==0.52.0
-pydantic==2.13.4
-pydantic-settings==2.14.2
+fastapi==0.162.0
+uvicorn==0.54.0
+pydantic==2.14.1
+pydantic-settings==2.16.1
 # Monitoring
 prometheus-fastapi-instrumentator==8.1.0
-backtesting==0.3.3
-bokeh==2.4.3
-yfinance==1.5.2
+backtesting==0.6.6
+bokeh==3.10.1
+yfinance==1.7.0
 requests==2.34.2
 # Security floors for requests/bokeh transitive dependencies (2026-10-09 audit).
 urllib3>=2.8.0
 tornado>=6.5.9
-pandas>=2.0.3,<3.0.0
-numpy<2.0.0
-python-dotenv==1.2.2
+pandas==3.1.0
+numpy==2.5.4
+python-dotenv==1.2.4
 python-multipart==0.0.32
 pytz>=2023.3
 python-dateutil>=2.8.2
@@ -28,4 +28,4 @@ pymysql>=1.0.2
 cryptography>=41.0.0
 # P2-28: 스키마 마이그레이션 도구 (alembic/ 디렉터리 참고). SQLAlchemy 위에서
 # 동작하며 앱과 같은 venv/이미지에서 `alembic upgrade head`로 실행된다.
-alembic==1.18.5
+alembic==1.20.1

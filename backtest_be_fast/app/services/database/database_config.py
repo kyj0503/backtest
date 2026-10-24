@@ -125,11 +125,10 @@ class DatabaseConfig:
     def get_masked_url(self) -> str:
         """로깅용 마스킹된 URL을 반환합니다 (비밀번호 숨김)."""
         try:
-            if self.database_password and isinstance(self.database_url, str):
-                return self.database_url.replace(self.database_password, "***")
+            from sqlalchemy.engine import make_url
+            return make_url(self.database_url).render_as_string(hide_password=True)
         except Exception:
-            pass
-        return self.database_url
+            return "<invalid database URL>"
 
     def get_components(self) -> dict:
         """연결 설정 요소를 딕셔너리로 반환합니다."""

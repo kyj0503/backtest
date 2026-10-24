@@ -16,6 +16,8 @@ services:
         format: raw
     networks:
       - backend-net
+    volumes:
+      - /opt/backtest/production/tls:/app/tls:ro
     healthcheck:
       test: [CMD, curl, -fsS, 'http://localhost:8000/health']
       interval: 10s
