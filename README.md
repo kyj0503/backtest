@@ -6,7 +6,7 @@
 
 ## 구성
 
-- `backtest_be_fast/`: Python 3.11, FastAPI, SQLAlchemy, pandas, backtesting.py 0.3.3.
+- `backtest_be_fast/`: Python 3.15, FastAPI, SQLAlchemy, pandas, backtesting.py 0.6.6.
 - `database/`: MySQL 스키마와 마이그레이션 운영 안내.
 - `compose.dev.yaml`: 로컬 백엔드·MySQL 개발 환경.
 - `compose.dev-prod.yaml`: 실제 런타임 이미지의 로컬 워커 모드 검증.
@@ -34,7 +34,7 @@ docker build --target runtime ./backtest_be_fast
 ```
 
 테스트는 Docker에서 실행합니다. 스키마 정합성 검사는 임시 MySQL만 사용하며 운영 DB를 변경하지 않습니다.
-CI 취약점 검사는 기존 bokeh 예외 근거를 유지합니다. 신규 차단 취약점을 무시하지 않습니다.
+CI 취약점 검사는 알려진 취약점을 예외 없이 차단합니다.
 
 ## GitHub Actions 배포
 
@@ -55,6 +55,8 @@ CI 취약점 검사는 기존 bokeh 예외 근거를 유지합니다. 신규 차
 ## DB 운영
 
 앱 배포에서 운영 DB 마이그레이션을 자동 실행하지 않습니다.
+OCI 관리형 MySQL 26.10을 사용하며, 전용 CA를 검증하는 TLS 연결을 사용합니다.
+CA 파일은 `/opt/backtest/production/tls/oracle-mysql-ca.pem`에 두고 컨테이너의 `/app/tls`에 읽기 전용으로 마운트합니다.
 스키마 변경은 `database/schema.sql`과 `backtest_be_fast/alembic/`를 함께 갱신하고 검증합니다.
 기존 DB의 baseline, Alembic 적용, MySQL 버전 변경은 [database/README.md](database/README.md)를 따릅니다.
 

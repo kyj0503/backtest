@@ -1,14 +1,14 @@
 # syntax=docker/dockerfile:1
-# Python 3.11 슬림 이미지 사용
+# Python 3.15 슬림 이미지 사용
 #
 # 3-스테이지 구성:
 #   builder  - 컴파일 툴체인(gcc/g++/cargo/rustc 등) + venv 생성 + requirements.txt만 설치.
 #              최종 이미지에는 포함되지 않는다.
 #   test     - builder에서 갈라져 나와 requirements-test.txt를 추가 설치하고 pytest를 실행.
 #              배포 전 테스트 단계 전용 (아래 설명 참고).
-#   runtime  - 클린 python:3.11-slim 위에 /opt/venv만 복사. 컴파일러도, 테스트
+#   runtime  - 클린 python:3.15-slim-trixie 위에 /opt/venv만 복사. 컴파일러도, 테스트
 #              의존성도 없다. non-root 사용자로 실행된다.
-FROM python:3.11-slim AS builder
+FROM python:3.15-slim-trixie AS builder
 
 WORKDIR /app
 
@@ -58,7 +58,7 @@ COPY tests ./tests
 COPY scripts ./scripts
 COPY pytest.ini ./
 
-RUN pytest tests/unit -q
+RUN pytest tests/unit -q && pytest tests/e2e -m e2e -q
 
 # audit: 의존성 취약점 감사 (CI 전용)
 #
@@ -69,7 +69,7 @@ RUN pytest tests/unit -q
 # 바인드 마운트(-v)가 아니라 빌드 컨텍스트로 파일을 받는 이유: Jenkins가
 # 컨테이너 안에서 호스트 Docker 데몬에 붙어 sibling 컨테이너를 띄우는 구조라
 # -v의 소스 경로가 호스트 기준으로 해석되어 파일을 찾지 못한다.
-FROM python:3.11-slim AS audit
+FROM python:3.15-slim-trixie AS audit
 
 WORKDIR /app
 COPY requirements.lock.txt .
@@ -86,8 +86,8 @@ RUN pip install -q pip-audit && \
 # runtime: 실제 배포 이미지 (마지막 스테이지 = 기본 빌드 타깃)
 #
 # builder의 컴파일러/헤더, test의 pytest 등 테스트 의존성은 여기 포함되지 않는다.
-# 클린한 python:3.11-slim 위에 venv(/opt/venv)만 복사하고 non-root 사용자로 실행한다.
-FROM python:3.11-slim AS runtime
+# 클린한 python:3.15-slim-trixie 위에 venv(/opt/venv)만 복사하고 non-root 사용자로 실행한다.
+FROM python:3.15-slim-trixie AS runtime
 
 WORKDIR /app
 
