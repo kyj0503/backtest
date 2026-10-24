@@ -58,7 +58,7 @@ class TestRsiRequirements:
         data = p1 + p2
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, RsiStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, RsiStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(rsi_period=14)
         
         if expected_trade:
@@ -83,7 +83,7 @@ class TestRsiRequirements:
         data = p1 + p2 + p3
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, RsiStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, RsiStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(rsi_period=14)
         
         trades = stats['_trades']
@@ -100,7 +100,7 @@ class TestRsiRequirements:
         data = [100] * 50
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, RsiStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, RsiStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(rsi_period=14)
         
         # Should finish without error
@@ -113,6 +113,6 @@ class TestRsiRequirements:
         data = [100] * 10 # < 14
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, RsiStrategy, cash=10000, commission=0)
+        bt = Backtest(df, RsiStrategy, cash=10000, commission=0, finalize_trades=True)
         stats = bt.run(rsi_period=14)
         assert len(stats['_trades']) == 0

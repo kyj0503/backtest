@@ -395,3 +395,5 @@ docker compose -f compose.dev.yaml exec -T backtest-fe npm run build
 - 문서 클린: 버전 표기 전면 최신(구버전 문자열 0건), Docker 온보딩 견실, CLAUDE.md 제약 검증표 Zustand 1건 제외 전부 VERIFIED(기준선 141/113 정적 재계산 일치).
 - 이번 세션 추가 검증: lint 경고 정확히 3개 실측(컨테이너), `pool_config.py` 40+80 확인, `TICKER_POPULARITY_TOTAL.labels(ticker=…)` 확인, jsdom/patch-package 미사용 확인, 현금 이름 필드 검증 순서 버그 확인(Codex 옳음 — 이전 감사의 "현금 심볼 검증 면제" 서술은 필드 순서 때문에 실제로는 무효), `nginx.prod.conf` trailing slash·SPA fallback 확인.
 - Codex 항목 중 미재현 잔여: BE 커버리지 42%(측정치 인용), 요청 한도 부재의 실부하 영향(P2-16), 캐시 DataFrame 공유 변경(P3-22), UI 숨김 옵션 payload 잔류(P2-13).
+
+- 2026-10-24: Python 3.15 / backtesting.py 0.6.6 업그레이드. 기존 단일 수수료 적용과 마지막 거래 청산을 유지. MySQL CA 검증용 마운트 및 URL 로그 비밀번호 마스킹 수정. 단위 504개와 기존 golden E2E 통과.

@@ -33,7 +33,7 @@ class TestVolatilityKeyMatchesLibraryOutput:
                 if crossover(self.fast, self.slow):
                     self.buy()
 
-        stats = Backtest(GOOG.iloc[:200], _Sma, cash=10_000, commission=0).run()
+        stats = Backtest(GOOG.iloc[:200], _Sma, cash=10_000, commission=0, finalize_trades=True).run()
 
         assert 'Volatility (Ann.) [%]' in stats.index
         assert isinstance(stats['Volatility (Ann.) [%]'], float)
@@ -60,7 +60,7 @@ class TestVolatilityKeyMatchesLibraryOutput:
                     self.buy()
 
         data = GOOG.iloc[:200]
-        stats = Backtest(data, _Sma, cash=10_000, commission=0).run()
+        stats = Backtest(data, _Sma, cash=10_000, commission=0, finalize_trades=True).run()
         assert stats['Volatility (Ann.) [%]'] > 0, "픽스처 전제: 변동성이 0보다 커야 의미 있는 검증"
 
         request = Mock()

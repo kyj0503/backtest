@@ -63,7 +63,7 @@ class TestBollingerBandsRequirements:
         data = p1 + [last_price] + extra_data
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, BollingerBandsStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, BollingerBandsStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(period=20, std_dev=2)
         
         if expected_trade:
@@ -89,7 +89,7 @@ class TestBollingerBandsRequirements:
         data = p1 + p2 + p3 + p4
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, BollingerBandsStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, BollingerBandsStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(period=20, std_dev=2)
         
         trades = stats['_trades']
@@ -113,7 +113,7 @@ class TestBollingerBandsRequirements:
         data = p1 + p2 + p3
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, BollingerBandsStrategy, cash=100000, commission=0)
+        bt = Backtest(df, BollingerBandsStrategy, cash=100000, commission=0, finalize_trades=True)
         stats = bt.run(period=20, std_dev=2)
         
         trades = stats['_trades']

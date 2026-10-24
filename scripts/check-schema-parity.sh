@@ -22,8 +22,8 @@
 # 사용: scripts/check-schema-parity.sh
 # 환경변수(모두 선택):
 #   DOCKER         docker 명령 (기본: docker). 예: DOCKER=docker.exe
-#   MYSQL_IMAGE    비교에 쓸 MySQL 이미지 (기본: mysql:8.4, compose와 동일)
-#   PY_IMAGE       Alembic 실행 이미지 (기본: python:3.11-slim, BE Dockerfile과 동일)
+#   MYSQL_IMAGE    비교에 쓸 MySQL 이미지 (기본: mysql:innovation, compose와 동일)
+#   PY_IMAGE       Alembic 실행 이미지 (기본: python:3.15-slim-trixie, BE Dockerfile과 동일)
 #   SCHEMA_SQL     비교할 initdb 스크립트 (기본: database/schema.sql)
 #   PARITY_PREFIX  임시 리소스 이름 접두사 (기본: schema-parity-<pid>)
 #   KEEP_DUMPS     비어 있지 않으면 비교에 쓴 덤프 디렉터리를 지우지 않는다
@@ -33,8 +33,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BE_DIR="$REPO_ROOT/backtest_be_fast"
 
 DOCKER="${DOCKER:-docker}"
-MYSQL_IMAGE="${MYSQL_IMAGE:-mysql:8.4}"
-PY_IMAGE="${PY_IMAGE:-python:3.11-slim}"
+MYSQL_IMAGE="${MYSQL_IMAGE:-mysql:innovation@sha256:f51c9c01c16b0eb5d81bb70ab7e7fcb3b96abc6a54114be3a94e8e569cae7815}"
+PY_IMAGE="${PY_IMAGE:-python:3.15-slim-trixie}"
 SCHEMA_SQL="${SCHEMA_SQL:-$REPO_ROOT/database/schema.sql}"
 PREFIX="${PARITY_PREFIX:-schema-parity-$$}"
 

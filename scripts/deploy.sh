@@ -46,7 +46,10 @@ failed() {
 }
 trap cleanup EXIT
 trap failed ERR
-if [[ "$app" == backtest ]]; then test -s "$root/.env"; fi
+if [[ "$app" == backtest ]]; then
+    test -s "$root/.env"
+    test -s "$root/tls/oracle-mysql-ca.pem"
+fi
 docker network inspect backend-net >/dev/null
 mkdir -m 700 "$release/.docker"
 export DOCKER_CONFIG="$release/.docker"

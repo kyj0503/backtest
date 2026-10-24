@@ -44,7 +44,7 @@ services:
     # 8.4는 다음 LTS이며, schema.sql이 쓰는 8.0+ 문법(utf8mb4_0900_ai_ci,
     # CHECK 제약)이 그대로 유지된다 — 스키마 초기화 스크립트가 8.4에서도
     # 깨끗이 적용됨을 일회성 컨테이너로 검증했다 (b4-E-report.md 참고).
-    image: mysql:8.4
+    image: mysql:innovation@sha256:f51c9c01c16b0eb5d81bb70ab7e7fcb3b96abc6a54114be3a94e8e569cae7815
     container_name: backtest-mysql-dev
     networks:
       - backtest-net

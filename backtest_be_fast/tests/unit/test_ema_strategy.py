@@ -44,7 +44,7 @@ class TestEmaRequirements:
         data = p1 + p2
         df = self.create_fixture_data(data)
 
-        bt = Backtest(df, EmaStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, EmaStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(fast_window=5, slow_window=10)
         
         trades = stats['_trades']
@@ -65,7 +65,7 @@ class TestEmaRequirements:
         data = p0 + p1 + p2
         df = self.create_fixture_data(data)
         
-        bt = Backtest(df, EmaStrategy, cash=standard_setup['cash'], commission=0)
+        bt = Backtest(df, EmaStrategy, cash=standard_setup['cash'], commission=0, finalize_trades=True)
         stats = bt.run(fast_window=5, slow_window=10)
         
         trades = stats['_trades']
