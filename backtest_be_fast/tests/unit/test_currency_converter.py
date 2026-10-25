@@ -134,19 +134,12 @@ class TestConvertDataframeToUsd:
         assert result['Close'].iloc[0] == pytest.approx(expected_close, rel=0.01)
 
     @pytest.mark.asyncio
-    async def test_unsupported_currency_returns_data_unchanged(self, converter, sample_krw_data):
-        """Test unsupported currency returns original data with warning"""
+    async def test_unsupported_currency_fails_explicitly(self, converter, sample_krw_data):
         converter.stock_repository.get_ticker_info.return_value = {'currency': 'XXX'}
-
-        result = await converter.convert_dataframe_to_usd(
-            ticker='TEST',
-            data=sample_krw_data.copy(),
-            start_date='2023-01-01',
-            end_date='2023-01-10'
-        )
-
-        # Data should be unchanged
-        pd.testing.assert_frame_equal(result, sample_krw_data)
+        with pytest.raises(ValueError, match='XXX'):
+            await converter.convert_dataframe_to_usd(
+                ticker='TEST', data=sample_krw_data.copy(),
+                start_date='2023-01-01', end_date='2023-01-10')
 
     @pytest.mark.asyncio
     async def test_conversion_error_raises_instead_of_returning_unconverted_data(

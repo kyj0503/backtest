@@ -390,7 +390,7 @@ class DataFetcher:
                 'industry': info.get('industry', 'Unknown'),
                 'market_cap': info.get('marketCap', None),
                 'current_price': info.get('regularMarketPrice', info.get('previousClose', None)),
-                'currency': info.get('currency', 'USD'),
+                'currency': info.get('currency'),
                 'exchange': info.get('exchange', 'Unknown'),
                 'country': info.get('country', 'Unknown'),
                 'first_trade_date': first_trade_date,

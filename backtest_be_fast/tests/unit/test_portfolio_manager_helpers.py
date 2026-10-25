@@ -239,13 +239,13 @@ class TestFormatIndividualResultsList:
                 'symbol': 'AAPL',
                 'weight': 0.4,
                 'amount': 4000.0,
-                'return': 25.0
+                'return': 25.0, 'final_value': 5000.0, 'sharpe_ratio': 1.25, 'trades': 3
             },
             'GOOGL': {
                 'symbol': 'GOOGL',
                 'weight': 0.6,
                 'amount': 6000.0,
-                'return': 18.0
+                'return': 18.0, 'final_value': 7080.0, 'sharpe_ratio': 1.0, 'trades': 2
             }
         }
 
@@ -260,8 +260,8 @@ class TestFormatIndividualResultsList:
         # final_equity = amount + (amount * return / 100) = 4000 + 1000 = 5000
         assert aapl_result['final_equity'] == 5000.0
         assert aapl_result['total_return_pct'] == 25.0
-        assert aapl_result['sharpe_ratio'] == 0.0  # Not calculated in buy_hold
-        assert aapl_result['trades'] == 1
+        assert aapl_result['sharpe_ratio'] == 1.25
+        assert aapl_result['trades'] == 3
         # buy&hold 포지션은 청산된 거래가 없어 거래 승률을 정의할 수 없다.
         # 과거에는 수익이면 100, 아니면 0을 지어냈다
         assert aapl_result['win_rate'] is None
@@ -273,7 +273,7 @@ class TestFormatIndividualResultsList:
                 'symbol': 'TSLA',
                 'weight': 1.0,
                 'amount': 10000.0,
-                'return': -10.0
+                'return': -10.0, 'final_value': 9000.0, 'sharpe_ratio': -1.0, 'trades': 1
             }
         }
 
@@ -293,13 +293,13 @@ class TestFormatIndividualResultsList:
                 'symbol': '',  # Empty symbol for cash
                 'weight': 0.2,
                 'amount': 2000.0,
-                'return': 0.0
+                'return': 0.0, 'final_value': 2000.0, 'sharpe_ratio': 0.0, 'trades': 0
             },
             'AAPL': {
                 'symbol': 'AAPL',
                 'weight': 0.8,
                 'amount': 8000.0,
-                'return': 15.0
+                'return': 15.0, 'final_value': 9200.0, 'sharpe_ratio': 1.0, 'trades': 1
             }
         }
 
@@ -320,11 +320,11 @@ class TestFormatIndividualResultsList:
         포트폴리오 Trade_Win_Rate(거래 없으면 None)와 같은 규칙이다."""
         individual_returns = {
             'NVDA': {
-                'symbol': 'NVDA', 'weight': 0.5, 'amount': 5000.0, 'return': 0.0,
+                'symbol': 'NVDA', 'weight': 0.5, 'amount': 5000.0, 'return': 0.0, 'final_value': 2000.0, 'sharpe_ratio': 0.0, 'trades': 0,
                 'final_value': 5000.0, 'trades': 0, 'win_rate': 0.0,
             },
             'CASH': {
-                'symbol': 'CASH', 'weight': 0.5, 'amount': 5000.0, 'return': 0.0,
+                'symbol': 'CASH', 'weight': 0.5, 'amount': 5000.0, 'return': 0.0, 'final_value': 2000.0, 'sharpe_ratio': 0.0, 'trades': 0,
                 'final_value': 5000.0, 'trades': 0, 'win_rate': 0.0,
             },
         }

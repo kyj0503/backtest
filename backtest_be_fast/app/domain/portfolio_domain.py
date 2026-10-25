@@ -20,6 +20,7 @@ class DcaStrategyInfo(BaseModel):
     # 실행 상태 관리
     executed_count: int = Field(default=0, description="현재까지 실행된 DCA 횟수")
     last_dca_date: Optional[date] = Field(default=None, description="마지막 DCA 실행 날짜")
+    next_scheduled_date: Optional[date] = None
     original_nth_weekday: Optional[int] = Field(default=None, description="최초 DCA 실행 시의 n번째 요일 정보")
 
     model_config = {

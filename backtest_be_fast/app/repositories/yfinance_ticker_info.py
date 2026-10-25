@@ -33,7 +33,7 @@ class TickerInfoQueriesMixin:
         engine = self._get_engine()
         default_info = {
             'symbol': ticker.upper(),
-            'currency': 'USD',
+            'currency': None,
             'company_name': ticker.upper(),
             'exchange': 'Unknown',
             'first_trade_date': None
@@ -70,7 +70,7 @@ class TickerInfoQueriesMixin:
 
                     return {
                         'symbol': ticker,
-                        'currency': info.get('currency', 'USD'),
+                        'currency': info.get('currency'),
                         'company_name': info.get('company_name', ticker),
                         'exchange': info.get('exchange', 'Unknown'),
                         'first_trade_date': info.get('first_trade_date', None)
@@ -123,7 +123,7 @@ class TickerInfoQueriesMixin:
 
                         result[ticker] = {
                             'symbol': ticker,
-                            'currency': info.get('currency', 'USD'),
+                            'currency': info.get('currency'),
                             'company_name': info.get('company_name', ticker),
                             'exchange': info.get('exchange', 'Unknown'),
                             'first_trade_date': first_trade_date
@@ -132,7 +132,7 @@ class TickerInfoQueriesMixin:
                         self.logger.warning(f"info_json 파싱 실패: {ticker} - {e}")
                         result[ticker] = {
                             'symbol': ticker,
-                            'currency': 'USD',
+                            'currency': None,
                             'company_name': ticker,
                             'exchange': 'Unknown',
                             'first_trade_date': None
@@ -140,7 +140,7 @@ class TickerInfoQueriesMixin:
                 else:
                     result[ticker] = {
                         'symbol': ticker,
-                        'currency': 'USD',
+                        'currency': None,
                         'company_name': ticker,
                         'exchange': 'Unknown',
                         'first_trade_date': None
@@ -159,7 +159,7 @@ class TickerInfoQueriesMixin:
                 if ticker not in found_tickers:
                     result[ticker] = {
                         'symbol': ticker,
-                        'currency': 'USD',
+                        'currency': None,
                         'company_name': ticker,
                         'exchange': 'Unknown',
                         'first_trade_date': None
@@ -173,7 +173,7 @@ class TickerInfoQueriesMixin:
             return {
                 ticker.upper(): {
                     'symbol': ticker.upper(),
-                    'currency': 'USD',
+                    'currency': None,
                     'company_name': ticker.upper(),
                     'exchange': 'Unknown'
                 }

@@ -72,19 +72,19 @@ class PortfolioDataLoader:
         종목별 통화 정보를 배치로 조회합니다.
         key: symbol, value: currency_code
         """
+        from app.constants.currencies import SUPPORTED_CURRENCIES
+
         try:
-            ticker_info_dict = await asyncio.to_thread(
-                self.stock_repository.get_tickers_info_batch, symbols
-            )
-            # symbol -> currency 맵핑으로 변환
-            ticker_currencies = {
-                symbol: info.get('currency', 'USD')
-                for symbol, info in ticker_info_dict.items()
-            }
-            return ticker_currencies
-        except Exception as e:
-            logger.warning(f"티커 정보 배치 조회 실패: {e}, 모두 USD로 가정")
-            return {symbol: 'USD' for symbol in symbols}
+            info = await asyncio.to_thread(self.stock_repository.get_tickers_info_batch, symbols)
+        except Exception as exc:
+            raise ValueError("종목 통화 정보를 조회할 수 없습니다. 잠시 후 다시 시도해 주세요.") from exc
+        currencies = {}
+        for symbol in symbols:
+            currency = info.get(symbol, {}).get('currency')
+            if currency not in SUPPORTED_CURRENCIES:
+                raise ValueError(f"{symbol}: 통화 정보를 확인할 수 없거나 지원하지 않는 통화입니다: {currency}")
+            currencies[symbol] = currency
+        return currencies
 
     async def load_exchange_rates(
         self,

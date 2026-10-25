@@ -4,6 +4,7 @@ backtesting.py 라이브러리를 래핑하여 백테스트를 실행하고 결�
 """
 import asyncio
 import logging
+from time import perf_counter
 from datetime import datetime, timedelta, date
 from typing import Dict, Any, Optional, List, Type
 from uuid import uuid4
@@ -21,6 +22,7 @@ from app.services.validation_service import validation_service
 from app.core.exceptions import ValidationError
 from app.constants.currencies import SUPPORTED_CURRENCIES
 from app.utils.currency_converter import currency_converter
+from app.utils.metrics_math import annualized_volatility, safe_sharpe_ratio
 from app.utils.type_converters import optional_finite_float, safe_float, safe_int
 
 
@@ -42,7 +44,11 @@ class BacktestEngine:
     async def run_backtest(self, request: BacktestRequest) -> BacktestResult:
         """백테스트 실행"""
         try:
-            self.validation_service.validate_backtest_request(request)
+            started = perf_counter()
+            # Price loading below validates existence using the cache-first data
+            # path. A second Yahoo .info call must not reject cached price data.
+            await asyncio.to_thread(self.validation_service.validate_backtest_request,
+                                    request, check_symbol_exists=False)
 
             self.logger.info(
                 "백테스트 시작: %s, %s ~ %s",
@@ -58,7 +64,10 @@ class BacktestEngine:
             self.logger.debug(f"데이터 컬럼: {list(data.columns)}")
             self.logger.info(f"데이터 범위: {data.index[0]} ~ {data.index[-1]}")
 
-            data = await self._convert_to_usd(request.ticker, data, request.start_date, request.end_date)
+            try:
+                data = await self._convert_to_usd(request.ticker, data, request.start_date, request.end_date)
+            except ValueError as exc:
+                raise ValidationError(str(exc)) from exc
 
             strategy_name = request.strategy.value if hasattr(request.strategy, 'value') else str(request.strategy)
             strategy_class = self._build_strategy(strategy_name, request.strategy_params)
@@ -98,7 +107,9 @@ class BacktestEngine:
             # 것처럼 "무효한 결과" 분기를 두고 실제로 실행된 거래가 없는데도
             # `_create_fallback_result()`로 Win Rate 100%/거래 1건 같은 조작된 통계를
             # HTTP 200 성공으로 반환했다(P3-21). 그 분기는 도달 불가능한 죽은 코드였다.
-            return self._convert_result_to_response(result, request)
+            response = await asyncio.to_thread(self._convert_result_to_response, result, request)
+            response.execution_time_seconds = perf_counter() - started
+            return response
 
         except Exception as e:
             self.logger.error(f"백테스트 전체 프로세스 오류: {e}")
@@ -222,12 +233,17 @@ class BacktestEngine:
                 try:
                     # DataFrame을 Dict[str, float]로 변환
                     equity_curve_dict = {}
-                    for idx, row in equity_curve_df.iterrows():
+                    for idx, equity in equity_curve_df['Equity'].items():
                         date_str = idx.strftime('%Y-%m-%d') if hasattr(idx, 'strftime') else str(idx)
-                        equity_curve_dict[date_str] = float(row['Equity'])
+                        equity_curve_dict[date_str] = float(equity)
                 except Exception as e:
                     self.logger.warning(f"equity curve 변환 실패: {e}")
                     equity_curve_dict = None
+
+            sharpe = safe_float(stats.get('Sharpe Ratio', 0.0))
+            if isinstance(equity_curve_df, pd.DataFrame) and not equity_curve_df.empty:
+                daily = equity_curve_df['Equity'].pct_change(fill_method=None).fillna(0.0)
+                sharpe = safe_sharpe_ratio(float(daily.mean()) * 252 * 100, annualized_volatility(daily))
 
             # 참고(P3-19): 여기에는 과거 request.benchmark_ticker가 설정된 경우
             # Alpha/Beta를 계산하는 벤치마크 비교 블록이 있었다. BacktestRequest에
@@ -258,7 +274,7 @@ class BacktestEngine:
                 volatility_pct=safe_float(
                     stats.get('Volatility (Ann.) [%]', stats.get('Volatility [%]', 0.0))
                 ),
-                sharpe_ratio=safe_float(stats.get('Sharpe Ratio', 0.0)),
+                sharpe_ratio=sharpe,
                 sortino_ratio=safe_float(stats.get('Sortino Ratio', 0.0)),
                 calmar_ratio=safe_float(stats.get('Calmar Ratio', 0.0)),
                 max_drawdown_pct=safe_float(stats.get('Max. Drawdown [%]', 0.0)),
@@ -277,7 +293,7 @@ class BacktestEngine:
                 sqn=safe_float(stats.get('SQN', 0.0)) if 'SQN' in stats else None,
                 trade_log=trade_log,
                 equity_curve=equity_curve_dict,  # 일일 자산 가치
-                execution_time_seconds=0.5,  # 추후 실제 시간 측정 추가
+                execution_time_seconds=0.0,  # run_backtest fills the measured end-to-end duration
                 timestamp=datetime.now()
             )
         except Exception as e:

@@ -130,7 +130,7 @@ class BacktestValidator:
             except ValueError as e:
                 raise ValueError(f"전략 파라미터 오류 ({strategy_name}): {str(e)}")
 
-    def validate_request(self, request) -> None:
+    def validate_request(self, request, *, check_symbol_exists: bool = True) -> None:
         """
         백테스트 요청 전체 검증
 
@@ -147,7 +147,10 @@ class BacktestValidator:
         """
         try:
             # 1. 티커 검증 및 정규화
-            ticker = self.symbol_validator.validate_and_normalize(request.ticker)
+            ticker = self.symbol_validator.normalize_ticker(request.ticker)
+            self.symbol_validator.validate_ticker_format(ticker)
+            if check_symbol_exists:
+                self.symbol_validator.validate_ticker_exists(ticker)
             logger.debug(f"티커 검증 완료: {ticker}")
 
             # 2. 날짜 검증

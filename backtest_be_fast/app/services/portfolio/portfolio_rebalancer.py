@@ -208,6 +208,7 @@ class PortfolioRebalancer:
         # 목표 비중대로 재조정 (조정된 비중 사용, 상장폐지 가치를 제외한 풀 기준)
         new_shares = {}
         new_cash_holdings = {}
+        asset_transfers = {}
         total_commission_cost = 0
         trades_in_rebalance = 0
         rebalance_trades = []  # 이번 리밸런싱의 거래 내역
@@ -220,6 +221,7 @@ class PortfolioRebalancer:
                 current_value = cash_holdings.get(unique_key, 0)
                 # 현금은 거래 수수료 없이 조정
                 new_cash_holdings[unique_key] = target_value
+                asset_transfers[unique_key] = target_value - current_value
 
                 # 현금 조정 내역 기록 (차이가 있을 때만)
                 if abs(target_value - current_value) / total_portfolio_value > trading_thresholds.REBALANCING_THRESHOLD_PCT:
@@ -289,6 +291,8 @@ class PortfolioRebalancer:
                             'shares': abs(shares_diff),
                             'price': price
                         })
+
+                asset_transfers[unique_key] = target_value - current_value
 
                 # 매도/매수 금액
                 trade_value = abs(target_value - current_value)
@@ -372,6 +376,7 @@ class PortfolioRebalancer:
             'weights_before': weights_before,
             'weights_after': weights_after,
             'commission_cost': total_commission_cost,
+            'asset_transfers': asset_transfers,
             'updated_shares': updated_shares,
             'updated_cash_holdings': updated_cash_holdings,
             'updated_available_cash': updated_available_cash

@@ -288,7 +288,7 @@ class PortfolioManagerService:
                 # ------------------------------------------
                 builder.add(item)
             allocation = builder.allocation
-            amounts = allocation.amounts  # 실제 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
+            amounts = allocation.amounts  # 예정 총 투자 금액 (DCA의 경우 회당 금액 × 횟수)
             dca_info = allocation.dca_info
             cash_amount = allocation.cash_amount
 
@@ -325,13 +325,16 @@ class PortfolioManagerService:
                 request.rebalance_frequency, request.commission
             )
             
+            amounts = portfolio_result.attrs['invested_amounts']
+            total_amount = sum(amounts.values())
+
             # 통계 계산
             logger.info("포트폴리오 통계 계산 중...")
             statistics = portfolio_calculator.calculate_portfolio_statistics(portfolio_result, total_amount)
             
             # 개별 종목 수익률 (참고용, 현금 포함)과 거래 로그
             individual_returns, strategy_details = build_buy_hold_individual_returns(
-                amounts, dca_info, portfolio_data, cash_amount, total_amount, request.start_date
+                portfolio_result
             )
 
             # 결과 포맷팅

@@ -183,15 +183,17 @@ class TestDcaAnnualReturnIsTimeWeighted:
         # Total_Return은 총 납입 대비 손익률 그대로다 (시간가중 수익률보다 작다)
         assert 0 < stats['Total_Return'] < (price_ratio - 1) * 100
 
-    def test_sharpe_uses_the_time_weighted_annual_return(self):
+    def test_sharpe_uses_mean_daily_time_weighted_return(self):
         frame = _zigzag_frame()
         request = _request([{
             'symbol': 'AAPL', 'amount': 1000.0,
             'investment_type': 'dca', 'dca_frequency': 'monthly_1',
         }])
-        stats = _run_buy_hold(request, {'AAPL': frame})['data']['portfolio_statistics']
-
-        assert stats['Sharpe_Ratio'] == pytest.approx(stats['Annual_Return'] / stats['Annual_Volatility'])
+        data = _run_buy_hold(request, {'AAPL': frame})['data']
+        stats = data['portfolio_statistics']
+        daily = pd.Series(data['daily_returns'], dtype=float) / 100
+        expected = daily.mean() / daily.std() * np.sqrt(252)
+        assert stats['Sharpe_Ratio'] == pytest.approx(expected)
 
 
 class TestLumpSumAnnualReturnIsUnchanged:
