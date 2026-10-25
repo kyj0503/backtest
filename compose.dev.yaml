@@ -17,6 +17,7 @@ services:
       - .env
     environment:
       - DEBUG=true
+      - TURNSTILE_ENABLED=${TURNSTILE_ENABLED:-false}
       - WATCHFILES_FORCE_POLLING=false
     volumes:
       - ./backtest_be_fast:/app

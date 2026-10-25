@@ -3,7 +3,7 @@
 포트폴리오 백테스트 실행 및 관련 데이터를 반환하는 FastAPI 엔드포인트입니다.
 """
 
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
 import logging
 import asyncio
@@ -20,6 +20,7 @@ from ....core.exceptions import ValidationError
 from ....core.client_ip import client_limit_key, parse_trusted_networks, resolve_client_ip
 from ....services.backtest_runner import BacktestRejected, get_backtest_runner
 from ..decorators import handle_portfolio_errors
+from ..turnstile import require_turnstile
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -176,9 +177,11 @@ def _rejection_response(exc: BacktestRejected) -> JSONResponse:
     status_code=status.HTTP_200_OK,
     summary="포트폴리오 백테스트 실행",
     description="포트폴리오 백테스트 실행 및 관련 데이터 반환",
+    dependencies=[Depends(require_turnstile)],
     responses={
+        403: {"description": "사람 인증 누락·실패·만료 또는 토큰 재사용 — 계산을 시작하지 않음"},
         429: {"description": "같은 클라이언트(IP)의 동시 실행 상한 초과 — 대기 없이 즉시 거부"},
-        503: {"description": "동시 실행 슬롯 대기 시간 초과 — 작업을 시작하지 않음"},
+        503: {"description": "사람 인증 검증 불가 또는 동시 실행 슬롯 대기 시간 초과 — 작업을 시작하지 않음"},
         504: {"description": "실행 시간 초과 — 작업에 취소 신호를 보냄"},
     },
 )
