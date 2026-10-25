@@ -24,7 +24,9 @@ def test_preserves_production_routes_requests_and_responses():
         actual = response.json()
     # The independently retriable read API is additive. Every pre-existing
     # route and request/response schema must remain byte-for-byte equivalent.
-    assert set(actual['paths']) == set(expected['paths']) | {'/api/v1/market-data'}
-    assert 'get' in actual['paths'].pop('/api/v1/market-data')
+    reads = {'/api/v1/' + name for name in ('prices', 'exchange-rates', 'benchmarks', 'news')}
+    assert set(actual['paths']) == set(expected['paths']) | reads
+    for path in reads:
+        assert 'get' in actual['paths'].pop(path)
     for section in ("paths", "components"):
         assert _contract(actual[section]) == expected[section]
