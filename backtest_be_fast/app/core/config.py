@@ -28,7 +28,7 @@ API 서버 설정 관리
 import json
 from typing import Optional
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic import field_validator
 
 
@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     host: str = Field(default="0.0.0.0", env="HOST")
     port: int = Field(default=8000, env="PORT")
     debug: bool = Field(default=False, env="DEBUG")
+
+    # Enabled by default: missing production configuration must never allow a job.
+    # Disable explicitly only for local development/tests.
+    turnstile_enabled: bool = True
+    turnstile_secret_key: SecretStr = SecretStr("")
+    turnstile_allowed_hostnames: str = ""
+    turnstile_expected_action: str = "backtest"
+    turnstile_timeout_seconds: float = Field(default=5.0, gt=0, le=10)
     
     # CORS 설정
     # CORS 설정: read raw env as string and expose a parsed property to avoid

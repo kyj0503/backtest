@@ -7,16 +7,20 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
 import math
+import os
 from pathlib import Path
 import urllib.error
 import urllib.parse
 import urllib.request
 
 
-def verify(base):
+def verify(base, token=None):
     def call(path, payload=None):
         body = json.dumps(payload).encode() if payload is not None else None
-        req = urllib.request.Request(base + path, data=body, headers={'Content-Type': 'application/json'})
+        headers = {'Content-Type': 'application/json'}
+        if payload is not None and token:
+            headers['X-Turnstile-Token'] = token
+        req = urllib.request.Request(base + path, data=body, headers=headers)
         try:
             response = urllib.request.urlopen(req, timeout=35)
         except urllib.error.HTTPError as exc:
@@ -86,7 +90,8 @@ if __name__ == '__main__':
     url = urllib.parse.urlsplit(args.base_url)
     if url.scheme != 'http' or url.hostname not in ('localhost', '127.0.0.1', '::1'):
         parser.error('Only a local HTTP test stack is allowed')
-    report = verify(args.base_url.rstrip('/'))
+    # Only documented dummy tokens, against the localhost restriction above.
+    report = verify(args.base_url.rstrip('/'), os.getenv('TURNSTILE_TEST_TOKEN'))
     if args.report:
         args.report.write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(report, indent=2))

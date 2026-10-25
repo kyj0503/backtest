@@ -5,6 +5,12 @@ Pytest Configuration and Global Fixtures
 단위 테스트는 DB 없이 실행 가능하도록 설계되었습니다.
 """
 
+import os
+
+# Unit/golden tests use no external credentials or network. Gate tests explicitly
+# enable verification and exercise rejection before any job can start.
+os.environ["TURNSTILE_ENABLED"] = "false"
+
 import pytest
 import asyncio
 from typing import AsyncGenerator
