@@ -10,11 +10,13 @@ from typing import Dict, Set, Tuple
 from datetime import datetime, date
 import pandas as pd
 
+from app.services.portfolio.portfolio_asset_ledger import PortfolioAssetLedger
 from app.services.portfolio.portfolio_dca_manager import PortfolioDcaManager
 from app.services.portfolio.portfolio_rebalancer import PortfolioRebalancer
-from app.services.rebalance_helper import RebalanceHelper, get_weekday_occurrence
+from app.services.rebalance_helper import RebalanceHelper, get_weekday_occurrence, generate_periodic_schedule
 from app.utils.currency_converter import currency_converter
 from app.constants.data_loading import TradingThresholds
+from app.schemas.schemas import FREQUENCY_MAP
 from app.domain.portfolio_domain import DcaStrategyInfo, PortfolioState
 from app.services.portfolio.portfolio_metrics import PortfolioMetrics
 from app.utils.metrics_math import TWR_START_RATIO_ATTR
@@ -179,11 +181,12 @@ class PortfolioSimulationEngine:
         aligned_prices: Dict[str, pd.Series],
         aligned_exchange_rates: Dict[str, pd.Series],
         ticker_currencies: Dict[str, str],
-        last_valid_exchange_rates: Dict[str, float]
+        last_valid_exchange_rates: Dict[str, float],
+        position: int = None,
     ) -> Tuple[Dict[str, float], Dict[str, float]]:
         """[성능 최적화] 미리 계산된 데이터에서 O(1)로 당일 가격 조회 (portfolio_price_alignment 위임)."""
         return get_daily_prices_from_aligned(
-            current_date, aligned_prices, aligned_exchange_rates, ticker_currencies, last_valid_exchange_rates
+            current_date, aligned_prices, aligned_exchange_rates, ticker_currencies, last_valid_exchange_rates, position
         )
 
     def _pre_calculate_tradeable_mask(
@@ -199,10 +202,11 @@ class PortfolioSimulationEngine:
     def _get_daily_tradeable_keys(
         self,
         current_date: pd.Timestamp,
-        aligned_tradeable: Dict[str, pd.Series]
+        aligned_tradeable: Dict[str, pd.Series],
+        position: int = None,
     ) -> Set[str]:
         """[P2-14] 오늘 RAW 데이터로 실제 관측된 unique_key 집합 (portfolio_price_alignment 위임)."""
-        return get_daily_tradeable_keys(current_date, aligned_tradeable)
+        return get_daily_tradeable_keys(current_date, aligned_tradeable, position)
 
     async def execute_simulation(
         self,
@@ -308,14 +312,22 @@ class PortfolioSimulationEngine:
         aligned_tradeable = self._pre_calculate_tradeable_mask(
             date_range, stock_amounts, portfolio_data, dca_info
         )
-        last_valid_exchange_rates = {} # 루프 내 캐싱용
+        aligned_prices = {k: series.to_numpy() for k, series in aligned_prices.items()}
+        aligned_exchange_rates = {k: series.to_numpy() for k, series in aligned_exchange_rates.items()}
+        aligned_tradeable = {k: series.to_numpy() for k, series in aligned_tradeable.items()}
+        ledger = PortfolioAssetLedger(amounts, dca_info)
+        schedule = (generate_periodic_schedule(start_date_obj, end_date_obj, *FREQUENCY_MAP[rebalance_frequency])
+                    if rebalance_frequency != 'none' else [])
+        rebalance_schedule = iter(schedule)
+        next_rebalance = next(rebalance_schedule, None)
+        last_valid_exchange_rates = {}
         # 첫 평가일의 "평가금 / 투입 원금" (A-19). 전일 평가금이 없는 날의 수익률은
         # 0으로 기록되므로 그날 매수 수수료만큼의 손실이 Daily_Return에 잡히지 않는다.
         # 연환산 수익률(TWR)이 이 손실을 빠뜨리지 않도록 따로 넘긴다.
         twr_start_ratio = None
 
         # 2. 메인 루프 실행
-        for current_date in date_range:
+        for position, current_date in enumerate(date_range):
             # A-05: 타임아웃·연결 끊김 후 취소 신호를 하루 단위로 확인한다
             # (토큰이 없으면 no-op).
             check_cancelled()
@@ -331,12 +343,12 @@ class PortfolioSimulationEngine:
                 aligned_prices=aligned_prices,
                 aligned_exchange_rates=aligned_exchange_rates,
                 ticker_currencies=ticker_currencies,
-                last_valid_exchange_rates=last_valid_exchange_rates
+                last_valid_exchange_rates=last_valid_exchange_rates, position=position
             )
             # [P2-14] 오늘 RAW 데이터로 실제 관측된 종목 집합. current_prices와
             # 달리 ffill로 채워지지 않으므로, 거래 실행 여부와 상장폐지 감지의
             # 근거로 쓴다 (밸류에이션은 계속 current_prices/ffill을 사용한다).
-            tradeable_today = self._get_daily_tradeable_keys(current_date, aligned_tradeable)
+            tradeable_today = self._get_daily_tradeable_keys(current_date, aligned_tradeable, position)
 
             # 2.2 상장폐지 감지
             self.detect_and_update_delisting(
@@ -355,9 +367,10 @@ class PortfolioSimulationEngine:
                 state.original_rebalance_nth = get_weekday_occurrence(start_date_obj)
                 self.logger.debug(f"리밸런싱 원본 Nth 값 설정 = {state.original_rebalance_nth}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
 
-            should_rebalance = RebalanceHelper.is_rebalance_date(
-                current_date, state.prev_date, rebalance_frequency, start_date_obj, state.last_rebalance_date, state.original_rebalance_nth
-            )
+            should_rebalance = False
+            while next_rebalance is not None and current_date.date() >= next_rebalance.date():
+                should_rebalance = state.prev_date is not None
+                next_rebalance = next(rebalance_schedule, None)
 
             if state.delisted_stocks and (should_rebalance or current_date.weekday() == 0):
                 delisted_symbols = [dca_info[key].symbol for key in state.delisted_stocks if key in dca_info]
@@ -371,6 +384,12 @@ class PortfolioSimulationEngine:
             pre_flow_value = PortfolioMetrics.portfolio_value(
                 state.shares, state.available_cash, current_prices
             )
+
+            before_values = ledger.values_at(state.shares, state.cash_holdings, current_prices)
+            ledger.record_market_profit(before_values)
+            before_shares = state.shares.copy()
+            counts_before = {key: dca_info[key].executed_count for key in stock_amounts}
+            transfers = {}
 
             # 2.4 DCA 실행 (초기 매수 또는 정기 매수)
             #
@@ -410,6 +429,9 @@ class PortfolioSimulationEngine:
                 state.total_trades += trades
                 daily_cash_inflow += cash_inflow
 
+
+            inflows = ledger.record_purchases(
+                current_date, before_shares, state.shares, current_prices, counts_before)
 
             # 2.5 리밸런싱 실행
             if rebalance_frequency != 'none':
@@ -476,6 +498,9 @@ class PortfolioSimulationEngine:
                     delisted_stocks=rebalance_excluded_stocks
                 )
 
+                transfers = rebalance_result.get('asset_transfers', {})
+                for key, new_size in rebalance_result['updated_shares'].items():
+                    ledger.add_trade(key, current_date, current_prices.get(key, 0.0), new_size - state.shares[key])
                 state.shares = rebalance_result['updated_shares']
                 state.cash_holdings = rebalance_result['updated_cash_holdings']
                 state.available_cash = rebalance_result['updated_available_cash']
@@ -492,6 +517,9 @@ class PortfolioSimulationEngine:
 
                 state.last_rebalance_date = current_date.date()
                 state.total_trades += trades_in_rebalance
+
+            after_values = ledger.values_at(state.shares, state.cash_holdings, current_prices)
+            ledger.record_day(before_values, after_values, inflows, transfers, current_prices)
 
             # 2.6 메트릭 계산
             metrics_calculator = PortfolioMetrics()
@@ -538,6 +566,14 @@ class PortfolioSimulationEngine:
         })
         result.set_index('Date', inplace=True)
 
+        actual_amount = sum(ledger.contributed.values())
+        if actual_amount <= 0:
+            raise ValueError("기간 내에 실행된 투자가 없습니다.")
+        # The loop uses a constant scale; publish against actual funded capital.
+        result['Portfolio_Value'] *= total_amount / actual_amount
+        result['Cumulative_Return'] = (result['Portfolio_Value'] - 1) * 100
+        result.attrs['invested_amounts'] = ledger.contributed
+        result.attrs['asset_results'] = ledger.results(actual_amount)
         result.attrs['total_trades'] = state.total_trades
         result.attrs['rebalance_history'] = state.rebalance_history
         result.attrs['weight_history'] = state.weight_history

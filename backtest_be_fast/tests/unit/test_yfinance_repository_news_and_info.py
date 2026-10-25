@@ -97,7 +97,7 @@ class TestTickerInfoBatch:
             "symbol": "005930.KS", "currency": "KRW", "company_name": "005930.KS",
             "exchange": "Unknown", "first_trade_date": None,
         }
-        default = lambda t: {"symbol": t, "currency": "USD", "company_name": t,
+        default = lambda t: {"symbol": t, "currency": None, "company_name": t,
                              "exchange": "Unknown", "first_trade_date": None}
         assert result["BROKEN"] == default("BROKEN")
         assert result["NULLINFO"] == default("NULLINFO")
@@ -117,13 +117,13 @@ class TestTickerInfoBatch:
     def test_db_failure_returns_defaults_without_first_trade_date(self, repository, monkeypatch):
         _use(repository, monkeypatch, _Engine(broken=True))
         assert repository.get_ticker_info_batch_from_db(["aapl"]) == {
-            "AAPL": {"symbol": "AAPL", "currency": "USD", "company_name": "AAPL",
+            "AAPL": {"symbol": "AAPL", "currency": None, "company_name": "AAPL",
                      "exchange": "Unknown"},
         }
 
 
 class TestTickerInfoSingleDefaults:
-    DEFAULT = {"symbol": "AAPL", "currency": "USD", "company_name": "AAPL",
+    DEFAULT = {"symbol": "AAPL", "currency": None, "company_name": "AAPL",
                "exchange": "Unknown", "first_trade_date": None}
 
     def test_unknown_ticker_returns_default(self, repository, monkeypatch):
