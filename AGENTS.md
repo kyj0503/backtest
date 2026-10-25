@@ -39,7 +39,7 @@ docker build --target test ./backtest_be_fast
 
 **DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through Alembic (`backtest_be_fast/alembic/`). There are **no physical foreign keys** — cross-table references are logical, integrity is owned by the app (A-10). A DB created from schema.sql **before** revision `7b2e9c4f1a30` still has the old FK: baseline it with `alembic stamp d5c3763b29e6` then `alembic upgrade head` (plain `stamp head` would skip the FK drop). A DB created from the current schema.sql is already at head (`alembic stamp head`). Migrations are NOT run by the GitHub Actions pipeline or the runtime image — apply them manually. schema.sql and the Alembic head must stay identical (COMMENTs included): change both together and run `scripts/check-schema-parity.sh`. Keep the `SET NAMES utf8mb4;` at the top of schema.sql — the official image runs initdb with a latin1 client and would double-encode Korean COMMENTs. Upgrade/baseline procedures and the MySQL 8.0 → 8.4 notes live in `database/README.md`.
 
-**API:** POST `/api/v1/backtest` calculates results; GET `/api/v1/market-data` independently loads reference data. The console disables all POST `include_*` flags, renders the calculation first, then loads/retries reference data without rerunning it. Legacy POST defaults remain unchanged. See `docs/architecture/api-boundaries.md`. Errors: `@handle_portfolio_errors` decorator on the calculation path.
+**API:** POST `/api/v1/backtest` calculates results; four GETs (`/prices`, `/exchange-rates`, `/benchmarks`, `/news` under `/api/v1`) independently load reference data. The console disables all POST `include_*` flags, renders the calculation first, then loads/retries each resource without rerunning it. The old `/market-data` GET is replaced; legacy POST defaults remain unchanged. All reads share one bounded runner, not four independent capacity pools. See `docs/architecture/api-boundaries.md`. Errors: `@handle_portfolio_errors` decorator on the calculation path.
 
 ## Critical Constraints
 
@@ -84,7 +84,7 @@ docker build --target test ./backtest_be_fast
 - **Verify in Docker** (`docker compose exec`, or `docker build --target test`) before declaring work complete.
 - **BE markers:** `@pytest.mark.unit` (no DB), `@pytest.mark.integration` (DB), `@pytest.mark.external` (real API)
 - **FE:** Vitest + React Testing Library. Playwright E2E exists in `backtest-console` (`playwright.config.ts`, one smoke spec) and needs the dev stack running — it is deliberately NOT in the Docker CI test stage (no browser, no live backend there).
-- **Current baseline (2026-09-27):** BE 492 unit tests + 12 integration + 1 e2e golden master (`pytest tests/e2e -m e2e`, no network/DB), FE 344 tests — all green. Any failure is a regression, not pre-existing noise.
+- **Current Docker baseline (2026-10-25):** BE 529 unit tests + 1 e2e golden master (`pytest tests/e2e -m e2e`, no network/DB); the separate console has 356 tests. The older 12 DB integration tests are a historical baseline, not part of the Docker test target. Runtime HTTP verification for the four reads is `tests/integration/verify_reference_reads_http.py` with isolated synthetic fixtures. Any failure is a regression, not pre-existing noise.
 - **Test files are type-checked** via `tsconfig.test.json` / `npm run type-check:test`. `tsconfig.build.json` deliberately excludes them.
 - **Coverage (BE 2026-08-03 / FE 2026-09-27):** BE 71.6%, FE about 74% statements. Core financial modules are 82-98%; the remaining gaps are `data_fetcher` (41%), the `app/validators/` package (23-32%), and `currency_converter` (57%). The validators look dead but are reached via `backtest_engine.py` → `validation_service` — do not delete them.
 
@@ -92,7 +92,7 @@ docker build --target test ./backtest_be_fast
 
 GitHub Actions lives in `.github/workflows/cicd.yml`. PRs to main/dev and pushes to either branch run Docker tests, dependency audit, runtime build, and schema parity checks. Only main publishes an ARM64 `ghcr.io/kyj0503/backtest` image and deploys its immutable digest through Tailscale and pinned SSH. dev has no OCI deployment. Runtime credentials stay in `/opt/backtest/production/.env` and are never committed.
 
-The dependency audit retains the documented bokeh exception in `scripts/audit-deps.sh`; do not weaken it. Deployment checks `/health/ready` after Docker liveness succeeds and restores the previous release on failure. CI does not automatically migrate a deployed DB. Shared gateway configuration is managed outside this repository at `/opt/gateway`.
+The dependency audit has no exceptions in `scripts/audit-deps.sh`; do not weaken it. Deployment checks `/health/ready` after Docker liveness succeeds and restores the previous release on failure. CI does not automatically migrate a deployed DB. Shared gateway configuration is managed outside this repository at `/opt/gateway`.
 
 ## Commit Convention
 

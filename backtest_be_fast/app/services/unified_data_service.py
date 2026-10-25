@@ -18,7 +18,7 @@ from app.monitoring.custom_metrics import (
 )
 from app.repositories.stock_repository import get_stock_repository
 from ..core.config import settings
-from ..core.cancellation import CancelToken, bind_token, current_token, submit_with_context
+from ..core.cancellation import CancelToken, bind_token, current_token, submit_with_context, check_cancelled
 
 logger = logging.getLogger(__name__)
 
@@ -273,6 +273,7 @@ class UnifiedDataService:
 
         latest_news = {}
         for symbol in symbols:
+            check_cancelled()
             try:
                 # 1. DB에서 먼저 조회 (3시간 이내)
                 cached_news = self.stock_repo.load_ticker_news(symbol, max_age_hours=max_cache_hours)
@@ -286,6 +287,7 @@ class UnifiedDataService:
                     logger.info(f"{symbol} 뉴스 캐시가 없거나 오래됨 - API 호출")
                     search_query = self.news_service.get_ticker_query(symbol)
                     news_list = self.news_service.search_news(search_query, display=display)
+                    check_cancelled()
 
                     # 3. API 결과를 DB에 저장
                     if news_list:
@@ -350,8 +352,8 @@ class UnifiedDataService:
     def collect_all_unified_data(
         self,
         symbols: List[str],
-        start_date: str,
-        end_date: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
         include_news: bool = True,
         news_display_count: int = 20,
         include_stock_data: bool = True,
@@ -359,6 +361,7 @@ class UnifiedDataService:
         include_exchange_rates: bool = True,
         include_benchmarks: bool = True,
         timeout_seconds: Optional[float] = None,
+        include_ticker_info: bool = True,
     ) -> Dict[str, Any]:
         """
         모든 통합 데이터를 한 번에 수집
@@ -374,6 +377,7 @@ class UnifiedDataService:
             include_exchange_rates: 환율·환율 통계 포함 여부 (A-08)
             include_benchmarks: S&P 500/NASDAQ 포함 여부 (A-08)
             timeout_seconds: 병렬 수집 구간의 시간 예산. None이면 무제한 (A-08)
+            include_ticker_info: 종목 메타데이터 포함. 독립 뉴스·환율·벤치마크 조회는 끈다.
 
         Returns:
             모든 통합 데이터를 포함하는 딕셔너리. 끈 섹션·시간 초과 섹션도 키는
@@ -405,6 +409,8 @@ class UnifiedDataService:
             타임아웃까지 응답을 기다린 뒤 끝난다(CPU를 쓰지 않는 대기라 동시 계산
             상한의 목적은 유지된다).
         """
+        if (include_stock_data or include_volatility_events or include_exchange_rates or include_benchmarks) and not (start_date and end_date):
+            raise ValueError('가격·환율·벤치마크 조회에는 시작일과 종료일이 필요합니다.')
         total_start = time.perf_counter()
         timings: Dict[str, float] = {}
 
@@ -431,9 +437,10 @@ class UnifiedDataService:
         try:
             # submit_with_context가 제출 시점 컨텍스트(하위 토큰 바인딩)를 스레드로 넘긴다
             with bind_token(supplemental_token):
-                futures['ticker_info'] = submit_with_context(
-                    executor, timed, "ticker_info", self.collect_ticker_info, symbols
-                )
+                if include_ticker_info:
+                    futures['ticker_info'] = submit_with_context(
+                        executor, timed, "ticker_info", self.collect_ticker_info, symbols
+                    )
                 if need_prices:
                     futures['price_history'] = submit_with_context(
                         executor, timed, "price_history", self._fetch_price_histories,

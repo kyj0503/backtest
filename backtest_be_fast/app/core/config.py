@@ -159,7 +159,7 @@ class Settings(BaseSettings):
 
     # Read-only market data has its own capacity; slow feeds must not occupy
     # the simulation slots or keep a completed calculation waiting.
-    max_concurrent_market_data: int = 2
+    max_concurrent_market_data: int = 4
     market_data_queue_timeout_seconds: float = 2.0
     market_data_timeout_seconds: float = 20.0
     

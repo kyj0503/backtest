@@ -67,8 +67,8 @@ CA 파일은 `/opt/backtest/production/tls/oracle-mysql-ca.pem`에 두고 컨테
 
 `POST /api/v1/backtest`가 주요 API입니다. 최소 백테스트 기간은 30일입니다.
 
-콘솔은 `include_*`를 끄고 계산 결과를 먼저 받은 뒤 `GET /api/v1/market-data`로
-참고 데이터를 조회합니다. 기존 통합 응답은 기본 옵션으로 계속 지원합니다.
+콘솔은 `include_*`를 끄고 계산 결과를 먼저 받은 뒤 `/api/v1/prices`, `/exchange-rates`,
+`/benchmarks`, `/news`를 각각 조회·재시도합니다. 기존 POST 통합 응답은 기본 옵션으로 계속 지원합니다.
 조회·취소·실행 한도와 이전 절차는 [API 경계](docs/architecture/api-boundaries.md)를 참고하세요.
 프론트엔드의 `MIN_BACKTEST_PERIOD_DAYS`와 백엔드 설정을 함께 유지합니다.
 CORS는 공통 Nginx에서 처리합니다. 서버 비밀값을 프론트엔드 `VITE_*` 변수에 넣지 않습니다.
