@@ -133,6 +133,9 @@ class BacktestJobRunner:
         cancel_grace: float,
         poll_interval: float = 0.05,
         disconnect_poll_interval: float = 1.0,
+        running_metric=BACKTEST_JOBS_RUNNING,
+        waiting_metric=BACKTEST_JOBS_WAITING,
+        job_name: str = "백테스트",
     ) -> None:
         self.max_concurrent = max(1, int(max_concurrent))
         self.per_client = int(per_client)
@@ -141,6 +144,9 @@ class BacktestJobRunner:
         self.cancel_grace = float(cancel_grace)
         self.poll_interval = float(poll_interval)
         self.disconnect_poll_interval = float(disconnect_poll_interval)
+        self.running_metric = running_metric
+        self.waiting_metric = waiting_metric
+        self.job_name = job_name
         self.slot_dir = slot_dir
         self.global_pool = FileSlotPool(slot_dir, "global", self.max_concurrent)
         self._client_pools: Dict[int, FileSlotPool] = {}
@@ -165,12 +171,12 @@ class BacktestJobRunner:
     def _job_started(self) -> None:
         with self._active_lock:
             self._active += 1
-        BACKTEST_JOBS_RUNNING.inc()
+        self.running_metric.inc()
 
     def _job_finished(self) -> None:
         with self._active_lock:
             self._active -= 1
-        BACKTEST_JOBS_RUNNING.dec()
+        self.running_metric.dec()
 
     def shutdown(self, wait: bool = True) -> None:
         self._executor.shutdown(wait=wait)
@@ -202,7 +208,7 @@ class BacktestJobRunner:
             now = loop_time()
             if now >= deadline:
                 raise QueueTimeout(
-                    f"요청이 몰려 {self.queue_timeout:.0f}초 동안 기다렸지만 백테스트를 "
+                    f"요청이 몰려 {self.queue_timeout:.0f}초 동안 기다렸지만 {self.job_name}를 "
                     f"시작하지 못했습니다(동시 실행 {self.max_concurrent}건 사용 중). "
                     "잠시 후 다시 시도해주세요.",
                     retry_after=max(1, int(self.exec_timeout // 2)),
@@ -235,14 +241,14 @@ class BacktestJobRunner:
             if client_slot is None:
                 logger.warning("백테스트 IP별 동시 실행 상한 초과: client=%s", client_key)
                 raise ClientLimitExceeded(
-                    f"같은 클라이언트에서 이미 {self.per_client}건의 백테스트가 실행 중입니다. "
+                    f"같은 클라이언트에서 이미 {self.per_client}건의 {self.job_name}가 실행 중입니다. "
                     "이전 요청이 끝난 뒤 다시 시도해주세요.",
                     retry_after=10,
                 )
 
         wait_started = time.monotonic()
         try:
-            with BACKTEST_JOBS_WAITING.track_inprogress():
+            with self.waiting_metric.track_inprogress():
                 global_slot = await self._wait_for_global_slot(is_disconnected)
         except BaseException:
             if client_slot is not None:
@@ -287,7 +293,7 @@ class BacktestJobRunner:
             if remaining <= 0:
                 self._cancel(token, "timeout", fut, job_id)
                 raise ExecutionTimeout(
-                    f"백테스트 처리 시간이 {self.exec_timeout:.0f}초를 초과하여 중단되었습니다. "
+                    f"{self.job_name} 처리 시간이 {self.exec_timeout:.0f}초를 초과하여 중단되었습니다. "
                     "기간을 줄이거나 잠시 후 다시 시도해주세요.",
                     retry_after=30,
                 )
@@ -300,7 +306,7 @@ class BacktestJobRunner:
                 return
             if is_disconnected is not None and await is_disconnected():
                 self._cancel(token, "client disconnected", fut, job_id)
-                raise ClientDisconnected("클라이언트가 연결을 끊어 백테스트를 중단했습니다.")
+                raise ClientDisconnected(f"클라이언트가 연결을 끊어 {self.job_name}를 중단했습니다.")
 
     def _cancel(self, token: CancelToken, reason: str, fut: asyncio.Future, job_id: str) -> None:
         if fut.done():

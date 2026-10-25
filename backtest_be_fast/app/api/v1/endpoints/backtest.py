@@ -99,6 +99,16 @@ async def _execute_portfolio_backtest(request: PortfolioBacktestRequest) -> dict
     # 이 지점에 도달했다면 항상 성공 결과다.
     backtest_result = await portfolio_manager_service.run_portfolio_backtest(request)
 
+    # The console loads reference data separately. Do not even query metadata
+    # when every supplemental section is disabled.
+    if not any((request.include_news, request.include_stock_data,
+                request.include_volatility_events, request.include_exchange_rates,
+                request.include_benchmarks)):
+        backtest_result['data'].update(
+            unified_data_service.empty_unified_data(symbols, outcome='skipped')
+        )
+        return backtest_result
+
     # 3. 부가 데이터 수집 (데이터 서비스 위임) — asyncio.to_thread로 이벤트 루프 블로킹 방지
     # [A-08] 요청의 include_* 옵션(기본값 모두 True = 기존 응답과 동일)으로 섹션을
     # 끌 수 있고, 시간 예산을 넘긴 섹션은 비워서 반환한다. 부가 수집이 통째로
