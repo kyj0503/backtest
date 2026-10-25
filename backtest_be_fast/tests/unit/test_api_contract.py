@@ -22,5 +22,9 @@ def test_preserves_production_routes_requests_and_responses():
         response = http.get("/api/v1/openapi.json")
         assert response.status_code == 200
         actual = response.json()
+    # The independently retriable read API is additive. Every pre-existing
+    # route and request/response schema must remain byte-for-byte equivalent.
+    assert set(actual['paths']) == set(expected['paths']) | {'/api/v1/market-data'}
+    assert 'get' in actual['paths'].pop('/api/v1/market-data')
     for section in ("paths", "components"):
         assert _contract(actual[section]) == expected[section]

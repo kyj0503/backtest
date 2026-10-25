@@ -39,13 +39,13 @@ docker build --target test ./backtest_be_fast
 
 **DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through Alembic (`backtest_be_fast/alembic/`). There are **no physical foreign keys** — cross-table references are logical, integrity is owned by the app (A-10). A DB created from schema.sql **before** revision `7b2e9c4f1a30` still has the old FK: baseline it with `alembic stamp d5c3763b29e6` then `alembic upgrade head` (plain `stamp head` would skip the FK drop). A DB created from the current schema.sql is already at head (`alembic stamp head`). Migrations are NOT run by the GitHub Actions pipeline or the runtime image — apply them manually. schema.sql and the Alembic head must stay identical (COMMENTs included): change both together and run `scripts/check-schema-parity.sh`. Keep the `SET NAMES utf8mb4;` at the top of schema.sql — the official image runs initdb with a latin1 client and would double-encode Korean COMMENTs. Upgrade/baseline procedures and the MySQL 8.0 → 8.4 notes live in `database/README.md`.
 
-**API:** POST `/api/v1/backtest` — main endpoint. Errors: `@handle_portfolio_errors` decorator.
+**API:** POST `/api/v1/backtest` calculates results; GET `/api/v1/market-data` independently loads reference data. The console disables all POST `include_*` flags, renders the calculation first, then loads/retries reference data without rerunning it. Legacy POST defaults remain unchanged. See `docs/architecture/api-boundaries.md`. Errors: `@handle_portfolio_errors` decorator on the calculation path.
 
 ## Critical Constraints
 
 1. **Async/Sync boundary:** Always `await asyncio.to_thread(sync_fn, ...)` for sync I/O in async endpoints. Violating this causes race conditions (first run fails, second succeeds).
 
-2. **backtesting.py pinned to 0.3.3:** No `finalize_trades`, no `spread` param, commission on entry only, no Kelly Criterion.
+2. **backtesting.py version is pinned in requirements.lock.txt** (currently 0.6.6). Preserve the tested commission/finalization behavior; do not apply assumptions from the historical 0.3.3 implementation.
 
 3. **Strategy enum values:** `sma_strategy`, `rsi_strategy`, `bollinger_strategy`, `macd_strategy`, `buy_hold_strategy` (NOT "buy_and_hold"), `ema_strategy`. `PortfolioBacktestRequest.strategy` validates membership against `StrategyType` — unknown values are rejected, not silently accepted.
 

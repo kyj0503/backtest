@@ -9,7 +9,8 @@ import os
 import time
 
 
-def run_jobs_in_process(slot_dir: str, cap: int, jobs: int, job_seconds: float, log_path: str) -> None:
+def run_jobs_in_process(slot_dir: str, cap: int, jobs: int, job_seconds: float, log_path: str,
+                        first_wave, started) -> None:
     """이 프로세스 안에서 BacktestJobRunner로 작업 `jobs`개를 동시에 실행하고
     각 작업의 [시작, 끝] 벽시계 시각을 log_path에 한 줄씩 남긴다."""
     from app.services.backtest_runner import BacktestJobRunner
@@ -26,6 +27,13 @@ def run_jobs_in_process(slot_dir: str, cap: int, jobs: int, job_seconds: float, 
 
     def blocking_work() -> None:
         start = time.time()
+        # Ensure actual contention independently of spawn/import/CPU scheduling.
+        # A wrongly serial runner fails the barrier rather than appearing healthy.
+        with started.get_lock():
+            started.value += 1
+            ordinal = started.value
+        if ordinal <= cap:
+            first_wave.wait(timeout=20)
         time.sleep(job_seconds)
         end = time.time()
         line = json.dumps({"pid": os.getpid(), "start": start, "end": end}) + "\n"
