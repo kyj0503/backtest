@@ -28,5 +28,12 @@ def test_preserves_production_routes_requests_and_responses():
     assert set(actual['paths']) == set(expected['paths']) | reads
     for path in reads:
         assert 'get' in actual['paths'].pop(path)
+    # Only the calculation's verification header/403 response are additive.
+    post = actual['paths']['/api/v1/backtest']['post']
+    header = post.pop('parameters')
+    assert len(header) == 1
+    assert header[0]['name'] == 'X-Turnstile-Token'
+    assert header[0]['in'] == 'header' and header[0]['required'] is False
+    assert set(post['responses'].pop('403')) == {'description'}
     for section in ("paths", "components"):
         assert _contract(actual[section]) == expected[section]

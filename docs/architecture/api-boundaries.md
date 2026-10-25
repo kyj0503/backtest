@@ -40,6 +40,32 @@ prices/news의 symbols는 필수이며 반복 파라미터를 쓴다. 입력 최
 종목 메타데이터를 조회하지 않는다. 기존 캐시·수집·직렬화 코드를 재사용하며 계산식은
 바꾸지 않는다. 벤치마크 자료가 부족하면 sp500_total_return_pct는 null이다.
 
+## 계산 전 사람 인증
+
+운영 계산 POST에는 `X-Turnstile-Token` 헤더가 필요하다. JSON 요청·응답 필드는
+유지한다. FastAPI 의존성이 계산 슬롯 확보·데이터 조회 전에 Cloudflare Siteverify로
+검증하며, `success=true`, 설정한 정확한 hostname, `action=backtest`를 모두 확인한다.
+클라이언트의 Host 헤더나 인증 완료 표시만으로 허용하지 않는다.
+
+- 누락·잘못된 토큰·만료·재사용·hostname/action 불일치: 403, 계산 미실행.
+- 키/호스트 설정 누락·검증 통신 장애: 503, 계산 미실행. 토큰/키/검증 응답은 로그에 남기지 않는다.
+- 토큰은 Cloudflare가 5분 만료·일회성을 관리한다. 자체 세션·토큰 캐시를 추가하지 않는다.
+- 네 GET과 해당 재시도, 헬스체크는 인증을 요구하지 않는다. 기존 실행/IP 상한은 유지한다.
+
+런타임 설정은 `TURNSTILE_ENABLED=true`(기본값), `TURNSTILE_SECRET_KEY`,
+`TURNSTILE_ALLOWED_HOSTNAMES=backtest.yeonjae.kr`, `TURNSTILE_EXPECTED_ACTION=backtest`다.
+검증 요청 타임아웃은 기본 5초다. 비밀키는 기존 서버 `.env`와 개인 키 디렉터리에서만
+관리하며 GitHub·문서에 값을 기록하지 않는다. 공개 sitekey는 콘솔 저장소의
+GitHub Actions Variable `VITE_TURNSTILE_SITE_KEY`로 빌드에 전달한다.
+위젯은 Managed 모드이며 Pre-clearance는 사용하지 않는다.
+
+로컬 개발만 `TURNSTILE_ENABLED=false`로 명시해 위젯 없이 실행할 수 있다.
+로컬 통합 검증에는 [Cloudflare 공식 테스트 키](https://developers.cloudflare.com/turnstile/troubleshooting/testing/)를
+사용한다. 2026-10-25 실측 더미 Siteverify 응답은 `example.com`이며 action이 없어
+엄격한 검증을 통과하지 못했다(공식 문서의 응답 예시와 다름). 따라서 로컬 계산 통합
+검증은 테스트 컨테이너에서만 검증 응답의 hostname/action을 고정하는 어댑터를 사용하며,
+운영 키로 별도 확인한다. 애플리케이션에는 더미 키 허용 분기나 운영 우회 경로가 없다.
+
 ## 실행 상한과 취소
 
 - 계산: 기존 컨테이너 전체 8건, IP별 2건, 대기 30초 + 실행 60초.
