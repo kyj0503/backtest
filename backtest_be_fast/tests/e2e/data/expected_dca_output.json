@@ -94,11 +94,11 @@
     "individual_results": [
       {
         "amount": 9000.0,
-        "final_equity": 9947.300096973322,
-        "sharpe_ratio": 0.0,
+        "final_equity": 9927.405496779375,
+        "sharpe_ratio": 6.073172612973097,
         "ticker": "AAPL",
-        "total_return_pct": 10.525556633036913,
-        "trades": 1,
+        "total_return_pct": 10.304505519770828,
+        "trades": 9,
         "weight": 1.0,
         "win_rate": null
       }
@@ -108,10 +108,13 @@
         "amount": 9000.0,
         "dca_periods": 9,
         "end_price": 190.0,
+        "final_value": 9927.405496779375,
         "investment_type": "dca",
-        "return": 10.525556633036913,
-        "start_price": 171.90594265074037,
+        "return": 10.304505519770828,
+        "sharpe_ratio": 6.073172612973097,
+        "start_price": 171.9059426507404,
         "symbol": "AAPL",
+        "trades": 9,
         "weight": 1.0
       }
     },
@@ -146,7 +149,7 @@
       "Peak_Value": 9927.405496779375,
       "Positive_Days": 28,
       "Profit_Factor": 2.295908173601549,
-      "Sharpe_Ratio": 13.584536665998447,
+      "Sharpe_Ratio": 6.073172612973103,
       "Start": "2023-01-01",
       "Total_Return": 10.304505519770824,
       "Total_Trades": 9,
@@ -167,7 +170,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 6.578947368421052,
+            "Size": 6.565789473684211,
             "Type": "BUY"
           },
           {
@@ -178,7 +181,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 6.060606060606061,
+            "Size": 6.048484848484849,
             "Type": "BUY"
           },
           {
@@ -189,7 +192,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 5.882352941176471,
+            "Size": 5.870588235294118,
             "Type": "BUY"
           },
           {
@@ -200,7 +203,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 5.813953488372093,
+            "Size": 5.802325581395348,
             "Type": "BUY"
           },
           {
@@ -211,7 +214,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 5.714285714285715,
+            "Size": 5.702857142857141,
             "Type": "BUY"
           },
           {
@@ -222,7 +225,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 5.6179775280898845,
+            "Size": 5.606741573033709,
             "Type": "BUY"
           },
           {
@@ -233,7 +236,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 5.78034682080925,
+            "Size": 5.76878612716763,
             "Type": "BUY"
           },
           {
@@ -244,7 +247,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 5.58659217877095,
+            "Size": 5.575418994413404,
             "Type": "BUY"
           },
           {
@@ -255,7 +258,7 @@
             "ExitTime": null,
             "PnL": null,
             "ReturnPct": null,
-            "Size": 5.319148936170215,
+            "Size": 5.308510638297875,
             "Type": "BUY"
           }
         ]

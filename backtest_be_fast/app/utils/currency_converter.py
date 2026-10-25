@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, date, timedelta
 from typing import Dict, Optional, Tuple
 import pandas as pd
+import numpy as np
 
 from app.constants.currencies import SUPPORTED_CURRENCIES, EXCHANGE_RATE_LOOKBACK_DAYS
 from app.constants.data_loading import TradingThresholds
@@ -80,7 +81,7 @@ class CurrencyConverter:
 
         Note:
             - buffer_days만큼 시작일을 앞당겨서 데이터 로딩
-            - 타임존 제거 후 forward-fill, backward-fill 적용
+            - 타임존 제거 후 forward-fill 적용 (미래 환율로 채우지 않음)
             - target_date_range와 정렬하여 누락 날짜 보정
         """
         # USD는 변환 불필요
@@ -115,11 +116,13 @@ class CurrencyConverter:
         # 타임존 제거 (한국 주식 vs 환율 데이터 타임존 불일치 해결)
         exchange_data.index = self._remove_timezone(exchange_data.index)
 
-        # target_date_range와 정렬 (forward-fill + backward-fill)
+        # target_date_range와 정렬 (forward-fill only)
         if target_date_range is not None:
             target_index_no_tz = self._remove_timezone(target_date_range)
             exchange_data = exchange_data.reindex(target_index_no_tz, method='ffill')
-            exchange_data = exchange_data.bfill()
+            rates = exchange_data['Close']
+            if not ((rates > 0) & np.isfinite(rates)).all():
+                raise ValueError(f"{currency}: 해당 날짜의 유효한 환율이 없습니다.")
 
         logger.info(f"환율 데이터 전처리 완료: {len(exchange_data)}일치")
         return exchange_data
@@ -147,27 +150,24 @@ class CurrencyConverter:
 
         Note:
             - USD 통화인 경우 원본 데이터를 그대로 반환
-            - 변환 실패 시 경고 로그와 함께 원본 데이터 반환
+            - 통화나 환율 확인 실패 시 명시적으로 실패
             - Open, High, Low, Close 컬럼에만 변환 적용
         """
         # 통화 정보 조회
         if currency is None:
             try:
                 ticker_info = await asyncio.to_thread(self.stock_repository.get_ticker_info, ticker)
-                currency = ticker_info.get('currency', 'USD')
+                currency = ticker_info.get('currency')
                 logger.info(f"{ticker} 통화: {currency}")
             except Exception as e:
-                logger.warning(f"{ticker} 통화 정보 조회 실패: {e}, USD로 가정")
-                currency = 'USD'
+                raise ValueError(f"{ticker}: 통화 정보를 조회할 수 없습니다.") from e
 
         # USD면 변환 불필요
         if currency == 'USD':
             return data
 
-        # 지원하지 않는 통화는 경고 후 원본 반환
         if currency not in SUPPORTED_CURRENCIES:
-            logger.warning(f"지원하지 않는 통화입니다: {currency}., 변환 없이 진행")
-            return data
+            raise ValueError(f"{ticker}: 통화 정보를 확인할 수 없거나 지원하지 않는 통화입니다: {currency}")
 
         try:
             # 환율 데이터 로딩 및 전처리
@@ -207,7 +207,10 @@ class CurrencyConverter:
             if currency in ['EUR', 'GBP', 'AUD', 'CAD', 'CHF']:
                 multipliers = exchange_rates_aligned
             else:
-                multipliers = 1.0 / exchange_rates_aligned.where(exchange_rates_aligned > 0, 1.0)
+                multipliers = 1.0 / exchange_rates_aligned
+
+            if not ((exchange_rates_aligned > 0) & np.isfinite(exchange_rates_aligned)).all():
+                raise ValueError(f"{ticker}: 유효한 환율 없이 가격을 변환할 수 없습니다.")
 
             # 4. NaN이 아닌 행만 변환
             valid_mask = multipliers.notna()

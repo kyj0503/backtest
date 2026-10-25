@@ -63,12 +63,12 @@ class PortfolioCalculator:
         )
 
         # 무위험 수익률을 0으로 가정한 샤프 비율
-        sharpe_ratio = safe_sharpe_ratio(annual_return, annual_volatility)
+        sharpe_ratio = safe_sharpe_ratio(float(daily_returns.mean()) * 252 * 100, annual_volatility)
 
         # 최대 연속 상승/하락일
         daily_changes = daily_returns > 0
         consecutive_gains = PortfolioCalculator._get_max_consecutive(daily_changes, True)
-        consecutive_losses = PortfolioCalculator._get_max_consecutive(daily_changes, False)
+        consecutive_losses = PortfolioCalculator._get_max_consecutive(daily_returns < 0, True)
 
         # Profit Factor: 일간 이익 합 / 일간 손실 합. 손실일이 없으면 None (A-09)
         profit_factor = daily_profit_factor(daily_returns)

@@ -50,7 +50,7 @@ class TestMissingOrEmptyPriceData:
     """종목에 가격 데이터가 전혀 없을 때(심볼이 portfolio_data에서 아예 빠지거나,
     존재해도 0행인 경우) 그 종목에 배정된 자본이 어떻게 되는지 문서화한다.
 
-    **현재 동작(수정하지 않고 있는 그대로 고정)**: 그 자본은 available_cash에도
+    **실제 납입 원금 기준**: 그 자본은 available_cash에도
     보유 주식 평가액에도 반영되지 않는다 -- 에러나 경고 없이 포트폴리오
     평가액 계산에서 조용히 빠진다. pending_initial_keys가 매일 재시도하지만
     가격이 끝내 나타나지 않으므로 영원히 미매수 상태로 남는다.
@@ -74,9 +74,8 @@ class TestMissingOrEmptyPriceData:
             exchange_rates_by_currency={}, rebalance_frequency='none', commission=0.0,
         )
 
-        # A의 $600만 투자되고(가격 $100 -> 6주), B의 $400은 어디에도 반영되지
-        # 않아 포트폴리오 가치가 총투자금 대비 0.6배로 고정된다.
-        assert result['Portfolio_Value'].tolist() == pytest.approx([0.6] * len(result))
+        # Only A is funded. Unexecuted B is not contributed capital or a loss.
+        assert result['Portfolio_Value'].tolist() == pytest.approx([1.0] * len(result))
         assert result.attrs['total_trades'] == 1  # A만 매수됨
 
     def test_empty_dataframe_for_symbol_behaves_same_as_missing_symbol(self):
@@ -99,7 +98,7 @@ class TestMissingOrEmptyPriceData:
             exchange_rates_by_currency={}, rebalance_frequency='none', commission=0.0,
         )
 
-        assert result['Portfolio_Value'].tolist() == pytest.approx([0.6] * len(result))
+        assert result['Portfolio_Value'].tolist() == pytest.approx([1.0] * len(result))
         assert result.attrs['total_trades'] == 1
 
 

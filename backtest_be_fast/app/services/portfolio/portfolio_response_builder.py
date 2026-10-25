@@ -16,7 +16,6 @@ import pandas as pd
 
 from app.domain.portfolio_domain import DcaStrategyInfo
 from app.schemas.schemas import PortfolioBacktestRequest
-from app.services.dca_calculator import DcaCalculator
 from app.services.portfolio.portfolio_execution import StrategyRunOutcome
 from app.services.portfolio.portfolio_statistics_builder import build_cash_only_statistics
 
@@ -46,12 +45,12 @@ def format_individual_results_list(
         else:  # buy_hold
             results.append({
                 'ticker': returns['symbol'] if returns.get('symbol') else key,
-                'final_equity': returns['amount'] + (returns['amount'] * returns['return'] / 100),
+                'final_equity': returns['final_value'],
                 'total_return_pct': returns['return'],
-                'sharpe_ratio': 0.0,
+                'sharpe_ratio': returns['sharpe_ratio'],
                 'weight': returns['weight'],
                 'amount': returns['amount'],
-                'trades': 1 if returns.get('symbol', '') != 'CASH' else 0,
+                'trades': returns['trades'],
                 # buy&hold 포지션은 청산된 거래가 없어 거래 승률을 정의할 수 없다.
                 # 과거에는 수익이면 100, 아니면 0을 지어냈다(A-09 부류)
                 'win_rate': None
@@ -186,117 +185,9 @@ def build_cash_only_response(
 # buy&hold 시뮬레이션 경로
 # ---------------------------------------------------------------------------
 
-def build_buy_hold_individual_returns(
-    amounts: Dict[str, float],
-    dca_info: Dict[str, DcaStrategyInfo],
-    portfolio_data: Dict[str, pd.DataFrame],
-    cash_amount: float,
-    total_amount: float,
-    start_date: str,
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """개별 종목 수익률(참고용, 현금 포함)과 종목별 거래 로그(strategy_details).
-
-    현금은 여러 항목이어도 'CASH' 하나로 합쳐 맨 앞에 둔다. 일시불은 첫 가격
-    대비 마지막 가격, DCA는 DcaCalculator의 평균 단가 기준 수익률이다.
-    """
-    individual_returns = {}
-    strategy_details = {}  # 거래 로그를 저장할 딕셔너리
-
-    if cash_amount > 0:
-        individual_returns['CASH'] = _cash_individual_return(cash_amount / total_amount, cash_amount)
-
-    # 주식 수익률 추가 (중복 종목 지원)
-    for unique_key, amount in amounts.items():
-        if unique_key.endswith('_CASH') or (unique_key in dca_info and dca_info[unique_key].asset_type == 'cash'):
-            continue
-
-        symbol = dca_info[unique_key].symbol
-        if symbol not in portfolio_data:
-            continue
-        df = portfolio_data[symbol]
-        if len(df) == 0:
-            continue
-
-        investment_type = dca_info[unique_key].investment_type
-        weight = amount / total_amount
-
-        if investment_type == 'lump_sum':
-            # 일시불: 시작가 대비 종료가로 수익률 계산
-            start_price = df['Close'].iloc[0]
-            end_price = df['Close'].iloc[-1]
-            individual_return = (end_price / start_price - 1) * 100
-
-            # 일시불 매수 거래 로그 생성
-            total_shares = amount / start_price
-            trade_log = [_trade_log_entry(df.index[0].isoformat(), start_price, total_shares, 'BUY')]
-
-            individual_returns[unique_key] = {
-                'symbol': symbol,
-                'weight': weight,
-                'amount': amount,
-                'return': individual_return,
-                'start_price': start_price,
-                'end_price': end_price,
-                'investment_type': investment_type,
-                'dca_periods': None
-            }
-        else:  # DCA
-            # 분할매수: DcaCalculator를 사용하여 수익률 계산
-            dca_periods = dca_info[unique_key].dca_periods
-            period_amount = dca_info[unique_key].monthly_amount  # 회당 투자 금액
-            dca_frequency = dca_info[unique_key].dca_frequency  # DCA 주기
-
-            total_shares, average_price, individual_return, trade_log = DcaCalculator.calculate_dca_shares_and_return(
-                df, period_amount, dca_periods, start_date, dca_frequency
-            )
-
-            end_price = df['Close'].iloc[-1]
-
-            individual_returns[unique_key] = {
-                'symbol': symbol,
-                'weight': weight,
-                'amount': amount,
-                'return': individual_return,
-                'start_price': average_price,  # DCA의 경우 평균 매수 단가
-                'end_price': end_price,
-                'investment_type': investment_type,
-                'dca_periods': dca_periods
-            }
-
-        # strategy_details에 거래 로그 저장
-        strategy_details[unique_key] = {
-            'trade_log': trade_log
-        }
-
-    return individual_returns, strategy_details
-
-
-def append_rebalance_trades(
-    strategy_details: Dict[str, Any],
-    rebalance_history: List[Dict[str, Any]],
-    dca_info: Dict[str, DcaStrategyInfo],
-) -> None:
-    """리밸런싱 거래(buy/sell)를 해당 종목의 trade_log 뒤에 붙인다 (현금은 제외)."""
-    for rebalance_event in rebalance_history:
-        rebalance_date = rebalance_event['date']
-        for trade in rebalance_event['trades']:
-            symbol = trade['symbol']
-            action = trade['action']
-
-            # unique_key 찾기 (symbol로 매칭)
-            unique_key = None
-            for key in dca_info.keys():
-                if dca_info[key].symbol == symbol:
-                    unique_key = key
-                    break
-
-            if unique_key and unique_key in strategy_details:
-                # 거래 타입 결정 (buy/sell만 처리, 현금은 제외)
-                if action in ['buy', 'sell']:
-                    strategy_details[unique_key]['trade_log'].append(_trade_log_entry(
-                        rebalance_date, trade['price'], trade['shares'],
-                        'BUY' if action == 'buy' else 'SELL',
-                    ))
+def build_buy_hold_individual_returns(portfolio_result: pd.DataFrame) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Already valued USD positions and executions; never replay a second simulation."""
+    return portfolio_result.attrs['asset_results']
 
 
 def build_buy_hold_response(
@@ -318,7 +209,6 @@ def build_buy_hold_response(
     rebalance_history = portfolio_result.attrs.get('rebalance_history', [])
     weight_history = portfolio_result.attrs.get('weight_history', [])
 
-    append_rebalance_trades(strategy_details, rebalance_history, dca_info)
 
     return {
         'status': 'success',
@@ -336,7 +226,7 @@ def build_buy_hold_response(
                     'weight': amount / total_amount,
                     'amount': amount,
                     'investment_type': dca_info[unique_key].investment_type,
-                    'dca_periods': dca_info[unique_key].dca_periods if dca_info[unique_key].investment_type == 'dca' else None,
+                    'dca_periods': dca_info[unique_key].executed_count if dca_info[unique_key].investment_type == 'dca' else None,
                     'asset_type': dca_info[unique_key].asset_type
                 }
                 for unique_key, amount in amounts.items()

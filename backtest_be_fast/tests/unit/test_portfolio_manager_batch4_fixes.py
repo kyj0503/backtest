@@ -315,10 +315,11 @@ class TestStrategyPortfolioTrueMetrics:
         assert stats['Max_Drawdown'] == pytest.approx(-10.0, abs=1e-6), (
             f"Max_Drawdown={stats['Max_Drawdown']} (기대: -10.0, 가중평균 근사값은 -20.0)"
         )
-        # 진짜 포트폴리오 샤프: 총수익률 0% -> 0이어야 함 (가중평균 근사값은 2.0)
-        assert stats['Sharpe_Ratio'] == pytest.approx(0.0, abs=1e-9), (
-            f"Sharpe_Ratio={stats['Sharpe_Ratio']} (기대: 0.0, 가중평균 근사값은 2.0)"
-        )
+        # Arithmetic daily excess-return Sharpe (risk-free rate = 0), not CAGR/vol.
+        daily = pd.Series(result['data']['daily_returns'], dtype=float) / 100
+        expected_sharpe = daily.mean() / daily.std() * (252 ** 0.5)
+        assert stats['Sharpe_Ratio'] == pytest.approx(expected_sharpe)
+        assert stats['Sharpe_Ratio'] != pytest.approx(2.0)  # not a weighted mean of asset Sharpes
         assert stats['Avg_Drawdown'] == pytest.approx(-10.0, abs=1e-6)
         assert stats['Peak_Value'] == pytest.approx(2000.0, abs=1e-6)
         # 실제 데이터 포인트는 5개(1/1~1/5) -- 달력일 차이(4)가 아니어야 함

@@ -95,7 +95,7 @@ def count_dca_periods(investment_type: str, dca_frequency: str,
 class BuyHoldAllocation:
     """buy&hold 시뮬레이션 입력.
 
-    amounts: unique_key → 실제 총 투자 금액 (DCA는 회당 금액 × 횟수)
+    amounts: unique_key → 예정 총 투자 금액 (DCA는 회당 금액 × 횟수)
     dca_info: unique_key → DcaStrategyInfo
     cash_amount: 현금 자산 합계
     symbols_to_load: 가격을 로드할 주식 심볼 (요청 순서)

@@ -11,6 +11,8 @@ from datetime import date
 from typing import Dict, Set, Tuple
 
 import pandas as pd
+import numpy as np
+from app.constants.currencies import SUPPORTED_CURRENCIES
 
 from app.domain.portfolio_domain import DcaStrategyInfo
 
@@ -48,9 +50,9 @@ def pre_calculate_prices(
         rates_series.index = pd.to_datetime(rates_series.index)
 
         # Reindex & FFill
-        # [Copilot Suggestion] ffill만 하면 시뮬레이션 시작일보다 환율 데이터가 늦게 시작될 경우 앞부분이 NaN이 됨.
-        # bfill을 추가하여 앞부분 결측치도 보완 (최초 환율로 메꿈)
-        aligned_rate = rates_series.reindex(date_range).ffill().bfill()
+        # Keep observations before the requested range for forward-fill; never
+        # use a future quote to invent an earlier FX conversion.
+        aligned_rate = rates_series.sort_index().reindex(date_range, method='ffill')
         aligned_exchange_rates[currency] = aligned_rate
 
     # 2. 주가 데이터 정렬 & 환율 적용
@@ -68,11 +70,17 @@ def pre_calculate_prices(
         price_series = df['Close'].reindex(date_range).ffill()
 
         # 환율 변환
-        currency = ticker_currencies.get(unique_key, 'USD')
+        currency = ticker_currencies.get(unique_key)
+        if currency not in SUPPORTED_CURRENCIES:
+            raise ValueError(f"{symbol}: 통화 정보를 확인할 수 없거나 지원하지 않는 통화입니다: {currency}")
         if currency != 'USD' and currency in aligned_exchange_rates:
             # 벡터 연산으로 전체 기간 환율 적용
             # [Copilot Suggestion] 벡터 연산 (환율 적용) - apply 제거 및 Vectorization 적용
             exchange_rates = aligned_exchange_rates[currency]
+
+            needed = price_series.notna()
+            if not ((exchange_rates[needed] > 0) & np.isfinite(exchange_rates[needed])).all():
+                raise ValueError(f"{symbol}: 해당 날짜의 유효한 {currency} 환율이 없습니다.")
 
             # 주요 통화(EUR, GBP 등)는 직접 곱하기, 그 외(KRW, JPY 등)는 나누기 역수
             # CurrencyConverter.get_conversion_multiplier 로직을 벡터화
@@ -81,12 +89,7 @@ def pre_calculate_prices(
                  price_series = price_series * exchange_rates
             else:
                  # Inverse (1 / rate)
-                 # 0 또는 NaN인 경우 1.0으로 처리 (Division by Zero 방지)
-                 valid_mask = (exchange_rates > 0) & (pd.notnull(exchange_rates))
-                 multipliers = pd.Series(1.0, index=exchange_rates.index)
-                 multipliers[valid_mask] = 1.0 / exchange_rates[valid_mask]
-
-                 price_series = price_series * multipliers
+                 price_series = price_series / exchange_rates
         elif currency != 'USD':
             # [P2-02] 환율 데이터가 없다고 원본(비USD) 가격을 그대로 흘려보내면
             # 안 된다 -- 이후 시뮬레이션이 이 가격을 USD 현금과 그대로 합산해,
@@ -109,7 +112,8 @@ def get_daily_prices_from_aligned(
     aligned_prices: Dict[str, pd.Series],
     aligned_exchange_rates: Dict[str, pd.Series],
     ticker_currencies: Dict[str, str],
-    last_valid_exchange_rates: Dict[str, float]
+    last_valid_exchange_rates: Dict[str, float],
+    position: int = None,
 ) -> Tuple[Dict[str, float], Dict[str, float]]:
     """
     [성능 최적화] 미리 계산된 데이터에서 O(1)로 당일 가격 조회
@@ -119,7 +123,7 @@ def get_daily_prices_from_aligned(
     # 1. 환율 캐시 업데이트
     for currency, rates_series in aligned_exchange_rates.items():
         try:
-            rate = rates_series.at[current_date]
+            rate = rates_series[position] if position is not None else rates_series.at[current_date]
             if pd.notnull(rate):
                 last_valid_exchange_rates[currency] = rate
         except KeyError:
@@ -128,7 +132,7 @@ def get_daily_prices_from_aligned(
     # 2. 가격 조회
     for unique_key, price_series in aligned_prices.items():
         try:
-            price = price_series.at[current_date]
+            price = price_series[position] if position is not None else price_series.at[current_date]
             # NaN 체크 (해당 날짜 데이터 없음 or 상장폐지 등)
             if pd.notnull(price):
                 current_prices[unique_key] = float(price)
@@ -182,7 +186,8 @@ def pre_calculate_tradeable_mask(
 
 def get_daily_tradeable_keys(
     current_date: pd.Timestamp,
-    aligned_tradeable: Dict[str, pd.Series]
+    aligned_tradeable: Dict[str, pd.Series],
+    position: int = None,
 ) -> Set[str]:
     """
     [P2-14] 미리 계산된 tradeable 마스크에서 O(1)로 당일 관측 여부를 조회합니다.
@@ -193,7 +198,7 @@ def get_daily_tradeable_keys(
     tradeable_today: Set[str] = set()
     for unique_key, mask_series in aligned_tradeable.items():
         try:
-            if bool(mask_series.at[current_date]):
+            if bool(mask_series[position] if position is not None else mask_series.at[current_date]):
                 tradeable_today.add(unique_key)
         except KeyError:
             pass  # 마스크에 해당 날짜가 없으면 관측되지 않은 것으로 취급

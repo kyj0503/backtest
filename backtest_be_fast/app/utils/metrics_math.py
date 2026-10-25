@@ -67,13 +67,13 @@ def drawdown_from_returns(daily_returns: pd.Series) -> pd.Series:
     return drawdown.where(drawdown < -DRAWDOWN_EPSILON, 0.0)
 
 
-def safe_sharpe_ratio(annual_return: float, annual_volatility: float) -> float:
-    """변동성이 사실상 0이면 Sharpe를 0으로 둔다 (0 나눗셈·폭발 방지)."""
+def safe_sharpe_ratio(annual_excess_return: float, annual_volatility: float) -> float:
+    """Arithmetic annual excess return / volatility; near-zero volatility gives 0."""
     if annual_volatility is None or np.isnan(annual_volatility):
         return 0.0
     if annual_volatility <= VOLATILITY_EPSILON:
         return 0.0
-    return float(annual_return / annual_volatility)
+    return float(annual_excess_return / annual_volatility)
 
 
 def time_weighted_annual_return(

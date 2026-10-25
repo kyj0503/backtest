@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import Dict, Optional, Set, Tuple
 from datetime import datetime, date
 import pandas as pd
@@ -18,7 +19,7 @@ def _is_tradeable_price(price) -> bool:
     NaN도 같은 이유로 배제한다 (NaN과의 비교는 항상 False).
     """
     try:
-        return price is not None and float(price) > 0
+        return price is not None and math.isfinite(float(price)) and float(price) > 0
     except (TypeError, ValueError):
         return False
 
@@ -120,12 +121,6 @@ class PortfolioDcaManager:
                 # 초회 매수도 납입 1회로 계상한다. dca_periods가 "총 납입 횟수"
                 # (초회 포함)이므로, 이렇게 해야 정기 매수가 남은 횟수만 집행한다.
                 info.executed_count = 1
-                # [P2-14] 정기 매수의 기준일(reference_date)을 "이론상 시작일"이
-                # 아니라 "실제로 돈이 들어간 날"로 앵커링한다. 초기 매수가 지연된
-                # 경우(예: 이 종목의 시장이 한동안 휴장) 이걸 빼먹으면
-                # execute_periodic_purchases가 여전히 start_date_obj 기준으로
-                # 이미 지나버린 정기 매수 목표일을 계산해, 지연된 초기 매수와
-                # 같은 날 정기 매수까지 겹쳐 이중 집행될 수 있다.
                 current_date_val = current_date.date() if isinstance(current_date, datetime) else current_date
                 info.last_dca_date = current_date_val
                 logger.info(f"{current_date.date()}: {unique_key} DCA 첫 투자 (금액: ${monthly_amount:,.2f}, interval_weeks: {info.dca_frequency})")
@@ -146,54 +141,10 @@ class PortfolioDcaManager:
         start_date_obj: datetime,
         tradeable_keys: Optional[Set[str]] = None
     ) -> Tuple[int, float]:
-        """
-        주기적 DCA 투자를 실행합니다 (Nth Weekday 기반).
+        """Execute due contributions on observed quotes, retaining the planned calendar.
 
-        **역할**:
-        - 설정된 주기(weekly, biweekly, monthly 등)에 따라 자동 매수
-        - Nth Weekday 방식으로 요일 패턴 유지
-        - DCA 투자 횟수 제한 준수
-
-        **파라미터**:
-        - current_date: 현재 시뮬레이션 날짜
-        - stock_amounts: 종목별 투자 금액
-        - current_prices: 종목별 USD 변환 가격 (밸류에이션용, ffill 포함 가능)
-        - dca_info: 종목 정보 (DcaStrategyInfo 모델)
-        - shares: 종목별 보유 주식 수
-        - commission: 거래 수수료
-        - start_date_obj: 시뮬레이션 시작 날짜
-        - tradeable_keys: [P2-14] 오늘 RAW 데이터로 실제 관측된 종목 집합.
-          None이면(하위 호환) current_prices 유무만으로 판단한다. 값이 주어지면
-          이 집합에 없는 종목은(current_prices에 ffill된 값이 있더라도) 오늘
-          매수하지 않고 다음 관측일까지 대기한다.
-
-        **반환**:
-        - trades_executed: 실행된 거래 수
-        - daily_cash_inflow: 당일 현금 유입 (투자 금액)
-
-        **트리거 판정 방식 (레벨 기반)**:
-        예전에는 "current >= next_dca_date AND prev < next_dca_date" 라는 엣지
-        검출 방식을 썼다. 이 방식은 그 순간에 매수가 실제로 집행된다는 전제
-        하에서만 안전하다 -- next_dca_date가 매수 성공 시에만 미래로 전진하기
-        때문에, 만약 그 날 종목이 관측되지 않아 매수를 건너뛰면 prev/next
-        관계가 다시는 "prev < next"를 만족하지 못해 그 회차가 영영 유실된다.
-        [P2-14]에서 거래를 tradeable_keys로 게이팅하면 이 유실이 실제로
-        발생하므로, "current >= next_dca_date" 레벨 조건만으로 판단하도록
-        바꿨다. next_dca_date는 매수가 실제로 집행된 날에만 미래로 전진하므로
-        (get_next_nth_weekday는 항상 기준일보다 엄격히 미래인 날짜를 반환),
-        이 레벨 조건은 매수가 실행될 때까지 계속 참을 유지해 자동으로
-        재시도되고, 실행되는 순간 즉시 거짓이 되어 같은 날 두 번 집행되지
-        않는다.
-
-        [P2-14] `original_nth_weekday`를 잠그는 조건에서 `last_dca_date is
-        None`을 제거한 이유: 초기 매수(execute_initial_purchases)가 이제
-        DCA 첫 회차에서도 last_dca_date를 설정하므로, 그 조건을 그대로 두면
-        이 메서드가 처음 호출되는 시점에 이미 last_dca_date가 채워져 있어
-        원본 Nth 값이 영영 잠기지 않는다 (매번 reference_date의 요일에서
-        다시 계산되어, get_next_nth_weekday가 참조일 자체의 요일을 쓰는
-        특성과 맞물려 스케줄이 표류할 수 있다). original_nth_weekday 자신의
-        None 여부만으로 "아직 한 번도 잠기지 않았음"을 판단하는 것으로
-        충분하다.
+        Missing quotes defer funding until a real execution. A contribution with
+        no execution before the end is not invested capital and is not a loss.
         """
         trades_executed = 0
         daily_cash_inflow = 0.0
@@ -207,73 +158,35 @@ class PortfolioDcaManager:
             if info.investment_type != 'dca':
                 continue
 
-            # Nth Weekday 기반 DCA 실행
-            dca_frequency = info.dca_frequency
-            period_info = FREQUENCY_MAP.get(dca_frequency)
-
-            if period_info is None:
-                logger.error(f"{symbol}: 알 수 없는 DCA 주기 '{dca_frequency}'")
+            if info.executed_count == 0 or info.executed_count >= info.dca_periods:
                 continue
-
-            period_type, interval = period_info
-
-            # 첫 실행 시 original_nth 값 저장 (한 번 잠기면 이후 재계산하지
-            # 않는다 -- last_dca_date는 이제 초기 매수 시점에도 설정될 수
-            # 있으므로 이 조건에서 제외한다. original_nth_weekday 자체가
-            # "아직 한 번도 잠기지 않았음"의 충분한 신호다).
+            current = current_date.date() if isinstance(current_date, datetime) else current_date
+            # Never double-fund an initial purchase on its deferred execution day.
+            if info.last_dca_date == current:
+                continue
+            period_type, interval = FREQUENCY_MAP[info.dca_frequency]
             if info.original_nth_weekday is None:
                 info.original_nth_weekday = get_weekday_occurrence(start_date_obj)
-                logger.debug(f"{symbol}: 원본 Nth 값 설정 = {info.original_nth_weekday}번째 {['월','화','수','목','금','토','일'][start_date_obj.weekday()]}요일")
-
-            # 다음 DCA 날짜 계산 (original_nth 유지, 마지막 "실제 집행일"에서부터)
-            reference_date = info.last_dca_date or start_date_obj
-            original_nth = info.original_nth_weekday
-            next_dca_date = get_next_nth_weekday(reference_date, period_type, interval, original_nth)
-
-            current_date_val = current_date.date() if isinstance(current_date, datetime) else current_date
-            next_dca_date_val = next_dca_date.date() if isinstance(next_dca_date, datetime) else next_dca_date
-
-            if current_date_val >= next_dca_date_val:
-                # 투자 횟수 확인
-                executed_count = info.executed_count
-
-                if executed_count < info.dca_periods:
-                    is_tradeable = tradeable_keys is None or symbol in tradeable_keys
-                    has_valid_price = (
-                        symbol in current_prices
-                        and _is_tradeable_price(current_prices[symbol])
-                    )
-                    if has_valid_price and is_tradeable:
-                        price = current_prices[symbol]
-                        period_amount = info.monthly_amount  # 회당 투자 금액
-                        invest_amount = period_amount * (1 - commission)
-                        shares[symbol] += invest_amount / price
-                        trades_executed += 1  # DCA 추가 매수 거래
-                        daily_cash_inflow += period_amount  # DCA 추가 투자 유입 기록
-
-                        # 실행 횟수 및 마지막 실행 날짜 업데이트
-                        info.executed_count = executed_count + 1
-                        info.last_dca_date = current_date_val # Use pre-converted value for consistency
-
-                        # 다음 예정일 계산 (로그용)
-                        next_scheduled = get_next_nth_weekday(current_date, period_type, interval, original_nth)
-                        current_nth = get_weekday_occurrence(current_date)
-                        logger.info(
-                            f"{current_date.date()}: {symbol} DCA 추가 매수 실행! "
-                            f"(주기 {info.executed_count}/{info.dca_periods}, "
-                            f"금액: ${period_amount:,.2f}, "
-                            f"실행: {current_nth}번째 {['월','화','수','목','금','토','일'][current_date.weekday()]}요일, "
-                            f"다음 예정: {next_scheduled.date()})"
-                        )
-                    else:
-                        # [P2-14] 예정일에 도달했지만 오늘 관측되지 않았다(또는
-                        # 가격이 아예 없다). executed_count/last_dca_date를
-                        # 갱신하지 않으므로 next_dca_date가 그대로 유지되어
-                        # 다음 날에도 이 레벨 조건이 계속 참이 되고, 실제로
-                        # 관측되는 날 자동으로 재시도된다 (회차 유실 없음).
-                        logger.debug(
-                            f"{current_date.date()}: {symbol} DCA 매수 예정일 도달했지만 "
-                            f"당일 데이터 없음 (주기 {executed_count + 1}/{info.dca_periods}, 다음 거래일 재시도)"
-                        )
+            if info.next_scheduled_date is None:
+                planned = start_date_obj
+                for _ in range(info.executed_count):
+                    planned = get_next_nth_weekday(planned, period_type, interval, info.original_nth_weekday)
+                info.next_scheduled_date = planned.date()
+            if current < info.next_scheduled_date:
+                continue
+            if (tradeable_keys is not None and symbol not in tradeable_keys) or not _is_tradeable_price(current_prices.get(symbol)):
+                continue
+            # Catch up overdue scheduled contributions at the first real quote.
+            # Advance the planned cursor, never the holiday-shifted trade date.
+            while info.executed_count < info.dca_periods and current >= info.next_scheduled_date:
+                amount = info.monthly_amount
+                shares[symbol] += amount * (1 - commission) / current_prices[symbol]
+                trades_executed += 1
+                daily_cash_inflow += amount
+                info.executed_count += 1
+                info.last_dca_date = current
+                planned = datetime.combine(info.next_scheduled_date, datetime.min.time())
+                info.next_scheduled_date = get_next_nth_weekday(
+                    planned, period_type, interval, info.original_nth_weekday).date()
 
         return trades_executed, daily_cash_inflow

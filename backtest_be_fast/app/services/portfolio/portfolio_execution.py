@@ -222,7 +222,7 @@ async def simulate_buy_hold(
     keyed_ticker_currencies = {}
     for unique_key in stock_amounts.keys():
         symbol = dca_info[unique_key].symbol
-        keyed_ticker_currencies[unique_key] = ticker_currencies.get(symbol, 'USD')
+        keyed_ticker_currencies[unique_key] = ticker_currencies.get(symbol)
 
     # 2. Exchange Rates 로드
     required_currencies = list(set(keyed_ticker_currencies.values()) - {'USD'})
@@ -245,7 +245,7 @@ async def simulate_buy_hold(
         total_amount=total_amount,
         portfolio_data=portfolio_data,
         dca_info=dca_info,
-        ticker_currencies=ticker_currencies,
+        ticker_currencies=keyed_ticker_currencies,
         exchange_rates_by_currency=exchange_rates_by_currency,
         rebalance_frequency=rebalance_frequency,
         commission=commission

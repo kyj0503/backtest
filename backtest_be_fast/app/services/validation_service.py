@@ -24,10 +24,10 @@ class ValidationService:
             strategy_service=self.strategy_service
         )
 
-    def validate_backtest_request(self, request: BacktestRequest) -> None:
+    def validate_backtest_request(self, request: BacktestRequest, *, check_symbol_exists: bool = True) -> None:
         """백테스트 요청 검증 (BacktestValidator로 위임)"""
         try:
-            self.backtest_validator.validate_request(request)
+            self.backtest_validator.validate_request(request, check_symbol_exists=check_symbol_exists)
             self.logger.info(f"백테스트 요청 검증 완료: {request.ticker}")
 
         except ValueError as ve:
