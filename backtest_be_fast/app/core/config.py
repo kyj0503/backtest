@@ -156,6 +156,12 @@ class Settings(BaseSettings):
     # 이 안에 끝나지 않은 섹션은 비워서 반환하고 핵심 결과는 그대로 돌려준다.
     # 로컬 실측(워밍 상태) supplemental_total p95 약 2초, 콜드 벤치마크 조회 약 5.5초.
     supplemental_data_timeout_seconds: float = 15.0
+
+    # Read-only market data has its own capacity; slow feeds must not occupy
+    # the simulation slots or keep a completed calculation waiting.
+    max_concurrent_market_data: int = 2
+    market_data_queue_timeout_seconds: float = 2.0
+    market_data_timeout_seconds: float = 20.0
     
     # pydantic v2 configuration
     model_config = {

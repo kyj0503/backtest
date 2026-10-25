@@ -165,12 +165,14 @@ class TestCapIsSharedAcrossWorkerProcesses:
         log_path = str(tmp_path / "jobs.log")
 
         ctx = multiprocessing.get_context("spawn")
+        first_wave = ctx.Barrier(cap)
+        started = ctx.Value('i', 0)
         from tests.unit.backtest_runner_mp_helper import run_jobs_in_process
 
         workers = [
             ctx.Process(
                 target=run_jobs_in_process,
-                args=(slot_dir, cap, jobs_per_proc, job_seconds, log_path),
+                args=(slot_dir, cap, jobs_per_proc, job_seconds, log_path, first_wave, started),
             )
             for _ in range(procs)
         ]
