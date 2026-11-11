@@ -1,0 +1,270 @@
+{
+  "date": "2026-11-11",
+  "basis": "Independent synthetic arithmetic and actual source/runtime probes. Python outputs are not an oracle.",
+  "unchanged_prior_manifest_files": 197,
+  "source_sha256": {
+    "backtest_be_rust\\src\\api.rs": "23914df1c0fcaa6d94f99aa99508bf35a4e0de65730bcfc72dcb4a762d7e79e3",
+    "backtest_be_rust\\src\\api_tests.rs": "c04188f0f4bb092b9898c508f66af44750948dd82d741f24f4847136c6591804",
+    "backtest_be_rust\\src\\data.rs": "91c1b7a7ce5542a6fe68c59319ba49410e2f5000506c4e50c43a12a61c230b7b",
+    "backtest_be_rust\\src\\db.rs": "d14ade8f1e54c71030af76f36f65a8d87e92722e371eb64f3b59d1e89a909af4",
+    "backtest_be_rust\\src\\engine.rs": "2bdb29f78c5618c001c123da33c9b42f32ac278daea044dda342377087a4bfab",
+    "backtest_be_rust\\src\\error.rs": "b21ea8969c434504bb3ee06770f1db371ab15510095921af73967726fc752890",
+    "backtest_be_rust\\src\\lib.rs": "d13d8dc0f9f34337f5e54d959a15b6506d84b22f8bc30f5bec8079f1444f4766",
+    "backtest_be_rust\\src\\main.rs": "b586d88364cbb92384402e0d40ba394c6e3ca67687d86118a746fb3809c2d29d",
+    "backtest_be_rust\\src\\metrics.rs": "2df23a77154f2ab6d4499330dce39f5f87bbda4cbcc9a1efc83c932416de5866",
+    "backtest_be_rust\\src\\model.rs": "a1a5bb693c609f7a3475643bd6aa8c6898e627c14574dd3a5fcf8ea60fe81952",
+    "backtest_be_rust\\src\\news.rs": "449b62a9ac62042b90228b11c633549a9208df8b0c36eb586c16a998204736bf",
+    "backtest_be_rust\\src\\schedule.rs": "680ce5e42f90c645f484555bdc9bd63f4bcbbeb8f030732e51ad35b01f74da7f",
+    "backtest_be_rust\\src\\strategy.rs": "c2c2173c829b4d583092f70ea61094802d45db19fb52ab923a75c0bd66a5845d",
+    "backtest_be_rust\\src\\validation.rs": "f9fcb2434350c459f146a541f50f74a0f27e6fc981d03a6059180f4c9d28f293"
+  },
+  "runtime_images": {
+    "api": "sha256:08b07b170a82cb9de3ade7b703bd02df4055367917858a89d40bb9fecf375cf0",
+    "console": "sha256:263444bdab018b109b0dd786880d5e7fa444da2b93f0ae6217142bae7b2cecc2"
+  },
+  "baseline": {
+    "cases": 133,
+    "checks": 202,
+    "passed": 202,
+    "failed": 0
+  },
+  "ordinary_rust_tests": {
+    "passed": 24,
+    "ignored_db_tests": 2,
+    "command": "cargo test --offline"
+  },
+  "fresh_engine_cases": 16,
+  "before_control_cases": 16,
+  "http_cases": 16,
+  "http_statuses": {
+    "sunday_rebalance_none": 200,
+    "sunday_rebalance_weekly_1": 200,
+    "fx_open_position_2000": 200,
+    "fx_buyhold_control_2000": 200,
+    "open_position": 200,
+    "cash_date_key": 200,
+    "cash_weight_chart": 200,
+    "profit_factor": 200,
+    "finite_annual_overflow": 500,
+    "finite_short_listing_overflow": 500,
+    "monthly_2_calendar": 422,
+    "monthly_2_60day_control": 200,
+    "one_market_holiday_False": 200,
+    "one_market_holiday_True": 200,
+    "fe_added_budget": 200,
+    "fe_removed_budget": 200
+  },
+  "findings": [
+    {
+      "id": "R01",
+      "priority": "P1",
+      "kind": "regression",
+      "title": "휴장일 리밸런싱 일정 소실",
+      "expected": {
+        "rebalance_dates": [
+          "2023-01-09",
+          "2023-01-16",
+          "2023-01-23",
+          "2023-01-30",
+          "2023-02-06"
+        ],
+        "final_value": 17356.30580357143
+      },
+      "actual": {
+        "rebalance_count": 0,
+        "final_value": 19285.714285714286
+      },
+      "source": "backtest_be_rust/src/engine.rs:282"
+    },
+    {
+      "id": "R02",
+      "priority": "P1",
+      "kind": "residual",
+      "title": "기술적 전략의 휴장일 FX 평가 누락",
+      "expected": 5298.507,
+      "actual": 10000.0,
+      "cash": 597.0139999999992,
+      "shares": 96938.0,
+      "source": "backtest_be_rust/src/engine.rs:630"
+    },
+    {
+      "id": "R03",
+      "priority": "P1",
+      "kind": "regression",
+      "title": "동시 갱신 시 메타데이터와 시세 스냅샷 불일치",
+      "expected_invalid_hits": 0,
+      "actual": {
+        "accepted_incomplete_histories": 108,
+        "attempts": 2000,
+        "cache_hits": 788,
+        "expected_incomplete_histories": 0,
+        "snapshot_writes": 500,
+        "test_hook_changes_to_production_methods": false
+      },
+      "source": "backtest_be_rust/src/data.rs:228"
+    },
+    {
+      "id": "R04",
+      "priority": "P1",
+      "kind": "residual",
+      "title": "비중 모드 종목 추가/삭제 후 총 투자금 보존 실패",
+      "expected": 10000,
+      "actual_added": 20000,
+      "actual_removed": 9500,
+      "validation_added": [],
+      "validation_removed": [],
+      "http_added_initial": 20000.0,
+      "source": "../backtest-console/src/features/backtest/model/backtestFormReducer.ts:40"
+    },
+    {
+      "id": "R05",
+      "priority": "P2",
+      "kind": "residual",
+      "title": "손익 금액 대신 수익률을 더하는 Profit Factor",
+      "trade_pnl": [
+        3540.0,
+        -3660.0
+      ],
+      "expected": 0.9672131147540983,
+      "actual": 1.3125,
+      "actual_portfolio": 1.5795217957720904,
+      "source": "backtest_be_rust/src/strategy.rs:329"
+    },
+    {
+      "id": "R06",
+      "priority": "P2",
+      "kind": "regression",
+      "title": "현금 비중의 API/화면 식별자 불일치",
+      "expected_cash_pct": 50,
+      "actual": {
+        "composition": [
+          {
+            "amount": 5000,
+            "asset_type": "cash",
+            "dca_periods": null,
+            "investment_type": "lump_sum",
+            "symbol": "CASH",
+            "weight": 0.5
+          },
+          {
+            "amount": 5000,
+            "asset_type": "stock",
+            "dca_periods": null,
+            "investment_type": "lump_sum",
+            "symbol": "TEST",
+            "weight": 0.5
+          }
+        ],
+        "raw": {
+          "CASH__cash_1": 0.5,
+          "TEST": 0.5,
+          "date": "2023-01-02"
+        },
+        "rendered": {
+          "date": "2023-01-02",
+          "CASH": 0,
+          "TEST": 50
+        }
+      },
+      "source": "backtest_be_rust/src/engine.rs:435"
+    },
+    {
+      "id": "R07",
+      "priority": "P2",
+      "kind": "regression",
+      "title": "미청산 진입 거래가 화면에서 누락",
+      "expected_buys": 1,
+      "actual": {
+        "apiPositions": [
+          {
+            "Commission": 0,
+            "EntryPrice": 97,
+            "EntryTime": "2023-01-05",
+            "MarketPrice": 97,
+            "MarketValue": 9312,
+            "Size": 96
+          }
+        ],
+        "logs": {
+          "TEST": []
+        },
+        "chartCounts": {
+          "buys": 0,
+          "sells": 0
+        },
+        "buyMarkers": 0
+      },
+      "source": "../backtest-console/src/features/backtest/utils/chartDataTransform.ts:146"
+    },
+    {
+      "id": "R08",
+      "priority": "P2",
+      "kind": "residual",
+      "title": "동일 비중이 종목 순서에 따라 다른 금액으로 배분",
+      "expected": "동일한 종목별 배분 또는 합계 오류의 명시적 거부",
+      "actual": [
+        {
+          "A": 9500,
+          "B": 500
+        },
+        {
+          "B": 1000,
+          "A": 9000
+        }
+      ],
+      "source": "../backtest-console/src/features/backtest/model/backtestFormReducer.ts:23"
+    },
+    {
+      "id": "R09",
+      "priority": "P2",
+      "kind": "residual",
+      "title": "실제 달력에 존재하는 DCA 납입 일정 거부",
+      "expected_dates": [
+        "2023-01-30",
+        "2023-03-27"
+      ],
+      "frontend_periods": 2,
+      "actual_http": 422,
+      "source": "backtest_be_rust/src/model.rs:157"
+    },
+    {
+      "id": "R10",
+      "priority": "P2",
+      "kind": "regression",
+      "title": "유한 입력의 연율화 오버플로가 panic/HTTP 500 발생",
+      "expected": "성공 또는 명시적 422; panic 금지",
+      "actual_http": [
+        500,
+        500
+      ],
+      "source": "backtest_be_rust/src/strategy.rs:288"
+    },
+    {
+      "id": "R11",
+      "priority": "P3",
+      "kind": "residual",
+      "title": "현금 이름 date가 비중 이력 날짜를 덮어씀",
+      "expected_date": "2023-01-02",
+      "actual": {
+        "TEST": 0.5,
+        "date": 0.5
+      },
+      "scope": "직접 API에서 소문자 현금 이름 date를 사용한 경우; UI는 대문자로 변환",
+      "source": "backtest_be_rust/src/engine.rs:642"
+    }
+  ],
+  "regressions": 5,
+  "residuals": 6,
+  "severity_counts": {
+    "P1": 4,
+    "P2": 6,
+    "P3": 1
+  },
+  "limitations": [
+    "Synthetic holiday/price scenarios do not assert those values happened in live markets.",
+    "Frontend checks execute actual reducers/validators/chart transformations; no fresh full-browser E2E in this round.",
+    "Cache race uses unchanged cached/save methods in an isolated MySQL; the frequency is not a production incidence estimate.",
+    "Undefined metric fallbacks and previously documented modeling assumptions are not counted again.",
+    "Application code, user-facing containers and their DB volumes were not changed."
+  ]
+}

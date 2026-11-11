@@ -1,0 +1,42 @@
+# Standalone, local-only controlled data benchmark. Input files are generated
+# from the preserved scenarios; see the corrected verification report.
+name: backtest-frozen-memory
+services:
+  memory-python-api:
+    image: backtest-compare-python-api:local
+    container_name: backtest-memory-python-api-1
+    entrypoint: [python, /scripts/frozen-api-python.py]
+    environment:
+      PYTHONPATH: /app
+      DEBUG: "true"
+      TURNSTILE_ENABLED: "false"
+      LOG_LEVEL: WARNING
+      DATABASE_URL: mysql+pymysql://compare:comparison-local-app@mysql-python:3306/stock_data_cache
+      BACKTEST_FIXTURE_FILE: /inputs/prices.json
+      MAX_CONCURRENT_BACKTESTS: "8"
+      MAX_CONCURRENT_BACKTESTS_PER_CLIENT: "2"
+    volumes:
+      - ./:/scripts:ro
+      - ../.comparison/reports/corrected-2026-11-11/benchmark-inputs:/inputs:ro
+    deploy:
+      resources:
+        limits: {cpus: "2", memory: 2G}
+  memory-rust-api:
+    image: backtest-compare-rust-api:local
+    container_name: backtest-memory-rust-api-1
+    environment:
+      DEBUG: "true"
+      TURNSTILE_ENABLED: "false"
+      LOG_LEVEL: WARNING
+      BACKTEST_FIXTURE_FILE: /inputs/prices.json
+      MAX_CONCURRENT_BACKTESTS: "8"
+      MAX_CONCURRENT_BACKTESTS_PER_CLIENT: "2"
+    volumes:
+      - ../.comparison/reports/corrected-2026-11-11/benchmark-inputs:/inputs:ro
+    deploy:
+      resources:
+        limits: {cpus: "2", memory: 2G}
+networks:
+  default:
+    external: true
+    name: backtest-compare_default

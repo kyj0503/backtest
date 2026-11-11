@@ -23,13 +23,13 @@ jobs:
         with:
           persist-credentials: false
       - name: Test in Docker
-        run: docker build --target test ./backtest_be_fast
+        run: docker build --target test ./backtest_be_rust
       - name: Audit dependencies
         run: sh scripts/audit-deps.sh be
       - name: Check database schema parity
         run: sh scripts/check-schema-parity.sh
       - name: Build runtime in Docker
-        run: docker build --target runtime ./backtest_be_fast
+        run: docker build --target runtime ./backtest_be_rust
 
   publish:
     needs: verify
@@ -54,7 +54,7 @@ jobs:
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         id: build
         with:
-          context: ./backtest_be_fast
+          context: ./backtest_be_rust
           target: runtime
           platforms: linux/arm64
           push: true

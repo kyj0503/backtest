@@ -1,0 +1,70 @@
+name: backtest-rust-check
+
+# Disposable integration environment: no host ports and no existing DB volumes.
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: rust-test-only
+      MYSQL_DATABASE: stock_data_cache
+      MYSQL_USER: rusttest
+      MYSQL_PASSWORD: rust-test-only
+    tmpfs:
+      - /var/lib/mysql
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: [CMD, mysqladmin, ping, -h, localhost]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+  api:
+    build:
+      context: ./backtest_be_rust
+      target: runtime
+    environment:
+      DEBUG: "true"
+      TURNSTILE_ENABLED: "false"
+      BACKTEST_FIXTURE_FILE: /fixtures/histories.json
+      DATABASE_HOST: mysql
+      DATABASE_NAME: stock_data_cache
+      DATABASE_USER: rusttest
+      DATABASE_PASSWORD: rust-test-only
+    volumes:
+      - ./backtest_be_rust/tests/fixtures:/fixtures:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, curl, -fsS, 'http://localhost:8000/health/ready']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  console:
+    build:
+      context: ../backtest-console
+      target: test
+    environment:
+      BACKTEST_PROXY_TARGET: http://api:8000
+      DISABLE_HMR: "1"
+    command: [npm, run, dev, --, --host, 0.0.0.0]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:5173/backtest').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  e2e:
+    build:
+      context: ../backtest-console
+      dockerfile: Dockerfile.e2e
+    # Browser and Vite share localhost; Vite's allowed-host policy stays intact.
+    network_mode: service:console
+    environment:
+      RUST_MIGRATION_E2E: "1"
+      PLAYWRIGHT_BASE_URL: http://localhost:5173
+    depends_on:
+      console:
+        condition: service_healthy

@@ -1,0 +1,978 @@
+{
+  "date": "2026-11-11",
+  "scope": "S01-S06; fractional adjusted units; independent accounting, not Python parity",
+  "tests": {
+    "rust_regular": 48,
+    "mysql": 3,
+    "frontend": 392,
+    "independent_cases": 133,
+    "independent_checks": 202,
+    "http_cases": 16,
+    "http_checks": 6062,
+    "browser_cases": 5,
+    "frontend_replayed_cases": 16,
+    "frontend_marker_cases": 15,
+    "new_rust_tests": 6,
+    "new_frontend_tests": 10
+  },
+  "runtime": [
+    {
+      "name": "backtest-compare-python-api-1",
+      "image": "sha256:6f622a697e0b65e197cdd7959f7e6f913a80ba25d2c4b7b6d5f622f774837c3c",
+      "health": "healthy",
+      "running": true,
+      "restarts": 0,
+      "ports": {
+        "8000/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "backtest-compare-rust-api-1",
+      "image": "sha256:e9b565db977e4c50250eb9f0a8c957cec0dfd551112e4c43f3447bb3e40ca8aa",
+      "health": "healthy",
+      "running": true,
+      "restarts": 0,
+      "ports": {
+        "8000/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8001"
+          }
+        ]
+      }
+    },
+    {
+      "name": "backtest-compare-python-console-1",
+      "image": "sha256:1bebe77360234b7813a32bacbbb0776f177df886cfd7a6e03d530a9af915140c",
+      "health": "healthy",
+      "running": true,
+      "restarts": 0,
+      "ports": {
+        "5173/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "5173"
+          }
+        ]
+      }
+    },
+    {
+      "name": "backtest-compare-rust-console-1",
+      "image": "sha256:e5ea43fc52c104e7ea5cc5596e5c91c6fdee7dc3f4f342c854b5a72912ba09b3",
+      "health": "healthy",
+      "running": true,
+      "restarts": 0,
+      "ports": {
+        "5173/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "5174"
+          }
+        ]
+      }
+    }
+  ],
+  "rust_binary_sha256": "dafebdeaf662c937b5fa1a851fda2fe0b5bd6b6350f36bcc7fcdbf2cd4f5b927",
+  "benchmarks": {
+    "previous_rust": {
+      "source": ".comparison/reports/yahoo-after-memory-2026-11-11/rust.json",
+      "sha256": "00f4bf4717b796556eb80a545c4e8111ded7610573cc23bdab7462f839cecef7",
+      "requests": 346,
+      "median_ms": 3.8397480002458906,
+      "p95_ms": 7.683281000936404,
+      "idle_mib": 3.37890625,
+      "kernel_peak_mib": 68.55859375,
+      "rss_hwm_mib": 73.6796875,
+      "swap_bytes": 0,
+      "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+      "cases": [
+        {
+          "name": "usd_single",
+          "concurrency": 1,
+          "median_ms": 1.3198255001043435,
+          "observed_peak_mib": 5.37890625
+        },
+        {
+          "name": "usd_five_8years",
+          "concurrency": 1,
+          "median_ms": 7.359194498349098,
+          "observed_peak_mib": 12.8828125
+        },
+        {
+          "name": "mixed_us_kr_cash",
+          "concurrency": 1,
+          "median_ms": 1.6222295016632415,
+          "observed_peak_mib": 12.55859375
+        },
+        {
+          "name": "crypto_7day",
+          "concurrency": 1,
+          "median_ms": 1.6937929995037848,
+          "observed_peak_mib": 12.625
+        },
+        {
+          "name": "japan_europe_fx",
+          "concurrency": 1,
+          "median_ms": 1.3276955014589475,
+          "observed_peak_mib": 12.58984375
+        },
+        {
+          "name": "cash_only",
+          "concurrency": 1,
+          "median_ms": 1.3033089999225922,
+          "observed_peak_mib": 13.01953125
+        },
+        {
+          "name": "zero_weight",
+          "concurrency": 1,
+          "median_ms": 1.2544130004243925,
+          "observed_peak_mib": 13.0
+        },
+        {
+          "name": "weights_cash",
+          "concurrency": 1,
+          "median_ms": 1.3887634995626286,
+          "observed_peak_mib": 12.98046875
+        },
+        {
+          "name": "dca_weekly_1",
+          "concurrency": 1,
+          "median_ms": 3.808729499723995,
+          "observed_peak_mib": 12.98828125
+        },
+        {
+          "name": "dca_weekly_2",
+          "concurrency": 1,
+          "median_ms": 3.444473999479669,
+          "observed_peak_mib": 13.14453125
+        },
+        {
+          "name": "dca_monthly_1",
+          "concurrency": 1,
+          "median_ms": 3.3213940005225595,
+          "observed_peak_mib": 13.28515625
+        },
+        {
+          "name": "dca_monthly_2",
+          "concurrency": 1,
+          "median_ms": 3.2142189993464854,
+          "observed_peak_mib": 13.00390625
+        },
+        {
+          "name": "dca_monthly_3",
+          "concurrency": 1,
+          "median_ms": 3.2360014993173536,
+          "observed_peak_mib": 13.15234375
+        },
+        {
+          "name": "dca_monthly_6",
+          "concurrency": 1,
+          "median_ms": 3.3648805001575965,
+          "observed_peak_mib": 12.7421875
+        },
+        {
+          "name": "dca_monthly_12",
+          "concurrency": 1,
+          "median_ms": 3.139246999126044,
+          "observed_peak_mib": 12.62890625
+        },
+        {
+          "name": "rebalance_weekly_1",
+          "concurrency": 1,
+          "median_ms": 7.569422501546796,
+          "observed_peak_mib": 14.296875
+        },
+        {
+          "name": "rebalance_monthly_1",
+          "concurrency": 1,
+          "median_ms": 4.81301600120787,
+          "observed_peak_mib": 13.89453125
+        },
+        {
+          "name": "rebalance_monthly_12",
+          "concurrency": 1,
+          "median_ms": 4.042665499582654,
+          "observed_peak_mib": 13.9765625
+        },
+        {
+          "name": "dca_with_rebalance",
+          "concurrency": 1,
+          "median_ms": 5.276853498799028,
+          "observed_peak_mib": 14.51171875
+        },
+        {
+          "name": "sma_default",
+          "concurrency": 1,
+          "median_ms": 5.626494499665569,
+          "observed_peak_mib": 14.5234375
+        },
+        {
+          "name": "sma_custom",
+          "concurrency": 1,
+          "median_ms": 5.686439997589332,
+          "observed_peak_mib": 14.78125
+        },
+        {
+          "name": "ema_default",
+          "concurrency": 1,
+          "median_ms": 6.076625501009403,
+          "observed_peak_mib": 15.1875
+        },
+        {
+          "name": "ema_custom",
+          "concurrency": 1,
+          "median_ms": 8.125241001835093,
+          "observed_peak_mib": 14.95703125
+        },
+        {
+          "name": "rsi_default",
+          "concurrency": 1,
+          "median_ms": 5.849763998412527,
+          "observed_peak_mib": 14.78125
+        },
+        {
+          "name": "rsi_custom",
+          "concurrency": 1,
+          "median_ms": 5.691113001375925,
+          "observed_peak_mib": 14.703125
+        },
+        {
+          "name": "bollinger_default",
+          "concurrency": 1,
+          "median_ms": 5.627909000395448,
+          "observed_peak_mib": 14.7734375
+        },
+        {
+          "name": "bollinger_custom",
+          "concurrency": 1,
+          "median_ms": 5.819196501761326,
+          "observed_peak_mib": 14.77734375
+        },
+        {
+          "name": "macd_default",
+          "concurrency": 1,
+          "median_ms": 6.9938650012773,
+          "observed_peak_mib": 14.5234375
+        },
+        {
+          "name": "macd_custom",
+          "concurrency": 1,
+          "median_ms": 7.0559420018980745,
+          "observed_peak_mib": 15.234375
+        },
+        {
+          "name": "small_cash_no_trades",
+          "concurrency": 1,
+          "median_ms": 1.395531000525807,
+          "observed_peak_mib": 14.6328125
+        },
+        {
+          "name": "crypto_sma",
+          "concurrency": 1,
+          "median_ms": 1.5168469999480294,
+          "observed_peak_mib": 14.61328125
+        },
+        {
+          "name": "krw_sma",
+          "concurrency": 1,
+          "median_ms": 1.4194819996191654,
+          "observed_peak_mib": 15.08203125
+        },
+        {
+          "name": "concurrent_2",
+          "concurrency": 2,
+          "median_ms": 11.257402999035548,
+          "observed_peak_mib": 20.9453125
+        },
+        {
+          "name": "concurrent_8",
+          "concurrency": 8,
+          "median_ms": 24.962567500551813,
+          "observed_peak_mib": 61.66015625
+        },
+        {
+          "name": "concurrent_16",
+          "concurrency": 16,
+          "median_ms": 35.75379950052593,
+          "observed_peak_mib": 68.30859375
+        }
+      ]
+    },
+    "python": {
+      "source": ".comparison/reports/s01-s06-memory-2026-11-11/python.json",
+      "sha256": "bbf7108a0ec4c59507e3e32e1b1b7f9d72b0ed940f16b7b3d2f29c3d91716909",
+      "requests": 346,
+      "median_ms": 97.84130949992687,
+      "p95_ms": 259.11390600231243,
+      "idle_mib": 153.48046875,
+      "kernel_peak_mib": 220.8125,
+      "rss_hwm_mib": 256.60546875,
+      "swap_bytes": 0,
+      "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+      "cases": [
+        {
+          "name": "usd_single",
+          "concurrency": 1,
+          "median_ms": 25.1739790001011,
+          "observed_peak_mib": 156.16796875
+        },
+        {
+          "name": "usd_five_8years",
+          "concurrency": 1,
+          "median_ms": 259.28524500159256,
+          "observed_peak_mib": 170.87109375
+        },
+        {
+          "name": "mixed_us_kr_cash",
+          "concurrency": 1,
+          "median_ms": 34.625799000423285,
+          "observed_peak_mib": 170.70703125
+        },
+        {
+          "name": "crypto_7day",
+          "concurrency": 1,
+          "median_ms": 42.617448500095634,
+          "observed_peak_mib": 170.1484375
+        },
+        {
+          "name": "japan_europe_fx",
+          "concurrency": 1,
+          "median_ms": 32.89151950048108,
+          "observed_peak_mib": 169.77734375
+        },
+        {
+          "name": "cash_only",
+          "concurrency": 1,
+          "median_ms": 6.746918999851914,
+          "observed_peak_mib": 169.76171875
+        },
+        {
+          "name": "zero_weight",
+          "concurrency": 1,
+          "median_ms": 33.307921501545934,
+          "observed_peak_mib": 169.76953125
+        },
+        {
+          "name": "weights_cash",
+          "concurrency": 1,
+          "median_ms": 36.520472500342294,
+          "observed_peak_mib": 169.54296875
+        },
+        {
+          "name": "dca_weekly_1",
+          "concurrency": 1,
+          "median_ms": 128.1543295008305,
+          "observed_peak_mib": 169.66796875
+        },
+        {
+          "name": "dca_weekly_2",
+          "concurrency": 1,
+          "median_ms": 115.27302700051223,
+          "observed_peak_mib": 170.33984375
+        },
+        {
+          "name": "dca_monthly_1",
+          "concurrency": 1,
+          "median_ms": 108.96352899908379,
+          "observed_peak_mib": 169.76171875
+        },
+        {
+          "name": "dca_monthly_2",
+          "concurrency": 1,
+          "median_ms": 105.1281085001392,
+          "observed_peak_mib": 169.8046875
+        },
+        {
+          "name": "dca_monthly_3",
+          "concurrency": 1,
+          "median_ms": 103.74680500171962,
+          "observed_peak_mib": 169.49609375
+        },
+        {
+          "name": "dca_monthly_6",
+          "concurrency": 1,
+          "median_ms": 102.80460300054983,
+          "observed_peak_mib": 169.546875
+        },
+        {
+          "name": "dca_monthly_12",
+          "concurrency": 1,
+          "median_ms": 102.35474449837056,
+          "observed_peak_mib": 169.29296875
+        },
+        {
+          "name": "rebalance_weekly_1",
+          "concurrency": 1,
+          "median_ms": 283.51149699847156,
+          "observed_peak_mib": 170.65625
+        },
+        {
+          "name": "rebalance_monthly_1",
+          "concurrency": 1,
+          "median_ms": 163.1438589975005,
+          "observed_peak_mib": 170.26171875
+        },
+        {
+          "name": "rebalance_monthly_12",
+          "concurrency": 1,
+          "median_ms": 134.34591200166324,
+          "observed_peak_mib": 170.84375
+        },
+        {
+          "name": "dca_with_rebalance",
+          "concurrency": 1,
+          "median_ms": 181.3887740008795,
+          "observed_peak_mib": 170.78515625
+        },
+        {
+          "name": "sma_default",
+          "concurrency": 1,
+          "median_ms": 92.04178899926774,
+          "observed_peak_mib": 171.29296875
+        },
+        {
+          "name": "sma_custom",
+          "concurrency": 1,
+          "median_ms": 94.83398449992819,
+          "observed_peak_mib": 172.48828125
+        },
+        {
+          "name": "ema_default",
+          "concurrency": 1,
+          "median_ms": 91.72709849917737,
+          "observed_peak_mib": 173.125
+        },
+        {
+          "name": "ema_custom",
+          "concurrency": 1,
+          "median_ms": 96.55166049924446,
+          "observed_peak_mib": 173.5546875
+        },
+        {
+          "name": "rsi_default",
+          "concurrency": 1,
+          "median_ms": 79.7086015008972,
+          "observed_peak_mib": 179.09375
+        },
+        {
+          "name": "rsi_custom",
+          "concurrency": 1,
+          "median_ms": 86.78795950072526,
+          "observed_peak_mib": 173.69140625
+        },
+        {
+          "name": "bollinger_default",
+          "concurrency": 1,
+          "median_ms": 95.62011300113227,
+          "observed_peak_mib": 173.87890625
+        },
+        {
+          "name": "bollinger_custom",
+          "concurrency": 1,
+          "median_ms": 100.99793650078936,
+          "observed_peak_mib": 173.98828125
+        },
+        {
+          "name": "macd_default",
+          "concurrency": 1,
+          "median_ms": 102.76358050032286,
+          "observed_peak_mib": 173.92578125
+        },
+        {
+          "name": "macd_custom",
+          "concurrency": 1,
+          "median_ms": 109.3261554997298,
+          "observed_peak_mib": 175.62890625
+        },
+        {
+          "name": "small_cash_no_trades",
+          "concurrency": 1,
+          "median_ms": 21.231250000710133,
+          "observed_peak_mib": 176.2890625
+        },
+        {
+          "name": "crypto_sma",
+          "concurrency": 1,
+          "median_ms": 22.98997350044374,
+          "observed_peak_mib": 176.52734375
+        },
+        {
+          "name": "krw_sma",
+          "concurrency": 1,
+          "median_ms": 27.744881001126487,
+          "observed_peak_mib": 176.22265625
+        },
+        {
+          "name": "concurrent_2",
+          "concurrency": 2,
+          "median_ms": 639.5578605006449,
+          "observed_peak_mib": 179.23828125
+        },
+        {
+          "name": "concurrent_8",
+          "concurrency": 8,
+          "median_ms": 2515.120233500056,
+          "observed_peak_mib": 200.01171875
+        },
+        {
+          "name": "concurrent_16",
+          "concurrency": 16,
+          "median_ms": 4176.790741999866,
+          "observed_peak_mib": 220.58984375
+        }
+      ]
+    },
+    "rust": {
+      "source": ".comparison/reports/s01-s06-memory-2026-11-11/rust.json",
+      "sha256": "962f194f8044ddd609c49743c84be326c6bdf8ed15bc4196632942c30c5bbdf3",
+      "requests": 346,
+      "median_ms": 4.2836960001295665,
+      "p95_ms": 8.149613000568934,
+      "idle_mib": 4.109375,
+      "kernel_peak_mib": 70.734375,
+      "rss_hwm_mib": 74.31640625,
+      "swap_bytes": 0,
+      "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+      "cases": [
+        {
+          "name": "usd_single",
+          "concurrency": 1,
+          "median_ms": 1.301732499996433,
+          "observed_peak_mib": 5.609375
+        },
+        {
+          "name": "usd_five_8years",
+          "concurrency": 1,
+          "median_ms": 8.606519499153364,
+          "observed_peak_mib": 13.52734375
+        },
+        {
+          "name": "mixed_us_kr_cash",
+          "concurrency": 1,
+          "median_ms": 1.5770760001032613,
+          "observed_peak_mib": 13.73828125
+        },
+        {
+          "name": "crypto_7day",
+          "concurrency": 1,
+          "median_ms": 1.3835250010743039,
+          "observed_peak_mib": 13.96875
+        },
+        {
+          "name": "japan_europe_fx",
+          "concurrency": 1,
+          "median_ms": 1.3973399982205592,
+          "observed_peak_mib": 13.6953125
+        },
+        {
+          "name": "cash_only",
+          "concurrency": 1,
+          "median_ms": 1.320287999988068,
+          "observed_peak_mib": 13.96484375
+        },
+        {
+          "name": "zero_weight",
+          "concurrency": 1,
+          "median_ms": 1.2651789984374773,
+          "observed_peak_mib": 13.703125
+        },
+        {
+          "name": "weights_cash",
+          "concurrency": 1,
+          "median_ms": 1.6370275006920565,
+          "observed_peak_mib": 13.765625
+        },
+        {
+          "name": "dca_weekly_1",
+          "concurrency": 1,
+          "median_ms": 4.403359498610371,
+          "observed_peak_mib": 13.609375
+        },
+        {
+          "name": "dca_weekly_2",
+          "concurrency": 1,
+          "median_ms": 4.016940001747571,
+          "observed_peak_mib": 13.70703125
+        },
+        {
+          "name": "dca_monthly_1",
+          "concurrency": 1,
+          "median_ms": 3.6602434993255883,
+          "observed_peak_mib": 13.9375
+        },
+        {
+          "name": "dca_monthly_2",
+          "concurrency": 1,
+          "median_ms": 3.720109998539556,
+          "observed_peak_mib": 13.65234375
+        },
+        {
+          "name": "dca_monthly_3",
+          "concurrency": 1,
+          "median_ms": 3.4623334995558253,
+          "observed_peak_mib": 13.64453125
+        },
+        {
+          "name": "dca_monthly_6",
+          "concurrency": 1,
+          "median_ms": 3.3587164998607477,
+          "observed_peak_mib": 13.5859375
+        },
+        {
+          "name": "dca_monthly_12",
+          "concurrency": 1,
+          "median_ms": 3.2314250001945766,
+          "observed_peak_mib": 13.4375
+        },
+        {
+          "name": "rebalance_weekly_1",
+          "concurrency": 1,
+          "median_ms": 8.390734999920824,
+          "observed_peak_mib": 15.3984375
+        },
+        {
+          "name": "rebalance_monthly_1",
+          "concurrency": 1,
+          "median_ms": 5.474206000144477,
+          "observed_peak_mib": 14.97265625
+        },
+        {
+          "name": "rebalance_monthly_12",
+          "concurrency": 1,
+          "median_ms": 4.336410498581245,
+          "observed_peak_mib": 11.984375
+        },
+        {
+          "name": "dca_with_rebalance",
+          "concurrency": 1,
+          "median_ms": 5.801680999866221,
+          "observed_peak_mib": 12.9375
+        },
+        {
+          "name": "sma_default",
+          "concurrency": 1,
+          "median_ms": 6.032012999639846,
+          "observed_peak_mib": 13.3359375
+        },
+        {
+          "name": "sma_custom",
+          "concurrency": 1,
+          "median_ms": 6.325820500933332,
+          "observed_peak_mib": 13.1328125
+        },
+        {
+          "name": "ema_default",
+          "concurrency": 1,
+          "median_ms": 6.395588001396391,
+          "observed_peak_mib": 13.1015625
+        },
+        {
+          "name": "ema_custom",
+          "concurrency": 1,
+          "median_ms": 6.2665254990861285,
+          "observed_peak_mib": 13.23046875
+        },
+        {
+          "name": "rsi_default",
+          "concurrency": 1,
+          "median_ms": 6.067879499823903,
+          "observed_peak_mib": 13.0390625
+        },
+        {
+          "name": "rsi_custom",
+          "concurrency": 1,
+          "median_ms": 6.197476499437471,
+          "observed_peak_mib": 12.765625
+        },
+        {
+          "name": "bollinger_default",
+          "concurrency": 1,
+          "median_ms": 6.0541049988387385,
+          "observed_peak_mib": 12.87890625
+        },
+        {
+          "name": "bollinger_custom",
+          "concurrency": 1,
+          "median_ms": 6.340382999042049,
+          "observed_peak_mib": 13.0625
+        },
+        {
+          "name": "macd_default",
+          "concurrency": 1,
+          "median_ms": 6.534105001264834,
+          "observed_peak_mib": 12.796875
+        },
+        {
+          "name": "macd_custom",
+          "concurrency": 1,
+          "median_ms": 7.5502239997149445,
+          "observed_peak_mib": 13.77734375
+        },
+        {
+          "name": "small_cash_no_trades",
+          "concurrency": 1,
+          "median_ms": 1.4110619995335583,
+          "observed_peak_mib": 13.45703125
+        },
+        {
+          "name": "crypto_sma",
+          "concurrency": 1,
+          "median_ms": 1.7106800005421974,
+          "observed_peak_mib": 13.453125
+        },
+        {
+          "name": "krw_sma",
+          "concurrency": 1,
+          "median_ms": 1.562979499794892,
+          "observed_peak_mib": 14.03125
+        },
+        {
+          "name": "concurrent_2",
+          "concurrency": 2,
+          "median_ms": 11.707949999617995,
+          "observed_peak_mib": 21.296875
+        },
+        {
+          "name": "concurrent_8",
+          "concurrency": 8,
+          "median_ms": 28.264526001294143,
+          "observed_peak_mib": 63.921875
+        },
+        {
+          "name": "concurrent_16",
+          "concurrency": 16,
+          "median_ms": 34.94968250015518,
+          "observed_peak_mib": 69.83984375
+        }
+      ]
+    }
+  },
+  "source_sha256": {
+    "backtest/backtest_be_rust/src/api.rs": "23914df1c0fcaa6d94f99aa99508bf35a4e0de65730bcfc72dcb4a762d7e79e3",
+    "backtest/backtest_be_rust/src/api_tests.rs": "c04188f0f4bb092b9898c508f66af44750948dd82d741f24f4847136c6591804",
+    "backtest/backtest_be_rust/src/data.rs": "83e8bb9ba79e1b98de4430efa6f6d033dbb3dc2956b63bdab3d2376431692ac6",
+    "backtest/backtest_be_rust/src/data_regression_tests.rs": "1390b9aea0e367514faa4ad72d4f905a51760dcfec04000c4f67dc2f7447dbd8",
+    "backtest/backtest_be_rust/src/db.rs": "d14ade8f1e54c71030af76f36f65a8d87e92722e371eb64f3b59d1e89a909af4",
+    "backtest/backtest_be_rust/src/engine.rs": "2c954e201bf8f668ce70716043ded5ef4e44c9a8589234d78da5106c022b5e0d",
+    "backtest/backtest_be_rust/src/error.rs": "b21ea8969c434504bb3ee06770f1db371ab15510095921af73967726fc752890",
+    "backtest/backtest_be_rust/src/lib.rs": "d13d8dc0f9f34337f5e54d959a15b6506d84b22f8bc30f5bec8079f1444f4766",
+    "backtest/backtest_be_rust/src/main.rs": "b586d88364cbb92384402e0d40ba394c6e3ca67687d86118a746fb3809c2d29d",
+    "backtest/backtest_be_rust/src/metrics.rs": "63b19379d1b6611a97289c935200b5b2f81aaab87fdc5b3a3414d92d032bce86",
+    "backtest/backtest_be_rust/src/model.rs": "5cd9335916d7f5c11be27a72d00a86426a0148b9a66ad3e8a90b9c4ec4f703a4",
+    "backtest/backtest_be_rust/src/news.rs": "449b62a9ac62042b90228b11c633549a9208df8b0c36eb586c16a998204736bf",
+    "backtest/backtest_be_rust/src/schedule.rs": "680ce5e42f90c645f484555bdc9bd63f4bcbbeb8f030732e51ad35b01f74da7f",
+    "backtest/backtest_be_rust/src/strategy.rs": "42b3984bad854cea4b6cf2acfe3e570e2a9bbeb27cc3ce7fa3aebfe8ba220f2b",
+    "backtest/backtest_be_rust/src/validation.rs": "f9fcb2434350c459f146a541f50f74a0f27e6fc981d03a6059180f4c9d28f293",
+    "backtest/backtest_be_rust/src/yahoo_regression_tests.rs": "3dd188c32f4496c9bceab1095e4acd73ce76a6eea575f56e90c6ba0be1edcfc0",
+    "backtest/backtest_be_rust/tests/correctness.rs": "c838782256a1e94b6ca32d63085bb3beb901ce8a983518e4dcafbfe6603e0b10",
+    "backtest/backtest_be_rust/tests/export_reference.py": "218107845f096e0c3dc2760d68a0a29ccd99f22d0c032f6fd601f5eed8ce8788",
+    "backtest/backtest_be_rust/tests/export_supplemental.py": "dd650345856cd928583ee0b6645406c46a7e16a05559bc70c1e27b373386326b",
+    "backtest/backtest_be_rust/tests/parity.rs": "708872bbac0aae49e3041c440b6f0ed05dc12839c9721199c2b1837eb62c7708",
+    "backtest/backtest_be_rust/tests/readversarial.rs": "d88926d316e9792126586dbc5a663583e53624d28a4b2b1a380dfd42f5188870",
+    "backtest/backtest_be_rust/tests/s01_s06.rs": "888aa85d570eb39b6e92a7ab5c5a6a9f017a944c7cc9c8469ab553376283c196",
+    "backtest/backtest_be_rust/tests/verify_runtime.py": "c2b14809c074e8bf1fe923f1032a786fd5ed241081f6684b970083c1e6a8ba09",
+    "backtest/backtest_be_rust/tests/fixtures/histories.json": "466ab3e8972cd561f5c15f227c6b60f17effaa58058499b225368c873a7de610",
+    "backtest/backtest_be_rust/tests/fixtures/http-boundary.json": "81b6a849f6a11542cfe5b1d77f7d282c5c47eea99b1668dfb9974055f4ed32ba",
+    "backtest/backtest_be_rust/tests/fixtures/parity.json": "a82802f00bea1f1d8014a62b795a1a51d62964e8c65784b45610b72d15004b62",
+    "backtest/backtest_be_rust/tests/fixtures/readversarial.json": "74a25ff64111ced92c0cf4de62ac786bd0570e8425be4fb6ce0f3d41db33ad84",
+    "backtest/backtest_be_rust/tests/fixtures/real-market-python.json": "7a92c041566c2d9bfe918e8c7fd8f182f11d9b8b2e72362fdd21dc1b35277c33",
+    "backtest/backtest_be_rust/tests/fixtures/supplemental.json": "786fbd0ea103ce4df4e7fdfc5b130913d3c0d626830df8b571b5a18ac9941db5",
+    "backtest/backtest_be_rust/tests/fixtures/yahoo-chart-regression.json": "9b2a4b8cd57b84c198574d13149e93171f82ec614612badc8680a66706e50379",
+    "backtest/backtest_be_rust/Cargo.toml": "6a355ad654f9bafecba23538139e097ba32e7acd74e065ad9f09d390574253b6",
+    "backtest/backtest_be_rust/Cargo.lock": "90536ac0a3f6703e3bedda73b2cd6dd47e90340231ddaf285f341abd097115c4",
+    "backtest-console/src/features/backtest/constants/strategyDetails.ts": "aba37a39ea3f4877919c531f2067b415be5a4526c1b7c1063bac81244a2afc98",
+    "backtest-console/src/features/backtest/hooks/useBacktestForm.ts": "fb306ead3258f613182248d01b6d6d02132b93f51539fb123fc69218bf9bfee3",
+    "backtest-console/src/features/backtest/hooks/useFormValidation.ts": "0813907d95b4263332d55ec636993fb385c1cd08a13f84fcb84e29e8e195fb25",
+    "backtest-console/src/features/backtest/hooks/usePortfolioBacktest.ts": "7244a0d27051c2dd31c5fb6363f021143519c5626831e063dff1d59720d20717",
+    "backtest-console/src/features/backtest/hooks/useStrategyParams.ts": "8921363502480780fdeada7bd0476bffb006fdfec45ab59d75e580b5d7f5ba02",
+    "backtest-console/src/features/backtest/model/backtestFormReducer.ts": "98f5cd71ad43a9676d3a6f542a6824dc41a5d5de66ab524ad9b57c13c315d3d3",
+    "backtest-console/src/features/backtest/model/strategyConfig.ts": "ecef757cf2bc7446882af56f83aa0dbca7d115ce4fb0788d818e98aca633e6a5",
+    "backtest-console/src/features/backtest/services/backtestService.ts": "df948486dbf8e96495f6b540aa7cc3e01b55c0fd138997030be5ceceaa95815f",
+    "backtest-console/src/features/backtest/services/reportGenerator.ts": "eb3d892b92b0ab45876ee62230b208f51176b010ba8268814f822fe0e55ec55b",
+    "backtest-console/src/features/backtest/utils/calculateDcaPeriods.ts": "555c563030c9f9dd4c395f51fa8365f33ab90275b6d29a7aa62ebea0b515f060",
+    "backtest-console/src/features/backtest/utils/chartDataTransform.ts": "27fe49e0a064c7ad039ed5a4b504510f64ad6910dbac2d539beec6a18f2db31e",
+    "backtest-console/src/features/backtest/utils/executionChartData.ts": "7cc8d2208b5274d4adcefeb81190a7b53f0831cc6efaf3e4ed7247da7acbb20c",
+    "backtest-console/src/features/backtest/utils/index.ts": "7c2bc199231fd1e20bbf6e3f5070400bfb3a0866830d535066d6f72a3f1de215",
+    "backtest-console/src/features/backtest/utils/portfolioCalculations.ts": "07d280b02907ea3b0f195561fc1a1923b5adc8b179a0d2e047d67aa6cf214027",
+    "backtest-console/src/features/backtest/utils/__tests__/calculationCorrectness.test.ts": "0d03a522dcb39825f5fd157d0e4f1000c84885e4be6d644c306752318de650e7",
+    "backtest-console/src/features/backtest/utils/__tests__/chartDataTransform.test.ts": "33ded48460c156e2db58b3f9a5fcca8f873891f4651a743fa5b35baa50e12001",
+    "backtest-console/src/features/backtest/utils/__tests__/portfolioCalculations.test.ts": "658a411cb0cf40264c800e75496c08ff523890eab5d00a9ee1540f6a727c31a4",
+    "backtest-console/src/features/backtest/services/__tests__/backtestService.integration.test.ts": "2c9d9905b137d2e1d37dc51f366d2a60815b5ec6a28cb9c282e33534a3ec7dfc",
+    "backtest-console/src/features/backtest/services/__tests__/reportGenerator.results.test.ts": "5c677c2fc6b72c3c3c939d8bc3bd751924fb99af0d7d5d91818e215391265071",
+    "backtest-console/src/features/backtest/services/__tests__/reportGenerator.test.ts": "120fd387219000ea0370b746658fddaa1d272e5cc468b78518fbd8867a1a8f20",
+    "backtest-console/src/features/backtest/model/constants/assetTypes.ts": "cacaffacc0f6270587e11d1def3a58dda32e8c9c71afb47f39b0bd18ff9504ca",
+    "backtest-console/src/features/backtest/model/constants/dcaConfig.ts": "865a92f3243874620398d921f2c576068cb02e5ebb10a6c4e82510d2b20cb295",
+    "backtest-console/src/features/backtest/model/constants/index.ts": "1025b5826e81bc9eeb70bf0d985442b8387ffbbc49d305e8b81bde9be28b75f5",
+    "backtest-console/src/features/backtest/model/constants/rebalancing.ts": "d63c7f513de718a32fdf33443f54a3cc4f069075cab58732cfeb38aec4c8b036",
+    "backtest-console/src/features/backtest/model/constants/stocks.ts": "91be361bb6b64dfa76b4842867774e8a13cc8286e244ee02fa68fb085c94d0d0",
+    "backtest-console/src/features/backtest/model/constants/strategies.ts": "dcc5180a09f07ea907a190d8c4711bd723aef816bcb7f822861f446f081afe95",
+    "backtest-console/src/features/backtest/model/constants/validation.ts": "b3719a98bed14c5f4b8679a5aa4d85bea606c6ec6c2713b80c8d64bca8fceac9",
+    "backtest-console/src/features/backtest/model/types/api-types.ts": "707e04fc404b63051c85d44d4fa509cb7a72deb8846d0cb8df717bd9e05a4dba",
+    "backtest-console/src/features/backtest/model/types/backtest-form-types.ts": "6968a41ba1d0cdd0b957812ba15df3408be1259038f83893a9a6d6d0308d6cdd",
+    "backtest-console/src/features/backtest/model/types/backtest-result-types.ts": "226f66ffe2c4ec6fa2e3baff584576558a9a035f26f7fd0a2fbd35bdad020c8a",
+    "backtest-console/src/features/backtest/model/types/index.ts": "729bb33567751f64b11500d068c241911beff6eb5fb4a394b916199f211e0b5e",
+    "backtest-console/src/features/backtest/model/types/volatility-news-types.ts": "baffa8827104d13c47434e606624ee03b7efbf1f907056eb35c083fe55bffba3",
+    "backtest-console/src/features/backtest/model/__tests__/backtestFormReducer.test.ts": "b405f43f28bf4162e05a8eae9f768c10e61947bb3bec84ca2fc59140cc75ccbb",
+    "backtest-console/src/features/backtest/model/__tests__/readversarial.test.ts": "e480b549e77da9f4066360567163ae1d8243171010b35e865069763a660c81af",
+    "backtest-console/src/features/backtest/model/__tests__/recalcAmountsByWeight.test.ts": "ea93d726e8d0b0f6d158ae7e4f755deb4b669cba73403bc0abddf50a96d1e97a",
+    "backtest-console/src/features/backtest/model/__tests__/strategyCapabilities.test.ts": "05cad19bb428e14905372b3a67a64ce3545876e16944f3236e24e32689cd3bcf",
+    "backtest-console/src/features/backtest/model/types/__tests__/api-types.contract.test.ts": "54b684d85259c87920a087c910c202c697ed484cb5a42973eca7042eb439a1d7",
+    "backtest-console/src/features/backtest/hooks/charts/chartDataSelectors.ts": "0cea528c96b27aa547e08c44ca2a7008c42bc2aea13f1b7a4d4c65fa14cb6de6",
+    "backtest-console/src/features/backtest/hooks/charts/chartSeriesBuilders.ts": "3b874578d9a00a08648b3855d50f5c255add4aa2e28edbfa3cb5393383d781b1",
+    "backtest-console/src/features/backtest/hooks/charts/useChartData.ts": "c3ffedbf2ee235482da5d7847f1128196e911868f19feab908ff188673b07bd8",
+    "backtest-console/src/features/backtest/hooks/__tests__/marketDataLifecycle.test.ts": "5b2cbf190a54b80bb820b5d37d168db5fdaf19cd6270f5104dadae86a013dc00",
+    "backtest-console/src/features/backtest/hooks/__tests__/useBacktestForm.test.ts": "cf157342838d629a71673c7cdc09400d34ec2dc6aded4dba819ad84cce5b5581",
+    "backtest-console/src/features/backtest/hooks/__tests__/useFormValidation.test.ts": "acfb59d292c361330c780c4fc5e2a6f58ffef144084f87c46e75ee852cb44d35",
+    "backtest-console/src/features/backtest/hooks/__tests__/usePortfolioBacktest.test.ts": "849a0da60abc6f1341142e6c42ad1583062ef08f84b8a3de11372eeb7bb12385",
+    "backtest-console/src/features/backtest/hooks/charts/__tests__/useChartData.test.ts": "9eb27044a5fa570f7d81706bd146520c1e9daf0842c520bf442099a5f6665e1a",
+    "backtest-console/src/features/backtest/components/portfolio-form/index.ts": "6bc25138597a2d6ea3cc05778aa3d451ba2ddfd39fa0cb86bef54f682d6006fd",
+    "backtest-console/src/features/backtest/components/shared/index.ts": "b793b6a974b01181bed48da2af9976529424dc4f7b4ccfb87d9c4ccfa2251280",
+    "backtest-console/src/features/backtest/components/BacktestResults.tsx": "60f625ef480ee720a5daccd8c84d1dbb2f9fef07334c090243572f92ca156730",
+    "backtest-console/src/features/backtest/components/CommissionForm.tsx": "39842ebf3aef6208a4e75afaf574ae3608cf2ee7c4d882af1aedfa97e6c423b1",
+    "backtest-console/src/features/backtest/components/DateRangeForm.tsx": "4e49c52cf7d9a375329822a7993795ce3879f6c5c99515828d0c5950eadd62d7",
+    "backtest-console/src/features/backtest/components/EquityChart.tsx": "65e1e81bcb60a0163a3856cd4301698d0f0d0d148e60653aa4bbc751acf9ef05",
+    "backtest-console/src/features/backtest/components/OHLCChart.tsx": "6ed7c0d9a1360f798ba78833f6391794e85f3b3d1f38f0ce904e294c023ec87d",
+    "backtest-console/src/features/backtest/components/PortfolioBacktestForm.tsx": "5ba799d2fa712b236a9181e8dea7bb2869fdb3e1bd1cec5c36af7fc3eab1ef24",
+    "backtest-console/src/features/backtest/components/PortfolioForm.tsx": "65d2f5ad09aacb894dddf5b756ca18edaff982fd43e4202e1b378e4873397a55",
+    "backtest-console/src/features/backtest/components/StatsSummary.tsx": "b4068c9824cbff1325e50d4bf24f7d09620b928e15519da1cf250e547cadd44e",
+    "backtest-console/src/features/backtest/components/StockPriceChart.tsx": "6c1281202c2715bb3208d6950e5d143ccd7ff5c9bda7c1cc79a484cc8f9962df",
+    "backtest-console/src/features/backtest/components/StrategyForm.tsx": "6b60872ea6fdfa62dd825941e4184a3ac257ebeaa7220908df34e65700984054",
+    "backtest-console/src/features/backtest/components/StrategyHelpModal.tsx": "aa802dd49422d359366acd6b852bac3c9039b04405481b0cec32ee2af6c505ce",
+    "backtest-console/src/features/backtest/components/TradesChart.tsx": "455105ac00d406ed3b72f9d946c8df77c2d9d1e6d40bed4de81ec07b1c9de0da",
+    "backtest-console/src/features/backtest/components/TradeSignalsChart.tsx": "534940fffe871965d9aa3a389e26a34041da597182b30d00c3c90403317d70fe",
+    "backtest-console/src/features/backtest/components/TurnstileVerification.tsx": "df2fd798563e54c902685c12a1e756814d476e3c297a1436a621a0b67c8b37b3",
+    "backtest-console/src/features/backtest/components/lazy/LazyChartComponents.tsx": "66e9ecd4a7d51fb6b367eb33f72cb95d67da2dcf67cb1b9d052a7bf25adc6c02",
+    "backtest-console/src/features/backtest/components/portfolio-form/DcaPreview.tsx": "9163369d8bb53808851670e5c937bd7b1fc2f2bd39841bc7cdc3c31169132183",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioInputModeToggle.tsx": "fe292f03a9c6aea953182bacda1b70c5451fedb67c875eba3fe470bcfc2c9842",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioMobileCard.tsx": "cf0b3e9a3553da4e16cc4f48def3af3ca35a899c8ca1a06333bf0e7f0f63d238",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioSummary.tsx": "a2964ced064f23907b7f165cc3a2592cfaa0e7816483cb68cea9852fdaea1eb2",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioTable.tsx": "3d4bfb148256efd87fbf92bf39df81358b5bd6f88a754c39674db5950e2d8efe",
+    "backtest-console/src/features/backtest/components/results/BenchmarkIndexChart.tsx": "b780837c99b13f85005c4ed20b737721bb93c91f801ce47e370618d682cdddc7",
+    "backtest-console/src/features/backtest/components/results/BenchmarkReturnsChart.tsx": "6e157993404eae28e91c4a08d5225e0f7bb98270d2b07f158ca045e29ff8c434",
+    "backtest-console/src/features/backtest/components/results/LatestNewsSection.tsx": "8fbd2df5e392dfd982d55bf9f0805fcf1d9a762be14e615b8323fa82c002673e",
+    "backtest-console/src/features/backtest/components/results/MarketDataStatus.tsx": "37270c10f5681eda310b6c05669117ee674f2dd24a1d2aaf246a6c8e0f66a0d2",
+    "backtest-console/src/features/backtest/components/results/RebalanceHistoryTable.tsx": "26147757b7075f579d9290bc2adccd586324206e646eec61468caac596102848",
+    "backtest-console/src/features/backtest/components/results/ResultsHeader.tsx": "6d45d9a0f32a07b0edc63ab0a80fe77b2f5dc63864885b9ccefb3e3922260d41",
+    "backtest-console/src/features/backtest/components/results/StockSymbolSelector.tsx": "4b2cc2fc5db804931084303eb7d6cb438741b6135b7ff1dcddf80ce6fc032e54",
+    "backtest-console/src/features/backtest/components/results/SupplementalStatusNotice.tsx": "33dee86242d20f1f59e85e09ca01cf23849cb94917ebb6dfc85096bb862b0279",
+    "backtest-console/src/features/backtest/components/results/VolatilityEventsSection.tsx": "4f732a780554f7d6339766d263d5b735f764f3d830c16b080389b513c5564742",
+    "backtest-console/src/features/backtest/components/results/WarningBanner.tsx": "be02d095ff2033ee04bcaa9359701a837e69a2a69b8fdec25efc499f11bc8f17",
+    "backtest-console/src/features/backtest/components/results/WeightHistoryChart.tsx": "cd89bdb054c956ca4082d2f1dad1b38fe78086a7c2009a35e1b9499b3993d321",
+    "backtest-console/src/features/backtest/components/shared/CustomTooltip.tsx": "9200e76f1bab3003ed138e51d9e245e8dbe4c9e717b1bebfdd5820fe13ff63f5",
+    "backtest-console/src/features/backtest/components/shared/ResultBlock.tsx": "40a5aba9bf5a22416eebbb49cf8fa2aaf41582c77a5669b91bcfc8114ec10988",
+    "backtest-console/src/features/backtest/components/volatility/VolatilityTable.tsx": "5b29a88628a00116bbdb22f42532fc63b0b4838f7278ebc6c3ba0c498779e8bd",
+    "backtest-console/src/features/backtest/components/__tests__/BacktestForm.test.tsx": "ec1ddfc9c701107f4c7670c680c4034d3953f11af9728d6ae09755bb6c5efd43",
+    "backtest-console/src/features/backtest/components/__tests__/BacktestResults.test.tsx": "2aaa4058a9afa334dbc2aa0f8a1026ec11c6fe2d419569c5525859329decae3a",
+    "backtest-console/src/features/backtest/components/__tests__/ChartRendering.test.tsx": "8e8a1da356cdf3d06b98c1e0ad06925caa031ccf541e40e2e7e855fbb70ab4c9",
+    "backtest-console/src/features/backtest/components/__tests__/ChartResponsiveness.test.tsx": "cf35add99a33f2757a787f75213422b4d61475b3e8c5750a50452319f300f050",
+    "backtest-console/src/features/backtest/components/__tests__/OpenPositionChart.test.tsx": "b06e5880179e20d8becac095fdeb86d1ccf2d2ffb241d061dc418ceb94378bdc",
+    "backtest-console/src/features/backtest/components/__tests__/S01S06.test.tsx": "f7791c6243bccc27403083ce48d29193c238a497e8299488998224644e1e0766",
+    "backtest-console/src/features/backtest/components/__tests__/StatsSummary.results.test.tsx": "f98f01fe5b52aebc7868aeca8d61905a9cc442771bf83b0f3188ecfa5d04d8e6",
+    "backtest-console/src/features/backtest/components/__tests__/StatsSummary.test.tsx": "6de33f3c7eb8bb5ddd7f6ab5a7b410fd589ad6bee33e2a5106feea9b71e97f85",
+    "backtest-console/src/features/backtest/components/__tests__/StrategyForm.test.tsx": "cc5367d2f1b457c438456075752667e53b841f4cf664388e792b74b3063f8ab3",
+    "backtest-console/src/features/backtest/components/__tests__/TradesChart.test.tsx": "79c4364c9b9683c285adc4894f4b76cee58b735580764bed71bc5c7c402b7278",
+    "backtest-console/src/features/backtest/components/__tests__/TradeSignalsChart.test.tsx": "61b5685638e06b9858e9a8064b9564adff4545451474aaa7b6a5d5eeef1b26e1",
+    "backtest-console/src/features/backtest/components/__tests__/TurnstileVerification.test.tsx": "82eb6f496df3f306a5d765e796a54e67a9d4fb4a8d35ef3b8aced77dc51d9860",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/BenchmarkSection.tsx": "e0e3e12fff5af896f9a954911c449498db059bb469c44f9b7d91a99f27e69a6f",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/index.tsx": "51586903df5819399b72cb070737a1cc8c8a668be158df186ba746e77744c9f9",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/PortfolioCharts.tsx": "7934ab0e1541b20e5bdfff1162a661fd52df0762959d22f23b444b7ad4a7eef6",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/SingleStockCharts.tsx": "d9d0a4cad9c817b8a155d80fc69931de8da9a8132fe6a706ca239df3f7f0b78e",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/SupplementaryCharts.tsx": "1deabdb7214fe10aa48fb5a1d475e8a6c77dd12c1b9dc8b654f20c14d16b3ffd",
+    "backtest-console/src/features/backtest/components/results/__tests__/LatestNewsSection.test.tsx": "824c8cecdf8ca4bb6bdf948219934399b5c8d1d44f29073e20d83a2792717234",
+    "backtest-console/src/features/backtest/components/results/__tests__/RebalanceHistoryTable.test.tsx": "bca1757b11faede42d4588e2c54bc7629a2f3d3df3fc587a24e73f60bac688ba",
+    "backtest-console/src/features/backtest/components/results/__tests__/WeightHistoryChart.test.tsx": "c95e26424ed003f6f95487ac948dcd0bae611f25d6cbdcc1d70071de36133ceb",
+    "backtest-console/src/features/backtest/components/portfolio-form/__tests__/PortfolioMobileCard.test.tsx": "0085b75266c4e2f47afe6727fab807ae884710acbb4cb5d4e865da35574db259",
+    "backtest-console/src/features/backtest/components/portfolio-form/__tests__/PortfolioSummary.test.tsx": "cd7e0549ba5ddb04c2b9a5d353b59ba73dd31765ef87ca15bd25eee5f94fbe94",
+    "backtest-console/src/features/backtest/components/portfolio-form/__tests__/PortfolioTable.test.tsx": "5ec991f27f4aa33dd4eb0038d9bee682c98d667104ae831dd2aae12f04ef378e",
+    "backtest-console/src/shared/utils/dataSampling/calendar.ts": "cb42d46067daf5f2cb4897492a4919be565dbd8a0cbc939602cb872a12859591",
+    "backtest-console/src/shared/utils/dataSampling/index.ts": "28ed58626944c42c3c0a8841355d32073174f8da73299539962964355d9e5b6d",
+    "backtest-console/src/shared/utils/dataSampling/periodSampling.ts": "06ef62bb369fd99061a4b3ff8ec1bf9e096ad7f3bd9dd0b7d0a7dcfc972a4b06",
+    "backtest-console/src/shared/utils/dataSampling/pointLimitSampling.ts": "dd5b7d0f37e46d497831901a10267589a5fa110f4eb8c453c341f0796b87f8dd",
+    "backtest-console/src/shared/utils/dataSampling/priceSampling.ts": "c6a462be7d02e6127b1d8874bc2c1ea81028e72d3bad82ede8ef1b89ad553a8c",
+    "backtest-console/src/shared/utils/dataSampling/returnAggregation.ts": "f592d3f320abffbffefaac756adee0b241fee5cddc2109d3877208170acd6b0f"
+  },
+  "browser_results": [
+    {
+      "name": "initial_fee",
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 9900.990099009901,
+      "csvBytes": 1025,
+      "pageErrors": []
+    },
+    {
+      "name": "weekend_cash_weights",
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 10000,
+      "csvBytes": 1015,
+      "pageErrors": []
+    },
+    {
+      "name": "front_loaded_gain_monthly",
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 12000,
+      "csvBytes": 2256,
+      "pageErrors": []
+    },
+    {
+      "name": "open_close_gap",
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 11300,
+      "marker": {
+        "date": "2023-01-08",
+        "price": "97",
+        "tooltip": "날짜: 2023-01-08\n\n주가: $110.00\n\n매수: $97.00"
+      },
+      "csvBytes": 1051,
+      "pageErrors": []
+    },
+    {
+      "name": "weekly_backdated_open",
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 10000,
+      "marker": {
+        "date": "2023-01-11",
+        "price": "98",
+        "tooltip": "날짜: 2023-01-11\n\n매수: $98.00"
+      },
+      "csvBytes": 1504,
+      "pageErrors": []
+    }
+  ],
+  "raw_evidence": ".comparison/reports/s01-s06-2026-11-11",
+  "memory_samples": ".comparison/reports/s01-s06-memory-2026-11-11"
+}

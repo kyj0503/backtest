@@ -1,0 +1,1156 @@
+[
+  {
+    "name": "21_items",
+    "request": {
+      "name": "21_items",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "CASH0",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH1",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH2",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH3",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH4",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH5",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH6",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH7",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH8",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH9",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH10",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH11",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH12",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH13",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH14",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH15",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH16",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH17",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH18",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH19",
+            "amount": 100,
+            "asset_type": "cash"
+          },
+          {
+            "symbol": "CASH20",
+            "amount": 100,
+            "asset_type": "cash"
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "too_long",
+          "loc": [
+            "body",
+            "portfolio"
+          ],
+          "msg": "List should have at most 20 items after validation, not 21",
+          "input": [
+            {
+              "symbol": "CASH0",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH1",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH2",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH3",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH4",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH5",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH6",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH7",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH8",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH9",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH10",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH11",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH12",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH13",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH14",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH15",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH16",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH17",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH18",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH19",
+              "amount": 100,
+              "asset_type": "cash"
+            },
+            {
+              "symbol": "CASH20",
+              "amount": 100,
+              "asset_type": "cash"
+            }
+          ],
+          "ctx": {
+            "field_type": "List",
+            "max_length": 20,
+            "actual_length": 21
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "29_day_period",
+    "request": {
+      "name": "29_day_period",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-02-01",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": "백테스트 기간이 너무 짧습니다: 29일 (최소 30일 필요)"
+    }
+  },
+  {
+    "name": "amount_and_weight",
+    "request": {
+      "name": "amount_and_weight",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 1000,
+            "weight": 100
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body",
+            "portfolio"
+          ],
+          "msg": "Value error, 포트폴리오 내 모든 종목은 amount 또는 weight 중 하나만 입력해야 합니다. 혼합 입력 불가.",
+          "input": [
+            {
+              "symbol": "AAPL",
+              "amount": 1000,
+              "weight": 100
+            }
+          ],
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate_stock",
+    "request": {
+      "name": "duplicate_stock",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 1000
+          },
+          {
+            "symbol": "AAPL",
+            "amount": 2000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body",
+            "portfolio"
+          ],
+          "msg": "Value error, 중복된 종목이 있습니다: AAPL. 같은 종목은 한 번만 추가할 수 있습니다.",
+          "input": [
+            {
+              "symbol": "AAPL",
+              "amount": 1000
+            },
+            {
+              "symbol": "AAPL",
+              "amount": 2000
+            }
+          ],
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty_portfolio",
+    "request": {
+      "name": "empty_portfolio",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "too_short",
+          "loc": [
+            "body",
+            "portfolio"
+          ],
+          "msg": "List should have at least 1 item after validation, not 0",
+          "input": [],
+          "ctx": {
+            "field_type": "List",
+            "min_length": 1,
+            "actual_length": 0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "get_invalid_news_limit",
+    "request": {
+      "name": "get_invalid_news_limit",
+      "method": "GET",
+      "path": "/api/v1/news?symbols=AAPL&limit=50"
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "less_than_equal",
+          "loc": [
+            "query",
+            "limit"
+          ],
+          "msg": "Input should be less than or equal to 20",
+          "input": "50",
+          "ctx": {
+            "le": 20
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "get_missing_date",
+    "request": {
+      "name": "get_missing_date",
+      "method": "GET",
+      "path": "/api/v1/prices?symbols=AAPL"
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "missing",
+          "loc": [
+            "query",
+            "start_date"
+          ],
+          "msg": "Field required",
+          "input": {
+            "symbols": [
+              "AAPL"
+            ]
+          }
+        },
+        {
+          "type": "missing",
+          "loc": [
+            "query",
+            "end_date"
+          ],
+          "msg": "Field required",
+          "input": {
+            "symbols": [
+              "AAPL"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "get_unknown_argument",
+    "request": {
+      "name": "get_unknown_argument",
+      "method": "GET",
+      "path": "/api/v1/prices?symbols=AAPL&start_date=2023-01-03&end_date=2023-10-31&extra=1"
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "extra_forbidden",
+          "loc": [
+            "query",
+            "extra"
+          ],
+          "msg": "Extra inputs are not permitted",
+          "input": "1"
+        }
+      ]
+    }
+  },
+  {
+    "name": "invalid_commission",
+    "request": {
+      "name": "invalid_commission",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.1,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "less_than",
+          "loc": [
+            "body",
+            "commission"
+          ],
+          "msg": "Input should be less than 0.1",
+          "input": 0.1,
+          "ctx": {
+            "lt": 0.1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "invalid_json",
+    "request": {
+      "name": "invalid_json",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "raw": "{not json}"
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "json_invalid",
+          "loc": [
+            "body",
+            1
+          ],
+          "msg": "JSON decode error",
+          "input": {},
+          "ctx": {
+            "error": "Expecting property name enclosed in double quotes"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "invalid_params",
+    "request": {
+      "name": "invalid_params",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "sma_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false,
+        "strategy_params": {
+          "short_window": 30,
+          "long_window": 20
+        }
+      }
+    },
+    "expected": {
+      "detail": "[ValidationError] 모든 종목의 백테스트가 실패했습니다."
+    }
+  },
+  {
+    "name": "invalid_strategy",
+    "request": {
+      "name": "invalid_strategy",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "unknown",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body",
+            "strategy"
+          ],
+          "msg": "Value error, 유효하지 않은 전략입니다: unknown. 허용된 값: bollinger_strategy, buy_hold_strategy, ema_strategy, macd_strategy, rsi_strategy, sma_strategy",
+          "input": "unknown",
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "invalid_symbol",
+    "request": {
+      "name": "invalid_symbol",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL<script>",
+            "amount": 1000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "string_too_long",
+          "loc": [
+            "body",
+            "portfolio",
+            0,
+            "symbol"
+          ],
+          "msg": "String should have at most 10 characters",
+          "input": "AAPL<script>",
+          "ctx": {
+            "max_length": 10
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "malformed_date",
+    "request": {
+      "name": "malformed_date",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "not-a-date",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body",
+            "start_date"
+          ],
+          "msg": "Value error, 날짜는 YYYY-MM-DD 형식이어야 합니다.",
+          "input": "not-a-date",
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "missing_amount",
+    "request": {
+      "name": "missing_amount",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL"
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body",
+            "portfolio"
+          ],
+          "msg": "Value error, 총 투자 금액은 0보다 커야 합니다.",
+          "input": [
+            {
+              "symbol": "AAPL"
+            }
+          ],
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "negative_amount",
+    "request": {
+      "name": "negative_amount",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": -1
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "greater_than",
+          "loc": [
+            "body",
+            "portfolio",
+            0,
+            "amount"
+          ],
+          "msg": "Input should be greater than 0",
+          "input": -1,
+          "ctx": {
+            "gt": 0.0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "null_rebalance",
+    "request": {
+      "name": "null_rebalance",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": null,
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "string_type",
+          "loc": [
+            "body",
+            "rebalance_frequency"
+          ],
+          "msg": "Input should be a valid string",
+          "input": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "over_10years",
+    "request": {
+      "name": "over_10years",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "2010-01-01",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body",
+            "end_date"
+          ],
+          "msg": "Value error, 백테스트 기간은 최대 10년으로 제한됩니다.",
+          "input": "2023-10-31",
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "reverse_dates",
+    "request": {
+      "name": "reverse_dates",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2022-01-01",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body",
+            "end_date"
+          ],
+          "msg": "Value error, 종료 날짜는 시작 날짜보다 이후여야 합니다.",
+          "input": "2022-01-01",
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "technical_dca",
+    "request": {
+      "name": "technical_dca",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 1000,
+            "investment_type": "dca"
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "sma_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body"
+          ],
+          "msg": "Value error, sma_strategy는 분할 매수(DCA)를 지원하지 않습니다 (DCA 종목: AAPL). DCA는 buy_hold_strategy에서만 사용할 수 있습니다.",
+          "input": {
+            "portfolio": [
+              {
+                "symbol": "AAPL",
+                "amount": 1000,
+                "investment_type": "dca"
+              }
+            ],
+            "start_date": "2023-01-03",
+            "end_date": "2023-10-31",
+            "strategy": "sma_strategy",
+            "rebalance_frequency": "none",
+            "commission": 0.002,
+            "include_stock_data": false,
+            "include_volatility_events": false,
+            "include_exchange_rates": false,
+            "include_benchmarks": false,
+            "include_news": false
+          },
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "technical_rebalance",
+    "request": {
+      "name": "technical_rebalance",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "sma_strategy",
+        "rebalance_frequency": "monthly_1",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body"
+          ],
+          "msg": "Value error, sma_strategy는 리밸런싱을 지원하지 않습니다 (rebalance_frequency=monthly_1). rebalance_frequency를 none으로 보내거나 buy_hold_strategy를 사용하세요.",
+          "input": {
+            "portfolio": [
+              {
+                "symbol": "AAPL",
+                "amount": 10000
+              }
+            ],
+            "start_date": "2023-01-03",
+            "end_date": "2023-10-31",
+            "strategy": "sma_strategy",
+            "rebalance_frequency": "monthly_1",
+            "commission": 0.002,
+            "include_stock_data": false,
+            "include_volatility_events": false,
+            "include_exchange_rates": false,
+            "include_benchmarks": false,
+            "include_news": false
+          },
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "unknown_dca",
+    "request": {
+      "name": "unknown_dca",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 1000,
+            "investment_type": "dca",
+            "dca_frequency": "weekly_4"
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "value_error",
+          "loc": [
+            "body",
+            "portfolio",
+            0,
+            "dca_frequency"
+          ],
+          "msg": "Value error, DCA 주기는 weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12 중 하나여야 합니다.",
+          "input": "weekly_4",
+          "ctx": {
+            "error": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "zero_amount",
+    "request": {
+      "name": "zero_amount",
+      "method": "POST",
+      "path": "/api/v1/backtest",
+      "body": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 0
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "rebalance_frequency": "none",
+        "commission": 0.002,
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      }
+    },
+    "expected": {
+      "detail": [
+        {
+          "type": "greater_than",
+          "loc": [
+            "body",
+            "portfolio",
+            0,
+            "amount"
+          ],
+          "msg": "Input should be greater than 0",
+          "input": 0,
+          "ctx": {
+            "gt": 0.0
+          }
+        }
+      ]
+    }
+  }
+]

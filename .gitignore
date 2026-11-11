@@ -22,3 +22,6 @@ node_modules/
 
 # macOS
 .DS_Store
+
+# Exported sources for the local Python/Rust comparison stack
+/.comparison/

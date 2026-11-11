@@ -4,6 +4,16 @@
 **에이전트용 지시 문서는 이 파일 하나만 둔다** — `CLAUDE.md`, `.github/copilot-instructions.md`,
 `.cursorrules` 같은 도구별 지시 파일을 새로 만들지 말고 필요한 내용은 여기에 추가한다.
 
+## Rust migration branch
+
+- `rust-migration`에서 실행·배포 대상은 `backtest_be_rust/`다. React 콘솔은 별도 저장소에 유지한다.
+- 아래 Python 관련 규칙은 보존된 비교 구현과 Alembic에 적용한다. 2026-11-11 사용자 요청에 따라 Rust 금융 계산은 Python 출력 일치보다 독립적인 정확성 검증을 우선한다. 양방향 수수료, 다음 시가 체결, 미청산 포지션 평가, 실제 납입 일정, 달력 일간 위험 지표를 사용한다.
+- Rust 검증: `docker build --target test ./backtest_be_rust`, `sh scripts/audit-deps.sh be`, `docker build --target runtime ./backtest_be_rust`.
+- `tests/fixtures/parity.json`은 Python 기준 결과다. Rust 출력으로 재생성하지 않는다. 내보내기 절차는 `docs/rust-migration.md`를 참조한다.
+- Rust 운영 이미지에는 단일 서버 프로세스만 실행한다. 컨테이너 공통 실행 한도는 이 프로세스의 공유 세마포어와 클라이언트별 admission guard가 소유한다. CPU 작업이 취소 신호를 확인해 종료할 때까지 슬롯을 반환하지 않는다.
+- DB 스키마와 Alembic은 유지한다. 기존 개발 DB 볼륨이나 운영 DB를 초기화하지 않는다.
+- 현재 개발 기준 브랜치 이름은 `develop`이다. 아래 역사적 `dev` 표기는 `develop`을 뜻한다.
+
 ## Git / PR 규칙
 
 - **`main` 대상 PR은 어떤 경우에도 에이전트가 머지하지 않는다. 사용자가 GitHub에서 직접 머지한다.**
@@ -45,7 +55,7 @@ docker build --target test ./backtest_be_fast
 
 1. **Async/Sync boundary:** Always `await asyncio.to_thread(sync_fn, ...)` for sync I/O in async endpoints. Violating this causes race conditions (first run fails, second succeeds).
 
-2. **backtesting.py version is pinned in requirements.lock.txt** (currently 0.6.6). Preserve the tested commission/finalization behavior; do not apply assumptions from the historical 0.3.3 implementation.
+2. **backtesting.py version is pinned in requirements.lock.txt** (currently 0.6.6). Preserve the Python comparison implementation. Rust uses its independently tested commission/finalization definitions documented in `docs/rust-migration.md`.
 
 3. **Strategy enum values:** `sma_strategy`, `rsi_strategy`, `bollinger_strategy`, `macd_strategy`, `buy_hold_strategy` (NOT "buy_and_hold"), `ema_strategy`. `PortfolioBacktestRequest.strategy` validates membership against `StrategyType` — unknown values are rejected, not silently accepted.
 

@@ -21,13 +21,10 @@ set -eu
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-PIP_IGNORE=""
-
 audit_backend() {
-  echo "== BE: pip-audit (예외: ${PIP_IGNORE:-없음}) =="
+  echo "== BE: cargo-audit (예외 없음) =="
   docker build --target audit --output=type=cacheonly \
-    --build-arg "PIP_AUDIT_IGNORE=${PIP_IGNORE}" \
-    "${REPO_ROOT}/backtest_be_fast"
+    "${REPO_ROOT}/backtest_be_rust"
 }
 
 case "${1:-all}" in

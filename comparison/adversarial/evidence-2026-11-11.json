@@ -1,0 +1,2155 @@
+{
+  "review_date": "2026-11-11",
+  "basis": "Independent arithmetic, causal execution, cash conservation; no original Python financial outputs used",
+  "branches": {
+    "backtest": "rust-migration",
+    "backtest-console": "rust-migration"
+  },
+  "rust_runtime_image": "sha256:bda62be9e3bcf9629170634bf5ada176124085ba589d7f363285f2e08c07edd1",
+  "engine": {
+    "cases": 133,
+    "checks": 201,
+    "passed": 123,
+    "failed": 78,
+    "checks_detail": [
+      {
+        "name": "cash_constant",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "usd_double",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "usd_flat",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "krw_fx",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "eur_fx",
+        "passed": true,
+        "actual": 12000.0,
+        "expected": 12000,
+        "explanation": ""
+      },
+      {
+        "name": "rebalance_no_fee",
+        "passed": true,
+        "actual": 3000.0,
+        "expected": 3000,
+        "explanation": ""
+      },
+      {
+        "name": "dca_flow_neutral",
+        "passed": true,
+        "actual": 2000.0,
+        "expected": 2000,
+        "explanation": ""
+      },
+      {
+        "name": "dca_growth",
+        "passed": true,
+        "actual": 3000.0,
+        "expected": 3000,
+        "explanation": ""
+      },
+      {
+        "name": "future_fx_not_backfilled",
+        "passed": true,
+        "actual": 422,
+        "expected": 422,
+        "explanation": ""
+      },
+      {
+        "name": "sma_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "ema_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "macd_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "rsi_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "bollinger_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_JPY",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_GBP",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_CNY",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_HKD",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_TWD",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_SGD",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_AUD",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_CAD",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_CHF",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_INR",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "drawdown_recovery_final",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "drawdown_recovery_mdd",
+        "passed": true,
+        "actual": -50.0,
+        "expected": -50,
+        "explanation": ""
+      },
+      {
+        "name": "dca_flow_adjusted_mdd",
+        "passed": true,
+        "actual": -50.0,
+        "expected": -50,
+        "explanation": ""
+      },
+      {
+        "name": "dca_flow_adjusted_final",
+        "passed": true,
+        "actual": 1500.0,
+        "expected": 1500,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_weekly_1",
+        "passed": true,
+        "actual": 5800.0,
+        "expected": 5800,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_weekly_2",
+        "passed": true,
+        "actual": 2900.0,
+        "expected": 2900,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_1",
+        "passed": true,
+        "actual": 1400.0,
+        "expected": 1400,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_2",
+        "passed": true,
+        "actual": 700.0,
+        "expected": 700,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_3",
+        "passed": true,
+        "actual": 500.0,
+        "expected": 500,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_6",
+        "passed": true,
+        "actual": 300.0,
+        "expected": 300,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_12",
+        "passed": true,
+        "actual": 200.0,
+        "expected": 200,
+        "explanation": ""
+      },
+      {
+        "name": "cash_budget_fee_0.01",
+        "passed": false,
+        "actual": 9900.0,
+        "expected": 9900.990099009901,
+        "explanation": "Notional N plus commission c*N must equal the cash budget."
+      },
+      {
+        "name": "cash_budget_fee_0.09",
+        "passed": false,
+        "actual": 9100.0,
+        "expected": 9174.311926605504,
+        "explanation": "Notional N plus commission c*N must equal the cash budget."
+      },
+      {
+        "name": "initial_fee_is_drawdown",
+        "passed": false,
+        "actual": 0.0,
+        "expected": -9,
+        "explanation": "Relative to funded pre-trade capital, a flat market does not erase the initial transaction loss."
+      },
+      {
+        "name": "no_retroactive_final_bar_buy",
+        "passed": false,
+        "actual": 14700.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "causal_prefix_invariance",
+        "passed": false,
+        "actual": 14700.0,
+        "expected": 10000.0,
+        "explanation": "Adding a future bar cannot change previously observed marked wealth."
+      },
+      {
+        "name": "rsi_standard_seed_no_entry",
+        "passed": false,
+        "actual": 1,
+        "expected": 0,
+        "explanation": "RSI(2) starts at 50; subsequent unchanged prices keep it at 50, above oversold 40."
+      },
+      {
+        "name": "roundtrip_flat_price_fees",
+        "passed": false,
+        "actual": 9914.0,
+        "expected": 9828.0,
+        "explanation": "Actual executed share count held fixed; charge the stated 1% commission on both notionals."
+      },
+      {
+        "name": "trade_commission_disclosed",
+        "passed": false,
+        "actual": 0.0,
+        "expected": 172.0,
+        "explanation": ""
+      },
+      {
+        "name": "cash_dca_first_deposit",
+        "passed": false,
+        "actual": 3000.0,
+        "expected": 500,
+        "explanation": ""
+      },
+      {
+        "name": "mixed_cash_dca_first_deposit",
+        "passed": false,
+        "actual": 4000.0,
+        "expected": 1500,
+        "explanation": ""
+      },
+      {
+        "name": "individual_equity_reconciles",
+        "passed": false,
+        "actual": 2000.0,
+        "expected": 5000.0,
+        "explanation": ""
+      },
+      {
+        "name": "rebalance_share_ledger",
+        "passed": false,
+        "actual": 2.45,
+        "expected": 2.462250000000001,
+        "explanation": ""
+      },
+      {
+        "name": "rebalance_fee_on_actual_trade",
+        "passed": false,
+        "actual": 4.9,
+        "expected": 4.924500000000002,
+        "explanation": ""
+      },
+      {
+        "name": "rebalance_self_financing",
+        "passed": false,
+        "actual": 2975.1,
+        "expected": 2975.075376884422,
+        "explanation": ""
+      },
+      {
+        "name": "crypto_volatility_365",
+        "passed": false,
+        "actual": 23.815346236638806,
+        "expected": 28.661773632480664,
+        "explanation": ""
+      },
+      {
+        "name": "crypto_sharpe_365",
+        "passed": false,
+        "actual": 5.319617163291951,
+        "expected": 6.40216024704126,
+        "explanation": ""
+      },
+      {
+        "name": "ui_budget_matches_total",
+        "passed": false,
+        "actual": 9090.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "small_price_unrounded_control",
+        "passed": true,
+        "actual": 29999.999999999996,
+        "expected": 30000,
+        "explanation": ""
+      },
+      {
+        "name": "stored_small_price_remains_usable",
+        "passed": false,
+        "actual": null,
+        "expected": "success",
+        "explanation": "MySQL DECIMAL(19,4) rounds both valid positive quotes to zero."
+      },
+      {
+        "name": "finite_input_no_success_with_null_wealth",
+        "passed": false,
+        "actual": true,
+        "expected": false,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 6,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_1e-05_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_0.1_no_up_down_days",
+        "passed": false,
+        "actual": 3,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_0.1_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_3_no_up_down_days",
+        "passed": false,
+        "actual": 3,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_3_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_7_no_up_down_days",
+        "passed": false,
+        "actual": 33,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_7_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 10,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_99.9_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 18,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_123.45_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_10000_no_up_down_days",
+        "passed": false,
+        "actual": 19,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_10000_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 10,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_1e-05_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_0.1_no_up_down_days",
+        "passed": false,
+        "actual": 10,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_0.1_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_3_no_up_down_days",
+        "passed": false,
+        "actual": 6,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_3_no_return",
+        "passed": true,
+        "actual": -3.3306690738754696e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_7_no_up_down_days",
+        "passed": false,
+        "actual": 6,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_7_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 11,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 11,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_123.45_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_10000_no_up_down_days",
+        "passed": false,
+        "actual": 12,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_10000_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 30,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_1e-05_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_3_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_3_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_7_no_up_down_days",
+        "passed": false,
+        "actual": 5,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_7_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 8,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 3,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_123.45_no_return",
+        "passed": true,
+        "actual": -3.3306690738754696e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_10000_no_up_down_days",
+        "passed": false,
+        "actual": 6,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_10000_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 31,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_1e-05_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_3_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_3_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_7_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 34,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 2,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_123.45_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_10000_no_up_down_days",
+        "passed": false,
+        "actual": 2,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_10000_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_1e-05_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_0.1_no_up_down_days",
+        "passed": false,
+        "actual": 2,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_0.1_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_3_no_up_down_days",
+        "passed": false,
+        "actual": 34,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_3_no_return",
+        "passed": true,
+        "actual": -4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_7_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_7_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 6,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_99.9_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 2,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_123.45_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_10000_no_up_down_days",
+        "passed": false,
+        "actual": 13,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_10000_no_return",
+        "passed": true,
+        "actual": -4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 1,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_1e-05_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_0.1_no_up_down_days",
+        "passed": false,
+        "actual": 12,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_0.1_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_3_no_up_down_days",
+        "passed": false,
+        "actual": 5,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_3_no_return",
+        "passed": true,
+        "actual": -3.3306690738754696e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_7_no_up_down_days",
+        "passed": false,
+        "actual": 5,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_7_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 5,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_99.9_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 12,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_123.45_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_10000_no_up_down_days",
+        "passed": false,
+        "actual": 2,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_10000_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 30,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_1e-05_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_3_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_3_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_7_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_7_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 8,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_123.45_no_return",
+        "passed": true,
+        "actual": -4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_10000_no_up_down_days",
+        "passed": false,
+        "actual": 14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_10000_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 30,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_1e-05_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_0.1_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_3_no_up_down_days",
+        "passed": false,
+        "actual": 3,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_3_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_7_no_up_down_days",
+        "passed": false,
+        "actual": 31,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_7_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 2,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_99.9_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 1,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_123.45_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_10000_no_up_down_days",
+        "passed": false,
+        "actual": 4,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_10000_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_1e-05_no_up_down_days",
+        "passed": false,
+        "actual": 17,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_1e-05_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_0.1_no_up_down_days",
+        "passed": false,
+        "actual": 7,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_3_no_up_down_days",
+        "passed": false,
+        "actual": 16,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_3_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_7_no_up_down_days",
+        "passed": false,
+        "actual": 26,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_7_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_99.9_no_up_down_days",
+        "passed": false,
+        "actual": 16,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_99.9_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_123.45_no_up_down_days",
+        "passed": false,
+        "actual": 16,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_123.45_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_10000_no_up_down_days",
+        "passed": false,
+        "actual": 7,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_10000_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_1_wealth",
+        "passed": true,
+        "actual": 407.5,
+        "expected": 407.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_1_order_invariance",
+        "passed": true,
+        "actual": 407.5,
+        "expected": 407.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_2_wealth",
+        "passed": true,
+        "actual": 815.0,
+        "expected": 815.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_2_order_invariance",
+        "passed": true,
+        "actual": 815.0,
+        "expected": 815.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_3_wealth",
+        "passed": true,
+        "actual": 1222.5,
+        "expected": 1222.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_3_order_invariance",
+        "passed": true,
+        "actual": 1222.5,
+        "expected": 1222.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_4_wealth",
+        "passed": true,
+        "actual": 1630.0,
+        "expected": 1630.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_4_order_invariance",
+        "passed": true,
+        "actual": 1630.0,
+        "expected": 1630.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_5_wealth",
+        "passed": true,
+        "actual": 2037.5,
+        "expected": 2037.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_5_order_invariance",
+        "passed": true,
+        "actual": 2037.5,
+        "expected": 2037.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_6_wealth",
+        "passed": true,
+        "actual": 2445.0,
+        "expected": 2445.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_6_order_invariance",
+        "passed": true,
+        "actual": 2445.0,
+        "expected": 2445.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_7_wealth",
+        "passed": true,
+        "actual": 2852.5,
+        "expected": 2852.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_7_order_invariance",
+        "passed": true,
+        "actual": 2852.5,
+        "expected": 2852.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_8_wealth",
+        "passed": true,
+        "actual": 3260.0,
+        "expected": 3260.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_8_order_invariance",
+        "passed": true,
+        "actual": 3260.0,
+        "expected": 3260.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_9_wealth",
+        "passed": true,
+        "actual": 3667.5,
+        "expected": 3667.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_9_order_invariance",
+        "passed": true,
+        "actual": 3667.5,
+        "expected": 3667.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_10_wealth",
+        "passed": true,
+        "actual": 4075.0,
+        "expected": 4075.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_10_order_invariance",
+        "passed": true,
+        "actual": 4075.0,
+        "expected": 4075.0,
+        "explanation": ""
+      }
+    ]
+  },
+  "frontend": {
+    "dca": {
+      "periods": 11,
+      "weightResult": [
+        {
+          "symbol": "TEST",
+          "amount": 909,
+          "weight": 100,
+          "investmentType": "dca",
+          "dcaFrequency": "monthly_1",
+          "assetType": "stock"
+        }
+      ]
+    },
+    "weekly": {
+      "stock": [
+        {
+          "date": "2023-01-10",
+          "return_pct": 7.213535210700983
+        },
+        {
+          "date": "2023-01-19",
+          "return_pct": 7.213535210700983
+        },
+        {
+          "date": "2023-01-20",
+          "return_pct": 1.0000000000000009
+        }
+      ],
+      "benchmark": [
+        {
+          "date": "2023-01-08",
+          "return_pct": 5.101005009999993
+        },
+        {
+          "date": "2023-01-15",
+          "return_pct": 5.101005009999993
+        },
+        {
+          "date": "2023-01-22",
+          "return_pct": 5.101005009999993
+        }
+      ]
+    },
+    "signals": [
+      {
+        "date": "2023-01-03",
+        "price": 100,
+        "buySignal": 100
+      },
+      {
+        "date": "2023-01-04",
+        "price": 110,
+        "buySignal": 110
+      }
+    ],
+    "exportResults": {
+      "textIncludesFinal": true,
+      "csvFinalRow": "최종 자산가치,$3,000",
+      "csvFinalRowColumns": 3,
+      "overflowText": "Cannot read properties of null (reading 'toLocaleString')"
+    }
+  },
+  "http": [
+    {
+      "name": "last_close_future_buy",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": 3589.7011597557785,
+        "Annual_Volatility": 117.96906374130465,
+        "Avg_Drawdown": 0.0,
+        "Duration": "39 days",
+        "End": "2023-02-10",
+        "Final_Value": 14700.0,
+        "Initial_Value": 10000.0,
+        "Max_Consecutive_Gains": 1,
+        "Max_Consecutive_Losses": 0,
+        "Max_Drawdown": 0.0,
+        "Negative_Days": 0,
+        "Peak_Value": 14700.0,
+        "Positive_Days": 1,
+        "Profit_Factor": null,
+        "Sharpe_Ratio": 2.5099800796022267,
+        "Start": "2023-01-02",
+        "Total_Return": 47.0,
+        "Total_Trades": 0,
+        "Total_Trading_Days": 40,
+        "Trade_Win_Rate": null,
+        "Win_Rate": 2.5
+      },
+      "supplemental_status": {
+        "benchmarks": "skipped",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "rsi_wilder_seed",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": 0.0,
+        "Annual_Volatility": 0.0,
+        "Avg_Drawdown": 0.0,
+        "Duration": "39 days",
+        "End": "2023-02-10",
+        "Final_Value": 10000.0,
+        "Initial_Value": 10000.0,
+        "Max_Consecutive_Gains": 0,
+        "Max_Consecutive_Losses": 0,
+        "Max_Drawdown": 0.0,
+        "Negative_Days": 0,
+        "Peak_Value": 10000.0,
+        "Positive_Days": 0,
+        "Profit_Factor": null,
+        "Sharpe_Ratio": 0.0,
+        "Start": "2023-01-02",
+        "Total_Return": 0.0,
+        "Total_Trades": 1,
+        "Total_Trading_Days": 40,
+        "Trade_Win_Rate": 0.0,
+        "Win_Rate": 0.0
+      },
+      "supplemental_status": {
+        "benchmarks": "skipped",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "technical_roundtrip_fee",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": -7.770545023032781,
+        "Annual_Volatility": 51.152742736545356,
+        "Avg_Drawdown": -8.481065528123244,
+        "Duration": "39 days",
+        "End": "2023-02-10",
+        "Final_Value": 9914.0,
+        "Initial_Value": 10000.0,
+        "Max_Consecutive_Gains": 1,
+        "Max_Consecutive_Losses": 1,
+        "Max_Drawdown": -15.964358641173193,
+        "Negative_Days": 1,
+        "Peak_Value": 10774.0,
+        "Positive_Days": 2,
+        "Profit_Factor": 1.0798156417053233,
+        "Sharpe_Ratio": 0.15693185556651676,
+        "Start": "2023-01-02",
+        "Total_Return": -0.8600000000000052,
+        "Total_Trades": 1,
+        "Total_Trading_Days": 40,
+        "Trade_Win_Rate": 0.0,
+        "Win_Rate": 5.0
+      },
+      "supplemental_status": {
+        "benchmarks": "skipped",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "cash_dca",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": 0.0,
+        "Annual_Volatility": 0.0,
+        "Avg_Drawdown": 0.0,
+        "Duration": "39 days",
+        "End": "2023-02-10",
+        "Final_Value": 3000.0,
+        "Initial_Value": 3000.0,
+        "Max_Consecutive_Gains": 0,
+        "Max_Consecutive_Losses": 0,
+        "Max_Drawdown": 0.0,
+        "Negative_Days": 0,
+        "Peak_Value": 3000.0,
+        "Positive_Days": 0,
+        "Profit_Factor": null,
+        "Sharpe_Ratio": 0.0,
+        "Start": "2023-01-02",
+        "Total_Return": 0.0,
+        "Total_Trading_Days": 39,
+        "Win_Rate": 0.0
+      },
+      "supplemental_status": {
+        "benchmarks": "skipped",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "cash_symbol_collision",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": 11859.110166594684,
+        "Annual_Volatility": 167.3320053068151,
+        "Avg_Drawdown": 0.0,
+        "Duration": "39 days",
+        "End": "2023-02-10",
+        "Final_Value": 5000.0,
+        "Initial_Value": 3000.0,
+        "Max_Consecutive_Gains": 1,
+        "Max_Consecutive_Losses": 0,
+        "Max_Drawdown": 0.0,
+        "Negative_Days": 0,
+        "Peak_Value": 5000.0,
+        "Positive_Days": 1,
+        "Profit_Factor": null,
+        "Sharpe_Ratio": 2.509980079602227,
+        "Start": "2023-01-02",
+        "Total_Return": 66.66666666666667,
+        "Total_Trades": 1,
+        "Total_Trading_Days": 40,
+        "Win_Rate": 2.5
+      },
+      "supplemental_status": {
+        "benchmarks": "skipped",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "rebalance_fee",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": 4023.467820734505,
+        "Annual_Volatility": 124.25032042292227,
+        "Avg_Drawdown": 0.0,
+        "Duration": "39 days",
+        "End": "2023-02-10",
+        "Final_Value": 2975.1,
+        "Initial_Value": 2000.0,
+        "Max_Consecutive_Gains": 1,
+        "Max_Consecutive_Losses": 0,
+        "Max_Drawdown": 0.0,
+        "Negative_Days": 0,
+        "Peak_Value": 2975.1,
+        "Positive_Days": 1,
+        "Profit_Factor": null,
+        "Sharpe_Ratio": 2.5099800796022267,
+        "Start": "2023-01-02",
+        "Total_Return": 48.754999999999995,
+        "Total_Trades": 3,
+        "Total_Trading_Days": 40,
+        "Win_Rate": 2.5
+      },
+      "supplemental_status": {
+        "benchmarks": "skipped",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "dca_growth",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": 65857.1209304633,
+        "Annual_Volatility": 250.99800796022268,
+        "Avg_Drawdown": 0.0,
+        "Duration": "39 days",
+        "End": "2023-02-10",
+        "Final_Value": 3000.0,
+        "Initial_Value": 2000.0,
+        "Max_Consecutive_Gains": 1,
+        "Max_Consecutive_Losses": 0,
+        "Max_Drawdown": 0.0,
+        "Negative_Days": 0,
+        "Peak_Value": 3000.0,
+        "Positive_Days": 1,
+        "Profit_Factor": null,
+        "Sharpe_Ratio": 2.5099800796022267,
+        "Start": "2023-01-02",
+        "Total_Return": 50.0,
+        "Total_Trades": 2,
+        "Total_Trading_Days": 40,
+        "Win_Rate": 2.5,
+        "alpha_vs_sp500_pct": -50.0,
+        "sp500_total_return_pct": 100.0
+      },
+      "supplemental_status": {
+        "benchmarks": "ok",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "ui_weight_dca_budget",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": -3.4416913763379853e-13,
+        "Annual_Volatility": 0.0,
+        "Avg_Drawdown": 0.0,
+        "Duration": "302 days",
+        "End": "2023-10-31",
+        "Final_Value": 9090.000000000002,
+        "Initial_Value": 9090.0,
+        "Max_Consecutive_Gains": 1,
+        "Max_Consecutive_Losses": 27,
+        "Max_Drawdown": 0.0,
+        "Negative_Days": 27,
+        "Peak_Value": 9090.000000000002,
+        "Positive_Days": 1,
+        "Profit_Factor": 0.06575520833333331,
+        "Sharpe_Ratio": 0.0,
+        "Start": "2023-01-02",
+        "Total_Return": 2.220446049250313e-14,
+        "Total_Trades": 10,
+        "Total_Trading_Days": 303,
+        "Win_Rate": 0.33003300330033003
+      },
+      "supplemental_status": {
+        "benchmarks": "skipped",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "finite_input_overflow",
+      "http_status": 200,
+      "portfolio_statistics": {
+        "Annual_Return": -100.0,
+        "Annual_Volatility": 0.0,
+        "Avg_Drawdown": 0.0,
+        "Duration": "39 days",
+        "End": "2023-02-10",
+        "Final_Value": null,
+        "Initial_Value": null,
+        "Max_Consecutive_Gains": 0,
+        "Max_Consecutive_Losses": 0,
+        "Max_Drawdown": 0.0,
+        "Negative_Days": 0,
+        "Peak_Value": 0.0,
+        "Positive_Days": 0,
+        "Profit_Factor": null,
+        "Sharpe_Ratio": 0.0,
+        "Start": "2023-01-02",
+        "Total_Return": null,
+        "Total_Trades": 2,
+        "Total_Trading_Days": 40,
+        "Win_Rate": 0.0
+      },
+      "supplemental_status": {
+        "benchmarks": "skipped",
+        "exchange_rates": "skipped",
+        "news": "skipped",
+        "stock_data": "skipped",
+        "ticker_info": "skipped",
+        "volatility_events": "skipped"
+      },
+      "error": null
+    },
+    {
+      "name": "negative_fee",
+      "http_status": 422,
+      "portfolio_statistics": null,
+      "supplemental_status": null,
+      "error": null
+    },
+    {
+      "name": "future_date",
+      "http_status": 422,
+      "portfolio_statistics": null,
+      "supplemental_status": null,
+      "error": null
+    },
+    {
+      "name": "bad_strategy",
+      "http_status": 422,
+      "portfolio_statistics": null,
+      "supplemental_status": null,
+      "error": null
+    },
+    {
+      "name": "technical_dca",
+      "http_status": 422,
+      "portfolio_statistics": null,
+      "supplemental_status": null,
+      "error": null
+    },
+    {
+      "name": "empty_portfolio",
+      "http_status": 422,
+      "portfolio_statistics": null,
+      "supplemental_status": null,
+      "error": null
+    },
+    {
+      "name": "prices",
+      "http_status": 200,
+      "portfolio_statistics": null,
+      "supplemental_status": {
+        "stock_data": "ok",
+        "ticker_info": "ok",
+        "volatility_events": "ok"
+      },
+      "error": null
+    },
+    {
+      "name": "exchange",
+      "http_status": 200,
+      "portfolio_statistics": null,
+      "supplemental_status": {
+        "exchange_rates": "ok"
+      },
+      "error": null
+    },
+    {
+      "name": "benchmarks",
+      "http_status": 200,
+      "portfolio_statistics": null,
+      "supplemental_status": {
+        "benchmarks": "ok"
+      },
+      "error": null
+    },
+    {
+      "name": "news_empty",
+      "http_status": 200,
+      "portfolio_statistics": null,
+      "supplemental_status": {
+        "news": "empty"
+      },
+      "error": null
+    },
+    {
+      "name": "liveness",
+      "http_status": 200,
+      "portfolio_statistics": null,
+      "supplemental_status": null,
+      "error": null
+    }
+  ],
+  "database": [
+    {
+      "cached_history": {
+        "bars": [
+          {
+            "close": 0.0,
+            "date": "2023-01-02",
+            "high": 0.0,
+            "low": 0.0,
+            "open": 0.0,
+            "volume": 1000000.0
+          },
+          {
+            "close": 0.0,
+            "date": "2023-02-10",
+            "high": 0.0,
+            "low": 0.0,
+            "open": 0.0,
+            "volume": 1000000.0
+          }
+        ],
+        "company_name": "Synthetic micro price",
+        "currency": "USD",
+        "exchange": "",
+        "first_trade_date": null,
+        "symbol": "ZZTINY"
+      },
+      "output": {
+        "error": "기간 내에 실행된 투자가 없습니다.",
+        "error_code": 422
+      },
+      "symbol": "ZZTINY"
+    },
+    {
+      "cached_history": {
+        "bars": [
+          {
+            "close": 100.0,
+            "date": "2023-01-02",
+            "high": 100.0,
+            "low": 100.0,
+            "open": 100.0,
+            "volume": 1000000.0
+          },
+          {
+            "close": 50.0,
+            "date": "2023-02-10",
+            "high": 50.0,
+            "low": 50.0,
+            "open": 50.0,
+            "volume": 1000000.0
+          }
+        ],
+        "company_name": "Synthetic stale split cache",
+        "currency": "USD",
+        "exchange": "",
+        "first_trade_date": null,
+        "symbol": "ZZSPLIT"
+      },
+      "output": {
+        "data": {
+          "daily_returns": {
+            "2023-01-02": 0.0,
+            "2023-02-10": -50.0
+          },
+          "equity_curve": {
+            "2023-01-02": 10000.0,
+            "2023-02-10": 5000.0
+          },
+          "individual_results": [
+            {
+              "amount": 10000.0,
+              "final_equity": 5000.0,
+              "sharpe_ratio": -11.224972160321824,
+              "ticker": "ZZSPLIT",
+              "total_return_pct": -50.0,
+              "trades": 1,
+              "weight": 1.0,
+              "win_rate": null
+            }
+          ],
+          "individual_returns": {
+            "ZZSPLIT": {
+              "amount": 10000.0,
+              "dca_periods": null,
+              "end_price": 50.0,
+              "final_value": 5000.0,
+              "investment_type": "lump_sum",
+              "return": -50.0,
+              "sharpe_ratio": -11.224972160321824,
+              "start_price": 100.0,
+              "symbol": "ZZSPLIT",
+              "trades": 1,
+              "weight": 1.0
+            }
+          },
+          "portfolio_composition": [
+            {
+              "amount": 10000.0,
+              "asset_type": "stock",
+              "dca_periods": null,
+              "investment_type": "lump_sum",
+              "symbol": "ZZSPLIT",
+              "weight": 1.0
+            }
+          ],
+          "portfolio_result": {
+            "total_equity": 5000.0,
+            "total_return_pct": -50.0
+          },
+          "portfolio_statistics": {
+            "Annual_Return": -99.84838634769181,
+            "Annual_Volatility": 561.2486080160913,
+            "Avg_Drawdown": -50.0,
+            "Duration": "39 days",
+            "End": "2023-02-10",
+            "Final_Value": 5000.0,
+            "Initial_Value": 10000.0,
+            "Max_Consecutive_Gains": 0,
+            "Max_Consecutive_Losses": 1,
+            "Max_Drawdown": -50.0,
+            "Negative_Days": 1,
+            "Peak_Value": 10000.0,
+            "Positive_Days": 0,
+            "Profit_Factor": -0.0,
+            "Sharpe_Ratio": -11.224972160321824,
+            "Start": "2023-01-02",
+            "Total_Return": -50.0,
+            "Total_Trades": 1,
+            "Total_Trading_Days": 2,
+            "Win_Rate": 0.0
+          },
+          "rebalance_history": [],
+          "strategy_details": {
+            "ZZSPLIT": {
+              "trade_log": [
+                {
+                  "Duration": null,
+                  "EntryPrice": 100.0,
+                  "EntryTime": "2023-01-02T00:00:00",
+                  "ExitPrice": null,
+                  "ExitTime": null,
+                  "PnL": null,
+                  "ReturnPct": null,
+                  "Size": 100.0,
+                  "Type": "BUY"
+                }
+              ]
+            }
+          },
+          "warnings": [],
+          "weight_history": [
+            {
+              "ZZSPLIT": 1.0,
+              "date": "2023-01-02"
+            },
+            {
+              "ZZSPLIT": 1.0,
+              "date": "2023-02-10"
+            }
+          ]
+        },
+        "status": "success"
+      },
+      "symbol": "ZZSPLIT"
+    }
+  ],
+  "existing_rust_lib_tests": {
+    "passed": 14,
+    "ignored": 1,
+    "failed": 0,
+    "command": "cargo test --offline --lib",
+    "role": "Operational regression context only; includes existing compatibility assertions"
+  },
+  "source_sha256": {
+    "backtest/backtest_be_rust/src/api.rs": "4ac76a818431394496e3b0c87d2e9c0cb6c9ac970e06f59541443d1eaa68209d",
+    "backtest/backtest_be_rust/src/api_tests.rs": "3cdaa887defd27b1870770c1f4f9f440ce372f41154c35bb2ab6e38aefaeb507",
+    "backtest/backtest_be_rust/src/data.rs": "99f2a4715db8b44ce58a008e0a0eb709aead423ed5b103244a073da3ce0a35d9",
+    "backtest/backtest_be_rust/src/db.rs": "d14ade8f1e54c71030af76f36f65a8d87e92722e371eb64f3b59d1e89a909af4",
+    "backtest/backtest_be_rust/src/engine.rs": "bb553e5045ca0ce326b59c1530b55168a09f60cfcade3224e6acadfe0bdd7714",
+    "backtest/backtest_be_rust/src/error.rs": "b21ea8969c434504bb3ee06770f1db371ab15510095921af73967726fc752890",
+    "backtest/backtest_be_rust/src/lib.rs": "d13d8dc0f9f34337f5e54d959a15b6506d84b22f8bc30f5bec8079f1444f4766",
+    "backtest/backtest_be_rust/src/main.rs": "b586d88364cbb92384402e0d40ba394c6e3ca67687d86118a746fb3809c2d29d",
+    "backtest/backtest_be_rust/src/metrics.rs": "e500dae11d7074b8b7d788392c053aa6212e75e1990698c7fb1617052168a36d",
+    "backtest/backtest_be_rust/src/model.rs": "d3f5545dae8fdb5340740e437539d23e9871716c2ff2fcdce673de66cd1a7111",
+    "backtest/backtest_be_rust/src/news.rs": "449b62a9ac62042b90228b11c633549a9208df8b0c36eb586c16a998204736bf",
+    "backtest/backtest_be_rust/src/schedule.rs": "680ce5e42f90c645f484555bdc9bd63f4bcbbeb8f030732e51ad35b01f74da7f",
+    "backtest/backtest_be_rust/src/strategy.rs": "52f379514dab74953982883fb609ff1dd66093be0fdef54d2186d4923ba889a0",
+    "backtest/backtest_be_rust/src/ticker_names.json": "e2c489d9841dc08082592120296b8eb3567de8ff0d43b266064cf43ed45c06f9",
+    "backtest/backtest_be_rust/src/validation.rs": "f9fcb2434350c459f146a541f50f74a0f27e6fc981d03a6059180f4c9d28f293",
+    "backtest/database/schema.sql": "0be6d30c3a00b3e8821fbae2af74b9d020c480c61938b14df2d6b4fc2c89a591",
+    "backtest-console/src/features/backtest/constants/strategyDetails.ts": "aba37a39ea3f4877919c531f2067b415be5a4526c1b7c1063bac81244a2afc98",
+    "backtest-console/src/features/backtest/hooks/useBacktestForm.ts": "fb306ead3258f613182248d01b6d6d02132b93f51539fb123fc69218bf9bfee3",
+    "backtest-console/src/features/backtest/hooks/useFormValidation.ts": "04657d50b3c5ea060959a8cd2ac8e4b26eac2dc5aaaf030af500963fceae062f",
+    "backtest-console/src/features/backtest/hooks/usePortfolioBacktest.ts": "14fad357ae44604e80e63d7b56e8c03a1c2b45bf26bc8578c270e12a2296d0f8",
+    "backtest-console/src/features/backtest/hooks/useStrategyParams.ts": "8921363502480780fdeada7bd0476bffb006fdfec45ab59d75e580b5d7f5ba02",
+    "backtest-console/src/features/backtest/model/backtestFormReducer.ts": "100c62ce3599f601e1717c584dc3a4caa2afea7984e5967a42271e8ce72e4d7a",
+    "backtest-console/src/features/backtest/model/strategyConfig.ts": "ecef757cf2bc7446882af56f83aa0dbca7d115ce4fb0788d818e98aca633e6a5",
+    "backtest-console/src/features/backtest/services/backtestService.ts": "df948486dbf8e96495f6b540aa7cc3e01b55c0fd138997030be5ceceaa95815f",
+    "backtest-console/src/features/backtest/services/reportGenerator.ts": "4c52083a0219c69dc220b6b26e46120786bf8771d5147c2dc18dbde5309311dd",
+    "backtest-console/src/features/backtest/utils/calculateDcaPeriods.ts": "f3b64eeee20428d347b84a6475b39480ff432cc3de51b2acf6015992a3a24932",
+    "backtest-console/src/features/backtest/utils/chartDataTransform.ts": "31086bc551be42455965d6ae3d2fc4ca1528a08ccd14fa913891a85722776821",
+    "backtest-console/src/features/backtest/utils/index.ts": "7c2bc199231fd1e20bbf6e3f5070400bfb3a0866830d535066d6f72a3f1de215",
+    "backtest-console/src/features/backtest/utils/portfolioCalculations.ts": "4e8874aff7e5809d525de18f3ea7f89d082774f339556256f9dabdf55d64da47",
+    "backtest-console/src/features/backtest/model/constants/assetTypes.ts": "cacaffacc0f6270587e11d1def3a58dda32e8c9c71afb47f39b0bd18ff9504ca",
+    "backtest-console/src/features/backtest/model/constants/dcaConfig.ts": "865a92f3243874620398d921f2c576068cb02e5ebb10a6c4e82510d2b20cb295",
+    "backtest-console/src/features/backtest/model/constants/index.ts": "1025b5826e81bc9eeb70bf0d985442b8387ffbbc49d305e8b81bde9be28b75f5",
+    "backtest-console/src/features/backtest/model/constants/rebalancing.ts": "d63c7f513de718a32fdf33443f54a3cc4f069075cab58732cfeb38aec4c8b036",
+    "backtest-console/src/features/backtest/model/constants/stocks.ts": "91be361bb6b64dfa76b4842867774e8a13cc8286e244ee02fa68fb085c94d0d0",
+    "backtest-console/src/features/backtest/model/constants/strategies.ts": "dcc5180a09f07ea907a190d8c4711bd723aef816bcb7f822861f446f081afe95",
+    "backtest-console/src/features/backtest/model/constants/validation.ts": "b3719a98bed14c5f4b8679a5aa4d85bea606c6ec6c2713b80c8d64bca8fceac9",
+    "backtest-console/src/features/backtest/model/types/api-types.ts": "121d262570098e8decf5d4a3dca53b67e32ab9de51c1d9b830a87fc2e161d3e8",
+    "backtest-console/src/features/backtest/model/types/backtest-form-types.ts": "b3a60b6e8e245da3caa6fc90bfc36ca2ea8c8f023d8dfd001509b8cb9d0b0273",
+    "backtest-console/src/features/backtest/model/types/backtest-result-types.ts": "61d4ea278913b9d9d6bc9af1871833807b1683223533d2dfa425bbf84153f566",
+    "backtest-console/src/features/backtest/model/types/index.ts": "729bb33567751f64b11500d068c241911beff6eb5fb4a394b916199f211e0b5e",
+    "backtest-console/src/features/backtest/model/types/volatility-news-types.ts": "baffa8827104d13c47434e606624ee03b7efbf1f907056eb35c083fe55bffba3",
+    "backtest-console/src/features/backtest/hooks/charts/chartDataSelectors.ts": "0cea528c96b27aa547e08c44ca2a7008c42bc2aea13f1b7a4d4c65fa14cb6de6",
+    "backtest-console/src/features/backtest/hooks/charts/chartSeriesBuilders.ts": "841ddcd52adc183ed4b64cb76e6d21cad639e1de29baa9c42643aa0ed24e7577",
+    "backtest-console/src/features/backtest/hooks/charts/useChartData.ts": "c3ffedbf2ee235482da5d7847f1128196e911868f19feab908ff188673b07bd8",
+    "backtest-console/src/features/backtest/components/portfolio-form/index.ts": "6bc25138597a2d6ea3cc05778aa3d451ba2ddfd39fa0cb86bef54f682d6006fd",
+    "backtest-console/src/features/backtest/components/shared/index.ts": "b793b6a974b01181bed48da2af9976529424dc4f7b4ccfb87d9c4ccfa2251280",
+    "backtest-console/src/features/backtest/components/BacktestResults.tsx": "2dc067c73d235e4f9f53a56fdab0f1e1dcebb0f7d5faf3b3639db2d3d244955e",
+    "backtest-console/src/features/backtest/components/CommissionForm.tsx": "39842ebf3aef6208a4e75afaf574ae3608cf2ee7c4d882af1aedfa97e6c423b1",
+    "backtest-console/src/features/backtest/components/DateRangeForm.tsx": "4e49c52cf7d9a375329822a7993795ce3879f6c5c99515828d0c5950eadd62d7",
+    "backtest-console/src/features/backtest/components/EquityChart.tsx": "65e1e81bcb60a0163a3856cd4301698d0f0d0d148e60653aa4bbc751acf9ef05",
+    "backtest-console/src/features/backtest/components/OHLCChart.tsx": "6ed7c0d9a1360f798ba78833f6391794e85f3b3d1f38f0ce904e294c023ec87d",
+    "backtest-console/src/features/backtest/components/PortfolioBacktestForm.tsx": "8824af2457918530c80bcb16e7b1782f7fa7e27a5eb10dafd5e576e111ff5352",
+    "backtest-console/src/features/backtest/components/PortfolioForm.tsx": "767f83b89966dff42f2d764f26a854683516857c5f3486a6a2e5e67ae5b81e9a",
+    "backtest-console/src/features/backtest/components/StatsSummary.tsx": "24a7180565bb196b9d7fe5efa26e017cb58242cd8ac2088931b3ca9bb54ab827",
+    "backtest-console/src/features/backtest/components/StockPriceChart.tsx": "da8e1399e21f8ca652bebc3703af56408e582c48f61b66df881202cc4ec7abfc",
+    "backtest-console/src/features/backtest/components/StrategyForm.tsx": "6b60872ea6fdfa62dd825941e4184a3ac257ebeaa7220908df34e65700984054",
+    "backtest-console/src/features/backtest/components/StrategyHelpModal.tsx": "aa802dd49422d359366acd6b852bac3c9039b04405481b0cec32ee2af6c505ce",
+    "backtest-console/src/features/backtest/components/TradesChart.tsx": "455105ac00d406ed3b72f9d946c8df77c2d9d1e6d40bed4de81ec07b1c9de0da",
+    "backtest-console/src/features/backtest/components/TradeSignalsChart.tsx": "534940fffe871965d9aa3a389e26a34041da597182b30d00c3c90403317d70fe",
+    "backtest-console/src/features/backtest/components/TurnstileVerification.tsx": "df2fd798563e54c902685c12a1e756814d476e3c297a1436a621a0b67c8b37b3",
+    "backtest-console/src/features/backtest/components/lazy/LazyChartComponents.tsx": "66e9ecd4a7d51fb6b367eb33f72cb95d67da2dcf67cb1b9d052a7bf25adc6c02",
+    "backtest-console/src/features/backtest/components/portfolio-form/DcaPreview.tsx": "7a2881ab7f49e1bbb0d11e2fff1a39b26766c296751f807b85ec3b183c03b9b8",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioInputModeToggle.tsx": "fe292f03a9c6aea953182bacda1b70c5451fedb67c875eba3fe470bcfc2c9842",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioMobileCard.tsx": "cf0b3e9a3553da4e16cc4f48def3af3ca35a899c8ca1a06333bf0e7f0f63d238",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioSummary.tsx": "9b8f29d3f5a884d6af45859bf5a7cdb65d82944c52b9c108bba199d7810ee26c",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioTable.tsx": "3d4bfb148256efd87fbf92bf39df81358b5bd6f88a754c39674db5950e2d8efe",
+    "backtest-console/src/features/backtest/components/results/BenchmarkIndexChart.tsx": "675fb1742aa5d7626420bc3e3cfb845891e012822f092b74770f0ad609b79c4b",
+    "backtest-console/src/features/backtest/components/results/BenchmarkReturnsChart.tsx": "6e157993404eae28e91c4a08d5225e0f7bb98270d2b07f158ca045e29ff8c434",
+    "backtest-console/src/features/backtest/components/results/LatestNewsSection.tsx": "8fbd2df5e392dfd982d55bf9f0805fcf1d9a762be14e615b8323fa82c002673e",
+    "backtest-console/src/features/backtest/components/results/MarketDataStatus.tsx": "37270c10f5681eda310b6c05669117ee674f2dd24a1d2aaf246a6c8e0f66a0d2",
+    "backtest-console/src/features/backtest/components/results/RebalanceHistoryTable.tsx": "fb9ac985517804f3ce1c9d349d0eac7fcf00ca19fbfac5c1503ca84c1f6843ea",
+    "backtest-console/src/features/backtest/components/results/ResultsHeader.tsx": "6d45d9a0f32a07b0edc63ab0a80fe77b2f5dc63864885b9ccefb3e3922260d41",
+    "backtest-console/src/features/backtest/components/results/StockSymbolSelector.tsx": "4b2cc2fc5db804931084303eb7d6cb438741b6135b7ff1dcddf80ce6fc032e54",
+    "backtest-console/src/features/backtest/components/results/SupplementalStatusNotice.tsx": "33dee86242d20f1f59e85e09ca01cf23849cb94917ebb6dfc85096bb862b0279",
+    "backtest-console/src/features/backtest/components/results/VolatilityEventsSection.tsx": "4f732a780554f7d6339766d263d5b735f764f3d830c16b080389b513c5564742",
+    "backtest-console/src/features/backtest/components/results/WarningBanner.tsx": "be02d095ff2033ee04bcaa9359701a837e69a2a69b8fdec25efc499f11bc8f17",
+    "backtest-console/src/features/backtest/components/results/WeightHistoryChart.tsx": "57c1d36056539b1a7921e4ee2e543112a20ad6fce8d4c2227245ff78a45f1d31",
+    "backtest-console/src/features/backtest/components/shared/CustomTooltip.tsx": "9200e76f1bab3003ed138e51d9e245e8dbe4c9e717b1bebfdd5820fe13ff63f5",
+    "backtest-console/src/features/backtest/components/shared/ResultBlock.tsx": "40a5aba9bf5a22416eebbb49cf8fa2aaf41582c77a5669b91bcfc8114ec10988",
+    "backtest-console/src/features/backtest/components/volatility/VolatilityTable.tsx": "5b29a88628a00116bbdb22f42532fc63b0b4838f7278ebc6c3ba0c498779e8bd",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/BenchmarkSection.tsx": "e0e3e12fff5af896f9a954911c449498db059bb469c44f9b7d91a99f27e69a6f",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/index.tsx": "51586903df5819399b72cb070737a1cc8c8a668be158df186ba746e77744c9f9",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/PortfolioCharts.tsx": "7934ab0e1541b20e5bdfff1162a661fd52df0762959d22f23b444b7ad4a7eef6",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/SingleStockCharts.tsx": "d9d0a4cad9c817b8a155d80fc69931de8da9a8132fe6a706ca239df3f7f0b78e",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/SupplementaryCharts.tsx": "4fba0019f141357659a657409aabda6e8ce05c4ba185414e5fe9ceac83439e6e",
+    "backtest-console/src/shared/utils/dataSampling/calendar.ts": "cb42d46067daf5f2cb4897492a4919be565dbd8a0cbc939602cb872a12859591",
+    "backtest-console/src/shared/utils/dataSampling/index.ts": "28ed58626944c42c3c0a8841355d32073174f8da73299539962964355d9e5b6d",
+    "backtest-console/src/shared/utils/dataSampling/periodSampling.ts": "06ef62bb369fd99061a4b3ff8ec1bf9e096ad7f3bd9dd0b7d0a7dcfc972a4b06",
+    "backtest-console/src/shared/utils/dataSampling/pointLimitSampling.ts": "dd5b7d0f37e46d497831901a10267589a5fa110f4eb8c453c341f0796b87f8dd",
+    "backtest-console/src/shared/utils/dataSampling/priceSampling.ts": "c6a462be7d02e6127b1d8874bc2c1ea81028e72d3bad82ede8ef1b89ad553a8c",
+    "backtest-console/src/shared/utils/dataSampling/returnAggregation.ts": "b7390c32c3a7c89b68bad7efc0203a5ad75efe39c2e5aa05bbd6481d351c5fbd"
+  }
+}

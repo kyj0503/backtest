@@ -1,0 +1,2987 @@
+{
+  "date": "2026-11-11",
+  "fixed_findings": [
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08",
+    "R09",
+    "R10",
+    "R11"
+  ],
+  "basis": "Independent cash/share ledgers, calendar dates, net realized PnL, UI budget conservation. Python outputs are not an oracle.",
+  "regressions": {
+    "rust_ordinary": 32,
+    "disposable_mysql": 3,
+    "frontend": 382,
+    "new_rust_ordinary": 8,
+    "new_mysql": 1,
+    "new_frontend": 11
+  },
+  "independent_baseline": {
+    "cases": 133,
+    "checks": 202,
+    "passed": 202,
+    "failed": 0,
+    "checks_detail": [
+      {
+        "name": "cash_constant",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "usd_double",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "usd_flat",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "krw_fx",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "eur_fx",
+        "passed": true,
+        "actual": 12000.0,
+        "expected": 12000,
+        "explanation": ""
+      },
+      {
+        "name": "rebalance_no_fee",
+        "passed": true,
+        "actual": 3000.0,
+        "expected": 3000,
+        "explanation": ""
+      },
+      {
+        "name": "dca_flow_neutral",
+        "passed": true,
+        "actual": 2000.0,
+        "expected": 2000,
+        "explanation": ""
+      },
+      {
+        "name": "dca_growth",
+        "passed": true,
+        "actual": 3000.0,
+        "expected": 3000,
+        "explanation": ""
+      },
+      {
+        "name": "future_fx_not_backfilled",
+        "passed": true,
+        "actual": 422,
+        "expected": 422,
+        "explanation": ""
+      },
+      {
+        "name": "sma_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "ema_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "macd_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "rsi_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "bollinger_flat_control",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_JPY",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_GBP",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_CNY",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_HKD",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_TWD",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_SGD",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_AUD",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_CAD",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_CHF",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "fx_INR",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000,
+        "explanation": ""
+      },
+      {
+        "name": "drawdown_recovery_final",
+        "passed": true,
+        "actual": 20000.0,
+        "expected": 20000,
+        "explanation": ""
+      },
+      {
+        "name": "drawdown_recovery_mdd",
+        "passed": true,
+        "actual": -50.0,
+        "expected": -50,
+        "explanation": ""
+      },
+      {
+        "name": "dca_flow_adjusted_mdd",
+        "passed": true,
+        "actual": -50.0,
+        "expected": -50,
+        "explanation": ""
+      },
+      {
+        "name": "dca_flow_adjusted_final",
+        "passed": true,
+        "actual": 1500.0,
+        "expected": 1500,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_weekly_1",
+        "passed": true,
+        "actual": 5800.0,
+        "expected": 5800,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_weekly_2",
+        "passed": true,
+        "actual": 2900.0,
+        "expected": 2900,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_1",
+        "passed": true,
+        "actual": 1400.0,
+        "expected": 1400,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_2",
+        "passed": true,
+        "actual": 700.0,
+        "expected": 700,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_3",
+        "passed": true,
+        "actual": 500.0,
+        "expected": 500,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_6",
+        "passed": true,
+        "actual": 300.0,
+        "expected": 300,
+        "explanation": ""
+      },
+      {
+        "name": "calendar_monthly_12",
+        "passed": true,
+        "actual": 200.0,
+        "expected": 200,
+        "explanation": ""
+      },
+      {
+        "name": "cash_budget_fee_0.01",
+        "passed": true,
+        "actual": 9900.990099009901,
+        "expected": 9900.990099009901,
+        "explanation": "Notional N plus commission c*N must equal the cash budget."
+      },
+      {
+        "name": "cash_budget_fee_0.09",
+        "passed": true,
+        "actual": 9174.311926605504,
+        "expected": 9174.311926605504,
+        "explanation": "Notional N plus commission c*N must equal the cash budget."
+      },
+      {
+        "name": "initial_fee_is_drawdown",
+        "passed": true,
+        "actual": -8.25688073394496,
+        "expected": -8.25688073394496,
+        "explanation": "Relative to funded pre-trade capital, a flat market does not erase the initial transaction loss."
+      },
+      {
+        "name": "no_retroactive_final_bar_buy",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "causal_prefix_invariance",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000.0,
+        "explanation": "Adding a future bar cannot change previously observed marked wealth."
+      },
+      {
+        "name": "rsi_standard_seed_no_entry",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": "RSI(2) starts at 50; subsequent unchanged prices keep it at 50, above oversold 40."
+      },
+      {
+        "name": "roundtrip_flat_price_fees",
+        "passed": true,
+        "actual": 9830.0,
+        "expected": 9830.0,
+        "explanation": "Actual executed share count held fixed; charge the stated 1% commission on both notionals."
+      },
+      {
+        "name": "trade_commission_disclosed",
+        "passed": true,
+        "actual": 170.0,
+        "expected": 170.0,
+        "explanation": ""
+      },
+      {
+        "name": "cash_dca_first_deposit",
+        "passed": true,
+        "actual": 500.0,
+        "expected": 500,
+        "explanation": ""
+      },
+      {
+        "name": "mixed_cash_dca_first_deposit",
+        "passed": true,
+        "actual": 1500.0,
+        "expected": 1500,
+        "explanation": ""
+      },
+      {
+        "name": "individual_equity_reconciles",
+        "passed": true,
+        "actual": 5000.0,
+        "expected": 5000.0,
+        "explanation": ""
+      },
+      {
+        "name": "rebalance_share_ledger",
+        "passed": true,
+        "actual": 2.462809094979848,
+        "expected": 2.462809094979848,
+        "explanation": ""
+      },
+      {
+        "name": "rebalance_fee_on_actual_trade",
+        "passed": true,
+        "actual": 4.925618189959696,
+        "expected": 4.925618189959696,
+        "explanation": ""
+      },
+      {
+        "name": "rebalance_self_financing",
+        "passed": true,
+        "actual": 2975.272401612021,
+        "expected": 2975.27240161202,
+        "explanation": ""
+      },
+      {
+        "name": "crypto_volatility_365",
+        "passed": true,
+        "actual": 28.661773632480646,
+        "expected": 28.66177363248067,
+        "explanation": ""
+      },
+      {
+        "name": "crypto_sharpe_365",
+        "passed": true,
+        "actual": 6.402160247041261,
+        "expected": 6.402160247041256,
+        "explanation": ""
+      },
+      {
+        "name": "ui_budget_matches_total",
+        "passed": true,
+        "actual": 10000.0,
+        "expected": 10000,
+        "explanation": ""
+      },
+      {
+        "name": "small_price_unrounded_control",
+        "passed": true,
+        "actual": 29999.999999999996,
+        "expected": 30000,
+        "explanation": ""
+      },
+      {
+        "name": "zero_price_rejected",
+        "passed": true,
+        "actual": 422,
+        "expected": 422,
+        "explanation": "Zero prices must fail closed; precision preservation is separately checked through MySQL."
+      },
+      {
+        "name": "overflow_rejected",
+        "passed": true,
+        "actual": 422,
+        "expected": 422,
+        "explanation": ""
+      },
+      {
+        "name": "finite_input_no_success_with_null_wealth",
+        "passed": true,
+        "actual": false,
+        "expected": false,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_1e-05_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_0.1_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_3_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_7_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_99.9_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_123.45_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.01_10000_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_1e-05_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_0.1_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_3_no_return",
+        "passed": true,
+        "actual": -3.3306690738754696e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_7_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_123.45_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_0.1_10000_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_1e-05_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_3_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_7_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_123.45_no_return",
+        "passed": true,
+        "actual": -3.3306690738754696e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_1_10000_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_1e-05_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_3_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_7_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_123.45_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_7_10000_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_1e-05_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_0.1_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_3_no_return",
+        "passed": true,
+        "actual": -4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_7_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_123.45_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_123.45_10000_no_return",
+        "passed": true,
+        "actual": -4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_1e-05_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_0.1_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_3_no_return",
+        "passed": true,
+        "actual": -3.3306690738754696e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_7_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_99.9_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_123.45_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_333.33_10000_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_1e-05_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_3_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_7_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_99.9_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_123.45_no_return",
+        "passed": true,
+        "actual": -4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_500_10000_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_1e-05_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_3_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_7_no_return",
+        "passed": true,
+        "actual": 4.440892098500626e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_99.9_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_123.45_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_999.99_10000_no_return",
+        "passed": true,
+        "actual": -1.1102230246251565e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_1e-05_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_1e-05_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_0.1_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_0.1_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_3_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_3_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_7_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_7_no_return",
+        "passed": true,
+        "actual": 2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_99.9_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_99.9_no_return",
+        "passed": true,
+        "actual": -2.220446049250313e-14,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_123.45_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_123.45_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_10000_no_up_down_days",
+        "passed": true,
+        "actual": 0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "flat_dca_10000_10000_no_return",
+        "passed": true,
+        "actual": 0.0,
+        "expected": 0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_1_wealth",
+        "passed": true,
+        "actual": 407.5,
+        "expected": 407.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_1_order_invariance",
+        "passed": true,
+        "actual": 407.5,
+        "expected": 407.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_2_wealth",
+        "passed": true,
+        "actual": 815.0,
+        "expected": 815.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_2_order_invariance",
+        "passed": true,
+        "actual": 815.0,
+        "expected": 815.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_3_wealth",
+        "passed": true,
+        "actual": 1222.5,
+        "expected": 1222.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_3_order_invariance",
+        "passed": true,
+        "actual": 1222.5,
+        "expected": 1222.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_4_wealth",
+        "passed": true,
+        "actual": 1630.0,
+        "expected": 1630.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_4_order_invariance",
+        "passed": true,
+        "actual": 1630.0,
+        "expected": 1630.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_5_wealth",
+        "passed": true,
+        "actual": 2037.5,
+        "expected": 2037.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_5_order_invariance",
+        "passed": true,
+        "actual": 2037.5,
+        "expected": 2037.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_6_wealth",
+        "passed": true,
+        "actual": 2445.0,
+        "expected": 2445.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_6_order_invariance",
+        "passed": true,
+        "actual": 2445.0,
+        "expected": 2445.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_7_wealth",
+        "passed": true,
+        "actual": 2852.5,
+        "expected": 2852.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_7_order_invariance",
+        "passed": true,
+        "actual": 2852.5,
+        "expected": 2852.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_8_wealth",
+        "passed": true,
+        "actual": 3260.0,
+        "expected": 3260.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_8_order_invariance",
+        "passed": true,
+        "actual": 3260.0,
+        "expected": 3260.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_9_wealth",
+        "passed": true,
+        "actual": 3667.5,
+        "expected": 3667.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_9_order_invariance",
+        "passed": true,
+        "actual": 3667.5,
+        "expected": 3667.5,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_10_wealth",
+        "passed": true,
+        "actual": 4075.0,
+        "expected": 4075.0,
+        "explanation": ""
+      },
+      {
+        "name": "allocation_10_order_invariance",
+        "passed": true,
+        "actual": 4075.0,
+        "expected": 4075.0,
+        "explanation": ""
+      }
+    ]
+  },
+  "independent_second": {
+    "checks": 34,
+    "passed": 34,
+    "failed": 0,
+    "detail": [
+      {
+        "name": "R01_pending_holiday_final",
+        "actual": 17356.305803571428,
+        "expected": 17356.30580357143,
+        "passed": true
+      },
+      {
+        "name": "R01_five_actual_rebalances",
+        "actual": 5,
+        "expected": 5,
+        "passed": true
+      },
+      {
+        "name": "R01_other_market_holiday",
+        "actual": "2023-01-10",
+        "expected": "2023-01-10",
+        "passed": true
+      },
+      {
+        "name": "R02_fx_mark",
+        "actual": 5298.507,
+        "expected": 5298.507,
+        "passed": true
+      },
+      {
+        "name": "R02_cash_stays_USD",
+        "actual": 597.0139999999992,
+        "expected": 597.014,
+        "passed": true
+      },
+      {
+        "name": "R02_no_fx_change_control",
+        "actual": 10000.0,
+        "expected": 10000,
+        "passed": true
+      },
+      {
+        "name": "R02_buyhold_control",
+        "actual": 4850.0,
+        "expected": 4850,
+        "passed": true
+      },
+      {
+        "name": "R03_no_invalid_snapshot",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "name": "R04_added_asset_budget",
+        "actual": 10000,
+        "expected": 10000,
+        "passed": true
+      },
+      {
+        "name": "R04_missing_weight_blocked",
+        "actual": true,
+        "expected": true,
+        "passed": true
+      },
+      {
+        "name": "R04_removed_asset_budget",
+        "actual": 10000,
+        "expected": 10000,
+        "passed": true
+      },
+      {
+        "name": "R04_remaining_weight_valid",
+        "actual": [],
+        "expected": [],
+        "passed": true
+      },
+      {
+        "name": "R05_strategy_details",
+        "actual": 0.9672131147540983,
+        "expected": 0.9672131147540983,
+        "passed": true
+      },
+      {
+        "name": "R05_portfolio_statistics",
+        "actual": 0.9672131147540983,
+        "expected": 0.9672131147540983,
+        "passed": true
+      },
+      {
+        "name": "R05_cash_reconciles",
+        "actual": 9880.0,
+        "expected": 9880,
+        "passed": true
+      },
+      {
+        "name": "R06_cash_chart",
+        "actual": 50,
+        "expected": 50,
+        "passed": true
+      },
+      {
+        "name": "R06_stock_chart",
+        "actual": 50,
+        "expected": 50,
+        "passed": true
+      },
+      {
+        "name": "R07_buy_marker",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "name": "R07_buy_count",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "name": "R07_no_fake_sell",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "name": "R08_order_invariant",
+        "actual": {
+          "A": 9047.62,
+          "B": 952.38
+        },
+        "expected": {
+          "B": 952.38,
+          "A": 9047.62
+        },
+        "passed": true
+      },
+      {
+        "name": "R08_normalized_allocation",
+        "actual": {
+          "A": 9047.62,
+          "B": 952.38
+        },
+        "expected": {
+          "A": 9047.62,
+          "B": 952.38
+        },
+        "passed": true
+      },
+      {
+        "name": "R09_two_real_payments",
+        "actual": 20000.0,
+        "expected": 20000,
+        "passed": true
+      },
+      {
+        "name": "R09_same_frontend_calendar",
+        "actual": 2,
+        "expected": 2,
+        "passed": true
+      },
+      {
+        "name": "R10_extreme_annual_error",
+        "actual": 422,
+        "expected": 422,
+        "passed": true
+      },
+      {
+        "name": "R10_short_listing_full_calendar",
+        "actual": 96000688.0,
+        "expected": 96000688,
+        "passed": true
+      },
+      {
+        "name": "R11_date_remains_string",
+        "actual": "2023-01-02",
+        "expected": "2023-01-02",
+        "passed": true
+      },
+      {
+        "name": "HTTP_sunday_rebalance_weekly_1",
+        "actual": 17356.305803571428,
+        "expected": 17356.305803571428,
+        "passed": true
+      },
+      {
+        "name": "HTTP_fx_open_position_2000",
+        "actual": 5298.507,
+        "expected": 5298.507,
+        "passed": true
+      },
+      {
+        "name": "HTTP_profit_factor",
+        "actual": 9880.0,
+        "expected": 9880.0,
+        "passed": true
+      },
+      {
+        "name": "HTTP_monthly_2_calendar",
+        "actual": 20000.0,
+        "expected": 20000.0,
+        "passed": true
+      },
+      {
+        "name": "HTTP_finite_short_listing_overflow",
+        "actual": 96000688.0,
+        "expected": 96000688.0,
+        "passed": true
+      },
+      {
+        "name": "HTTP_R04_added_zero_weight_rejected",
+        "actual": 422,
+        "expected": 422,
+        "passed": true
+      },
+      {
+        "name": "HTTP_R04_removed_budget",
+        "actual": 10000.0,
+        "expected": 10000,
+        "passed": true
+      }
+    ]
+  },
+  "cache_race": {
+    "attempts": 2000,
+    "cache_hits": 959,
+    "invalid_histories": 0,
+    "snapshot_writes": 500
+  },
+  "frontend": {
+    "allocations": {
+      "95+10": {
+        "portfolio": [
+          {
+            "symbol": "A",
+            "weight": 95,
+            "amount": 9047.62,
+            "assetType": "stock",
+            "investmentType": "lump_sum",
+            "dcaFrequency": "monthly_1",
+            "totalAmount": 9047.62
+          },
+          {
+            "symbol": "B",
+            "weight": 10,
+            "amount": 952.38,
+            "assetType": "stock",
+            "investmentType": "lump_sum",
+            "dcaFrequency": "monthly_1",
+            "totalAmount": 952.38
+          }
+        ],
+        "validation": []
+      },
+      "10+95": {
+        "portfolio": [
+          {
+            "symbol": "A",
+            "weight": 10,
+            "amount": 952.38,
+            "assetType": "stock",
+            "investmentType": "lump_sum",
+            "dcaFrequency": "monthly_1",
+            "totalAmount": 952.38
+          },
+          {
+            "symbol": "B",
+            "weight": 95,
+            "amount": 9047.62,
+            "assetType": "stock",
+            "investmentType": "lump_sum",
+            "dcaFrequency": "monthly_1",
+            "totalAmount": 9047.62
+          }
+        ],
+        "validation": []
+      },
+      "50+45": {
+        "portfolio": [
+          {
+            "symbol": "A",
+            "weight": 50,
+            "amount": 5263.16,
+            "assetType": "stock",
+            "investmentType": "lump_sum",
+            "dcaFrequency": "monthly_1",
+            "totalAmount": 5263.16
+          },
+          {
+            "symbol": "B",
+            "weight": 45,
+            "amount": 4736.84,
+            "assetType": "stock",
+            "investmentType": "lump_sum",
+            "dcaFrequency": "monthly_1",
+            "totalAmount": 4736.84
+          }
+        ],
+        "validation": []
+      },
+      "45+50": {
+        "portfolio": [
+          {
+            "symbol": "A",
+            "weight": 45,
+            "amount": 4736.84,
+            "assetType": "stock",
+            "investmentType": "lump_sum",
+            "dcaFrequency": "monthly_1",
+            "totalAmount": 4736.84
+          },
+          {
+            "symbol": "B",
+            "weight": 50,
+            "amount": 5263.16,
+            "assetType": "stock",
+            "investmentType": "lump_sum",
+            "dcaFrequency": "monthly_1",
+            "totalAmount": 5263.16
+          }
+        ],
+        "validation": []
+      }
+    },
+    "addStock": {
+      "portfolio": [
+        {
+          "symbol": "A",
+          "weight": 100,
+          "amount": 10000,
+          "assetType": "stock",
+          "investmentType": "lump_sum",
+          "dcaFrequency": "monthly_1",
+          "totalAmount": 10000
+        },
+        {
+          "symbol": "B",
+          "amount": 0,
+          "investmentType": "lump_sum",
+          "dcaFrequency": "monthly_1",
+          "assetType": "stock",
+          "totalAmount": 0
+        }
+      ],
+      "validation": [
+        "2번째 종목의 투자 금액은 최소 $100 이상이어야 합니다.",
+        "비중 모드에서는 모든 종목의 비중을 0 초과 100% 이하로 입력해주세요."
+      ],
+      "total": 10000
+    },
+    "removeStock": {
+      "portfolio": [
+        {
+          "symbol": "B",
+          "weight": 95,
+          "amount": 10000,
+          "assetType": "stock",
+          "investmentType": "lump_sum",
+          "dcaFrequency": "monthly_1",
+          "totalAmount": 10000
+        }
+      ],
+      "validation": [],
+      "total": 10000
+    },
+    "openPosition": {
+      "apiPositions": [
+        {
+          "Commission": 0,
+          "EntryPrice": 97,
+          "EntryTime": "2023-01-05",
+          "MarketPrice": 97,
+          "MarketValue": 9312,
+          "Size": 96
+        }
+      ],
+      "logs": {
+        "TEST": [
+          {
+            "Type": "BUY",
+            "EntryTime": "2023-01-05",
+            "EntryPrice": 97,
+            "Size": 96
+          }
+        ]
+      },
+      "chartCounts": {
+        "buys": 1,
+        "sells": 0
+      },
+      "buyMarkers": 1
+    },
+    "cashWeights": {
+      "composition": [
+        {
+          "amount": 5000,
+          "asset_id": "CASH__cash_1",
+          "asset_type": "cash",
+          "dca_periods": null,
+          "investment_type": "lump_sum",
+          "symbol": "CASH",
+          "weight": 0.5
+        },
+        {
+          "amount": 5000,
+          "asset_id": "TEST",
+          "asset_type": "stock",
+          "dca_periods": null,
+          "investment_type": "lump_sum",
+          "symbol": "TEST",
+          "weight": 0.5
+        }
+      ],
+      "raw": {
+        "CASH__cash_1": 0.5,
+        "TEST": 0.5,
+        "date": "2023-01-02"
+      },
+      "rendered": {
+        "date": "2023-01-02",
+        "CASH__cash_1": 50,
+        "TEST": 50
+      }
+    },
+    "orderPermutation": [
+      [
+        {
+          "symbol": "A",
+          "weight": 95,
+          "amount": 9047.62,
+          "assetType": "stock",
+          "investmentType": "lump_sum",
+          "dcaFrequency": "monthly_1",
+          "totalAmount": 9047.62
+        },
+        {
+          "symbol": "B",
+          "weight": 10,
+          "amount": 952.38,
+          "assetType": "stock",
+          "investmentType": "lump_sum",
+          "dcaFrequency": "monthly_1",
+          "totalAmount": 952.38
+        }
+      ],
+      [
+        {
+          "symbol": "B",
+          "weight": 10,
+          "amount": 952.38,
+          "assetType": "stock",
+          "investmentType": "lump_sum",
+          "dcaFrequency": "monthly_1",
+          "totalAmount": 952.38
+        },
+        {
+          "symbol": "A",
+          "weight": 95,
+          "amount": 9047.62,
+          "assetType": "stock",
+          "investmentType": "lump_sum",
+          "dcaFrequency": "monthly_1",
+          "totalAmount": 9047.62
+        }
+      ]
+    ],
+    "monthly2Periods": 2
+  },
+  "http": [
+    {
+      "name": "sunday_rebalance_none",
+      "status": 200
+    },
+    {
+      "name": "sunday_rebalance_weekly_1",
+      "status": 200
+    },
+    {
+      "name": "fx_open_position_2000",
+      "status": 200
+    },
+    {
+      "name": "fx_buyhold_control_2000",
+      "status": 200
+    },
+    {
+      "name": "open_position",
+      "status": 200
+    },
+    {
+      "name": "cash_date_key",
+      "status": 200
+    },
+    {
+      "name": "cash_weight_chart",
+      "status": 200
+    },
+    {
+      "name": "profit_factor",
+      "status": 200
+    },
+    {
+      "name": "finite_annual_overflow",
+      "status": 422
+    },
+    {
+      "name": "finite_short_listing_overflow",
+      "status": 200
+    },
+    {
+      "name": "monthly_2_calendar",
+      "status": 200
+    },
+    {
+      "name": "monthly_2_60day_control",
+      "status": 200
+    },
+    {
+      "name": "one_market_holiday_False",
+      "status": 200
+    },
+    {
+      "name": "one_market_holiday_True",
+      "status": 200
+    },
+    {
+      "name": "fe_added_budget",
+      "status": 422
+    },
+    {
+      "name": "fe_removed_budget",
+      "status": 200
+    }
+  ],
+  "browser": [
+    {
+      "server": "rust",
+      "scenario": "usd_buy_hold",
+      "request": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 10000,
+            "investment_type": "lump_sum",
+            "dca_frequency": "monthly_1",
+            "asset_type": "stock"
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "strategy_params": {},
+        "commission": 0.002,
+        "rebalance_frequency": "none",
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      },
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 13684.838193360767,
+      "totalReturn": 36.84838193360767,
+      "uiMs": 1614.2419330000002,
+      "csvBytes": 1246,
+      "pageErrors": []
+    },
+    {
+      "server": "rust",
+      "scenario": "krw_sma",
+      "request": {
+        "portfolio": [
+          {
+            "symbol": "005930.KS",
+            "amount": 10000,
+            "investment_type": "lump_sum",
+            "dca_frequency": "monthly_1",
+            "asset_type": "stock"
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "sma_strategy",
+        "strategy_params": {
+          "short_window": 10,
+          "long_window": 20
+        },
+        "commission": 0.002,
+        "rebalance_frequency": "none",
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      },
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 9626.216574878747,
+      "totalReturn": -3.737834251212535,
+      "uiMs": 1523.8388669999995,
+      "csvBytes": 1276,
+      "pageErrors": []
+    },
+    {
+      "server": "rust",
+      "scenario": "monthly_dca",
+      "request": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "amount": 500,
+            "investment_type": "dca",
+            "dca_frequency": "monthly_1",
+            "asset_type": "stock"
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "strategy_params": {},
+        "commission": 0.002,
+        "rebalance_frequency": "none",
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      },
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 5125.969314310936,
+      "totalReturn": 2.5193862862187277,
+      "uiMs": 1021.2548379999989,
+      "csvBytes": 1241,
+      "pageErrors": []
+    },
+    {
+      "server": "rust",
+      "scenario": "weight_dca",
+      "request": {
+        "portfolio": [
+          {
+            "symbol": "AAPL",
+            "total_amount": 10000,
+            "amount": 1000,
+            "investment_type": "dca",
+            "dca_frequency": "monthly_1",
+            "asset_type": "stock"
+          }
+        ],
+        "start_date": "2023-01-03",
+        "end_date": "2023-10-31",
+        "strategy": "buy_hold_strategy",
+        "strategy_params": {},
+        "commission": 0.002,
+        "rebalance_frequency": "none",
+        "include_stock_data": false,
+        "include_volatility_events": false,
+        "include_exchange_rates": false,
+        "include_benchmarks": false,
+        "include_news": false
+      },
+      "statuses": [
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "finalValue": 10251.938628621872,
+      "totalReturn": 2.5193862862187277,
+      "uiMs": 946.8807259999994,
+      "csvBytes": 1244,
+      "pageErrors": []
+    }
+  ],
+  "runtime": [
+    {
+      "name": "backtest-compare-mysql-python-1",
+      "image": "sha256:0744ee5ef89ce6ccfa13de3e579fe6b9e27f93dd70da9c06d2c908b1b193fb8d",
+      "status": "running",
+      "health": "healthy",
+      "started": "2026-11-11T07:22:13.552910083Z",
+      "cpuLimit": 0,
+      "memoryLimit": 0,
+      "restartCount": 0
+    },
+    {
+      "name": "backtest-compare-mysql-rust-1",
+      "image": "sha256:0744ee5ef89ce6ccfa13de3e579fe6b9e27f93dd70da9c06d2c908b1b193fb8d",
+      "status": "running",
+      "health": "healthy",
+      "started": "2026-11-11T07:22:13.732469671Z",
+      "cpuLimit": 0,
+      "memoryLimit": 0,
+      "restartCount": 0
+    },
+    {
+      "name": "backtest-compare-python-api-1",
+      "image": "sha256:6f622a697e0b65e197cdd7959f7e6f913a80ba25d2c4b7b6d5f622f774837c3c",
+      "status": "running",
+      "health": "healthy",
+      "started": "2026-11-11T08:22:17.54679333Z",
+      "cpuLimit": 2000000000,
+      "memoryLimit": 2147483648,
+      "restartCount": 0
+    },
+    {
+      "name": "backtest-compare-python-console-1",
+      "image": "sha256:1bebe77360234b7813a32bacbbb0776f177df886cfd7a6e03d530a9af915140c",
+      "status": "running",
+      "health": "healthy",
+      "started": "2026-11-11T07:23:37.9851099Z",
+      "cpuLimit": 0,
+      "memoryLimit": 0,
+      "restartCount": 0
+    },
+    {
+      "name": "backtest-compare-rust-api-1",
+      "image": "sha256:a37ccb58f50cebf992ce571cd6fe196f3c68351380c5ec7068839ee5ba1f23f0",
+      "status": "running",
+      "health": "healthy",
+      "started": "2026-11-11T10:52:47.113113943Z",
+      "cpuLimit": 2000000000,
+      "memoryLimit": 2147483648,
+      "restartCount": 0
+    },
+    {
+      "name": "backtest-compare-rust-console-1",
+      "image": "sha256:35673d12dbf27d7d2c4ea79bcf71780e1b7bd41afe50e2e0b800406cd1f5f23e",
+      "status": "running",
+      "health": "healthy",
+      "started": "2026-11-11T10:52:52.357540672Z",
+      "cpuLimit": 0,
+      "memoryLimit": 0,
+      "restartCount": 0
+    }
+  ],
+  "deployed_frontend_source_files_matched": 126,
+  "binary_sha256": "8d9d6c0886c8c5c92727f11570d197a2b993b2c37d9ba342e0ec71d0f7d9c5ef",
+  "binary_comparison": "Same sha256 observed via docker exec in live Rust, fixture HTTP and benchmark containers.",
+  "benchmark": {
+    "conditions": {
+      "cases": 32,
+      "repeats": 10,
+      "concurrency": [
+        2,
+        8,
+        16
+      ],
+      "cpus": 2,
+      "memory_limit_gib": 2,
+      "processes": 1,
+      "quotes_sha256": "17f120ffbc9094301101a3c799df4b38e6321e9c5825342fbe0ee52977a9df96",
+      "basis": "Identical captured quotes and requests; full HTTP calculation; excludes external quote/DB I/O; observer in separate cgroup; 1 ms requested sampling."
+    },
+    "servers": {
+      "python": {
+        "requests": 346,
+        "success_200": 346,
+        "sequential_median_ms": 107.86070249923796,
+        "sequential_p95_ms": 268.90343799823313,
+        "idle_mib": 162.74609375,
+        "observed_peak_mib": 225.421875,
+        "kernel_peak_mib": 225.625,
+        "rss_peak_mib": 252.0859375,
+        "sequential_peak_mib": 189.20703125,
+        "end_mib": 224.39453125,
+        "swap_bytes": 0,
+        "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+        "sampling_interval_median_ms": 1.3277779980853666
+      },
+      "rust": {
+        "requests": 346,
+        "success_200": 346,
+        "sequential_median_ms": 4.938922000292223,
+        "sequential_p95_ms": 8.44460100051947,
+        "idle_mib": 2.4921875,
+        "observed_peak_mib": 72.57421875,
+        "kernel_peak_mib": 74.30859375,
+        "rss_peak_mib": 77.71875,
+        "sequential_peak_mib": 18.8984375,
+        "end_mib": 60.99609375,
+        "swap_bytes": 0,
+        "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+        "sampling_interval_median_ms": 1.4008240032126196
+      }
+    },
+    "per_case": {
+      "python": {
+        "usd_single": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 26.78551150165731,
+          "p95_ms": 39.16270699846791,
+          "observed_peak_mib": 166.19140625
+        },
+        "usd_five_8years": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 268.59600949865126,
+          "p95_ms": 361.20197900163475,
+          "observed_peak_mib": 181.10546875
+        },
+        "mixed_us_kr_cash": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 36.98147100112692,
+          "p95_ms": 38.770842998928856,
+          "observed_peak_mib": 179.6875
+        },
+        "crypto_7day": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 44.17716749958345,
+          "p95_ms": 45.94798999823979,
+          "observed_peak_mib": 179.8671875
+        },
+        "japan_europe_fx": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 35.006837500986876,
+          "p95_ms": 36.6904649999924,
+          "observed_peak_mib": 179.91796875
+        },
+        "cash_only": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 6.717207499605138,
+          "p95_ms": 8.519249000528362,
+          "observed_peak_mib": 179.75
+        },
+        "zero_weight": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 35.14433099917369,
+          "p95_ms": 41.15146399999503,
+          "observed_peak_mib": 179.82421875
+        },
+        "weights_cash": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 38.26150500026415,
+          "p95_ms": 43.97040600088076,
+          "observed_peak_mib": 179.75390625
+        },
+        "dca_weekly_1": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 131.89181700181507,
+          "p95_ms": 221.13618400180712,
+          "observed_peak_mib": 179.78515625
+        },
+        "dca_weekly_2": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 121.44389849891013,
+          "p95_ms": 208.42942600211245,
+          "observed_peak_mib": 179.62109375
+        },
+        "dca_monthly_1": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 115.83296149910893,
+          "p95_ms": 208.47156799936784,
+          "observed_peak_mib": 180.046875
+        },
+        "dca_monthly_2": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 113.29871800080582,
+          "p95_ms": 120.73812300150166,
+          "observed_peak_mib": 179.53515625
+        },
+        "dca_monthly_3": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 107.9368449991307,
+          "p95_ms": 196.6255129991623,
+          "observed_peak_mib": 179.859375
+        },
+        "dca_monthly_6": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 107.11699099920224,
+          "p95_ms": 191.72999200236518,
+          "observed_peak_mib": 179.8046875
+        },
+        "dca_monthly_12": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 107.94468599851825,
+          "p95_ms": 113.15344399918104,
+          "observed_peak_mib": 179.7890625
+        },
+        "rebalance_weekly_1": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 309.310511998774,
+          "p95_ms": 390.92528900073376,
+          "observed_peak_mib": 180.3203125
+        },
+        "rebalance_monthly_1": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 177.90024600071774,
+          "p95_ms": 275.2919779995864,
+          "observed_peak_mib": 180.17578125
+        },
+        "rebalance_monthly_12": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 139.45702799901483,
+          "p95_ms": 230.40177099755965,
+          "observed_peak_mib": 180.21484375
+        },
+        "dca_with_rebalance": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 196.28755700068723,
+          "p95_ms": 276.3858730031643,
+          "observed_peak_mib": 180.41015625
+        },
+        "sma_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 100.65774649956438,
+          "p95_ms": 114.38469899803749,
+          "observed_peak_mib": 181.390625
+        },
+        "sma_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 107.00660300062736,
+          "p95_ms": 127.20703699960723,
+          "observed_peak_mib": 182.1328125
+        },
+        "ema_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 108.39762199975667,
+          "p95_ms": 199.33257200318621,
+          "observed_peak_mib": 189.20703125
+        },
+        "ema_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 112.17692749960406,
+          "p95_ms": 122.18640500213951,
+          "observed_peak_mib": 183.50390625
+        },
+        "rsi_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 88.51136800149106,
+          "p95_ms": 93.93985200222232,
+          "observed_peak_mib": 183.50390625
+        },
+        "rsi_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 103.44781750063703,
+          "p95_ms": 121.5361490030773,
+          "observed_peak_mib": 183.9140625
+        },
+        "bollinger_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 106.98422600216873,
+          "p95_ms": 113.14228999981424,
+          "observed_peak_mib": 183.8671875
+        },
+        "bollinger_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 110.80400199898577,
+          "p95_ms": 121.27010300173424,
+          "observed_peak_mib": 184.03125
+        },
+        "macd_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 116.44082949896983,
+          "p95_ms": 145.70037000157754,
+          "observed_peak_mib": 184.73828125
+        },
+        "macd_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 120.93594499856408,
+          "p95_ms": 134.35529499838594,
+          "observed_peak_mib": 186.19140625
+        },
+        "small_cash_no_trades": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 24.408713999946485,
+          "p95_ms": 28.02267700099037,
+          "observed_peak_mib": 186.1015625
+        },
+        "crypto_sma": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 27.55248399989796,
+          "p95_ms": 29.394386998319533,
+          "observed_peak_mib": 186.2109375
+        },
+        "krw_sma": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 30.905343999620527,
+          "p95_ms": 34.00758900170331,
+          "observed_peak_mib": 186.40625
+        },
+        "concurrent_2": {
+          "concurrency": 2,
+          "requests": 2,
+          "median_ms": 713.556274500661,
+          "p95_ms": 727.5528440004564,
+          "observed_peak_mib": 188.96484375
+        },
+        "concurrent_8": {
+          "concurrency": 8,
+          "requests": 8,
+          "median_ms": 3079.7544324996124,
+          "p95_ms": 3080.168174998107,
+          "observed_peak_mib": 211.59765625
+        },
+        "concurrent_16": {
+          "concurrency": 16,
+          "requests": 16,
+          "median_ms": 5157.569714001511,
+          "p95_ms": 6021.516190998227,
+          "observed_peak_mib": 225.421875
+        }
+      },
+      "rust": {
+        "usd_single": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 1.4959585005271947,
+          "p95_ms": 2.7545209995878395,
+          "observed_peak_mib": 4.4921875
+        },
+        "usd_five_8years": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 7.1424074994865805,
+          "p95_ms": 12.727183999231784,
+          "observed_peak_mib": 11.171875
+        },
+        "mixed_us_kr_cash": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 1.6163085001608124,
+          "p95_ms": 2.2855120005260687,
+          "observed_peak_mib": 11.03515625
+        },
+        "crypto_7day": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 1.7537365001771832,
+          "p95_ms": 1.987358002224937,
+          "observed_peak_mib": 11.2109375
+        },
+        "japan_europe_fx": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 1.4055120009288657,
+          "p95_ms": 1.8457009973644745,
+          "observed_peak_mib": 10.93359375
+        },
+        "cash_only": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 1.3030964983045124,
+          "p95_ms": 1.8178910031565465,
+          "observed_peak_mib": 10.9375
+        },
+        "zero_weight": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 1.6372655009035952,
+          "p95_ms": 2.124668997566914,
+          "observed_peak_mib": 11.16796875
+        },
+        "weights_cash": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 1.9235205018048873,
+          "p95_ms": 2.2153240024636034,
+          "observed_peak_mib": 10.87890625
+        },
+        "dca_weekly_1": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 4.2485425001359545,
+          "p95_ms": 5.370840000978205,
+          "observed_peak_mib": 10.97265625
+        },
+        "dca_weekly_2": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 5.221584500759491,
+          "p95_ms": 5.428415999631397,
+          "observed_peak_mib": 11.84765625
+        },
+        "dca_monthly_1": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 4.092475002835272,
+          "p95_ms": 4.614582001522649,
+          "observed_peak_mib": 11.6015625
+        },
+        "dca_monthly_2": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 4.686737998781609,
+          "p95_ms": 5.245975000434555,
+          "observed_peak_mib": 11.68359375
+        },
+        "dca_monthly_3": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 3.2546489983360516,
+          "p95_ms": 4.049688999657519,
+          "observed_peak_mib": 11.42578125
+        },
+        "dca_monthly_6": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 3.9335250003205147,
+          "p95_ms": 4.856818999542156,
+          "observed_peak_mib": 11.5234375
+        },
+        "dca_monthly_12": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 3.610409501561662,
+          "p95_ms": 3.9322889970208053,
+          "observed_peak_mib": 11.44140625
+        },
+        "rebalance_weekly_1": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 8.070067999142339,
+          "p95_ms": 10.30576000266592,
+          "observed_peak_mib": 13.546875
+        },
+        "rebalance_monthly_1": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 5.554531000598217,
+          "p95_ms": 6.660639999608975,
+          "observed_peak_mib": 18.8984375
+        },
+        "rebalance_monthly_12": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 5.8349525006633485,
+          "p95_ms": 7.079223996697692,
+          "observed_peak_mib": 13.37890625
+        },
+        "dca_with_rebalance": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 6.756973501978791,
+          "p95_ms": 7.883084999775747,
+          "observed_peak_mib": 12.9453125
+        },
+        "sma_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 6.966341501538409,
+          "p95_ms": 8.420833000855055,
+          "observed_peak_mib": 12.93359375
+        },
+        "sma_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 7.80493300044327,
+          "p95_ms": 9.62971899934928,
+          "observed_peak_mib": 13.33203125
+        },
+        "ema_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 7.459148000634741,
+          "p95_ms": 8.854568000970175,
+          "observed_peak_mib": 13.3984375
+        },
+        "ema_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 7.736876001217752,
+          "p95_ms": 8.229536997532705,
+          "observed_peak_mib": 13.953125
+        },
+        "rsi_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 5.981078000331763,
+          "p95_ms": 7.590976998471888,
+          "observed_peak_mib": 13.97265625
+        },
+        "rsi_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 8.52393299828691,
+          "p95_ms": 10.527741000259994,
+          "observed_peak_mib": 13.41015625
+        },
+        "bollinger_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 6.788060500184656,
+          "p95_ms": 7.9939569986891,
+          "observed_peak_mib": 13.40234375
+        },
+        "bollinger_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 6.965953998587793,
+          "p95_ms": 8.742185997107299,
+          "observed_peak_mib": 13.78125
+        },
+        "macd_default": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 6.372890002239728,
+          "p95_ms": 7.394828000542475,
+          "observed_peak_mib": 13.6640625
+        },
+        "macd_custom": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 8.302952999656554,
+          "p95_ms": 10.396229998150375,
+          "observed_peak_mib": 13.13671875
+        },
+        "small_cash_no_trades": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 2.155897000193363,
+          "p95_ms": 2.6598879994708113,
+          "observed_peak_mib": 13.0703125
+        },
+        "crypto_sma": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 1.9908359972760081,
+          "p95_ms": 2.755255001829937,
+          "observed_peak_mib": 13.3203125
+        },
+        "krw_sma": {
+          "concurrency": 1,
+          "requests": 10,
+          "median_ms": 2.0104069990338758,
+          "p95_ms": 2.126004997990094,
+          "observed_peak_mib": 13.00390625
+        },
+        "concurrent_2": {
+          "concurrency": 2,
+          "requests": 2,
+          "median_ms": 12.039512999763247,
+          "p95_ms": 14.550701998814475,
+          "observed_peak_mib": 18.734375
+        },
+        "concurrent_8": {
+          "concurrency": 8,
+          "requests": 8,
+          "median_ms": 29.50506750130444,
+          "p95_ms": 30.07481500026188,
+          "observed_peak_mib": 60.91015625
+        },
+        "concurrent_16": {
+          "concurrency": 16,
+          "requests": 16,
+          "median_ms": 43.54224999951839,
+          "p95_ms": 46.52204900048673,
+          "observed_peak_mib": 72.57421875
+        }
+      }
+    },
+    "prior_rust": {
+      "requests": 346,
+      "success_200": 346,
+      "sequential_median_ms": 4.164357499575999,
+      "sequential_p95_ms": 7.625118001669762,
+      "idle_mib": 3.1796875,
+      "observed_peak_mib": 67.8515625,
+      "kernel_peak_mib": 68.12890625,
+      "rss_peak_mib": 71.71875,
+      "sequential_peak_mib": 14.71875,
+      "end_mib": 51.76171875,
+      "swap_bytes": 0,
+      "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\n",
+      "sampling_interval_median_ms": 1.3495780012817704
+    }
+  },
+  "source_sha256": {
+    "backtest/backtest_be_rust/Cargo.lock": "e31ed5985a3823ffc2f9054a7a6dd77ef216e90b55231ab889633bbef14e90e3",
+    "backtest/backtest_be_rust/Cargo.toml": "a6183b816cfc3ac3986f8efe8007a67ada148c0eae75ea31b255d84cc1e6b369",
+    "backtest/backtest_be_rust/openapi.json": "50f5b15942bcd2040d0f80fc612d2dc77f2c3212f2db7acc718ea528d7ccf01e",
+    "backtest/backtest_be_rust/src/api.rs": "23914df1c0fcaa6d94f99aa99508bf35a4e0de65730bcfc72dcb4a762d7e79e3",
+    "backtest/backtest_be_rust/src/api_tests.rs": "c04188f0f4bb092b9898c508f66af44750948dd82d741f24f4847136c6591804",
+    "backtest/backtest_be_rust/src/data.rs": "97801006cd2fe1667d06929acf8d0fa2e4d5b0ce3c9dc207cd229651ff657028",
+    "backtest/backtest_be_rust/src/data_regression_tests.rs": "1390b9aea0e367514faa4ad72d4f905a51760dcfec04000c4f67dc2f7447dbd8",
+    "backtest/backtest_be_rust/src/db.rs": "d14ade8f1e54c71030af76f36f65a8d87e92722e371eb64f3b59d1e89a909af4",
+    "backtest/backtest_be_rust/src/engine.rs": "c51dba42a967224c5c40f92c23deb50509c211003d0da29f5bbcb602e2cc98ee",
+    "backtest/backtest_be_rust/src/error.rs": "b21ea8969c434504bb3ee06770f1db371ab15510095921af73967726fc752890",
+    "backtest/backtest_be_rust/src/lib.rs": "d13d8dc0f9f34337f5e54d959a15b6506d84b22f8bc30f5bec8079f1444f4766",
+    "backtest/backtest_be_rust/src/main.rs": "b586d88364cbb92384402e0d40ba394c6e3ca67687d86118a746fb3809c2d29d",
+    "backtest/backtest_be_rust/src/metrics.rs": "63b19379d1b6611a97289c935200b5b2f81aaab87fdc5b3a3414d92d032bce86",
+    "backtest/backtest_be_rust/src/model.rs": "5cd9335916d7f5c11be27a72d00a86426a0148b9a66ad3e8a90b9c4ec4f703a4",
+    "backtest/backtest_be_rust/src/news.rs": "449b62a9ac62042b90228b11c633549a9208df8b0c36eb586c16a998204736bf",
+    "backtest/backtest_be_rust/src/schedule.rs": "680ce5e42f90c645f484555bdc9bd63f4bcbbeb8f030732e51ad35b01f74da7f",
+    "backtest/backtest_be_rust/src/strategy.rs": "67ab03168ee7d7a89aabd085477158e0392e78c02346de74cc7a149cf1733512",
+    "backtest/backtest_be_rust/src/ticker_names.json": "e2c489d9841dc08082592120296b8eb3567de8ff0d43b266064cf43ed45c06f9",
+    "backtest/backtest_be_rust/src/validation.rs": "f9fcb2434350c459f146a541f50f74a0f27e6fc981d03a6059180f4c9d28f293",
+    "backtest/backtest_be_rust/tests/correctness.rs": "c838782256a1e94b6ca32d63085bb3beb901ce8a983518e4dcafbfe6603e0b10",
+    "backtest/backtest_be_rust/tests/parity.rs": "708872bbac0aae49e3041c440b6f0ed05dc12839c9721199c2b1837eb62c7708",
+    "backtest/backtest_be_rust/tests/readversarial.rs": "6b509dcc9083cd6938d87d5aca8126ba0f41e61598c6fea5300e5efec97ebee0",
+    "backtest/backtest_be_rust/tests/fixtures/histories.json": "466ab3e8972cd561f5c15f227c6b60f17effaa58058499b225368c873a7de610",
+    "backtest/backtest_be_rust/tests/fixtures/http-boundary.json": "81b6a849f6a11542cfe5b1d77f7d282c5c47eea99b1668dfb9974055f4ed32ba",
+    "backtest/backtest_be_rust/tests/fixtures/parity.json": "a82802f00bea1f1d8014a62b795a1a51d62964e8c65784b45610b72d15004b62",
+    "backtest/backtest_be_rust/tests/fixtures/readversarial.json": "74a25ff64111ced92c0cf4de62ac786bd0570e8425be4fb6ce0f3d41db33ad84",
+    "backtest/backtest_be_rust/tests/fixtures/real-market-python.json": "7a92c041566c2d9bfe918e8c7fd8f182f11d9b8b2e72362fdd21dc1b35277c33",
+    "backtest/backtest_be_rust/tests/fixtures/supplemental.json": "786fbd0ea103ce4df4e7fdfc5b130913d3c0d626830df8b571b5a18ac9941db5",
+    "backtest-console/src/App.tsx": "925c876eb2eb1b406ad0488f696bff0d753b920186b0b2246dba71c74b3af753",
+    "backtest-console/src/main.tsx": "64750db323094dd2b7882688955f84b18f160caeeb56509258bd86348cf40235",
+    "backtest-console/src/vite-env.d.ts": "ef4428a7b067a06518627768d36ff24d9daadc9d61d26a55f99959e693797f72",
+    "backtest-console/src/lib/utils.ts": "bef1c132037b8e52ea7034ce308af9d34da550218686f049d6ff1a7ee560d6ec",
+    "backtest-console/src/pages/HomePage.tsx": "009a87aa4f0f0edb7e48d98ecad999f504b17901cd9e593b9be513ac47488ec6",
+    "backtest-console/src/pages/PortfolioPage.tsx": "4ad32a485f1a208cfb968ae9b49726209a64756177f8b315200016da73f7bcae",
+    "backtest-console/src/test/setup.ts": "28392d4ad5b802f8c0a87de436f86cb6ef99c10376f9b1ae8707cfd83df1e762",
+    "backtest-console/src/test/sizedCharts.ts": "8fd468826613b5586ff5d38e06647c0195f3bc6d94a1f8c94ced02a459c395c7",
+    "backtest-console/src/test/utils.tsx": "ac21064ad71b681bb2d0218096157786e9a3932039ef9b4b59969ed5254427d9",
+    "backtest-console/src/__tests__/routing.test.tsx": "ae37a9ca418428006ffea8ca6f820ea7f1b9a15e4d58bda3041e8a19527faf09",
+    "backtest-console/src/test/fixtures/backtestResults.ts": "74399a96f4ad98461df25f85b1e5c61845695b091723b7c3c10bb2c075624fa4",
+    "backtest-console/src/test/mocks/handlers.ts": "917d39f7f318285552282aa632a6c6b91d48f1a640cd24f13a80bdbc68bd0af3",
+    "backtest-console/src/test/mocks/server.ts": "3aaebfc4b6bb34fa7d0af357c190cfc43bb41d0b1023dad6a68cfb3eb64c9d97",
+    "backtest-console/src/shared/api/base.ts": "022d1922d68de81f8d043b764e4c3a7e845dd82a6bf24cca9af55f1e3ff8d3f2",
+    "backtest-console/src/shared/api/client.ts": "24fc9970530c51a0ddc0403aca581346b8cd94ffea6b6fe616b9aa0f32f8fe24",
+    "backtest-console/src/shared/components/index.ts": "0f4897defe34b90006bc4a01cff2033d503705fc114bff637bbb458e22ec279c",
+    "backtest-console/src/shared/hooks/useTheme.ts": "93982cdc3cdb361500c4f198882b01537b7d7f494993a11487e93d8e7e04bc6c",
+    "backtest-console/src/shared/styles/design-tokens.ts": "5a9fca50e8998c94a850e7b0123981052257fd0f6c711a7c2cd8fa1a23080258",
+    "backtest-console/src/shared/types/index.ts": "c9451397c3492f4d15df65f839d4b572c241c87009843d39bfd0c21b9e95f845",
+    "backtest-console/src/shared/types/theme.ts": "5c23c77ef16116d9738eb9e21dd05f48f499f7bcbb5799cc13706057b12ef192",
+    "backtest-console/src/shared/ui/alert.tsx": "7fbaae99a80c8dd096693666028019faee0776ee00a6692b04e3288ffb09cfdd",
+    "backtest-console/src/shared/ui/badge.tsx": "00679e51a3c55c125add76874cf791eca9a181a608f7fb3440b9a3e3c83abef8",
+    "backtest-console/src/shared/ui/button.tsx": "c0cfc0e87a292c200c268a727aa94edebe15136a22197e3fc12dda1689892734",
+    "backtest-console/src/shared/ui/card.tsx": "7935592133535ae89702a5b2a2cad977d37706974291a2c686e2fb78ffe22a3c",
+    "backtest-console/src/shared/ui/dialog.tsx": "dbfd4fd2b54f251239c1c01842e7509a70ffb300a43f1a9da3d4467ea94f9e8a",
+    "backtest-console/src/shared/ui/dropdown-menu.tsx": "b9905bc73b240e76d6d42fe2073584c141398fed3482e10588e16a32b60e6490",
+    "backtest-console/src/shared/ui/index.ts": "75a87738012ae2ef24e7a5972bc81063e602d3036246a761347cabbaeab4d551",
+    "backtest-console/src/shared/ui/input.tsx": "471d1f58d3b409061384fe09725ba7d17f9557c257ac166c0e5e3c248c189c5f",
+    "backtest-console/src/shared/ui/label.tsx": "58f5bc1098156d4ade5a347c8f6e89195c67bbee2d01bbccb4f81af649f92d65",
+    "backtest-console/src/shared/ui/scroll-area.tsx": "d7d02600effca55d0dcadce8c09c97ebddda3a19c5fa1d52dc9f6f727b26c6b1",
+    "backtest-console/src/shared/ui/select.tsx": "1cfdf142a649b6ba9102ac53e10e1b9701e009bb36d7ed82bee8ae6d24e83e0b",
+    "backtest-console/src/shared/ui/separator.tsx": "995c54f1c5c688f712a675fe35d55bcada2b31dba561dcc71553a1ad601e59ec",
+    "backtest-console/src/shared/ui/sonner.tsx": "771ab8637d27384c3ed030ba3be01a07b90c791c294eae06646250f8e81bc49e",
+    "backtest-console/src/shared/ui/table.tsx": "1da243956282c040db49d5718d2f0093a705fbbdfa3a25f51c1a31a069c45093",
+    "backtest-console/src/shared/ui/tabs.tsx": "b546015d550f574da5f1f67d9a0cbed70d2f8b2c07da034ab9d4fc16ce8e08c5",
+    "backtest-console/src/shared/ui/textarea.tsx": "3c8905e1883db3b407427bbc243e22c5a70d48f25ec597cb8bfa396f8e9a4a25",
+    "backtest-console/src/shared/ui/tooltip.tsx": "1f520fb7c6c259f8519a64d971cb9a14e2e122b248f22516ca5c3ba997d24d20",
+    "backtest-console/src/shared/utils/dataSampling/calendar.ts": "cb42d46067daf5f2cb4897492a4919be565dbd8a0cbc939602cb872a12859591",
+    "backtest-console/src/shared/utils/dataSampling/index.ts": "28ed58626944c42c3c0a8841355d32073174f8da73299539962964355d9e5b6d",
+    "backtest-console/src/shared/utils/dataSampling/periodSampling.ts": "06ef62bb369fd99061a4b3ff8ec1bf9e096ad7f3bd9dd0b7d0a7dcfc972a4b06",
+    "backtest-console/src/shared/utils/dataSampling/pointLimitSampling.ts": "dd5b7d0f37e46d497831901a10267589a5fa110f4eb8c453c341f0796b87f8dd",
+    "backtest-console/src/shared/utils/dataSampling/priceSampling.ts": "c6a462be7d02e6127b1d8874bc2c1ea81028e72d3bad82ede8ef1b89ad553a8c",
+    "backtest-console/src/shared/utils/dataSampling/returnAggregation.ts": "f592d3f320abffbffefaac756adee0b241fee5cddc2109d3877208170acd6b0f",
+    "backtest-console/src/shared/utils/__tests__/dataSampling.test.ts": "e95bf08afb580df411390a7594e908eaaa1960718c7b01b1ce45b8099965bbf1",
+    "backtest-console/src/shared/lib/core/utils.ts": "4c7dfa09f65619a536ddad99be751b0459ef48e86b29816cdf45324a60b88cb2",
+    "backtest-console/src/shared/lib/utils/dateUtils.ts": "284412a0d888b8a5bd88585774039a24e06347240cc7e06aa92becdf7ef338be",
+    "backtest-console/src/shared/lib/utils/formatters.ts": "fd3a88183a61c80769d70bbd1b435851bb863f09b16210ae2d460b99351ec10d",
+    "backtest-console/src/shared/lib/utils/index.ts": "7e91f088706931a0e78ba23eceb73ec328e9aeae2bda55edfb6be5dce78af859",
+    "backtest-console/src/shared/lib/utils/numberUtils.ts": "59f901f3ed0c2114781f28089b0fcda5ad7a403380d49089d86095a1f94e690b",
+    "backtest-console/src/shared/hooks/__tests__/useTheme.test.tsx": "a5078e9aa244db84c1890ee4985ee6e5702341e68aab88262ddea5e6260df802",
+    "backtest-console/src/shared/components/debug/PerformanceMonitor.tsx": "7a04d7a95603bcd360ec9d1907dd4bfeb83ff19852c74f1fa7b61f687be7e125",
+    "backtest-console/src/shared/components/form/FormField.tsx": "5a2cf926fba23aede7e23af045f46f0188ffc1f765a27eaa9331a8e2c4db2a65",
+    "backtest-console/src/shared/components/form/FormLegend.tsx": "41452e2fc777d9365ce4eae53eec73c1083c5279f25fb9e915a11d67cd9594e9",
+    "backtest-console/src/shared/components/form/FormSection.tsx": "0c5f60bbee663b53a01ce5b8680b2602d39276d03d163f3649db7b33772ac21b",
+    "backtest-console/src/shared/components/layout/ErrorBoundary.tsx": "b2ee9365ee808be90a98d1bcf38e8ec318fb23410882c4cd6eec68458979f5b4",
+    "backtest-console/src/shared/components/layout/Footer.tsx": "96a0760139feca45b9382d5240e8f528ff6b3b1e489b0e71798391534aebbedd",
+    "backtest-console/src/shared/components/layout/Header.tsx": "7a7c09b68afcdbd2dc0d51e9a4650d145cf2fcd3010678bf66559e3b0fc429d8",
+    "backtest-console/src/shared/components/layout/ThemeSelector.tsx": "252552db85c955c620d8ca80d64f48daf660c4c1ff8a8c4919360ef5b0bca096",
+    "backtest-console/src/shared/components/loading/ChartLoading.tsx": "6547ba389cc8685f5d679d366ed0b0c139084f9a3f1aabede8d0142c583f4e0c",
+    "backtest-console/src/shared/components/tooltip/FinancialTermTooltip.tsx": "a4b12101c608c1f0c1975bc8a94e12c514d870b53fd2111f38d8cedd7dc9a605",
+    "backtest-console/src/shared/components/layout/__tests__/ErrorBoundary.test.tsx": "9639f0b9e6bfbcf7e53d3d2baa4a49c5ff1389beeeccdb534154b7bb7b8f288c",
+    "backtest-console/src/shared/components/layout/__tests__/ThemeSelector.test.tsx": "3134a9445299f0d37923149a2f1880ef2fdd44ee744d1ccc4b3d678788271dd7",
+    "backtest-console/src/shared/components/form/__tests__/FormField.test.tsx": "593c991fc699e5d1ec1570adbb961afe621e7305d3e816f39c75c576bbb4a323",
+    "backtest-console/src/shared/api/__tests__/client.test.ts": "a7d51f2641a1026844a7bae61ce76d5b99249adc3aeca294d7c98f59cb7ad172",
+    "backtest-console/src/shared/api/__tests__/extractErrorMessage.test.ts": "4e0a2eb689e9db649253ddd8494f99c386d37c397b47d9103ae40a78922b446a",
+    "backtest-console/src/pages/landing/CTASection.tsx": "a1e68fdd84648a7cf579ba08770d9fedc997719d37309f1283641fdb46814e2b",
+    "backtest-console/src/pages/landing/HeroSection.tsx": "daba6c6029766cfb2d32af180880e44949590160f041624204b7fd843dffba38",
+    "backtest-console/src/pages/landing/HowToUseSection.tsx": "e3f637c525fc240e3d9ef3d748c6bdf6f444c49b149e4792c4a3f8abc2d75555",
+    "backtest-console/src/pages/landing/index.ts": "e86054c943dca4d8945816ec1e4c69a9751550a3e20bd861bb8f3563aae1d61c",
+    "backtest-console/src/pages/landing/KeyFeaturesSection.tsx": "81ec04fb01a545924e47ea4a55ee41fe5658a970713c2d0cb409ffa968073d6a",
+    "backtest-console/src/pages/landing/WhatIsBacktestSection.tsx": "2f1355a94b9fa8d2ba39283a906bef4a77aa6727377a05d6925c0f7c197b9f04",
+    "backtest-console/src/pages/__tests__/PortfolioPage.test.tsx": "f4d132db3845ebe229ea2be47ed8d38140001c02fe0d4245720ab55563e4c2c3",
+    "backtest-console/src/features/backtest/components/BacktestResults.tsx": "2dc067c73d235e4f9f53a56fdab0f1e1dcebb0f7d5faf3b3639db2d3d244955e",
+    "backtest-console/src/features/backtest/components/CommissionForm.tsx": "39842ebf3aef6208a4e75afaf574ae3608cf2ee7c4d882af1aedfa97e6c423b1",
+    "backtest-console/src/features/backtest/components/DateRangeForm.tsx": "4e49c52cf7d9a375329822a7993795ce3879f6c5c99515828d0c5950eadd62d7",
+    "backtest-console/src/features/backtest/components/EquityChart.tsx": "65e1e81bcb60a0163a3856cd4301698d0f0d0d148e60653aa4bbc751acf9ef05",
+    "backtest-console/src/features/backtest/components/OHLCChart.tsx": "6ed7c0d9a1360f798ba78833f6391794e85f3b3d1f38f0ce904e294c023ec87d",
+    "backtest-console/src/features/backtest/components/PortfolioBacktestForm.tsx": "5ba799d2fa712b236a9181e8dea7bb2869fdb3e1bd1cec5c36af7fc3eab1ef24",
+    "backtest-console/src/features/backtest/components/PortfolioForm.tsx": "65d2f5ad09aacb894dddf5b756ca18edaff982fd43e4202e1b378e4873397a55",
+    "backtest-console/src/features/backtest/components/StatsSummary.tsx": "b4068c9824cbff1325e50d4bf24f7d09620b928e15519da1cf250e547cadd44e",
+    "backtest-console/src/features/backtest/components/StockPriceChart.tsx": "8d9510fe2db6456e444bb572a43125da16bcf3c902f9ab689221246faf63b99a",
+    "backtest-console/src/features/backtest/components/StrategyForm.tsx": "6b60872ea6fdfa62dd825941e4184a3ac257ebeaa7220908df34e65700984054",
+    "backtest-console/src/features/backtest/components/StrategyHelpModal.tsx": "aa802dd49422d359366acd6b852bac3c9039b04405481b0cec32ee2af6c505ce",
+    "backtest-console/src/features/backtest/components/TradesChart.tsx": "455105ac00d406ed3b72f9d946c8df77c2d9d1e6d40bed4de81ec07b1c9de0da",
+    "backtest-console/src/features/backtest/components/TradeSignalsChart.tsx": "534940fffe871965d9aa3a389e26a34041da597182b30d00c3c90403317d70fe",
+    "backtest-console/src/features/backtest/components/TurnstileVerification.tsx": "df2fd798563e54c902685c12a1e756814d476e3c297a1436a621a0b67c8b37b3",
+    "backtest-console/src/features/backtest/constants/strategyDetails.ts": "aba37a39ea3f4877919c531f2067b415be5a4526c1b7c1063bac81244a2afc98",
+    "backtest-console/src/features/backtest/hooks/useBacktestForm.ts": "fb306ead3258f613182248d01b6d6d02132b93f51539fb123fc69218bf9bfee3",
+    "backtest-console/src/features/backtest/hooks/useFormValidation.ts": "0813907d95b4263332d55ec636993fb385c1cd08a13f84fcb84e29e8e195fb25",
+    "backtest-console/src/features/backtest/hooks/usePortfolioBacktest.ts": "7244a0d27051c2dd31c5fb6363f021143519c5626831e063dff1d59720d20717",
+    "backtest-console/src/features/backtest/hooks/useStrategyParams.ts": "8921363502480780fdeada7bd0476bffb006fdfec45ab59d75e580b5d7f5ba02",
+    "backtest-console/src/features/backtest/model/backtestFormReducer.ts": "98f5cd71ad43a9676d3a6f542a6824dc41a5d5de66ab524ad9b57c13c315d3d3",
+    "backtest-console/src/features/backtest/model/strategyConfig.ts": "ecef757cf2bc7446882af56f83aa0dbca7d115ce4fb0788d818e98aca633e6a5",
+    "backtest-console/src/features/backtest/services/backtestService.ts": "df948486dbf8e96495f6b540aa7cc3e01b55c0fd138997030be5ceceaa95815f",
+    "backtest-console/src/features/backtest/services/reportGenerator.ts": "b8dca25750bd16d9bd2b7c70bfe17691f4affb85d9d012a6f913487e753bee86",
+    "backtest-console/src/features/backtest/utils/calculateDcaPeriods.ts": "555c563030c9f9dd4c395f51fa8365f33ab90275b6d29a7aa62ebea0b515f060",
+    "backtest-console/src/features/backtest/utils/chartDataTransform.ts": "7e5c0ff10d2f822c69081270e36a64c3520852211bbf61e29419fc4cbd4f8fd7",
+    "backtest-console/src/features/backtest/utils/index.ts": "7c2bc199231fd1e20bbf6e3f5070400bfb3a0866830d535066d6f72a3f1de215",
+    "backtest-console/src/features/backtest/utils/portfolioCalculations.ts": "07d280b02907ea3b0f195561fc1a1923b5adc8b179a0d2e047d67aa6cf214027",
+    "backtest-console/src/features/backtest/utils/__tests__/calculationCorrectness.test.ts": "0d03a522dcb39825f5fd157d0e4f1000c84885e4be6d644c306752318de650e7",
+    "backtest-console/src/features/backtest/utils/__tests__/chartDataTransform.test.ts": "33ded48460c156e2db58b3f9a5fcca8f873891f4651a743fa5b35baa50e12001",
+    "backtest-console/src/features/backtest/utils/__tests__/portfolioCalculations.test.ts": "658a411cb0cf40264c800e75496c08ff523890eab5d00a9ee1540f6a727c31a4",
+    "backtest-console/src/features/backtest/services/__tests__/backtestService.integration.test.ts": "2c9d9905b137d2e1d37dc51f366d2a60815b5ec6a28cb9c282e33534a3ec7dfc",
+    "backtest-console/src/features/backtest/services/__tests__/reportGenerator.results.test.ts": "201dfdfa4e7a64cb87c88c20cff483974c7406e8a36fd11b3351b97a649829b6",
+    "backtest-console/src/features/backtest/services/__tests__/reportGenerator.test.ts": "120fd387219000ea0370b746658fddaa1d272e5cc468b78518fbd8867a1a8f20",
+    "backtest-console/src/features/backtest/model/constants/assetTypes.ts": "cacaffacc0f6270587e11d1def3a58dda32e8c9c71afb47f39b0bd18ff9504ca",
+    "backtest-console/src/features/backtest/model/constants/dcaConfig.ts": "865a92f3243874620398d921f2c576068cb02e5ebb10a6c4e82510d2b20cb295",
+    "backtest-console/src/features/backtest/model/constants/index.ts": "1025b5826e81bc9eeb70bf0d985442b8387ffbbc49d305e8b81bde9be28b75f5",
+    "backtest-console/src/features/backtest/model/constants/rebalancing.ts": "d63c7f513de718a32fdf33443f54a3cc4f069075cab58732cfeb38aec4c8b036",
+    "backtest-console/src/features/backtest/model/constants/stocks.ts": "91be361bb6b64dfa76b4842867774e8a13cc8286e244ee02fa68fb085c94d0d0",
+    "backtest-console/src/features/backtest/model/constants/strategies.ts": "dcc5180a09f07ea907a190d8c4711bd723aef816bcb7f822861f446f081afe95",
+    "backtest-console/src/features/backtest/model/constants/validation.ts": "b3719a98bed14c5f4b8679a5aa4d85bea606c6ec6c2713b80c8d64bca8fceac9",
+    "backtest-console/src/features/backtest/model/types/api-types.ts": "707e04fc404b63051c85d44d4fa509cb7a72deb8846d0cb8df717bd9e05a4dba",
+    "backtest-console/src/features/backtest/model/types/backtest-form-types.ts": "6968a41ba1d0cdd0b957812ba15df3408be1259038f83893a9a6d6d0308d6cdd",
+    "backtest-console/src/features/backtest/model/types/backtest-result-types.ts": "80103962f457d231f290ba656f7a89ca6756def3cd1f72db6a6e54618b9c2be9",
+    "backtest-console/src/features/backtest/model/types/index.ts": "729bb33567751f64b11500d068c241911beff6eb5fb4a394b916199f211e0b5e",
+    "backtest-console/src/features/backtest/model/types/volatility-news-types.ts": "baffa8827104d13c47434e606624ee03b7efbf1f907056eb35c083fe55bffba3",
+    "backtest-console/src/features/backtest/model/__tests__/backtestFormReducer.test.ts": "b405f43f28bf4162e05a8eae9f768c10e61947bb3bec84ca2fc59140cc75ccbb",
+    "backtest-console/src/features/backtest/model/__tests__/readversarial.test.ts": "34e1599cd716e64e403ae43296150dbb8de8ad03c395ae58703f91bcf7cbf868",
+    "backtest-console/src/features/backtest/model/__tests__/recalcAmountsByWeight.test.ts": "ea93d726e8d0b0f6d158ae7e4f755deb4b669cba73403bc0abddf50a96d1e97a",
+    "backtest-console/src/features/backtest/model/__tests__/strategyCapabilities.test.ts": "05cad19bb428e14905372b3a67a64ce3545876e16944f3236e24e32689cd3bcf",
+    "backtest-console/src/features/backtest/model/types/__tests__/api-types.contract.test.ts": "54b684d85259c87920a087c910c202c697ed484cb5a42973eca7042eb439a1d7",
+    "backtest-console/src/features/backtest/hooks/charts/chartDataSelectors.ts": "0cea528c96b27aa547e08c44ca2a7008c42bc2aea13f1b7a4d4c65fa14cb6de6",
+    "backtest-console/src/features/backtest/hooks/charts/chartSeriesBuilders.ts": "3b874578d9a00a08648b3855d50f5c255add4aa2e28edbfa3cb5393383d781b1",
+    "backtest-console/src/features/backtest/hooks/charts/useChartData.ts": "c3ffedbf2ee235482da5d7847f1128196e911868f19feab908ff188673b07bd8",
+    "backtest-console/src/features/backtest/hooks/__tests__/marketDataLifecycle.test.ts": "5b2cbf190a54b80bb820b5d37d168db5fdaf19cd6270f5104dadae86a013dc00",
+    "backtest-console/src/features/backtest/hooks/__tests__/useBacktestForm.test.ts": "cf157342838d629a71673c7cdc09400d34ec2dc6aded4dba819ad84cce5b5581",
+    "backtest-console/src/features/backtest/hooks/__tests__/useFormValidation.test.ts": "acfb59d292c361330c780c4fc5e2a6f58ffef144084f87c46e75ee852cb44d35",
+    "backtest-console/src/features/backtest/hooks/__tests__/usePortfolioBacktest.test.ts": "849a0da60abc6f1341142e6c42ad1583062ef08f84b8a3de11372eeb7bb12385",
+    "backtest-console/src/features/backtest/hooks/charts/__tests__/useChartData.test.ts": "9eb27044a5fa570f7d81706bd146520c1e9daf0842c520bf442099a5f6665e1a",
+    "backtest-console/src/features/backtest/components/lazy/LazyChartComponents.tsx": "66e9ecd4a7d51fb6b367eb33f72cb95d67da2dcf67cb1b9d052a7bf25adc6c02",
+    "backtest-console/src/features/backtest/components/portfolio-form/DcaPreview.tsx": "9163369d8bb53808851670e5c937bd7b1fc2f2bd39841bc7cdc3c31169132183",
+    "backtest-console/src/features/backtest/components/portfolio-form/index.ts": "6bc25138597a2d6ea3cc05778aa3d451ba2ddfd39fa0cb86bef54f682d6006fd",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioInputModeToggle.tsx": "fe292f03a9c6aea953182bacda1b70c5451fedb67c875eba3fe470bcfc2c9842",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioMobileCard.tsx": "cf0b3e9a3553da4e16cc4f48def3af3ca35a899c8ca1a06333bf0e7f0f63d238",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioSummary.tsx": "a2964ced064f23907b7f165cc3a2592cfaa0e7816483cb68cea9852fdaea1eb2",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioTable.tsx": "3d4bfb148256efd87fbf92bf39df81358b5bd6f88a754c39674db5950e2d8efe",
+    "backtest-console/src/features/backtest/components/results/BenchmarkIndexChart.tsx": "675fb1742aa5d7626420bc3e3cfb845891e012822f092b74770f0ad609b79c4b",
+    "backtest-console/src/features/backtest/components/results/BenchmarkReturnsChart.tsx": "6e157993404eae28e91c4a08d5225e0f7bb98270d2b07f158ca045e29ff8c434",
+    "backtest-console/src/features/backtest/components/results/LatestNewsSection.tsx": "8fbd2df5e392dfd982d55bf9f0805fcf1d9a762be14e615b8323fa82c002673e",
+    "backtest-console/src/features/backtest/components/results/MarketDataStatus.tsx": "37270c10f5681eda310b6c05669117ee674f2dd24a1d2aaf246a6c8e0f66a0d2",
+    "backtest-console/src/features/backtest/components/results/RebalanceHistoryTable.tsx": "26147757b7075f579d9290bc2adccd586324206e646eec61468caac596102848",
+    "backtest-console/src/features/backtest/components/results/ResultsHeader.tsx": "6d45d9a0f32a07b0edc63ab0a80fe77b2f5dc63864885b9ccefb3e3922260d41",
+    "backtest-console/src/features/backtest/components/results/StockSymbolSelector.tsx": "4b2cc2fc5db804931084303eb7d6cb438741b6135b7ff1dcddf80ce6fc032e54",
+    "backtest-console/src/features/backtest/components/results/SupplementalStatusNotice.tsx": "33dee86242d20f1f59e85e09ca01cf23849cb94917ebb6dfc85096bb862b0279",
+    "backtest-console/src/features/backtest/components/results/VolatilityEventsSection.tsx": "4f732a780554f7d6339766d263d5b735f764f3d830c16b080389b513c5564742",
+    "backtest-console/src/features/backtest/components/results/WarningBanner.tsx": "be02d095ff2033ee04bcaa9359701a837e69a2a69b8fdec25efc499f11bc8f17",
+    "backtest-console/src/features/backtest/components/results/WeightHistoryChart.tsx": "cd89bdb054c956ca4082d2f1dad1b38fe78086a7c2009a35e1b9499b3993d321",
+    "backtest-console/src/features/backtest/components/shared/CustomTooltip.tsx": "9200e76f1bab3003ed138e51d9e245e8dbe4c9e717b1bebfdd5820fe13ff63f5",
+    "backtest-console/src/features/backtest/components/shared/index.ts": "b793b6a974b01181bed48da2af9976529424dc4f7b4ccfb87d9c4ccfa2251280",
+    "backtest-console/src/features/backtest/components/shared/ResultBlock.tsx": "40a5aba9bf5a22416eebbb49cf8fa2aaf41582c77a5669b91bcfc8114ec10988",
+    "backtest-console/src/features/backtest/components/volatility/VolatilityTable.tsx": "5b29a88628a00116bbdb22f42532fc63b0b4838f7278ebc6c3ba0c498779e8bd",
+    "backtest-console/src/features/backtest/components/__tests__/BacktestForm.test.tsx": "ec1ddfc9c701107f4c7670c680c4034d3953f11af9728d6ae09755bb6c5efd43",
+    "backtest-console/src/features/backtest/components/__tests__/BacktestResults.test.tsx": "2aaa4058a9afa334dbc2aa0f8a1026ec11c6fe2d419569c5525859329decae3a",
+    "backtest-console/src/features/backtest/components/__tests__/ChartRendering.test.tsx": "8e8a1da356cdf3d06b98c1e0ad06925caa031ccf541e40e2e7e855fbb70ab4c9",
+    "backtest-console/src/features/backtest/components/__tests__/ChartResponsiveness.test.tsx": "cf35add99a33f2757a787f75213422b4d61475b3e8c5750a50452319f300f050",
+    "backtest-console/src/features/backtest/components/__tests__/OpenPositionChart.test.tsx": "b06e5880179e20d8becac095fdeb86d1ccf2d2ffb241d061dc418ceb94378bdc",
+    "backtest-console/src/features/backtest/components/__tests__/StatsSummary.results.test.tsx": "f98f01fe5b52aebc7868aeca8d61905a9cc442771bf83b0f3188ecfa5d04d8e6",
+    "backtest-console/src/features/backtest/components/__tests__/StatsSummary.test.tsx": "6de33f3c7eb8bb5ddd7f6ab5a7b410fd589ad6bee33e2a5106feea9b71e97f85",
+    "backtest-console/src/features/backtest/components/__tests__/StrategyForm.test.tsx": "cc5367d2f1b457c438456075752667e53b841f4cf664388e792b74b3063f8ab3",
+    "backtest-console/src/features/backtest/components/__tests__/TradesChart.test.tsx": "79c4364c9b9683c285adc4894f4b76cee58b735580764bed71bc5c7c402b7278",
+    "backtest-console/src/features/backtest/components/__tests__/TradeSignalsChart.test.tsx": "61b5685638e06b9858e9a8064b9564adff4545451474aaa7b6a5d5eeef1b26e1",
+    "backtest-console/src/features/backtest/components/__tests__/TurnstileVerification.test.tsx": "82eb6f496df3f306a5d765e796a54e67a9d4fb4a8d35ef3b8aced77dc51d9860",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/BenchmarkSection.tsx": "e0e3e12fff5af896f9a954911c449498db059bb469c44f9b7d91a99f27e69a6f",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/index.tsx": "51586903df5819399b72cb070737a1cc8c8a668be158df186ba746e77744c9f9",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/PortfolioCharts.tsx": "7934ab0e1541b20e5bdfff1162a661fd52df0762959d22f23b444b7ad4a7eef6",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/SingleStockCharts.tsx": "d9d0a4cad9c817b8a155d80fc69931de8da9a8132fe6a706ca239df3f7f0b78e",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/SupplementaryCharts.tsx": "1deabdb7214fe10aa48fb5a1d475e8a6c77dd12c1b9dc8b654f20c14d16b3ffd",
+    "backtest-console/src/features/backtest/components/results/__tests__/LatestNewsSection.test.tsx": "824c8cecdf8ca4bb6bdf948219934399b5c8d1d44f29073e20d83a2792717234",
+    "backtest-console/src/features/backtest/components/results/__tests__/RebalanceHistoryTable.test.tsx": "bca1757b11faede42d4588e2c54bc7629a2f3d3df3fc587a24e73f60bac688ba",
+    "backtest-console/src/features/backtest/components/results/__tests__/WeightHistoryChart.test.tsx": "c95e26424ed003f6f95487ac948dcd0bae611f25d6cbdcc1d70071de36133ceb",
+    "backtest-console/src/features/backtest/components/portfolio-form/__tests__/PortfolioMobileCard.test.tsx": "0085b75266c4e2f47afe6727fab807ae884710acbb4cb5d4e865da35574db259",
+    "backtest-console/src/features/backtest/components/portfolio-form/__tests__/PortfolioSummary.test.tsx": "cd7e0549ba5ddb04c2b9a5d353b59ba73dd31765ef87ca15bd25eee5f94fbe94",
+    "backtest-console/src/features/backtest/components/portfolio-form/__tests__/PortfolioTable.test.tsx": "5ec991f27f4aa33dd4eb0038d9bee682c98d667104ae831dd2aae12f04ef378e"
+  },
+  "changed_since_previous_fix": [
+    "backtest/backtest_be_rust/src/data.rs",
+    "backtest/backtest_be_rust/src/engine.rs",
+    "backtest/backtest_be_rust/src/metrics.rs",
+    "backtest/backtest_be_rust/src/model.rs",
+    "backtest/backtest_be_rust/src/strategy.rs",
+    "backtest/backtest_be_rust/tests/correctness.rs",
+    "backtest-console/src/shared/components/tooltip/FinancialTermTooltip.tsx",
+    "backtest-console/src/features/backtest/hooks/useFormValidation.ts",
+    "backtest-console/src/features/backtest/model/backtestFormReducer.ts",
+    "backtest-console/src/features/backtest/services/reportGenerator.ts",
+    "backtest-console/src/features/backtest/utils/chartDataTransform.ts",
+    "backtest-console/src/features/backtest/model/types/backtest-result-types.ts",
+    "backtest-console/src/features/backtest/components/portfolio-form/PortfolioSummary.tsx",
+    "backtest-console/src/features/backtest/components/results/RebalanceHistoryTable.tsx",
+    "backtest-console/src/features/backtest/components/results/WeightHistoryChart.tsx",
+    "backtest-console/src/features/backtest/components/results/ChartsSection/SupplementaryCharts.tsx",
+    "backtest-console/src/features/backtest/components/results/__tests__/WeightHistoryChart.test.tsx"
+  ],
+  "limits": "Controlled local benchmark, not production latency or long-duration leak proof. Scope and contract changes are in the accompanying review."
+}

@@ -1,0 +1,154 @@
+name: backtest-compare
+
+x-db-environment: &db-environment
+  MYSQL_ROOT_PASSWORD: comparison-local-root
+  MYSQL_DATABASE: stock_data_cache
+  MYSQL_USER: compare
+  MYSQL_PASSWORD: comparison-local-app
+
+x-api-environment: &api-environment
+  DEBUG: "true"
+  TURNSTILE_ENABLED: "false"
+  LOG_LEVEL: INFO
+  DATABASE_PORT: "3306"
+  DATABASE_NAME: stock_data_cache
+  DATABASE_USER: compare
+  DATABASE_PASSWORD: comparison-local-app
+  NAVER_CLIENT_ID: ""
+  NAVER_CLIENT_SECRET: ""
+  MAX_CONCURRENT_BACKTESTS: "8"
+  MAX_CONCURRENT_BACKTESTS_PER_CLIENT: "2"
+
+x-api-resources: &api-resources
+  resources:
+    limits:
+      cpus: "2"
+      memory: 2G
+
+x-console-build: &console-build
+  dockerfile_inline: |
+    # syntax=docker/dockerfile:1
+    FROM node:24-alpine
+    WORKDIR /app
+    RUN npm install --global npm@12.2.1
+    COPY package*.json ./
+    RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+    COPY . .
+    ENV NODE_ENV=development
+    EXPOSE 5173
+    CMD ["npm", "run", "dev", "--", "--config", "/app/vite.compare.config.ts", "--host", "0.0.0.0"]
+
+services:
+  mysql-python:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment: *db-environment
+    volumes:
+      - mysql_python:/var/lib/mysql
+      - ./.comparison/python/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: [CMD, mysqladmin, ping, -h, 127.0.0.1]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  mysql-rust:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment: *db-environment
+    volumes:
+      - mysql_rust:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: [CMD, mysqladmin, ping, -h, 127.0.0.1]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+
+  python-api:
+    build:
+      context: ./.comparison/python/backtest_be_fast
+      target: runtime
+    image: backtest-compare-python-api:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      <<: *api-environment
+      DATABASE_HOST: mysql-python
+      DATABASE_URL: mysql+pymysql://compare:comparison-local-app@mysql-python:3306/stock_data_cache?charset=utf8mb4
+    depends_on:
+      mysql-python:
+        condition: service_healthy
+    deploy: *api-resources
+
+  rust-api:
+    build:
+      context: ./backtest_be_rust
+      target: runtime
+    image: backtest-compare-rust-api:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8000"
+    environment:
+      <<: *api-environment
+      DATABASE_HOST: mysql-rust
+      DATABASE_URL: mysql://compare:comparison-local-app@mysql-rust:3306/stock_data_cache
+    depends_on:
+      mysql-rust:
+        condition: service_healthy
+    deploy: *api-resources
+
+  python-console:
+    build:
+      <<: *console-build
+      context: ./.comparison/console-python
+    image: backtest-compare-python-console:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5173:5173"
+    environment:
+      VITE_API_BASE_URL: ""
+      VITE_TURNSTILE_SITE_KEY: ""
+      FASTAPI_PROXY_TARGET: http://python-api:8000
+      BACKTEST_PROXY_TARGET: http://python-api:8000
+      DISABLE_HMR: "1"
+    volumes:
+      - ./comparison/vite.compare.config.ts:/app/vite.compare.config.ts:ro
+    depends_on:
+      python-api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:5173/backtest').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  rust-console:
+    build:
+      <<: *console-build
+      context: ../backtest-console
+    image: backtest-compare-rust-console:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5174:5173"
+    environment:
+      VITE_API_BASE_URL: ""
+      VITE_TURNSTILE_SITE_KEY: ""
+      FASTAPI_PROXY_TARGET: http://rust-api:8000
+      BACKTEST_PROXY_TARGET: http://rust-api:8000
+      DISABLE_HMR: "1"
+    volumes:
+      - ./comparison/vite.compare.config.ts:/app/vite.compare.config.ts:ro
+    depends_on:
+      rust-api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:5173/backtest').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  mysql_python:
+  mysql_rust:
