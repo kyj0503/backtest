@@ -43,20 +43,7 @@ PAYLOAD = {
     "strategy": "buy_hold_strategy",
 }
 
-UNIFIED_DATA = {
-    "sp500_benchmark": [],
-    "nasdaq_benchmark": [],
-    "exchange_rates": {},
-    "latest_news": [],
-}
-
 SUCCESS = {"status": "success", "data": {"portfolio_statistics": {}, "individual_returns": {}}}
-
-
-def _mock_stock_repository() -> MagicMock:
-    repo = MagicMock()
-    repo.get_tickers_info_batch.return_value = {}
-    return repo
 
 
 class RunningCounter:
@@ -115,19 +102,11 @@ def install_runner(tmp_path, monkeypatch):
 
 
 def _patch_backtest(side_effect):
-    """엔드포인트의 외부 의존(상장일 조회, 시뮬레이션, 부가 데이터)을 대체한다."""
+    """엔드포인트의 작업 본체(시세 로드·계산·부가 데이터)를 대체한다."""
     return (
         patch(
-            "app.api.v1.endpoints.backtest.get_stock_repository",
-            return_value=_mock_stock_repository(),
-        ),
-        patch(
-            "app.api.v1.endpoints.backtest.portfolio_manager_service.run_portfolio_backtest",
+            "app.api.v1.endpoints.backtest._execute_portfolio_backtest",
             new=AsyncMock(side_effect=side_effect),
-        ),
-        patch(
-            "app.api.v1.endpoints.backtest.unified_data_service.collect_all_unified_data",
-            return_value=UNIFIED_DATA,
         ),
     )
 

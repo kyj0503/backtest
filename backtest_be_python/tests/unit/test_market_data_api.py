@@ -43,7 +43,7 @@ def test_reads_only_requested_resource(section, monkeypatch, runner):
     collector = MagicMock(return_value=reference_data())
     simulation = AsyncMock(side_effect=AssertionError('must not calculate'))
     monkeypatch.setattr(market_data.unified_data_service, 'collect_all_unified_data', collector)
-    monkeypatch.setattr(backtest.portfolio_manager_service, 'run_portfolio_backtest', simulation)
+    monkeypatch.setattr(backtest, '_execute_portfolio_backtest', simulation)
     with TestClient(app) as client:
         response = client.get('/api/v1/' + section, params=QUERIES[section])
     assert response.status_code == 200, response.text
@@ -154,11 +154,20 @@ def test_news_stops_before_cache_write_and_next_symbol_after_cancel(monkeypatch)
 
 
 def test_all_flags_disabled_skips_reference_io(monkeypatch):
-    repo = MagicMock()
-    repo.get_tickers_info_batch.return_value = {}
-    monkeypatch.setattr(backtest, 'get_stock_repository', lambda: repo)
-    monkeypatch.setattr(backtest.portfolio_manager_service, 'run_portfolio_backtest',
-                        AsyncMock(return_value={'status': 'success', 'data': {'portfolio_statistics': {'Total_Return': 12}}}))
+    from datetime import date
+
+    from app.engine.marketdata import Bar, History
+    from app.engine.source import Source, source
+
+    source.clear()
+    calls = []
+
+    def history(symbol, start, end):
+        calls.append(symbol)
+        s, e = date(2023, 1, 1).toordinal(), date(2023, 6, 30).toordinal()
+        return History(symbol=symbol, bars=[Bar(d, 100.0, 100.0, 100.0, 100.0) for d in range(s, e + 1)])
+
+    monkeypatch.setattr(Source, 'history', lambda self, *a: history(*a))
     collector = MagicMock(side_effect=AssertionError('no reference I/O in simulation'))
     monkeypatch.setattr(backtest.unified_data_service, 'collect_all_unified_data', collector)
     payload = {
@@ -169,7 +178,10 @@ def test_all_flags_disabled_skips_reference_io(monkeypatch):
     }
     with TestClient(app) as client:
         response = client.post('/api/v1/backtest', json=payload)
+    source.clear()
     assert response.status_code == 200, response.text
-    assert response.json()['data']['portfolio_statistics']['Total_Return'] == 12
-    assert set(response.json()['data']['supplemental_status'].values()) == {'skipped'}
+    data = response.json()['data']
+    assert set(data['supplemental_status'].values()) == {'skipped'}
+    assert data['ticker_info']['AAPL']['symbol'] == 'AAPL'
+    assert calls == ['AAPL']
     collector.assert_not_called()

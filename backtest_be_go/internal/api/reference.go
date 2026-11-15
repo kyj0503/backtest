@@ -92,7 +92,7 @@ func (s *Service) reference(ctx context.Context, section string, q readQuery) se
 
 type tickerInfo struct {
 	Symbol         string      `json:"symbol"`
-	Currency       string      `json:"currency"`
+	Currency       *string     `json:"currency"`
 	CompanyName    string      `json:"company_name"`
 	Exchange       string      `json:"exchange"`
 	FirstTradeDate *civil.Date `json:"first_trade_date"`
@@ -117,6 +117,14 @@ type ratePoint struct {
 	Rate float64    `json:"rate"`
 }
 
+// statPoint는 exchange_stats의 지점이다. Python은 이 객체만 rate가 먼저다.
+type statPoint struct {
+	Rate float64    `json:"rate"`
+	Date civil.Date `json:"date"`
+}
+
+func stat(p ratePoint) statPoint { return statPoint{Rate: p.Rate, Date: p.Date} }
+
 type benchmarkPoint struct {
 	Date      civil.Date `json:"date"`
 	Close     float64    `json:"close"`
@@ -124,7 +132,8 @@ type benchmarkPoint struct {
 }
 
 func info(h marketdata.History) tickerInfo {
-	return tickerInfo{Symbol: h.Symbol, Currency: h.Currency, CompanyName: firstNonEmpty(h.CompanyName, h.Symbol),
+	cur := h.Currency
+	return tickerInfo{Symbol: h.Symbol, Currency: &cur, CompanyName: firstNonEmpty(h.CompanyName, h.Symbol),
 		Exchange: h.Exchange, FirstTradeDate: h.FirstTradeDate}
 }
 
@@ -154,9 +163,16 @@ func (s *Service) collect(ctx context.Context, section string, q readQuery) (sec
 		histories := make([]marketdata.History, len(q.Symbols))
 		g, gctx := errgroup.WithContext(ctx)
 		g.SetLimit(4)
+		failed := make([]bool, len(q.Symbols))
 		for i, sym := range q.Symbols {
 			g.Go(func() error {
 				h, err := s.Source.History(gctx, sym, q.Start, q.End)
+				if err != nil && gctx.Err() == nil {
+					// Python처럼 종목별 실패는 빈 목록과 기본 종목 정보로 남기고 다른 종목은 계속 돌려준다.
+					s.Log.Warn("price history failed", "symbol", sym, "error", err)
+					h, err = marketdata.History{Symbol: sym}, nil
+					failed[i] = true
+				}
 				histories[i] = h
 				return err
 			})
@@ -165,8 +181,12 @@ func (s *Service) collect(ctx context.Context, section string, q readQuery) (sec
 			return r, err
 		}
 		hasPrices, hasEvents := false, false
-		for _, h := range histories {
-			infos.Set(h.Symbol, info(h))
+		for i, h := range histories {
+			if failed[i] {
+				infos.Set(h.Symbol, unknownInfo(h.Symbol))
+			} else {
+				infos.Set(h.Symbol, info(h))
+			}
 			pts := make([]pricePoint, len(h.Bars))
 			for i, b := range h.Bars {
 				pts[i] = pricePoint{Date: b.Date, Price: b.Close, Volume: b.Volume}
@@ -199,7 +219,7 @@ func (s *Service) collect(ctx context.Context, section string, q readQuery) (sec
 					lo = p
 				}
 			}
-			stats = map[string]any{"start_point": pts[0], "end_point": pts[len(pts)-1], "high_point": hi, "low_point": lo}
+			stats = map[string]any{"start_point": stat(pts[0]), "end_point": stat(pts[len(pts)-1]), "high_point": stat(hi), "low_point": stat(lo)}
 		}
 		r.Fields["exchange_rates"], r.Fields["exchange_stats"] = pts, orderedStats(stats)
 		r.Status["exchange_rates"] = ok(len(pts) > 0)
@@ -223,7 +243,16 @@ func (s *Service) collect(ctx context.Context, section string, q readQuery) (sec
 		g, gctx := errgroup.WithContext(ctx)
 		g.SetLimit(4)
 		for i, sym := range q.Symbols {
-			g.Go(func() (err error) { results[i], err = s.News.Latest(gctx, sym, q.Limit); return })
+			g.Go(func() error {
+				items, err := s.News.Latest(gctx, sym, q.Limit)
+				if err != nil && gctx.Err() == nil {
+					// Python처럼 종목별 뉴스 실패는 빈 목록으로 남긴다.
+					s.Log.Warn("news failed", "symbol", sym, "error", err)
+					items, err = []news.Item{}, nil
+				}
+				results[i] = items
+				return err
+			})
 		}
 		if err := g.Wait(); err != nil {
 			return r, err
@@ -373,4 +402,9 @@ func (s *Service) supplemental(ctx context.Context, req engine.Request, d *engin
 		d.Supplemental[k] = raw
 	}
 	s.App.ObserveStage("supplemental_total", time.Since(began).Seconds())
+}
+
+// unknownInfo는 시세를 찾지 못한 종목의 정보다(Python stocks 테이블 미등록 종목과 같은 모양).
+func unknownInfo(symbol string) tickerInfo {
+	return tickerInfo{Symbol: symbol, CompanyName: symbol, Exchange: "Unknown"}
 }

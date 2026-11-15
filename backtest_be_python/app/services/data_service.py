@@ -12,8 +12,34 @@ from app.repositories.data_repository import data_repository
 from app.repositories.stock_repository import get_stock_repository
 from app.utils.data_fetcher import data_fetcher
 from app.core.exceptions import DataNotFoundError
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _fixture_dataframe(ticker: str, start_date, end_date) -> pd.DataFrame:
+    """고정 시세(BACKTEST_FIXTURE_FILE)의 [start, end] 일봉. 없거나 비면 DataNotFoundError(Go와 같은 404)."""
+    from app.engine import civil
+    from app.engine.errors import AppError
+    from app.engine.source import source
+
+    start = start_date if isinstance(start_date, date) else date.fromisoformat(str(start_date)[:10])
+    end = end_date if isinstance(end_date, date) else date.fromisoformat(str(end_date)[:10])
+    try:
+        h = source.history(ticker, start.toordinal(), end.toordinal())
+    except AppError:
+        raise DataNotFoundError(ticker, str(start_date), str(end_date))
+    index = pd.DatetimeIndex([pd.Timestamp(civil.fmt(b.date)) for b in h.bars], name="Date")
+    return pd.DataFrame(
+        {
+            "Open": [b.open for b in h.bars],
+            "High": [b.high for b in h.bars],
+            "Low": [b.low for b in h.bars],
+            "Close": [b.close for b in h.bars],
+            "Volume": [b.volume for b in h.bars],
+        },
+        index=index,
+    )
 
 
 class DataService:
@@ -31,7 +57,9 @@ class DataService:
         end_date: Union[date, str],
         use_db_first: bool = True
     ) -> pd.DataFrame:
-        """주식 데이터 조회 (DB 우선, yfinance fallback)"""
+        """주식 데이터 조회 (DB 우선, yfinance fallback). 고정 시세 모드면 그 파일만 본다."""
+        if settings.backtest_fixture_file:
+            return _fixture_dataframe(ticker, start_date, end_date)
         try:
             if use_db_first:
                 df = self.stock_repository.load_stock_data(ticker, start_date, end_date)

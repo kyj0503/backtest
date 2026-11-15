@@ -58,6 +58,7 @@ from app.core.exceptions import (
     YfinanceRateLimitError,
     ValidationError
 )
+from app.engine.errors import AppError
 
 import uuid
 
@@ -106,6 +107,12 @@ def handle_portfolio_errors(func):
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=e.detail
             )
+
+        except AppError as e:
+            # 계산·시세 오류(app/engine/errors.py): Go apperr와 같은 상태 코드·본문
+            headers = {"Retry-After": "30"} if e.status == 503 else (
+                {"Retry-After": "10"} if e.status == 429 else None)
+            raise HTTPException(status_code=e.status, detail=e.detail, headers=headers)
 
         except (DataNotFoundError, InvalidSymbolError, YfinanceRateLimitError) as e:
             raise e

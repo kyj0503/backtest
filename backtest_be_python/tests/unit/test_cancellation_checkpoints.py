@@ -87,38 +87,32 @@ class TestCancelToken:
 
 
 class TestSimulationLoopStopsOnCancel:
-    def test_daily_loop_checks_the_token(self):
-        from app.domain.portfolio_domain import DcaStrategyInfo
-        from app.services.portfolio.portfolio_simulation_engine import PortfolioSimulationEngine
+    def test_daily_loop_checks_the_token(self, monkeypatch):
+        from app.engine import buyhold
+        from app.engine.marketdata import Bar, History
+        from app.engine.request import Asset, Request
 
-        engine = PortfolioSimulationEngine()
-        start, end = datetime(2015, 1, 1), datetime(2024, 12, 31)
-        date_range = pd.bdate_range(start=start, end=end)
-        prices = pd.DataFrame({"Close": [100.0] * len(date_range)}, index=date_range)
-        dca_info = {
-            "A": DcaStrategyInfo(
-                symbol="AAA", allocation=1.0, asset_type="stock",
-                investment_type="lump_sum", monthly_amount=0.0,
-            ),
-        }
-        seen_days = []
-        original = engine._get_daily_prices_from_aligned
-
-        def spy(*args, **kwargs):
-            seen_days.append(kwargs.get("current_date"))
-            if len(seen_days) == 50:
-                token.cancel("timeout")
-            return original(*args, **kwargs)
-
-        engine._get_daily_prices_from_aligned = spy
+        start = datetime(2015, 1, 1).date().toordinal()
+        end = datetime(2024, 12, 31).date().toordinal()
+        bars = [Bar(d, 100.0, 100.0, 100.0, 100.0) for d in range(start, end + 1)]
+        data = {"AAA": History(symbol="AAA", bars=bars)}
+        req = Request(portfolio=[Asset(symbol="AAA", amount=1000.0)], start=start, end=end,
+                      commission=0.0, rebalance_frequency="none")
         token = CancelToken()
+        calls = []
+        original = buyhold.check_cancelled
+
+        def spy():
+            calls.append(1)
+            if len(calls) == 3:
+                token.cancel("timeout")
+            original()
+
+        monkeypatch.setattr(buyhold, "check_cancelled", spy)
         with bind_token(token):
             with pytest.raises(BacktestCancelled):
-                engine._execute_simulation_sync(
-                    date_range, start, end, {"A": 1000.0}, {"A": 1000.0}, 0.0, 1000.0,
-                    {"AAA": prices}, dca_info, {"A": "USD"}, {}, "none", 0.0,
-                )
-        assert len(seen_days) <= 51, f"취소 후에도 {len(seen_days)}일을 더 돌았다"
+                buyhold.run(req, data)
+        assert len(calls) == 3, f"취소 후에도 {len(calls)}번 더 확인했다"
 
 
 class TestExternalCollectionStopsOnCancel:

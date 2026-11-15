@@ -45,7 +45,7 @@ PortfolioValidator는 삭제했고, 그 규칙들은 각 필드가 실제로 정
 - 금액/비중: 양수, 95-105% 합계(비중 모드)
 - 심볼 포맷: 영문자, 숫자, '.', '-' (현금 자산 제외)
 - rebalance_frequency / dca_frequency: FREQUENCY_MAP(+'none') 멤버십
-- 중복 종목 검증, DCA 주기 vs 백테스트 기간 검증
+- 중복 종목 검증 (DCA 주기 vs 기간·총 예정 납입액 등 업무 규칙은 app/engine/request.py)
 
 **의존성**:
 - pydantic: 데이터 검증
@@ -57,12 +57,14 @@ PortfolioValidator는 삭제했고, 그 규칙들은 각 필드가 실제로 정
 """
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import numpy as np
 import re
 
 from ..core.config import settings
 from .requests import StrategyType
+
+_SEOUL = timezone(timedelta(hours=9))
 
 # DCA/리밸런싱 주기 프리셋 (Nth Weekday 방식)
 # 값: (주기 타입, 간격) - 예: ('weekly', 1) = 매주, ('monthly', 1) = 매월
@@ -80,6 +82,11 @@ class PortfolioStock(BaseModel):
     """포트폴리오 종목 모델"""
     symbol: str = Field(..., min_length=1, max_length=settings.max_symbol_length, description="주식 심볼")
     amount: Optional[float] = Field(None, gt=0, description="투자 금액 (> 0, weight와 동시 입력 불가)")
+    total_amount: Optional[float] = Field(
+        None, gt=0,
+        description="이 항목의 정확한 총예산(USD). amount와 함께만 쓴다. 적립이면 센트 단위 기본 회차 금액으로 "
+                    "나누고 마지막 회차에서 잔액을 맞춘다(T04)",
+    )
     weight: Optional[float] = Field(None, ge=0, le=100, description="비중(%) (0~100, amount와 동시 입력 불가, 소수점 허용)")
     investment_type: Optional[str] = Field("lump_sum", description="투자 방식 (lump_sum, dca)")
     dca_frequency: Optional[str] = Field("monthly_1", description="DCA 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12)")
@@ -248,7 +255,8 @@ class PortfolioBacktestRequest(BaseModel):
 
         # 미래 날짜 방지: 과거에는 검증이 전혀 없어 임의의 미래 end_date가
         # 그대로 통과했다 (P2-04).
-        today = datetime.now().date()
+        # 서비스 사용자가 한국에 있어 한국 날짜를 기준으로 한다(UTC면 KST 00~09시에 오늘 종료일이 거부된다).
+        today = datetime.now(_SEOUL).date()
         if end.date() > today:
             raise ValueError(f'종료 날짜는 미래일 수 없습니다: {v} (오늘: {today.isoformat()})')
 
@@ -321,49 +329,3 @@ class PortfolioBacktestRequest(BaseModel):
 
         return self
 
-    @model_validator(mode='after')
-    def validate_dca_frequency_against_backtest_period(self):
-        """DCA 주기가 백테스트 기간보다 짧거나 같은지 검증"""
-        start = datetime.strptime(self.start_date, '%Y-%m-%d')
-        end = datetime.strptime(self.end_date, '%Y-%m-%d')
-        backtest_days = (end - start).days
-
-        for idx, item in enumerate(self.portfolio):
-            if item.investment_type == 'dca' and item.dca_frequency:
-                # 주기 정보 가져오기
-                period_info = FREQUENCY_MAP.get(item.dca_frequency)
-                if not period_info:
-                    continue
-                
-                period_type, interval = period_info
-                
-                # 최소 필요 일수 계산
-                if period_type == 'weekly':
-                    required_days = interval * 7
-                    period_label = f"{interval}주마다"
-                elif period_type == 'monthly':
-                    required_days = interval * 30  # 근사값 (실제는 Nth Weekday로 계산)
-                    period_label = f"{interval}개월마다"
-                else:
-                    continue
-                
-                # DCA 주기가 백테스트 기간보다 길면 에러
-                if required_days > backtest_days:
-                    frequency_labels = {
-                        'weekly_1': '매주',
-                        'weekly_2': '2주마다',
-                        'monthly_1': '매월',
-                        'monthly_2': '2개월마다',
-                        'monthly_3': '3개월마다 (분기)',
-                        'monthly_6': '6개월마다 (반년)',
-                        'monthly_12': '12개월마다 (1년)',
-                    }
-                    frequency_label = frequency_labels.get(item.dca_frequency, period_label)
-                    raise ValueError(
-                        f'{idx + 1}번째 종목({item.symbol}): DCA 주기가 "{frequency_label} 투자"({required_days}일 기준)인데, '
-                        f'백테스트 기간이 {backtest_days}일밖에 안됩니다. '
-                        f'DCA 주기는 백테스트 기간보다 짧아야 합니다.'
-                    )
-        return self
-
- 

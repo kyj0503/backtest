@@ -1,23 +1,23 @@
 """백테스팅 API 엔드포인트
 
-포트폴리오 백테스트 실행 및 관련 데이터를 반환하는 FastAPI 엔드포인트입니다.
+POST /api/v1/backtest: 포트폴리오 백테스트를 실행하고 결과와 부가 데이터(include_*)를 반환한다.
+
+계산 계약·응답 스키마는 운영 기준인 Go 백엔드와 같다(app/engine 참고). 요청 형태 검증은
+PortfolioBacktestRequest(pydantic 422 목록), 업무 규칙은 app/engine/request.py(422 문자열)가 한다.
 """
 
 from fastapi import APIRouter, Depends, Request, status
 from fastapi.responses import JSONResponse
 import logging
-import asyncio
-from datetime import datetime
 from typing import Optional
 
 from ....schemas.schemas import PortfolioBacktestRequest
-from ....services.portfolio_manager_service import portfolio_manager_service
-from ....repositories.stock_repository import get_stock_repository
 from ....services.unified_data_service import unified_data_service
 from ....services.news_service import news_service
 from ....core.config import settings
-from ....core.exceptions import ValidationError
 from ....core.client_ip import client_limit_key, parse_trusted_networks, resolve_client_ip
+from ....engine import service as engine_service
+from ....engine.request import Request as EngineRequest
 from ....services.backtest_runner import BacktestRejected, get_backtest_runner
 from ..decorators import handle_portfolio_errors
 from ..turnstile import require_turnstile
@@ -25,135 +25,25 @@ from ..turnstile import require_turnstile
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# 서비스 초기화 (임포트됨)
-
-# 데이터 서비스에 뉴스 서비스 주입
+# 데이터 서비스에 뉴스 서비스 주입 (부가 데이터 news 섹션이 쓴다)
 unified_data_service.news_service = news_service
 
 # --- [P2-04] 포트폴리오 백테스트 최소 기간 ---
-# 스키마가 아니라 엔드포인트에서 강제한다. 스키마는 "요청 데이터의 형태"를,
-# 엔드포인트는 "HTTP 요청으로 받아들일 정책"을 책임진다 — 시뮬레이션 엔진을
-# 직접 호출하는 내부 사용(단위 테스트 포함)에는 이 하한이 적용되지 않는 것이
-# 의도된 동작이다.
+# 스키마가 아니라 엔드포인트(engine_service.to_request)에서 강제한다.
 MIN_BACKTEST_PERIOD_DAYS = settings.min_backtest_period_days
 
 # --- 동시 실행 상한 · 타임아웃 · 취소 · IP별 상한 (P2-16 → A-04/A-05/A-06) ---
-# 슬롯 대기, 실행 시간 상한, 취소 전파, IP별 상한은 모두
 # app/services/backtest_runner.py가 처리한다(설계와 한계는 그 모듈 docstring).
-# 값은 Settings(max_concurrent_backtests, backtest_timeout_seconds,
-# backtest_queue_timeout_seconds, max_concurrent_backtests_per_client 등)에서 읽는다.
 _trusted_proxies = parse_trusted_networks(settings.trusted_proxy_cidrs)
 
 
-async def _execute_portfolio_backtest(request: PortfolioBacktestRequest) -> dict:
-    """포트폴리오 백테스트 실행 본체 (주가/환율/뉴스/벤치마크 데이터 포함).
+async def _execute_portfolio_backtest(req: EngineRequest):
+    """백테스트 실행 본체: 시세 로드 → 계산 → 부가 데이터.
 
-    backtest_runner가 동시 실행 슬롯을 얻은 뒤 작업 전용 스레드·이벤트 루프에서
-    실행하는 실제 작업. 최소 기간 검증(MIN_BACKTEST_PERIOD_DAYS)은 이 함수
-    호출 전, 슬롯을 잡기도 전에 끝나 있어야 한다 (거부될 요청이 동시 실행
-    슬롯을 점유하지 않도록).
+    backtest_runner가 동시 실행 슬롯을 얻은 뒤 작업 전용 스레드·이벤트 루프에서 실행한다. 업무 규칙
+    검증(최소 기간 포함)은 슬롯을 잡기 전에 끝나 있다(거부될 요청이 슬롯을 점유하지 않도록).
     """
-    # P2-09: 현금 자산은 symbol 문자열이 아니라 asset_type으로 판별한다.
-    # symbol.upper() not in ['CASH', '현금'] 방식은 asset_type='cash'인데
-    # 커스텀 이름(예: "예금")을 쓰는 항목을 걸러내지 못해, 실재하지 않는
-    # "티커"가 상장일 조회/yfinance 조회(재시도 sleep 포함)까지 흘러들어갔다.
-    symbols = [
-        item.symbol
-        for item in request.portfolio
-        if item.asset_type != 'cash'
-    ]
-    symbols = list(set(symbols))  # 중복 제거
-
-    # 종목 정보 조회 (상장일 확인용) - 배치 조회로 최적화 (N+1 쿼리 → 1개 쿼리)
-    ticker_info_dict = await asyncio.to_thread(
-        get_stock_repository().get_tickers_info_batch, symbols
-    )
-
-    validation_errors = []
-
-    for symbol in symbols:
-        ticker_info = ticker_info_dict.get(symbol, {})
-        first_trade_date_str = ticker_info.get('first_trade_date')
-
-        if first_trade_date_str:
-            # 날짜 문자열을 date 객체로 변환하여 안전하게 비교
-            listing_date = datetime.strptime(first_trade_date_str, '%Y-%m-%d').date()
-            start_date = datetime.strptime(request.start_date, '%Y-%m-%d').date()
-
-            if listing_date > start_date:
-                company_name = ticker_info.get('company_name', symbol)
-                validation_errors.append(
-                    f"{company_name}({symbol})는 {first_trade_date_str}에 상장했습니다. "
-                    f"백테스트 시작일({request.start_date})을 {first_trade_date_str} 이후로 변경해주세요."
-                )
-
-    # 상장일 검증 실패 시 오류 반환
-    if validation_errors:
-        logger.error(f"상장일 검증 실패: {validation_errors}")
-        raise ValidationError(
-            "포트폴리오에 백테스트 시작일 이후에 상장한 종목이 포함되어 있습니다.\n\n" +
-            "\n".join(f"• {err}" for err in validation_errors)
-        )
-
-    # 2. 백테스트 실행 (포트폴리오 서비스 위임)
-    # 실패는 예외로 전파되어 @handle_portfolio_errors가 처리하므로,
-    # 이 지점에 도달했다면 항상 성공 결과다.
-    backtest_result = await portfolio_manager_service.run_portfolio_backtest(request)
-
-    # The console loads reference data separately. Do not even query metadata
-    # when every supplemental section is disabled.
-    if not any((request.include_news, request.include_stock_data,
-                request.include_volatility_events, request.include_exchange_rates,
-                request.include_benchmarks)):
-        backtest_result['data'].update(
-            unified_data_service.empty_unified_data(symbols, outcome='skipped')
-        )
-        return backtest_result
-
-    # 3. 부가 데이터 수집 (데이터 서비스 위임) — asyncio.to_thread로 이벤트 루프 블로킹 방지
-    # [A-08] 요청의 include_* 옵션(기본값 모두 True = 기존 응답과 동일)으로 섹션을
-    # 끌 수 있고, 시간 예산을 넘긴 섹션은 비워서 반환한다. 부가 수집이 통째로
-    # 실패해도 핵심 결과(시뮬레이션)는 버리지 않는다 — 섹션 결과는
-    # data.supplemental_status로 알린다.
-    try:
-        unified_data = await asyncio.to_thread(
-            unified_data_service.collect_all_unified_data,
-            symbols=symbols,
-            start_date=request.start_date,
-            end_date=request.end_date,
-            include_news=request.include_news,
-            news_display_count=15,
-            include_stock_data=request.include_stock_data,
-            include_volatility_events=request.include_volatility_events,
-            include_exchange_rates=request.include_exchange_rates,
-            include_benchmarks=request.include_benchmarks,
-            timeout_seconds=settings.supplemental_data_timeout_seconds,
-        )
-    except Exception:
-        logger.exception("부가 데이터 수집 실패 — 핵심 결과만 반환")
-        unified_data = unified_data_service.empty_unified_data(symbols, outcome="error")
-
-    # 4. S&P 500 벤치마크 통계 계산 및 추가
-    sp500_benchmark = unified_data.get('sp500_benchmark', [])
-    if sp500_benchmark and len(sp500_benchmark) > 0:
-        # S&P 500 수익률 계산
-        sp500_return = unified_data_service.calculate_benchmark_return(sp500_benchmark)
-
-        # 포트폴리오 통계에 추가
-        portfolio_stats = backtest_result['data'].get('portfolio_statistics', {})
-        if portfolio_stats:
-            portfolio_stats['sp500_total_return_pct'] = sp500_return
-
-            # 전략 수익률과 S&P 500 수익률 비교 (알파)
-            strategy_return = portfolio_stats.get('Total_Return', 0.0)
-            portfolio_stats['alpha_vs_sp500_pct'] = strategy_return - sp500_return
-
-            logger.info(f"S&P 500 수익률: {sp500_return:.2f}%, 알파: {strategy_return - sp500_return:.2f}%")
-
-    # 5. 응답 데이터 병합
-    backtest_result['data'].update(unified_data)
-
-    return backtest_result
+    return engine_service.compute(req)
 
 
 def _client_key(http_request: Request) -> Optional[str]:
@@ -188,24 +78,15 @@ def _rejection_response(exc: BacktestRejected) -> JSONResponse:
 @handle_portfolio_errors
 async def run_portfolio_backtest(request: PortfolioBacktestRequest, http_request: Request):
     """포트폴리오 백테스트 실행 및 주가, 환율, 뉴스, 벤치마크 데이터 반환"""
-    start_date_obj = datetime.strptime(request.start_date, '%Y-%m-%d').date()
-    end_date_obj = datetime.strptime(request.end_date, '%Y-%m-%d').date()
-    period_days = (end_date_obj - start_date_obj).days
-    if period_days < MIN_BACKTEST_PERIOD_DAYS:
-        raise ValidationError(
-            f"백테스트 기간이 너무 짧습니다: {period_days}일 "
-            f"(최소 {MIN_BACKTEST_PERIOD_DAYS}일 필요)"
-        )
+    req = engine_service.to_request(request)
 
     # 거부(429)·대기 초과(503)·실행 시간 초과(504)는 예외를 raise하지 않고
-    # JSONResponse를 return한다. HTTPException을 raise하면 @handle_portfolio_errors의
-    # catch-all에 걸려 500으로 뭉개진다(P2-16). 작업 안에서 난 예외
-    # (ValidationError, DataNotFoundError 등)는 runner가 그대로 다시 던지므로
-    # 기존처럼 데코레이터가 상태 코드로 매핑한다.
-    symbols = [item.symbol for item in request.portfolio]
+    # JSONResponse를 return한다. 작업 안에서 난 예외(AppError 등)는 runner가 그대로
+    # 다시 던지므로 데코레이터가 상태 코드로 매핑한다.
+    symbols = [a.symbol for a in req.portfolio]
     try:
         return await get_backtest_runner().run(
-            lambda: _execute_portfolio_backtest(request),
+            lambda: _execute_portfolio_backtest(req),
             client_key=_client_key(http_request),
             is_disconnected=http_request.is_disconnected,
             label=",".join(symbols)[:200],
@@ -213,4 +94,3 @@ async def run_portfolio_backtest(request: PortfolioBacktestRequest, http_request
     except BacktestRejected as exc:
         logger.warning(f"백테스트 거부/중단 ({exc.status_code}): {symbols} - {exc.detail}")
         return _rejection_response(exc)
-

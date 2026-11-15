@@ -2,7 +2,7 @@
 Prometheus ticker_popularity_total 라벨 카디널리티 상한(P2-15) 회귀 테스트
 
 **버그**:
-app/services/portfolio_manager_service.py는
+POST /api/v1/backtest(예전 app/services/portfolio_manager_service.py)는
 `TICKER_POPULARITY_TOTAL.labels(ticker=item.symbol).inc()`를 검증되지 않은
 (또는 형식만 검증되고 존재 여부는 검증되지 않은) 사용자 입력으로 직접 호출했다.
 Prometheus Counter는 한 번 생성된 라벨 조합을 프로세스 생명주기 동안 절대 GC하지
@@ -18,7 +18,7 @@ Prometheus Counter는 한 번 생성된 라벨 조합을 프로세스 생명주�
 티커는 계속 자기 라벨로 집계되므로(인기 있는 실제 티커일수록 초반에 캡을 채울
 가능성이 높다) "어떤 티커가 인기있는지" 라는 메트릭의 원래 목적은 유지된다.
 현금 항목(asset_type='cash')은 애초에 "티커"가 아니므로
-portfolio_manager_service.py에서 record_ticker_popularity() 호출 자체를
+app/engine/service.py에서 record_ticker_popularity() 호출 자체를
 건너뛴다.
 
 **A-18 이후**: first-N-seen 대신 TickerLabelPolicy(허용 목록 + 보장 횟수 기반

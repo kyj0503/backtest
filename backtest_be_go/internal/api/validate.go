@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -135,10 +136,29 @@ func isStockSymbol(s string) bool {
 // parseBacktest는 본문을 검증해 엔진 요청으로 바꾼다. 오류는 validationErrors(422 목록) 또는
 // *apperr.Error(422 문자열)다.
 func parseBacktest(body []byte, limits engine.Limits) (engine.Request, error) {
-	decoded, err := decodeJSON(body)
+	// FastAPI는 빈 본문을 JSON으로 해석하지 않고 body 누락으로 본다.
+	if len(body) == 0 {
+		return engine.Request{}, validationErrors{newFieldError("missing", []any{"body"}, "Field required", nil, nil)}
+	}
+	decoded, orders, err := decodeOrdered(body)
 	if err != nil {
 		return engine.Request{}, err
 	}
+	req, err := parseBacktestValue(decoded, limits)
+	var ve validationErrors
+	if errors.As(err, &ve) {
+		// pydantic은 입력을 받은 그대로(키 순서 포함) 되돌려 준다.
+		for i := range ve {
+			if in, ok := ve[i].Get("input"); ok {
+				ve[i].Set("input", orderInput(in, orders))
+			}
+		}
+		return req, ve
+	}
+	return req, err
+}
+
+func parseBacktestValue(decoded any, limits engine.Limits) (engine.Request, error) {
 	raw, ok := decoded.(map[string]any)
 	if !ok {
 		return engine.Request{}, validationErrors{newFieldError("model_attributes_type", []any{"body"},
@@ -370,12 +390,12 @@ func portfolioRules(items []any, limits engine.Limits) validationErrors {
 	if len(items) == 0 {
 		return validationErrors{newFieldError("too_short", []any{"body", "portfolio"},
 			"List should have at least 1 item after validation, not 0", items,
-			map[string]any{"field_type": "List", "min_length": 1, "actual_length": 0})}
+			orderedCtx("field_type", "List", "min_length", 1, "actual_length", 0))}
 	}
 	if len(items) > limits.MaxItems {
 		return validationErrors{newFieldError("too_long", []any{"body", "portfolio"},
 			fmt.Sprintf("List should have at most %d items after validation, not %d", limits.MaxItems, len(items)), items,
-			map[string]any{"field_type": "List", "max_length": limits.MaxItems, "actual_length": len(items)})}
+			orderedCtx("field_type", "List", "max_length", limits.MaxItems, "actual_length", len(items)))}
 	}
 	seen := map[string]bool{}
 	var dups []string
@@ -435,4 +455,89 @@ func sortStrings(s []string) {
 			s[j], s[j-1] = s[j-1], s[j]
 		}
 	}
+}
+
+// keyOrders는 디코딩한 JSON 객체(map)별 원래 키 순서다. map 주소로 찾는다.
+type keyOrders map[uintptr][]string
+
+// decodeOrdered는 decodeJSON과 같은 검사·오류를 내고, 객체마다 본문의 키 순서를 함께 기록한다.
+// 같은 키가 반복되면 Python dict처럼 첫 위치에 마지막 값을 둔다.
+func decodeOrdered(body []byte) (any, keyOrders, error) {
+	if _, err := decodeJSON(body); err != nil {
+		return nil, nil, err
+	}
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.UseNumber()
+	orders := keyOrders{}
+	var walk func() (any, error)
+	walk = func() (any, error) {
+		t, err := dec.Token()
+		if err != nil {
+			return nil, err
+		}
+		d, isDelim := t.(json.Delim)
+		if !isDelim {
+			return t, nil
+		}
+		if d == '[' {
+			arr := []any{}
+			for dec.More() {
+				v, err := walk()
+				if err != nil {
+					return nil, err
+				}
+				arr = append(arr, v)
+			}
+			_, err := dec.Token()
+			return arr, err
+		}
+		m := map[string]any{}
+		var keys []string
+		for dec.More() {
+			kt, err := dec.Token()
+			if err != nil {
+				return nil, err
+			}
+			k, _ := kt.(string)
+			v, err := walk()
+			if err != nil {
+				return nil, err
+			}
+			if _, dup := m[k]; !dup {
+				keys = append(keys, k)
+			}
+			m[k] = v
+		}
+		orders[reflect.ValueOf(m).Pointer()] = keys
+		_, err = dec.Token()
+		return m, err
+	}
+	v, err := walk()
+	if err != nil {
+		return nil, nil, invalidJSON(body, err)
+	}
+	return v, orders, nil
+}
+
+// orderInput은 오류 input에 담긴 원래 객체를 본문의 키 순서로 바꾼다. 검증 중 새로 만든 객체는 그대로 둔다.
+func orderInput(v any, orders keyOrders) any {
+	switch x := v.(type) {
+	case map[string]any:
+		keys, ok := orders[reflect.ValueOf(x).Pointer()]
+		if !ok {
+			return x
+		}
+		var o engine.Ordered[any]
+		for _, k := range keys {
+			o.Set(k, orderInput(x[k], orders))
+		}
+		return o
+	case []any:
+		out := make([]any, len(x))
+		for i, e := range x {
+			out[i] = orderInput(e, orders)
+		}
+		return out
+	}
+	return v
 }

@@ -29,7 +29,7 @@ def gate(monkeypatch):
     repository = Mock()
     monkeypatch.setattr(turnstile, "_siteverify", verifier)
     monkeypatch.setattr(backtest, "get_backtest_runner", runner_factory)
-    monkeypatch.setattr(backtest, "get_stock_repository", repository)
+    monkeypatch.setattr(backtest.engine_service.source, "load", repository)
     return verifier, runner_factory, repository
 
 

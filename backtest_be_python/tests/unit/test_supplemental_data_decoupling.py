@@ -247,17 +247,19 @@ class TestSlowSupplementalDoesNotBlockTheRest:
         assert _outcome_count("benchmarks", "empty") == before + 1
 
 
-def _mock_stock_repository() -> MagicMock:
-    repo = MagicMock()
-    repo.get_tickers_info_batch.return_value = {}
-    return repo
+def _history(symbol, start, end):
+    from datetime import date
 
+    from app.engine.errors import not_found
+    from app.engine.marketdata import Bar, History
 
-def _core_result():
-    return {
-        "status": "success",
-        "data": {"portfolio_statistics": {"Total_Return": 12.5}, "individual_returns": {}},
-    }
+    if symbol not in ("AAPL", "^GSPC", "^IXIC", "KRW=X"):
+        raise not_found(f"가격 데이터가 없습니다: {symbol}")
+    s, e = date(2022, 11, 1).toordinal(), date(2023, 6, 30).toordinal()
+    return History(symbol=symbol, bars=[Bar(d, 100.0, 100.0, 100.0, 100.0 + (d % 7))
+                                        for d in range(max(s, start), min(e, end) + 1)
+                                        if d % 7 not in (5, 6)] if symbol != "AAPL" else
+                   [Bar(d, 100.0, 100.0, 100.0, 100.0) for d in range(max(s, start), min(e, end) + 1)])
 
 
 PAYLOAD = {
@@ -268,49 +270,57 @@ PAYLOAD = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _clear_price_cache():
+    from app.engine.source import source
+
+    source.clear()
+    yield
+    source.clear()
+
+
 class TestEndpointPassesOptionsAndProtectsCoreResult:
-    def test_request_flags_reach_the_collector(self):
-        collector = MagicMock(return_value={})
-        with patch(
-            "app.api.v1.endpoints.backtest.get_stock_repository",
-            return_value=_mock_stock_repository(),
-        ), patch(
-            "app.api.v1.endpoints.backtest.portfolio_manager_service.run_portfolio_backtest",
-            new=AsyncMock(return_value=_core_result()),
-        ), patch(
-            "app.api.v1.endpoints.backtest.unified_data_service.collect_all_unified_data",
-            collector,
-        ):
+    def test_request_flags_skip_sections(self):
+        with patch("app.engine.source.Source.history", side_effect=_history):
             response = client.post(
                 "/api/v1/backtest",
                 json=dict(PAYLOAD, include_news=False, include_benchmarks=False),
             )
 
         assert response.status_code == 200, response.text
-        kwargs = collector.call_args.kwargs
-        assert kwargs["include_news"] is False
-        assert kwargs["include_benchmarks"] is False
-        assert kwargs["include_stock_data"] is True
-        assert kwargs["include_volatility_events"] is True
-        assert kwargs["include_exchange_rates"] is True
-        assert kwargs["timeout_seconds"] > 0
+        data = response.json()["data"]
+        assert data["supplemental_status"] == {
+            "ticker_info": "ok", "stock_data": "ok", "volatility_events": "empty",
+            "exchange_rates": "ok", "benchmarks": "skipped", "news": "skipped",
+        }
+        assert data["sp500_benchmark"] == [] and data["latest_news"] == {}
+        assert "sp500_total_return_pct" not in data["portfolio_statistics"]
+        assert list(data)[-9:] == [
+            "ticker_info", "stock_data", "exchange_rates", "exchange_stats", "volatility_events",
+            "sp500_benchmark", "nasdaq_benchmark", "latest_news", "supplemental_status",
+        ]
 
-    def test_collector_crash_still_returns_core_result(self):
-        """RED(수정 전): 부가 수집 예외가 그대로 전파되어 500."""
-        with patch(
-            "app.api.v1.endpoints.backtest.get_stock_repository",
-            return_value=_mock_stock_repository(),
-        ), patch(
-            "app.api.v1.endpoints.backtest.portfolio_manager_service.run_portfolio_backtest",
-            new=AsyncMock(return_value=_core_result()),
-        ), patch(
-            "app.api.v1.endpoints.backtest.unified_data_service.collect_all_unified_data",
-            side_effect=RuntimeError("collector exploded"),
-        ):
-            response = client.post("/api/v1/backtest", json=PAYLOAD)
+    def test_section_crash_still_returns_core_result(self):
+        """부가 섹션이 예외로 실패해도 핵심 결과는 200이고 그 섹션만 error다."""
+        def history(symbol, start, end):
+            if symbol in ("^GSPC", "^IXIC", "KRW=X"):
+                raise RuntimeError("collector exploded")
+            return _history(symbol, start, end)
+
+        with patch("app.engine.source.Source.history", side_effect=history):
+            response = client.post("/api/v1/backtest", json=dict(PAYLOAD, include_news=False))
 
         assert response.status_code == 200, response.text
         data = response.json()["data"]
-        assert data["portfolio_statistics"]["Total_Return"] == 12.5
+        assert data["portfolio_statistics"]["Final_Value"] == pytest.approx(10000 / 1.002)
         assert LEGACY_KEYS <= set(data.keys())
-        assert set(data["supplemental_status"].values()) == {"error"}
+        assert data["supplemental_status"]["benchmarks"] == "error"
+        assert data["supplemental_status"]["exchange_rates"] == "error"
+        assert data["supplemental_status"]["stock_data"] == "ok"
+
+    def test_benchmark_alpha_uses_time_weighted_return(self):
+        with patch("app.engine.source.Source.history", side_effect=_history):
+            response = client.post("/api/v1/backtest", json=dict(PAYLOAD, include_news=False))
+        stats = response.json()["data"]["portfolio_statistics"]
+        assert stats["alpha_vs_sp500_pct"] == pytest.approx(
+            stats["Time_Weighted_Return"] - stats["sp500_total_return_pct"])

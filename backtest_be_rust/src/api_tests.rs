@@ -170,7 +170,12 @@ async fn legacy_coercion_duplicate_queries_and_ipo_remain_supported() {
             .unwrap()
             > 0.0
     );
-    assert_eq!(value["data"]["ticker_info"]["AAPL"]["exchange"], "Unknown");
+    // Ticker info reports the metadata of the history the calculation used (as Go does).
+    assert_eq!(value["data"]["ticker_info"]["AAPL"]["exchange"], "TEST");
+    assert_eq!(
+        value["data"]["ticker_info"]["AAPL"]["first_trade_date"],
+        "2023-01-02"
+    );
 }
 
 #[test]

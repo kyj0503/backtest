@@ -65,6 +65,15 @@ const FREQUENCIES: &str =
     "weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12";
 
 pub fn backtest(raw: Value, min_days: i64) -> Result<BacktestRequest, ApiError> {
+    if !raw.is_object() {
+        return Err(ApiError::Validation(vec![field(
+            "model_attributes_type",
+            json!(["body"]),
+            "Input should be a valid dictionary or object to extract fields from",
+            &raw,
+            None,
+        )]));
+    }
     let mut errors = vec![];
     let mut normalized = raw.clone();
     if let Some(items) = raw["portfolio"].as_array() {
@@ -458,82 +467,298 @@ pub fn backtest(raw: Value, min_days: i64) -> Result<BacktestRequest, ApiError> 
     Ok(request)
 }
 
-pub fn query(section: &str, raw: Option<&str>) -> Result<(), ApiError> {
-    let mut input = json!({});
-    for (key, value) in url::form_urlencoded::parse(raw.unwrap_or("").as_bytes()) {
-        if key == "symbols" {
-            if input["symbols"].is_null() {
-                input["symbols"] = json!([]);
-            }
-            input["symbols"].as_array_mut().unwrap().push(json!(value));
-        } else {
-            input[key.as_ref()] = json!(value);
+/// Parsed GET query arguments after the Pydantic-compatible checks.
+#[derive(Debug, Default)]
+pub struct QueryValues {
+    pub symbols: Vec<String>,
+    pub start: Option<NaiveDate>,
+    pub end: Option<NaiveDate>,
+    pub limit: usize,
+}
+
+fn query_fields(section: &str) -> &'static [&'static str] {
+    // PricesQuery(PeriodQuery, SymbolsQuery) collects SymbolsQuery's field first.
+    match section {
+        "prices" => &["symbols", "start_date", "end_date"],
+        "news" => &["symbols", "limit"],
+        _ => &["start_date", "end_date"],
+    }
+}
+
+/// GET query models (`extra='forbid'`): field errors in field order, then extra keys in
+/// query order; the period model validator runs only when every field is valid. Repeated
+/// scalar keys keep the last value (Starlette); symbols stay a list.
+pub fn query(section: &str, raw: Option<&str>) -> Result<QueryValues, ApiError> {
+    let pairs: Vec<(String, String)> = url::form_urlencoded::parse(raw.unwrap_or("").as_bytes())
+        .into_owned()
+        .collect();
+    let mut order: Vec<String> = vec![];
+    for (k, _) in &pairs {
+        if !order.contains(k) {
+            order.push(k.clone());
         }
     }
+    let value = |k: &str| -> Value {
+        if k == "symbols" {
+            json!(
+                pairs
+                    .iter()
+                    .filter(|(key, _)| key == k)
+                    .map(|(_, v)| v.clone())
+                    .collect::<Vec<_>>()
+            )
+        } else {
+            json!(
+                pairs
+                    .iter()
+                    .rev()
+                    .find(|(key, _)| key == k)
+                    .map(|(_, v)| v.clone())
+            )
+        }
+    };
+    let allowed = query_fields(section);
+    let mut input = serde_json::Map::new();
+    for k in allowed {
+        if order.iter().any(|o| o == k) {
+            input.insert((*k).into(), value(k));
+        }
+    }
+    for k in &order {
+        if !allowed.contains(&k.as_str()) {
+            input.insert(k.clone(), value(k));
+        }
+    }
+    let input = Value::Object(input);
+    let mut q = QueryValues {
+        limit: 15,
+        ..Default::default()
+    };
     let mut errors = vec![];
-    for key in if section == "news" {
-        vec!["symbols"]
-    } else if section == "prices" {
-        vec!["symbols", "start_date", "end_date"]
-    } else {
-        vec!["start_date", "end_date"]
-    } {
-        if input.get(key).is_none() {
+    for key in allowed {
+        let Some(v) = input.get(*key) else {
+            if *key != "limit" {
+                errors.push(field(
+                    "missing",
+                    json!(["query", key]),
+                    "Field required",
+                    &input,
+                    None,
+                ));
+            }
+            continue;
+        };
+        match *key {
+            "symbols" => match query_symbols(v.as_array().unwrap()) {
+                Ok(symbols) => q.symbols = symbols,
+                Err(e) => errors.push(e),
+            },
+            "start_date" | "end_date" => match query_date(key, v.as_str().unwrap()) {
+                Ok(d) if *key == "start_date" => q.start = Some(d),
+                Ok(d) => q.end = Some(d),
+                Err(e) => errors.push(e),
+            },
+            _ => match query_limit(v.as_str().unwrap()) {
+                Ok(n) => q.limit = n,
+                Err(e) => errors.push(e),
+            },
+        }
+    }
+    for k in &order {
+        if !allowed.contains(&k.as_str()) {
             errors.push(field(
-                "missing",
+                "extra_forbidden",
+                json!(["query", k]),
+                "Extra inputs are not permitted",
+                &input[k.as_str()],
+                None,
+            ));
+        }
+    }
+    if !errors.is_empty() {
+        return Err(ApiError::Validation(errors));
+    }
+    if let (Some(start), Some(end)) = (q.start, q.end) {
+        let msg = if end < start {
+            Some("종료일은 시작일 이후여야 합니다.")
+        } else if end > Utc::now().date_naive() {
+            Some("미래 날짜는 조회할 수 없습니다.")
+        } else if (end - start).num_days() > 3650 {
+            Some("조회 기간이 최대 허용 기간을 초과했습니다.")
+        } else {
+            None
+        };
+        if let Some(msg) = msg {
+            return Err(ApiError::Validation(vec![value_error(
+                json!(["query"]),
+                msg,
+                &input,
+            )]));
+        }
+    }
+    Ok(q)
+}
+
+/// `list[str]` with 1..=20 items, each validated as `PortfolioStock(symbol=...)`; the
+/// field validator stops at the first bad symbol. Uppercased, deduplicated in input order.
+fn query_symbols(raw: &[Value]) -> Result<Vec<String>, Value> {
+    if raw.len() > 20 {
+        return Err(field(
+            "too_long",
+            json!(["query", "symbols"]),
+            format!(
+                "List should have at most 20 items after validation, not {}",
+                raw.len()
+            ),
+            &json!(raw),
+            Some(json!({"field_type":"List","max_length":20,"actual_length":raw.len()})),
+        ));
+    }
+    let mut out: Vec<String> = vec![];
+    for v in raw {
+        let s = v.as_str().unwrap();
+        let n = s.chars().count();
+        if n < 1 {
+            return Err(field(
+                "string_too_short",
+                json!(["query", "symbols", "symbol"]),
+                "String should have at least 1 character",
+                v,
+                Some(json!({"min_length":1})),
+            ));
+        }
+        if n > 10 {
+            return Err(field(
+                "string_too_long",
+                json!(["query", "symbols", "symbol"]),
+                "String should have at most 10 characters",
+                v,
+                Some(json!({"max_length":10})),
+            ));
+        }
+        if !s.eq_ignore_ascii_case("CASH")
+            && !s
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-')
+        {
+            return Err(value_error(
+                json!(["query", "symbols"]),
+                "주식 심볼은 영문자, 숫자, 점(.), 하이픈(-)만 포함해야 합니다.",
+                &json!({"symbol":s}),
+            ));
+        }
+        let upper = s.to_ascii_uppercase();
+        if !out.contains(&upper) {
+            out.push(upper);
+        }
+    }
+    Ok(out)
+}
+
+fn query_limit(s: &str) -> Result<usize, Value> {
+    let input = json!(s);
+    let Ok(n) = s.trim().parse::<i64>() else {
+        return Err(field(
+            "int_parsing",
+            json!(["query", "limit"]),
+            "Input should be a valid integer, unable to parse string as an integer",
+            &input,
+            None,
+        ));
+    };
+    if n > 20 {
+        return Err(field(
+            "less_than_equal",
+            json!(["query", "limit"]),
+            "Input should be less than or equal to 20",
+            &input,
+            Some(json!({"le":20})),
+        ));
+    }
+    if n < 1 {
+        return Err(field(
+            "greater_than_equal",
+            json!(["query", "limit"]),
+            "Input should be greater than or equal to 1",
+            &input,
+            Some(json!({"ge":1})),
+        ));
+    }
+    Ok(n as usize)
+}
+
+/// Pydantic (speedate) `date` parsing for the common inputs: YYYY-MM-DD with an optional
+/// all-zero time part.
+fn query_date(key: &str, s: &str) -> Result<NaiveDate, Value> {
+    let input = json!(s);
+    let fail = |reason: &str| {
+        field(
+            "date_from_datetime_parsing",
+            json!(["query", key]),
+            format!("Input should be a valid date or datetime, {reason}"),
+            &input,
+            Some(json!({"error":reason})),
+        )
+    };
+    let b = s.as_bytes();
+    let digits = |r: std::ops::Range<usize>| b[r].iter().all(u8::is_ascii_digit);
+    if b.len() < 10 {
+        return Err(fail("input is too short"));
+    }
+    if !digits(0..4) {
+        return Err(fail("invalid character in year"));
+    }
+    if b[4] != b'-' {
+        return Err(fail("invalid date separator, expected `-`"));
+    }
+    if !digits(5..7) {
+        return Err(fail("invalid character in month"));
+    }
+    if b[7] != b'-' {
+        return Err(fail("invalid date separator, expected `-`"));
+    }
+    if !digits(8..10) {
+        return Err(fail("invalid character in day"));
+    }
+    let (y, m, d): (i32, u32, u32) = (
+        s[0..4].parse().unwrap(),
+        s[5..7].parse().unwrap(),
+        s[8..10].parse().unwrap(),
+    );
+    if !(1..=12).contains(&m) {
+        return Err(fail("month value is outside expected range of 1-12"));
+    }
+    let Some(date) = NaiveDate::from_ymd_opt(y, m, d) else {
+        return Err(fail("day value is outside expected range"));
+    };
+    if b.len() > 10 {
+        if !matches!(b[10], b'T' | b't' | b'_' | b' ') {
+            return Err(fail(
+                "invalid datetime separator, expected `T`, `t`, `_` or space",
+            ));
+        }
+        if !matches!(&s[11..], "00:00" | "00:00:00" | "00:00:00Z") {
+            return Err(field(
+                "date_from_datetime_inexact",
                 json!(["query", key]),
-                "Field required",
+                "Datetimes provided to dates should have zero time - e.g. be exact dates",
                 &input,
                 None,
             ));
         }
     }
-    if section == "news"
-        && let Some(v) = input.get("limit")
-        && let Some(n) = v.as_str().and_then(|s| s.parse::<i64>().ok())
-        && !(1..=20).contains(&n)
-    {
-        errors.push(field(
-            if n > 20 {
-                "less_than_equal"
-            } else {
-                "greater_than_equal"
-            },
-            json!(["query", "limit"]),
-            if n > 20 {
-                "Input should be less than or equal to 20"
-            } else {
-                "Input should be greater than or equal to 1"
-            },
-            v,
-            Some(if n > 20 {
-                json!({"le":20})
-            } else {
-                json!({"ge":1})
-            }),
-        ));
-    }
-    for (key, v) in input.as_object().unwrap() {
-        let allowed = match section {
-            "news" => ["symbols", "limit"].contains(&key.as_str()),
-            "prices" => ["symbols", "start_date", "end_date"].contains(&key.as_str()),
-            _ => ["start_date", "end_date"].contains(&key.as_str()),
-        };
-        if !allowed {
-            errors.push(field(
-                "extra_forbidden",
-                json!(["query", key]),
-                "Extra inputs are not permitted",
-                v,
-                None,
-            ));
-        }
-    }
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(ApiError::Validation(errors))
-    }
+    Ok(date)
+}
+
+/// FastAPI reads an empty body as a missing body, not as malformed JSON.
+pub fn missing_body() -> ApiError {
+    ApiError::Validation(vec![field(
+        "missing",
+        json!(["body"]),
+        "Field required",
+        &Value::Null,
+        None,
+    )])
 }
 
 pub fn invalid_json(error: serde_json::Error) -> ApiError {
@@ -542,8 +767,21 @@ pub fn invalid_json(error: serde_json::Error) -> ApiError {
         json!(["body", error.column().saturating_sub(1)]),
         "JSON decode error",
         &json!({}),
-        Some(
-            json!({"error":if error.to_string().contains("key must be a string"){"Expecting property name enclosed in double quotes".to_string()}else{error.to_string()}}),
-        ),
+        Some(json!({"error": python_json_message(&error.to_string())})),
     )])
+}
+
+/// Python `json` module wording for the serde_json syntax error.
+fn python_json_message(serde: &str) -> &'static str {
+    if serde.contains("key must be a string") {
+        "Expecting property name enclosed in double quotes"
+    } else if serde.contains("expected `:`") {
+        "Expecting ':' delimiter"
+    } else if serde.contains("expected `,` or") {
+        "Expecting ',' delimiter"
+    } else if serde.contains("trailing characters") {
+        "Extra data"
+    } else {
+        "Expecting value"
+    }
 }

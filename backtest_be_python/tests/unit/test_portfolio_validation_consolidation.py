@@ -64,22 +64,6 @@ pytestmark = pytest.mark.unit
 client = TestClient(app)
 
 
-def _mock_stock_repository() -> MagicMock:
-    """상장일 검증 단계(엔드포인트 초반)가 실제 DB를 건드리지 않도록 격리."""
-    repo = MagicMock()
-    repo.get_tickers_info_batch.return_value = {}
-    return repo
-
-
-@pytest.fixture(autouse=True)
-def mock_stock_repository():
-    with patch(
-        "app.api.v1.endpoints.backtest.get_stock_repository",
-        return_value=_mock_stock_repository(),
-    ):
-        yield
-
-
 class TestCashItemWithCustomKoreanName:
     """(a) asset_type='cash'인 항목은 커스텀 한글 이름을 허용해야 한다."""
 
@@ -236,23 +220,14 @@ class TestMinimumBacktestPeriodAtEndpoint:
             "status": "success",
             "data": {"portfolio_statistics": {}, "individual_returns": {}},
         }
-        unified_data = {
-            "sp500_benchmark": [],
-            "nasdaq_benchmark": [],
-            "exchange_rates": {},
-            "latest_news": [],
-        }
         payload = {
             **self.BASE_PAYLOAD,
             "start_date": "2023-01-01",
             "end_date": "2023-01-10",  # 9일
         }
         with patch(
-            "app.api.v1.endpoints.backtest.portfolio_manager_service.run_portfolio_backtest",
+            "app.api.v1.endpoints.backtest._execute_portfolio_backtest",
             new=AsyncMock(return_value=success_result),
-        ), patch(
-            "app.api.v1.endpoints.backtest.unified_data_service.collect_all_unified_data",
-            return_value=unified_data,
         ):
             response = client.post("/api/v1/backtest", json=payload)
         assert response.status_code == 422, response.text
@@ -265,23 +240,14 @@ class TestMinimumBacktestPeriodAtEndpoint:
             "status": "success",
             "data": {"portfolio_statistics": {}, "individual_returns": {}},
         }
-        unified_data = {
-            "sp500_benchmark": [],
-            "nasdaq_benchmark": [],
-            "exchange_rates": {},
-            "latest_news": [],
-        }
         payload = {
             **self.BASE_PAYLOAD,
             "start_date": "2023-01-01",
             "end_date": "2023-01-31",  # 정확히 30일
         }
         with patch(
-            "app.api.v1.endpoints.backtest.portfolio_manager_service.run_portfolio_backtest",
+            "app.api.v1.endpoints.backtest._execute_portfolio_backtest",
             new=AsyncMock(return_value=success_result),
-        ), patch(
-            "app.api.v1.endpoints.backtest.unified_data_service.collect_all_unified_data",
-            return_value=unified_data,
         ):
             response = client.post("/api/v1/backtest", json=payload)
         assert response.status_code == 200, response.text

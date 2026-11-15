@@ -170,14 +170,15 @@ func (s *Service) read(section string) http.HandlerFunc {
 		for _, k := range sectionFields[section] {
 			data.Set(k, res.Fields[k])
 		}
-		if section == "benchmarks" {
-			data.Set("sp500_total_return_pct", res.SP500TotalReturn)
-		}
 		var st engine.Ordered[string]
 		for _, k := range sectionStatuses[section] {
 			st.Set(k, res.Status[k])
 		}
 		data.Set("supplemental_status", st)
+		if section == "benchmarks" {
+			// Python과 같이 supplemental_status 다음에 둔다.
+			data.Set("sp500_total_return_pct", res.SP500TotalReturn)
+		}
 		var resp engine.Ordered[any]
 		resp.Set("status", "success")
 		resp.Set("data", data)

@@ -15,6 +15,26 @@ from app.repositories.yfinance_repository import YFinanceRepository
 logger = logging.getLogger(__name__)
 
 
+def _fixture_ticker_info(ticker: str) -> Optional[Dict[str, Any]]:
+    """고정 시세 모드(BACKTEST_FIXTURE_FILE)면 시세 파일 메타데이터의 종목 정보, 아니면 None.
+
+    고정 시세에 없는 종목은 DB 미등록 종목과 같은 기본값이다.
+    """
+    from app.engine.source import fixture_fetcher
+
+    fixtures = fixture_fetcher()
+    if fixtures is None:
+        return None
+    h = fixtures.data.get(ticker.upper())
+    if h is None:
+        return {
+            "symbol": ticker.upper(), "currency": None, "company_name": ticker.upper(),
+            "exchange": "Unknown", "first_trade_date": None,
+        }
+    from app.engine.supplemental import ticker_info
+    return ticker_info(h)
+
+
 class StockRepositoryInterface(ABC):
     """주식 데이터 Repository 인터페이스"""
 
@@ -87,10 +107,15 @@ class StockRepository(StockRepositoryInterface):
 
     def get_ticker_info(self, ticker: str) -> Dict[str, Any]:
         """티커 메타데이터 조회 (currency, first_trade_date 포함)"""
+        info = _fixture_ticker_info(ticker)
+        if info is not None:
+            return info
         return self.db_repo.get_ticker_info_from_db(ticker=ticker)
 
     def get_tickers_info_batch(self, tickers: List[str]) -> Dict[str, Dict[str, Any]]:
         """여러 티커의 메타데이터 배치 조회 (N+1 쿼리 최적화)"""
+        if _fixture_ticker_info("") is not None:
+            return {t.upper(): _fixture_ticker_info(t) for t in tickers}
         return self.db_repo.get_ticker_info_batch_from_db(tickers=tickers)
 
     def load_ticker_news(self, ticker: str, max_age_hours: int = 3) -> Optional[list]:

@@ -500,9 +500,9 @@ fn buy_hold(req: &BacktestRequest, data: &Histories, cancel: &CancellationToken)
         composition.push(json!({"asset_id":h.key,"symbol":h.asset.symbol,"weight":h.contributed/contributed,"amount":h.contributed,"investment_type":h.asset.investment_type,"dca_periods":if h.asset.dca(){Some(h.executed)}else{None},"asset_type":h.asset.asset_type}));
     }
     let ordered = holdings.iter().map(|h| &individual[&h.key]);
-    let results:Vec<_>=ordered.map(|v|json!({"asset_id":v["asset_id"],"ticker":v["symbol"],"final_equity":v["final_value"],"total_return_pct":v["return"],"sharpe_ratio":v["sharpe_ratio"],"weight":v["weight"],"amount":v["amount"],"trades":v["trades"],"win_rate":null,"asset_type":v["asset_type"]})).collect();
+    let results:Vec<_>=ordered.map(|v|json!({"asset_id":v["asset_id"],"asset_type":v["asset_type"],"ticker":v["symbol"],"final_equity":v["final_value"],"total_return_pct":v["return"],"sharpe_ratio":v["sharpe_ratio"],"weight":v["weight"],"amount":v["amount"],"trades":v["trades"],"win_rate":null})).collect();
     Ok(
-        json!({"status":"success","data":{"portfolio_result":{"total_equity":stats["Final_Value"],"total_return_pct":stats["Total_Return"]},"portfolio_statistics":stats,"individual_returns":individual,"individual_results":results,"portfolio_composition":composition,"strategy_details":details,"equity_curve":curve(&dates,&equity,1.0),"daily_returns":curve(&dates,&returns,100.0),"weight_history":weights,"rebalance_history":rebalances,"warnings":warnings}}),
+        json!({"status":"success","data":{"portfolio_statistics":stats,"individual_returns":individual,"individual_results":results,"portfolio_result":{"total_equity":stats["Final_Value"],"total_return_pct":stats["Total_Return"]},"portfolio_composition":composition,"equity_curve":curve(&dates,&equity,1.0),"daily_returns":curve(&dates,&returns,100.0),"strategy_details":details,"rebalance_history":rebalances,"weight_history":weights,"warnings":warnings}}),
     )
 }
 
@@ -655,6 +655,8 @@ fn technical(req: &BacktestRequest, data: &Histories, cancel: &CancellationToken
     stats["Duration"] = json!(format!("{duration} days"));
     stats["Annual_Return"] =
         json!((equity.last().unwrap() / amount).powf(365.25 / duration as f64) * 100.0 - 100.0);
+    // Key order is part of the response contract: Trade_Win_Rate precedes Profit_Factor.
+    stats.as_object_mut().unwrap().shift_remove("Profit_Factor");
     stats["Trade_Win_Rate"] = json!(if trades > 0 {
         Some(wins as f64 / trades as f64 * 100.0)
     } else {
@@ -667,6 +669,6 @@ fn technical(req: &BacktestRequest, data: &Histories, cancel: &CancellationToken
         .map(|(key, a)| json!({"asset_id":key,"symbol":a.symbol,"weight":a.amount()/amount,"amount":a.amount(),"asset_type":a.asset_type}))
         .collect();
     Ok(
-        json!({"status":"success","data":{"portfolio_result":{"total_equity":stats["Final_Value"],"total_return_pct":stats["Total_Return"]},"portfolio_statistics":stats,"individual_returns":individual,"individual_results":results,"portfolio_composition":composition,"strategy_details":details,"equity_curve":curve(&dates,&equity,1.0),"daily_returns":curve(&dates,&returns,100.0),"weight_history":weights,"rebalance_history":[],"warnings":warnings}}),
+        json!({"status":"success","data":{"portfolio_statistics":stats,"individual_returns":individual,"individual_results":results,"portfolio_result":{"total_equity":stats["Final_Value"],"total_return_pct":stats["Total_Return"]},"portfolio_composition":composition,"equity_curve":curve(&dates,&equity,1.0),"daily_returns":curve(&dates,&returns,100.0),"strategy_details":details,"rebalance_history":[],"weight_history":weights,"warnings":warnings}}),
     )
 }

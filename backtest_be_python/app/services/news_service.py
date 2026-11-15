@@ -51,6 +51,9 @@ class NewsService:
     def __init__(self):
         self.client_id = settings.naver_client_id
         self.client_secret = settings.naver_client_secret
+        if settings.backtest_fixture_file:
+            # 고정 시세 모드에는 뉴스가 없다. 외부 API를 부르지 않는다(Go와 같다).
+            self.client_id = self.client_secret = None
 
         if not self.client_id or not self.client_secret:
             logger.warning("네이버 API 키가 설정되지 않았습니다.")

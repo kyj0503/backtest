@@ -108,9 +108,13 @@ class TestPortfolioBacktestRequest:
             "end_date": "2023-10-31",  # 약 10개월
             "strategy": "buy_hold_strategy"
         }
-        with pytest.raises(ValidationError) as exc_info:
-            PortfolioBacktestRequest(**data)
-        assert "DCA" in str(exc_info.value)
+        # 스키마가 아니라 업무 규칙(실제 예정일 기준, Go와 같은 422 문자열)이 거부한다.
+        from app.engine.errors import AppError
+        from app.engine.service import to_request
+        with pytest.raises(AppError) as exc_info:
+            to_request(PortfolioBacktestRequest(**data))
+        assert exc_info.value.status == 422
+        assert exc_info.value.detail == "DCA 주기가 백테스트 기간보다 깁니다."
     
     def test_dca_periods_within_backtest_period_succeeds(self):
         # Given: 24개월 백테스트 기간, 1개월 DCA
@@ -149,9 +153,11 @@ class TestPortfolioBacktestRequest:
             "end_date": "2023-10-31",
             "strategy": "buy_hold_strategy"
         }
-        with pytest.raises(ValidationError) as exc_info:
-            PortfolioBacktestRequest(**data)
-        assert "GOOGL" in str(exc_info.value)
+        from app.engine.errors import AppError
+        from app.engine.service import to_request
+        with pytest.raises(AppError) as exc_info:
+            to_request(PortfolioBacktestRequest(**data))
+        assert exc_info.value.detail == "DCA 주기가 백테스트 기간보다 깁니다."
 
     def test_edge_case_dca_equals_backtest_period(self):
         """DCA 기간이 백테스트 기간과 거의 같은 경우"""

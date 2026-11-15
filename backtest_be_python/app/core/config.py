@@ -29,7 +29,7 @@ import json
 from typing import Optional
 from pydantic_settings import BaseSettings
 from pydantic import Field, SecretStr
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 
 class Settings(BaseSettings):
@@ -148,6 +148,11 @@ class Settings(BaseSettings):
     # 네이버 API 키 (환경변수 또는 .env에서 로드)
     naver_client_id: Optional[str] = Field(default=None, env="NAVER_CLIENT_ID")
     naver_client_secret: Optional[str] = Field(default=None, env="NAVER_CLIENT_SECRET")
+
+    # 고정 시세 파일(backtest_be_go/testdata/rust/histories.json 형식). 설정하면 Yahoo·DB 대신 이 파일의
+    # 시세·종목 정보를 쓰고 뉴스 외부 API를 부르지 않는다. E2E·적합성 검사 전용이며 DEBUG=true일 때만
+    # 허용한다(Go BACKTEST_FIXTURE_FILE과 같다).
+    backtest_fixture_file: str = Field(default="", env="BACKTEST_FIXTURE_FILE")
     # Database configuration (support both DATABASE_URL and individual parts)
     database_url: Optional[str] = Field(default=None, env="DATABASE_URL")
     database_host: Optional[str] = Field(default=None, env="DATABASE_HOST")
@@ -171,6 +176,12 @@ class Settings(BaseSettings):
     market_data_queue_timeout_seconds: float = 2.0
     market_data_timeout_seconds: float = 20.0
     
+    @model_validator(mode="after")
+    def _fixture_only_in_debug(self):
+        if self.backtest_fixture_file and not self.debug:
+            raise ValueError("BACKTEST_FIXTURE_FILE is only allowed with DEBUG=true")
+        return self
+
     # pydantic v2 configuration
     model_config = {
         "env_file": ".env",

@@ -362,6 +362,13 @@ async fn backtest(
     body: Bytes,
 ) -> std::result::Result<Json<Value>, ApiError> {
     verify(&s, &headers).await?;
+    if body.is_empty() {
+        return Err(validation::missing_body());
+    }
+    if std::str::from_utf8(&body).is_err() {
+        // Starlette cannot decode the body: 400, never a lossy U+FFFD calculation.
+        return Err(Error(400, "There was an error parsing the body".into()).into());
+    }
     let raw: Value = serde_json::from_slice(&body).map_err(validation::invalid_json)?;
     let req = validation::backtest(raw, s.settings.min_days)?;
     let admission = s
@@ -380,9 +387,10 @@ async fn backtest(
         let input = req.clone();
         tokio::task::spawn_blocking(move || {
             let result = engine::run(&input, &data, &token).map(|mut value| {
-                let info: Map<String, Value> = input.portfolio.iter()
-                    .filter(|a| !a.cash())
-                    .map(|a| (a.symbol.clone(), json!({"symbol":a.symbol,"currency":"USD","company_name":a.symbol,"exchange":"Unknown"})))
+                // Ticker info comes from the histories the calculation used.
+                let info: Map<String, Value> = stock_symbols(&input)
+                    .into_iter()
+                    .filter_map(|symbol| data.get(&symbol).map(|h| (symbol, ticker_info(h))))
                     .collect();
                 value["data"]["ticker_info"] = json!(info);
                 value
@@ -404,12 +412,7 @@ async fn backtest(
         }
     };
     s.completed.fetch_add(1, Ordering::Relaxed);
-    let symbols = req
-        .portfolio
-        .iter()
-        .filter(|a| !a.cash())
-        .map(|a| a.symbol.clone())
-        .collect::<Vec<_>>();
+    let symbols = stock_symbols(&req);
     let mut extra = empty_data("skipped");
     extra["ticker_info"] = result["data"]["ticker_info"].clone();
     let sections = [
@@ -455,7 +458,7 @@ async fn backtest(
     extra
         .as_object_mut()
         .unwrap()
-        .remove("sp500_total_return_pct");
+        .shift_remove("sp500_total_return_pct");
     merge(&mut result["data"], extra);
     Ok(Json(result))
 }
@@ -475,7 +478,7 @@ fn merge(to: &mut Value, from: Value) {
     }
 }
 pub fn empty_data(outcome: &str) -> Value {
-    json!({"ticker_info":{},"stock_data":{},"volatility_events":{},"exchange_rates":[],"exchange_stats":{},"latest_news":{},"sp500_benchmark":[],"nasdaq_benchmark":[],"supplemental_status":{"ticker_info":outcome,"stock_data":outcome,"volatility_events":outcome,"exchange_rates":outcome,"benchmarks":outcome,"news":outcome}})
+    json!({"ticker_info":{},"stock_data":{},"exchange_rates":[],"exchange_stats":{},"volatility_events":{},"sp500_benchmark":[],"nasdaq_benchmark":[],"latest_news":{},"supplemental_status":{"ticker_info":outcome,"stock_data":outcome,"volatility_events":outcome,"exchange_rates":outcome,"benchmarks":outcome,"news":outcome}})
 }
 struct ReadQuery {
     symbols: Vec<String>,
@@ -483,70 +486,39 @@ struct ReadQuery {
     end: Option<NaiveDate>,
     limit: usize,
 }
-impl ReadQuery {
-    fn parse(section: &str, raw: Option<String>) -> Result<Self> {
-        let mut q = Self {
-            symbols: vec![],
-            start: None,
-            end: None,
-            limit: 15,
-        };
-        let pairs: Vec<_> = url::form_urlencoded::parse(raw.as_deref().unwrap_or("").as_bytes())
-            .into_owned()
-            .collect();
-        for (index, (key, value)) in pairs.iter().enumerate() {
-            // Starlette uses the last scalar value; symbols remains a list.
-            if key != "symbols" && pairs[index + 1..].iter().any(|(later, _)| later == key) {
-                continue;
-            }
-            match key.as_ref() {
-                "symbols" if section == "prices" || section == "news" => {
-                    model::validate_symbol(value, false)?;
-                    q.symbols.push(value.to_ascii_uppercase());
-                }
-                "start_date" if section != "news" => {
-                    q.start = Some(
-                        value
-                            .parse()
-                            .map_err(|_| Error::validation("날짜 형식이 잘못되었습니다."))?,
-                    )
-                }
-                "end_date" if section != "news" => {
-                    q.end = Some(
-                        value
-                            .parse()
-                            .map_err(|_| Error::validation("날짜 형식이 잘못되었습니다."))?,
-                    )
-                }
-                "limit" if section == "news" => {
-                    q.limit = value
-                        .parse()
-                        .map_err(|_| Error::validation("유효하지 않은 뉴스 개수입니다."))?
-                }
-                _ => return Err(Error::validation("지원하지 않는 조회 인자입니다.")),
-            }
+impl From<validation::QueryValues> for ReadQuery {
+    fn from(v: validation::QueryValues) -> Self {
+        Self {
+            symbols: v.symbols,
+            start: v.start,
+            end: v.end,
+            limit: v.limit,
         }
-        if (section == "prices" || section == "news")
-            && (q.symbols.is_empty() || q.symbols.len() > 20)
-        {
-            return Err(Error::validation("1~20개의 종목을 지정해 주세요."));
-        }
-        if section != "news" {
-            model::validate_period(
-                q.start
-                    .ok_or_else(|| Error::validation("시작 날짜가 필요합니다."))?,
-                q.end
-                    .ok_or_else(|| Error::validation("종료 날짜가 필요합니다."))?,
-                0,
-            )?;
-        }
-        if !(1..=20).contains(&q.limit) {
-            return Err(Error::validation("뉴스 개수는 1~20이어야 합니다."));
-        }
-        q.symbols.sort();
-        q.symbols.dedup();
-        Ok(q)
     }
+}
+/// Distinct stock symbols of the portfolio, sorted (cash assets have no market data).
+fn stock_symbols(req: &model::BacktestRequest) -> Vec<String> {
+    let mut symbols: Vec<String> = req
+        .portfolio
+        .iter()
+        .filter(|a| !a.cash())
+        .map(|a| a.symbol.clone())
+        .collect();
+    symbols.sort();
+    symbols.dedup();
+    symbols
+}
+fn ticker_info(h: &model::History) -> Value {
+    let name = if h.company_name.is_empty() {
+        &h.symbol
+    } else {
+        &h.company_name
+    };
+    json!({"symbol":h.symbol,"currency":h.currency,"company_name":name,"exchange":h.exchange,"first_trade_date":h.first_trade_date})
+}
+/// A symbol without market data, shaped like Python's unregistered `stocks` row.
+fn unknown_info(symbol: &str) -> Value {
+    json!({"symbol":symbol,"currency":null,"company_name":symbol,"exchange":"Unknown","first_trade_date":null})
 }
 macro_rules! read_handler {
     ($fn:ident,$section:literal) => {
@@ -571,8 +543,7 @@ async fn read(
     raw: Option<String>,
     section: &str,
 ) -> std::result::Result<Json<Value>, ApiError> {
-    validation::query(section, raw.as_deref())?;
-    let query = ReadQuery::parse(section, raw)?;
+    let query = ReadQuery::from(validation::query(section, raw.as_deref())?);
     let _admission = s
         .reads
         .acquire(
@@ -639,16 +610,30 @@ async fn collect(s: &AppState, section: &str, q: &ReadQuery) -> Result<Value> {
                 .into_iter()
                 .map(|symbol| {
                     let source = s.data.clone();
-                    async move { source.history(&symbol, start, end).await }
+                    async move { (source.history(&symbol, start, end).await, symbol) }
                 })
                 .collect();
-            let results = stream::iter(tasks)
-                .buffer_unordered(4)
-                .collect::<Vec<_>>()
-                .await;
-            for result in results {
-                let h = result?;
-                info.insert(h.symbol.clone(),json!({"symbol":h.symbol,"currency":h.currency,"company_name":h.company_name,"exchange":h.exchange,"first_trade_date":h.first_trade_date}));
+            let results = stream::iter(tasks).buffered(4).collect::<Vec<_>>().await;
+            for (result, symbol) in results {
+                // Like Python, one symbol's failure leaves an empty list and placeholder info.
+                let h = match result {
+                    Ok(h) => {
+                        info.insert(h.symbol.clone(), ticker_info(&h));
+                        h
+                    }
+                    Err(e) => {
+                        tracing::warn!(%symbol, error = %e.1, "price history failed");
+                        info.insert(symbol.clone(), unknown_info(&symbol));
+                        model::History {
+                            symbol,
+                            currency: String::new(),
+                            company_name: String::new(),
+                            exchange: String::new(),
+                            first_trade_date: None,
+                            bars: vec![],
+                        }
+                    }
+                };
                 prices.insert(
                     h.symbol.clone(),
                     json!(
@@ -682,7 +667,12 @@ async fn collect(s: &AppState, section: &str, q: &ReadQuery) -> Result<Value> {
             let stats = if points.is_empty() {
                 json!({})
             } else {
-                json!({"start_point":points.first(),"end_point":points.last(),"high_point":points.iter().max_by(|a,b|a["rate"].as_f64().unwrap().total_cmp(&b["rate"].as_f64().unwrap())),"low_point":points.iter().min_by(|a,b|a["rate"].as_f64().unwrap().total_cmp(&b["rate"].as_f64().unwrap()))})
+                {
+                    // Python orders these points rate first.
+                    let stat =
+                        |p: Option<&Value>| p.map(|p| json!({"rate":p["rate"],"date":p["date"]}));
+                    json!({"start_point":stat(points.first()),"end_point":stat(points.last()),"high_point":stat(points.iter().max_by(|a,b|a["rate"].as_f64().unwrap().total_cmp(&b["rate"].as_f64().unwrap()))),"low_point":stat(points.iter().min_by(|a,b|a["rate"].as_f64().unwrap().total_cmp(&b["rate"].as_f64().unwrap())))})
+                }
             };
             Ok(
                 json!({"exchange_rates":points,"exchange_stats":stats,"supplemental_status":{"exchange_rates":if points.is_empty(){"empty"}else{"ok"}}}),
@@ -719,7 +709,7 @@ async fn collect(s: &AppState, section: &str, q: &ReadQuery) -> Result<Value> {
                 None
             };
             Ok(
-                json!({"sp500_benchmark":points(&sp),"nasdaq_benchmark":points(&nasdaq),"sp500_total_return_pct":ret,"supplemental_status":{"benchmarks":if sp.bars.is_empty()&&nasdaq.bars.is_empty(){"empty"}else{"ok"}}}),
+                json!({"sp500_benchmark":points(&sp),"nasdaq_benchmark":points(&nasdaq),"supplemental_status":{"benchmarks":if sp.bars.is_empty()&&nasdaq.bars.is_empty(){"empty"}else{"ok"}},"sp500_total_return_pct":ret}),
             )
         }
         _ => {
@@ -737,13 +727,14 @@ async fn collect(s: &AppState, section: &str, q: &ReadQuery) -> Result<Value> {
                     }
                 })
                 .collect();
-            let results = stream::iter(tasks)
-                .buffer_unordered(4)
-                .collect::<Vec<_>>()
-                .await;
+            let results = stream::iter(tasks).buffered(4).collect::<Vec<_>>().await;
             let mut any = false;
             for (symbol, result) in results {
-                let items = result?;
+                // Like Python, one symbol's news failure leaves an empty list.
+                let items = result.unwrap_or_else(|e| {
+                    tracing::warn!(%symbol, error = %e.1, "news failed");
+                    vec![]
+                });
                 any |= !items.is_empty();
                 news.insert(symbol, json!(items));
             }

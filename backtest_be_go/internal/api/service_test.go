@@ -404,3 +404,64 @@ func TestInvalidUTF8BodyIs400(t *testing.T) {
 		t.Fatalf("%d %s", rec.Code, rec.Body)
 	}
 }
+
+// 조회 인자 오류는 Python(pydantic query 모델)이 실제로 돌려준 422 목록과 같아야 한다(2026-11-15 캡처).
+func TestReadQueryErrorsMatchPython(t *testing.T) {
+	_, h := newTestService(t, nil, testConfig(t))
+	ve := map[string]any{"error": map[string]any{}}
+	cases := []struct {
+		path string
+		want []map[string]any
+	}{
+		{"/api/v1/prices?symbols=A%3CB&start_date=2023-01-02&end_date=2023-10-31", []map[string]any{{"type": "value_error", "loc": []any{"query", "symbols"},
+			"msg": "Value error, 주식 심볼은 영문자, 숫자, 점(.), 하이픈(-)만 포함해야 합니다.", "input": map[string]any{"symbol": "A<B"}, "ctx": ve}}},
+		{"/api/v1/prices?symbols=AAPL&start_date=2023-03-02&end_date=2023-02-01", []map[string]any{{"type": "value_error", "loc": []any{"query"},
+			"msg": "Value error, 종료일은 시작일 이후여야 합니다.", "input": map[string]any{"symbols": []any{"AAPL"}, "start_date": "2023-03-02", "end_date": "2023-02-01"}, "ctx": ve}}},
+		{"/api/v1/prices?symbols=AAPL&start_date=2023-01-02&end_date=2099-02-01", []map[string]any{{"type": "value_error", "loc": []any{"query"},
+			"msg": "Value error, 미래 날짜는 조회할 수 없습니다.", "input": map[string]any{"symbols": []any{"AAPL"}, "start_date": "2023-01-02", "end_date": "2099-02-01"}, "ctx": ve}}},
+		{"/api/v1/prices?symbols=AAPL&start_date=2003-01-02&end_date=2023-02-01", []map[string]any{{"type": "value_error", "loc": []any{"query"},
+			"msg": "Value error, 조회 기간이 최대 허용 기간을 초과했습니다.", "input": map[string]any{"symbols": []any{"AAPL"}, "start_date": "2003-01-02", "end_date": "2023-02-01"}, "ctx": ve}}},
+		{"/api/v1/prices?symbols=AAPL&start_date=2023-13-02&end_date=2023-02-01", []map[string]any{{"type": "date_from_datetime_parsing", "loc": []any{"query", "start_date"},
+			"msg": "Input should be a valid date or datetime, month value is outside expected range of 1-12", "input": "2023-13-02",
+			"ctx": map[string]any{"error": "month value is outside expected range of 1-12"}}}},
+		{"/api/v1/news?symbols=", []map[string]any{{"type": "string_too_short", "loc": []any{"query", "symbols", "symbol"},
+			"msg": "String should have at least 1 character", "input": "", "ctx": map[string]any{"min_length": 1}}}},
+		{"/api/v1/news?symbols=%EC%98%88%EA%B8%88", []map[string]any{{"type": "value_error", "loc": []any{"query", "symbols"},
+			"msg": "Value error, 주식 심볼은 영문자, 숫자, 점(.), 하이픈(-)만 포함해야 합니다.", "input": map[string]any{"symbol": "예금"}, "ctx": ve}}},
+		{"/api/v1/news?symbols=A&symbols=B&symbols=C&symbols=D&symbols=E&symbols=F&symbols=G&symbols=H&symbols=I&symbols=J&symbols=K&symbols=L&symbols=M&symbols=N&symbols=O&symbols=P&symbols=Q&symbols=R&symbols=S&symbols=T&symbols=U",
+			[]map[string]any{{"type": "too_long", "loc": []any{"query", "symbols"}, "msg": "List should have at most 20 items after validation, not 21",
+				"input": []any{"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U"},
+				"ctx":   map[string]any{"field_type": "List", "max_length": 20, "actual_length": 21}}}},
+	}
+	for _, c := range cases {
+		rec := get(h, c.path)
+		if rec.Code != 422 || !jsonEqual(t, rec.Body.Bytes(), map[string]any{"detail": c.want}) {
+			t.Errorf("%s: %d %s", c.path, rec.Code, rec.Body)
+		}
+	}
+}
+
+// 시세를 찾지 못한 종목은 Python처럼 200에 빈 목록과 기본 종목 정보로 돌려준다.
+func TestPricesUnknownSymbolIsEmptyNotError(t *testing.T) {
+	_, h := newTestService(t, nil, testConfig(t))
+	rec := get(h, "/api/v1/prices?symbols=ZZZZ&start_date=2023-01-02&end_date=2023-10-31")
+	want := map[string]any{"status": "success", "data": map[string]any{
+		"ticker_info":         map[string]any{"ZZZZ": map[string]any{"symbol": "ZZZZ", "currency": nil, "company_name": "ZZZZ", "exchange": "Unknown", "first_trade_date": nil}},
+		"stock_data":          map[string]any{"ZZZZ": []any{}},
+		"volatility_events":   map[string]any{"ZZZZ": []any{}},
+		"supplemental_status": map[string]any{"ticker_info": "ok", "stock_data": "empty", "volatility_events": "empty"},
+	}}
+	if rec.Code != 200 || !jsonEqual(t, rec.Body.Bytes(), want) {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+}
+
+// 빈 본문은 FastAPI처럼 JSON 오류가 아니라 body 누락이다.
+func TestEmptyBodyIsMissing(t *testing.T) {
+	_, h := newTestService(t, nil, testConfig(t))
+	rec := post(h, "", nil)
+	want := map[string]any{"detail": []map[string]any{{"type": "missing", "loc": []any{"body"}, "msg": "Field required", "input": nil}}}
+	if rec.Code != 422 || !jsonEqual(t, rec.Body.Bytes(), want) {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+}
