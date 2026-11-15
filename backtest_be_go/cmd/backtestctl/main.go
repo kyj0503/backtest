@@ -4,6 +4,11 @@
 //	backtestctl migrate up                대기 중인 마이그레이션 적용 (백업 후 실행)
 //	backtestctl migrate detect            goose 기록이 없는 기존 DB의 스키마 버전 판별
 //	backtestctl migrate baseline <ver>    기존 DB에 <ver>까지 적용됨 표시 (SQL 실행 없음, 백업 후 실행)
+//	backtestctl check-orphans [--delete]  부모 stocks 행이 없는 일봉 점검(발견 시 종료 코드 1) / 삭제
+//
+// Python 배치 중 daily_price_update / manage_stock_splits / update_ticker_listing_dates는 옮기지 않는다.
+// 시세 캐시는 종목 단위 스냅샷(1시간 유효)을 통째로 교체하므로 분할·배당 조정이 다음 조회에 자동 반영되고,
+// 상장일은 시세 응답 메타에서 매번 온다. 미리 받아 둔 5년치 시세는 1시간 뒤 쓰이지 않는다.
 package main
 
 import (
@@ -20,6 +25,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 
 	"github.com/kyj0503/backtest/backtest_be_go/internal/config"
+	"github.com/kyj0503/backtest/backtest_be_go/internal/marketdata"
 	"github.com/kyj0503/backtest/backtest_be_go/internal/migrate"
 	"github.com/kyj0503/backtest/backtest_be_go/migrations"
 )
@@ -28,7 +34,8 @@ const usage = `usage:
   backtestctl migrate status
   backtestctl migrate up
   backtestctl migrate detect
-  backtestctl migrate baseline <version>`
+  backtestctl migrate baseline <version>
+  backtestctl check-orphans [--delete]`
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -46,7 +53,20 @@ func main() {
 
 var errUsage = errors.New("invalid arguments")
 
+// errOrphansFound는 점검 모드에서 고아 행을 찾았다는 뜻이다(종료 코드 1, cron 알림 조건).
+var errOrphansFound = errors.New("orphan daily_prices rows found")
+
 func run(ctx context.Context, args []string) error {
+	if len(args) >= 1 && args[0] == "check-orphans" {
+		del := false
+		switch {
+		case len(args) == 2 && args[1] == "--delete":
+			del = true
+		case len(args) != 1:
+			return errUsage
+		}
+		return checkOrphans(ctx, del)
+	}
 	if len(args) < 2 || args[0] != "migrate" {
 		return errUsage
 	}
@@ -108,6 +128,31 @@ func run(ctx context.Context, args []string) error {
 		return nil
 	}
 	return errUsage
+}
+
+func checkOrphans(ctx context.Context, del bool) error {
+	db, err := openDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	rows, ids, err := marketdata.OrphanPrices(ctx, db)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("orphan daily_prices rows: %d (stock_id values: %d)\n", rows, ids)
+	if rows == 0 {
+		return nil
+	}
+	if !del {
+		return errOrphansFound
+	}
+	n, err := marketdata.DeleteOrphanPrices(ctx, db)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("deleted %d rows\n", n)
+	return nil
 }
 
 func openDB() (*sql.DB, error) {

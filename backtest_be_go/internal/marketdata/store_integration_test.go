@@ -202,6 +202,30 @@ func TestFailedSaveKeepsPreviousSnapshot(t *testing.T) {
 	}
 }
 
+func TestOrphanPrices(t *testing.T) {
+	ctx := context.Background()
+	db := testDB(t)
+	s := NewMySQLStore(db)
+	d := civil.MustParse("2023-01-02")
+	if err := s.Save(ctx, History{Symbol: "ZZKEEP", Currency: "USD", Bars: bars("2023-01-02", 1, 2)}, d, d.AddDays(1)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO daily_prices (stock_id, date, open, high, low, close) VALUES (999, '2023-01-02', 1, 1, 1, 1), (999, '2023-01-03', 1, 1, 1, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	rows, ids, err := OrphanPrices(ctx, db)
+	if err != nil || rows != 2 || ids != 1 {
+		t.Fatalf("%d %d %v", rows, ids, err)
+	}
+	n, err := DeleteOrphanPrices(ctx, db)
+	if err != nil || n != 2 {
+		t.Fatalf("%d %v", n, err)
+	}
+	if c, _ := s.Cached(ctx, "ZZKEEP", d, d.AddDays(1)); c == nil || len(c.Bars) != 2 {
+		t.Fatal("non-orphan rows were deleted")
+	}
+}
+
 // 같은 종목의 교체와 읽기를 동시에 많이 해도 읽기는 완전한 스냅샷만 본다.
 func TestConcurrentReplaceAndRead(t *testing.T) {
 	ctx := context.Background()
