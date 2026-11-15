@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+	"unicode/utf8"
 
 	"github.com/kyj0503/backtest/backtest_be_go/internal/admission"
 	"github.com/kyj0503/backtest/backtest_be_go/internal/apperr"
@@ -66,6 +67,12 @@ func (s *Service) backtest(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBody))
 	if err != nil {
 		s.writeErr(w, &apperr.Error{Status: http.StatusRequestEntityTooLarge, Detail: "요청 본문이 너무 큽니다."})
+		return
+	}
+	// encoding/json은 깨진 UTF-8을 U+FFFD로 바꿔 받아들인다. Python(Starlette)은 본문 해석 단계에서
+	// 400으로 거부했다. 현금 항목 이름 등이 조용히 깨진 채 계산되지 않게 원본과 같이 거부한다.
+	if !utf8.Valid(body) {
+		s.writeErr(w, &apperr.Error{Status: http.StatusBadRequest, Detail: "There was an error parsing the body"})
 		return
 	}
 	req, err := parseBacktest(body, s.limits())

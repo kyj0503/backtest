@@ -1,23 +1,25 @@
-name: backtest-go-check
+name: backtest-e2e
 
 # 일회용 E2E 환경: 호스트 포트를 열지 않고 기존 DB 볼륨을 쓰지 않는다(MySQL은 tmpfs).
-# Go API는 DEBUG 고정 시세(testdata/rust/histories.json)를 쓰고 Turnstile을 끈다.
+# API는 DEBUG 고정 시세(testdata/rust/histories.json)를 쓰고 Turnstile을 끈다.
 # 브라우저(Playwright)가 콘솔(Vite)을 거쳐 API에 실제 HTTP 요청을 보낸다.
 #
-# 콘솔은 같은 상위 디렉터리의 backtest-console 저장소다. Go API는 rust-migration 계약(asset_id,
+# 백엔드는 E2E_BACKEND로 고른다: go(기본) 또는 rust. 둘 다 rust-migration 계약(asset_id,
 # Time_Weighted_Return, calculation_assumptions 등)을 따르므로 콘솔의 rust-migration 브랜치(또는 그
-# 변경을 병합한 브랜치)에서 실행한다. 콘솔의 계약 스펙(e2e/rust-migration.spec.ts)을 켠다.
+# 변경을 병합한 브랜치)에서 계약 스펙(e2e/rust-migration.spec.ts)을 돌린다. Python 원본은 고정 시세 모드가
+# 없고 응답 계약이 달라 이 스펙의 대상이 아니다(콘솔 develop 브랜치와 짝이다).
 #
-#   docker compose -f compose.go-test.yaml up --build --abort-on-container-exit --exit-code-from e2e
-#   docker compose -f compose.go-test.yaml down
+#   docker compose -f compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e
+#   E2E_BACKEND=rust docker compose -f compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e
+#   docker compose -f compose.e2e.yaml down
 services:
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_ROOT_PASSWORD: go-test-only
+      MYSQL_ROOT_PASSWORD: e2e-test-only
       MYSQL_DATABASE: stock_data_cache
-      MYSQL_USER: gotest
-      MYSQL_PASSWORD: go-test-only
+      MYSQL_USER: e2etest
+      MYSQL_PASSWORD: e2e-test-only
     tmpfs:
       - /var/lib/mysql
     volumes:
@@ -29,7 +31,7 @@ services:
       retries: 45
   api:
     build:
-      context: ./backtest_be_go
+      context: ./backtest_be_${E2E_BACKEND:-go}
       target: runtime
     environment:
       DEBUG: "true"
@@ -37,18 +39,28 @@ services:
       BACKTEST_FIXTURE_FILE: /fixtures/histories.json
       DATABASE_HOST: mysql
       DATABASE_NAME: stock_data_cache
-      DATABASE_USER: gotest
-      DATABASE_PASSWORD: go-test-only
+      DATABASE_USER: e2etest
+      DATABASE_PASSWORD: e2e-test-only
     volumes:
+      # Go와 Rust가 같은 고정 시세 파일을 쓴다(backtest_be_rust/tests/fixtures의 사본이다).
       - ./backtest_be_go/testdata/rust:/fixtures:ro
     depends_on:
       mysql:
         condition: service_healthy
+  # API 준비 확인. Go 런타임(distroless)에는 셸·curl이 없고 Rust 런타임에는 있어 컨테이너 안 헬스체크를
+  # 하나로 쓸 수 없다. 네트워크 너머에서 /health/ready를 확인하는 곁 컨테이너다. 끝나지 않고 떠 있어야 한다:
+  # --abort-on-container-exit는 어떤 컨테이너든 종료되면 전체를 멈춘다.
+  api-ready:
+    image: curlimages/curl:8.11.1
+    entrypoint: [sh, -c]
+    command: ["until curl -fsS -o /dev/null http://api:8000/health/ready; do sleep 2; done; touch /tmp/ready; exec sleep 3600"]
     healthcheck:
-      test: [CMD, /app/server, -healthcheck, /health/ready]
+      test: [CMD, test, -f, /tmp/ready]
       interval: 2s
-      timeout: 3s
-      retries: 30
+      retries: 90
+    depends_on:
+      api:
+        condition: service_started
   console:
     build:
       context: ../backtest-console
@@ -58,7 +70,7 @@ services:
       DISABLE_HMR: "1"
     command: [npm, run, dev, --, --host, 0.0.0.0]
     depends_on:
-      api:
+      api-ready:
         condition: service_healthy
     healthcheck:
       test: [CMD, node, -e, "fetch('http://localhost:5173/backtest').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

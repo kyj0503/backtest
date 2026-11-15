@@ -99,12 +99,12 @@ Go 테스트(`internal/api`)는 Python이 실제로 돌려준 422 본문 23개, 
 콘솔은 병렬 응답 병합·느린 뉴스 중 다른 자료 표시·각 API의 개별 재시도·잘못된
 응답 형식·오래된 응답 차단·화면 이탈 취소·현금 포트폴리오의 불필요한 조회 생략을 검증한다.
 
-실행 이미지 HTTP 검증은 `compose.go-test.yaml`이 한다. 고정 시세(`testdata/rust/histories.json`)와
+실행 이미지 HTTP 검증은 `compose.e2e.yaml`이 한다. 고정 시세(`testdata/rust/histories.json`)와
 임시 MySQL을 쓰고, 브라우저가 콘솔을 거쳐 계산 POST와 네 GET을 실제로 호출한다. 운영 자격증명이나
 실제 데이터는 필요하지 않다.
 
 ```bash
-docker compose -f compose.go-test.yaml up --build --abort-on-container-exit --exit-code-from e2e
+docker compose -f compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e
 ```
 
 브라우저에서는 네 조회만 503으로 실패시킨 뒤 하나씩 복구·재시도한다. 각 GET만 1회

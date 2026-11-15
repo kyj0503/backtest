@@ -1,0 +1,1 @@
+# Pydantic schemas (DTOs) for API requests and responses 

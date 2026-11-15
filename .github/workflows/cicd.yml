@@ -33,6 +33,25 @@ jobs:
       - name: Build runtime in Docker
         run: docker build --target runtime ./backtest_be_go
 
+  # 비교·참조 구현(Python 원본, Rust). 운영 배포 대상은 Go이므로 publish는 이 잡을 기다리지 않는다.
+  verify-reference:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [python, rust]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test in Docker
+        run: docker build --target test ./backtest_be_${{ matrix.backend }}
+      - name: Audit dependencies
+        run: sh scripts/audit-deps.sh ${{ matrix.backend }}
+      - name: Build runtime in Docker
+        run: docker build --target runtime ./backtest_be_${{ matrix.backend }}
+
   publish:
     needs: verify
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

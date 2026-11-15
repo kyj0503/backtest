@@ -3,8 +3,14 @@
 작업일: 2026-11-15. 브랜치 `go-migration`(부모 `develop` `b7a284f`). 계획: [go-migration-plan.md](go-migration-plan.md).
 
 Python(FastAPI, pandas, backtesting.py 0.6.6, SQLAlchemy, Alembic) 백엔드를 Go 단일 바이너리로 바꿨다.
-`backtest_be_fast/`는 삭제했고 git 이력에 남아 있다. 같은 시기 `rust-migration` 브랜치에서 Rust로 옮기며
-찾은 회계 결함 수정(F01–F16, R01–R11, S01–S06, T01–T05)을 계산 계약으로 채택했다.
+같은 시기 `rust-migration` 브랜치에서 Rust로 옮기며 찾은 회계 결함 수정(F01–F16, R01–R11, S01–S06, T01–T05)을
+계산 계약으로 채택했다.
+
+> **2026-11-15 갱신 — 세 구현을 함께 둔다.** 처음에는 Python을 지웠으나, 비교·회귀 확인을 위해 develop의
+> 원본을 `backtest_be_python/`(옛 `backtest_be_fast`)으로, rust-migration의 구현을 `backtest_be_rust/`로 다시
+> 들였다. 운영 배포는 Go만 한다. 스키마는 goose가 소유하고 Python의 Alembic은 이력이다. 언어는
+> `compose.dev.yaml` 프로필(`go`/`python`/`rust`/`all`)로 고른다. Python 잠금 파일은 새로 공개된 취약점 3건
+> (opentelemetry-api, soupsieve, tornado; 계산 경로 밖)만 올렸고 계산 코드는 원본 그대로다.
 
 ## 결정
 
@@ -14,7 +20,7 @@ Python(FastAPI, pandas, backtesting.py 0.6.6, SQLAlchemy, Alembic) 백엔드를 
 | HTTP | chi v5 + 표준 net/http. 요청 context로 취소를 전파한다 |
 | DB | MySQL 유지(운영은 OCI 관리형 MySQL). database/sql + go-sql-driver/mysql, raw SQL |
 | 마이그레이션 | Alembic → goose(SQL 파일을 바이너리에 내장). 자동 downgrade 없음 |
-| Python | 완전 제거. 기준 자료는 삭제 전에 `backtest_be_go/testdata/`로 추출했다 |
+| Python | 처음엔 제거했다가 비교용으로 `backtest_be_python/`에 원본을 다시 둔다(아래 갱신). 기준 자료는 `backtest_be_go/testdata/`에 있다 |
 | 빌드·테스트 | 모두 Docker. 런타임은 distroless static nonroot(서버·backtestctl 두 바이너리, curl 없음) |
 
 ## 구조
@@ -155,7 +161,7 @@ rust-migration의 [`docs/rust-migration.md`](https://github.com/kyj0503/backtest
 | HTTP 경계 | Python 422 본문 23개 일치. 참고 조회 변환(주가·급등락·환율·통계·벤치마크) Python 값과 일치 |
 | Yahoo | 실제 응답 7종·90개 일봉 회귀(1e-12) 통과, 실조회 AAPL·005930.KS·KRW=X·EURUSD=X·BTC-USD 통과 |
 | 스키마 | schema.sql = goose head(COMMENT 포함), 로컬 dev DB와 합성 Python 덤프로 baseline·up 리허설 |
-| E2E | compose.go-test.yaml: 브라우저 → 콘솔 → Go API 계산 + 참고 조회 4개 통과 |
+| E2E | compose.e2e.yaml: 브라우저 → 콘솔 → Go API 계산 + 참고 조회 4개 통과 |
 | 감사 | govulncheck 통과 |
 
 ## 아직 확인하지 않은 것

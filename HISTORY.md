@@ -9,6 +9,24 @@
 
 ---
 
+## 2026-11-15 세 백엔드 공존과 Go 응답 직렬화 최적화
+
+- **세 구현 공존**: develop 원본을 `backtest_be_python/`(옛 `backtest_be_fast`, 주석·문서의 경로·컨테이너 이름만
+  바꿈)로, rust-migration 구현을 `backtest_be_rust/`로 들였다. 운영 배포는 Go다. `compose.dev.yaml`·
+  `compose.dev-prod.yaml`은 프로필 `go`/`python`/`rust`/`all`로 고르고 호스트 포트가 달라(8000/8001/8002,
+  9000/9001/9002) 함께 띄울 수 있다. 콘솔 프록시 별칭 `backtest-be-fast`는 Go에 둔다. `compose.go-test.yaml`은
+  `compose.e2e.yaml`(`E2E_BACKEND=go|rust`)로 바꿨다. distroless Go에는 셸이 없어 API 준비 확인을 곁 컨테이너로
+  옮겼다(종료하면 `--abort-on-container-exit`가 전체를 멈추므로 떠 있게 했다). CI에 Python·Rust의 test·audit·
+  runtime 빌드(`verify-reference`, 배포 비필수)를 더했다. `audit-deps.sh`는 `be|go|python|rust|all`.
+- **Python 감사**: b7a284f 이후 공개된 취약점 3건(opentelemetry-api 1.45.1, soupsieve 3.0.4, tornado 6.6)을
+  잠금 파일만 올려 고쳤다(1.45.2, 4.0.0, 6.6.1). 단위 579 + 골든 마스터 1 그대로 통과.
+- **Go 깨진 UTF-8**: encoding/json은 깨진 UTF-8을 U+FFFD로 바꿔 받아들여, 현금 이름이 깨진 채 계산됐다(Windows
+  셸 curl로 한글을 보낼 때 드러남). Python(Starlette)처럼 400 `There was an error parsing the body`로 거부한다.
+- **성능**: 3자 벤치마크(같은 시세·요청 32개, CPU 2·2GiB) 프로파일에서 Go 응답 직렬화가 CPU 58%·할당 70%였다.
+  전용 인코더로 바꿔 중앙값 10.01ms → 2.86ms(Rust 4.37ms, Python 99.00ms), 최대 메모리 90 → 32MiB.
+  출력은 64개 사례에서 바이트 단위로 같다. 재현: `compose.bench.yaml` + `scripts/benchmark/run.sh`(입력은 로컬).
+- **덤프 보호**: `*.sql.gz`, `*.dump`, `/.local-db/`를 무시 목록에 넣었다. 운영 DB 덤프는 로컬에만 둔다.
+
 ## 2026-11-15 Python(FastAPI) → Go 백엔드 전환
 
 `go-migration` 브랜치(부모 `develop` `b7a284f`). 상세: [docs/go-migration.md](docs/go-migration.md).

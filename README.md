@@ -1,50 +1,68 @@
 # Backtest — 라고할때살걸 백엔드
 
-주식·암호화폐 전략 및 포트폴리오 백테스트를 제공하는 Go 서비스입니다(chi, 표준 net/http).
-프론트엔드는 [backtest-console](https://github.com/kyj0503/backtest-console) 저장소로 분리했습니다.
-기존 저장소 이름과 전체 Git 이력은 유지합니다. Python(FastAPI) 구현에서 옮긴 과정과 계산 계약은
-[docs/go-migration.md](docs/go-migration.md)에 있습니다.
+주식·암호화폐 전략 및 포트폴리오 백테스트 백엔드입니다. 같은 API를 세 언어로 구현해 두었고, 운영에
+배포하는 것은 **Go**입니다(chi, 표준 net/http). 프론트엔드는
+[backtest-console](https://github.com/kyj0503/backtest-console) 저장소로 분리했습니다.
+Python(FastAPI) 원본에서 옮긴 과정과 계산 계약은 [docs/go-migration.md](docs/go-migration.md)에 있습니다.
 
 ## 구성
 
-- `backtest_be_go/`: Go 1.27 백엔드. `cmd/server`(HTTP 서버), `cmd/backtestctl`(마이그레이션·점검 도구),
-  `internal/`(엔진, 시장 데이터, API), `migrations/`(goose SQL, 바이너리에 내장), `testdata/`(고정 기준 자료).
-- `database/`: MySQL 스키마(`schema.sql`)와 마이그레이션 운영 안내.
-- `compose.dev.yaml`: 로컬 백엔드(go run)·MySQL 개발 환경.
-- `compose.dev-prod.yaml`: 운영 런타임 이미지의 로컬 검증.
-- `compose.go-test.yaml`: 고정 시세 + 콘솔 + Playwright 브라우저 E2E.
-- `compose.devdb.yaml`, `scripts/load-devdb.sh`: 운영 DB 덤프의 로컬 검증용 복사본.
-- `compose.yaml`, `scripts/deploy.*`, `.github/workflows/cicd.yml`: OCI 배포.
+| 폴더 | 언어·스택 | 역할 |
+|---|---|---|
+| `backtest_be_go/` | Go 1.27, chi | **운영 배포 대상.** `cmd/server`, `cmd/backtestctl`(마이그레이션·점검), `migrations/`(goose, 스키마 소유), `testdata/`(고정 기준 자료) |
+| `backtest_be_rust/` | Rust, Axum | rust-migration 구현. 정합성 수정 계약(F01–T05)의 원조이자 Go의 차등 비교 대상 |
+| `backtest_be_python/` | Python 3.15, FastAPI, pandas, backtesting.py 0.6.6 | develop `b7a284f`의 원본(옛 `backtest_be_fast`). 회귀 기록·비교용 |
+
+Go와 Rust는 같은 계산 계약(asset_id, Time_Weighted_Return 등)을 따르고, Python 원본은 정합성 수정 이전의
+계산과 응답 형태를 그대로 둡니다(차이: docs/go-migration.md "Python(develop) 대비 바뀐 값").
+
+- `database/`: MySQL 스키마(`schema.sql` = goose head)와 마이그레이션 운영 안내. 스키마는 Go(goose)가 소유한다.
+  Python의 `alembic/`은 이력이며 goose로 관리하는 DB에 실행하지 않는다.
+- `compose.dev.yaml`: 언어별 개발 서버(프로필 `go` / `python` / `rust` / `all`) + MySQL.
+- `compose.dev-prod.yaml`: 언어별 운영(runtime) 이미지 로컬 검증(같은 프로필).
+- `compose.e2e.yaml`: 고정 시세 + 콘솔 + Playwright 브라우저 E2E(`E2E_BACKEND=go|rust`).
+- `compose.bench.yaml`, `scripts/benchmark/`: 세 언어 고정 시세 성능 비교.
+- `compose.devdb.yaml`, `scripts/load-devdb.sh`: 운영 DB 덤프의 로컬 검증용 복사본(덤프 파일은 커밋하지 않는다).
+- `compose.yaml`, `scripts/deploy.*`, `.github/workflows/cicd.yml`: OCI 배포(Go).
 - `TODO.md`: 미완료 작업, `HISTORY.md`: 구현·검증 이력.
 
 ## 로컬 개발
 
 ```bash
 cp .env.example .env
-docker compose -f compose.dev.yaml up -d --build
+docker compose -f compose.dev.yaml --profile go up -d --build        # Go     → localhost:8000
+docker compose -f compose.dev.yaml --profile python up -d --build    # Python → localhost:8001
+docker compose -f compose.dev.yaml --profile rust up -d --build      # Rust   → localhost:8002
+docker compose -f compose.dev.yaml --profile all up -d --build       # 셋 다 함께
 ```
 
-백엔드는 localhost:8000, 개발 MySQL은 127.0.0.1:3306입니다. 핫 리로드는 없습니다. 코드를 바꾸면
-`docker compose -f compose.dev.yaml restart backtest-be`로 다시 컴파일합니다.
-프론트엔드는 backtest-console 저장소의 `compose.dev.yaml`을 실행하면 localhost:5173에서 접속합니다.
-Go 서비스는 콘솔 프록시의 기본 대상 이름(`backtest-be-fast`)을 네트워크 별칭으로 가집니다.
+개발 MySQL은 127.0.0.1:3306이고 세 백엔드가 같이 씁니다. Go·Rust는 핫 리로드가 없어 코드를 바꾸면
+`docker compose -f compose.dev.yaml restart backtest-be-go`(또는 `backtest-be-rust`)로 다시 컴파일합니다.
+Python은 uvicorn `--reload`가 반영합니다.
 
-**빌드·실행·테스트는 모두 Docker로 합니다.** 호스트에 Go를 설치하지 않습니다.
+프론트엔드는 backtest-console 저장소의 `compose.dev.yaml`을 실행하면 localhost:5173에서 접속합니다. 콘솔
+프록시의 기본 대상 이름(`backtest-be-fast`)은 Go 서비스의 네트워크 별칭입니다. 다른 언어로 붙이려면 콘솔의
+`BACKTEST_PROXY_TARGET`을 `http://backtest-be-python:8000` 또는 `http://backtest-be-rust:8000`으로 줍니다.
+Python 원본의 응답은 콘솔 develop 브랜치, Go·Rust는 콘솔 rust-migration 브랜치와 짝입니다.
+
+**빌드·실행·테스트는 모두 Docker로 합니다.** 호스트에 Go·Python·Rust 툴체인을 설치하지 않습니다.
 
 ## 검증
 
 ```bash
 docker build --target test ./backtest_be_go          # gofmt, go vet, staticcheck, go test -race
-bash scripts/test-go-integration.sh                  # 임시 MySQL 통합 테스트
-sh scripts/audit-deps.sh be                          # govulncheck
+docker build --target test ./backtest_be_python      # pytest 단위 + 골든 마스터
+docker build --target test ./backtest_be_rust        # cargo fmt, clippy -D warnings, cargo test
+bash scripts/test-go-integration.sh                  # Go 임시 MySQL 통합 테스트
+sh scripts/audit-deps.sh all                         # govulncheck, pip-audit, cargo-audit
 sh scripts/check-schema-parity.sh                    # schema.sql = goose head (COMMENT까지)
-docker build --target runtime ./backtest_be_go       # distroless 운영 이미지
-docker compose -f compose.go-test.yaml up --build --abort-on-container-exit --exit-code-from e2e
+docker compose -f compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e
+bash scripts/benchmark/run.sh                        # 세 언어 성능 비교(입력은 로컬 .comparison)
 ```
 
 모두 임시 컨테이너만 쓰고 운영 DB를 바꾸지 않습니다. 계산 정확성의 기준은 불변식 테스트(현금 보존,
 체결 인과성, 수수료·손익 항등식)와 손으로 계산한 원장 사례입니다. Python 출력은 회귀 기록일 뿐입니다
-(`backtest_be_go/testdata/README.md`). rust-migration 구현과의 차등 비교는 `scripts/diff-rust-reference.sh`.
+(`backtest_be_go/testdata/README.md`). Rust 구현과의 차등 비교는 `scripts/diff-rust-reference.sh`.
 
 ## GitHub Actions 배포
 

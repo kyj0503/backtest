@@ -20,20 +20,33 @@ Frontend lives in the independent `kyj0503/backtest-console` repository; this re
 
 **라고할때살걸** — Korean trading strategy backtesting platform (SMA, RSI, MACD, Bollinger, EMA, Buy&Hold). Supports portfolios, DCA, cash, rebalancing, multi-currency (USD accounting).
 
-The backend is **Go** (`backtest_be_go/`, chi on net/http, single static binary). It replaced the Python/FastAPI backend on 2026-11-15; the history and the calculation contract are in `docs/go-migration.md`.
+The repository keeps **three implementations of the same API**:
+
+| Folder | Stack | Role |
+|---|---|---|
+| `backtest_be_go/` | Go, chi on net/http | **Deployed backend.** Owns the schema (goose). |
+| `backtest_be_rust/` | Rust, Axum | rust-migration implementation; source of the corrected calculation contract and Go's differential reference. |
+| `backtest_be_python/` | Python, FastAPI, backtesting.py 0.6.6 | Original backend from develop `b7a284f` (formerly `backtest_be_fast`); regression record and comparison. |
+
+Go and Rust follow the corrected contract; Python keeps the pre-fix calculations and response shape. History and the contract: `docs/go-migration.md`. Production deploys only Go (`.github/workflows/cicd.yml`).
 
 ## Commands
 
-**Build, run and test only through Docker.** Do not install Go on the host or run `go` there; use `docker run golang:<pinned>` or the Dockerfile targets.
+**Build, run and test only through Docker.** Do not install Go, Python or Rust toolchains on the host; use the Dockerfile targets or pinned `docker run` images.
 
 ```bash
-docker compose -f compose.dev.yaml up -d --build           # dev stack (go run + MySQL)
-docker compose -f compose.dev.yaml restart backtest-be     # recompile after code changes
+docker compose -f compose.dev.yaml --profile go up -d --build      # Go dev server :8000 (+ MySQL)
+docker compose -f compose.dev.yaml --profile python up -d --build  # Python dev server :8001
+docker compose -f compose.dev.yaml --profile rust up -d --build    # Rust dev server :8002
+docker compose -f compose.dev.yaml restart backtest-be-go          # recompile Go (Rust: backtest-be-rust)
 docker build --target test ./backtest_be_go                # gofmt, vet, staticcheck, go test -race
+docker build --target test ./backtest_be_python            # pytest unit + golden master
+docker build --target test ./backtest_be_rust              # cargo fmt, clippy, cargo test
 bash scripts/test-go-integration.sh                        # MySQL integration tests (go test -tags integration)
-sh scripts/audit-deps.sh be                                # govulncheck
+sh scripts/audit-deps.sh all                               # govulncheck, pip-audit, cargo-audit
 sh scripts/check-schema-parity.sh                          # schema.sql == goose head
-docker compose -f compose.go-test.yaml up --build --abort-on-container-exit --exit-code-from e2e
+docker compose -f compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e   # E2E_BACKEND=go|rust
+bash scripts/benchmark/run.sh                              # 3-language benchmark (inputs stay local)
 ```
 
 ## Architecture
@@ -46,11 +59,13 @@ docker compose -f compose.go-test.yaml up --build --abort-on-container-exit --ex
 - `internal/api`: handlers, pydantic-compatible 422 bodies, reference sections, Turnstile, client IP.
 - `cmd/backtestctl`: `migrate status|up|detect|baseline`, `check-orphans`.
 
-**DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through goose migrations in `backtest_be_go/migrations/` (embedded in both binaries). There are **no physical foreign keys** — cross-table references are logical, integrity is owned by the app (A-10). schema.sql and the goose head must stay identical (COMMENTs included): change both together and run `scripts/check-schema-parity.sh`. Keep `SET NAMES utf8mb4;` at the top of schema.sql (the image's initdb client is latin1). Never edit an already-deployed migration file. Migrations are NOT run by CI or the runtime image; apply them manually with `backtestctl` after a backup. A DB without goose history must be baselined first (`migrate detect` → `migrate baseline <v>` → `migrate up`); `up` refuses to run on such a DB. See `database/README.md`.
+**DB schema:** `database/schema.sql` is the first-boot initdb script; schema changes go through goose migrations in `backtest_be_go/migrations/` (embedded in both binaries). There are **no physical foreign keys** — cross-table references are logical, integrity is owned by the app (A-10). schema.sql and the goose head must stay identical (COMMENTs included): change both together and run `scripts/check-schema-parity.sh`. Keep `SET NAMES utf8mb4;` at the top of schema.sql (the image's initdb client is latin1). Never edit an already-deployed migration file. `backtest_be_python/alembic/` is history only: never run Alembic against a goose-managed DB. Migrations are NOT run by CI or the runtime image; apply them manually with `backtestctl` after a backup. A DB without goose history must be baselined first (`migrate detect` → `migrate baseline <v>` → `migrate up`); `up` refuses to run on such a DB. See `database/README.md`.
 
 **API:** POST `/api/v1/backtest` calculates; four GETs (`/prices`, `/exchange-rates`, `/benchmarks`, `/news`) load reference data on a separate gate. The console disables all POST `include_*` flags, renders the calculation first, then loads/retries each resource. See `docs/architecture/api-boundaries.md`.
 
 ## Critical Constraints
+
+0. **Change the right implementation.** Product changes go to Go. Keep Rust and Python building and passing their own Docker test stages (CI `verify-reference`), but do not port new features to them unless asked. Never "fix" Go to match Python output without checking the fix list.
 
 1. **Calculation contract.** The engine follows the corrected rust-migration contract (F01–F16, R01–R11, S01–S06, T01–T05) plus G01 (`docs/go-migration.md`). The acceptance standard is the invariant/ledger tests, not Python output. Never "fix" a difference by copying Python behaviour without checking the fix list.
 
@@ -88,11 +103,12 @@ docker compose -f compose.go-test.yaml up --build --abort-on-container-exit --ex
 
 - **Verify in Docker** before declaring work complete (commands above). Any failure is a regression, not pre-existing noise.
 - **Go test tags:** default (no DB, no network), `integration` (needs `TEST_MYSQL_ROOT_DSN`; run via `scripts/test-go-integration.sh`), `external` (real Yahoo), `diff` (rust-migration differential, `scripts/diff-rust-reference.sh`).
-- **Baseline (2026-11-15):** unit tests in 11 packages pass with `-race`; integration tests (migrate, marketdata store) pass on MySQL; console E2E (`compose.go-test.yaml`) passes; the engine matches the rust-migration implementation on all 64 parity inputs within ~1e-13 relative.
+- **Baseline (2026-11-15):** Go unit tests (11 packages, `-race`), Go MySQL integration tests, Python 579 unit + 1 golden master, Rust cargo test all pass; console E2E (`compose.e2e.yaml`) passes for Go and Rust; the Go engine matches the Rust implementation on all 64 parity inputs within ~1e-13 relative.
+- **OCI DB dumps stay local** (`.local-db/`, `*.sql.gz` are gitignored). Never commit a production dump.
 
 ## CI
 
-GitHub Actions lives in `.github/workflows/cicd.yml`. PRs to main/develop and pushes to either branch run the Docker test stage, MySQL integration tests, dependency audit, schema parity, and the runtime build. Only main publishes an ARM64 `ghcr.io/kyj0503/backtest` image and deploys its immutable digest through Tailscale and pinned SSH. Runtime credentials stay in `/opt/backtest/production/.env` and are never committed.
+GitHub Actions lives in `.github/workflows/cicd.yml`. PRs to main/develop and pushes to either branch run the Go Docker test stage, MySQL integration tests, dependency audit, schema parity, and the runtime build (`verify`), plus the Python and Rust test/audit/runtime builds (`verify-reference`, not required for publish). Only main publishes an ARM64 `ghcr.io/kyj0503/backtest` image and deploys its immutable digest through Tailscale and pinned SSH. Runtime credentials stay in `/opt/backtest/production/.env` and are never committed.
 
 The dependency audit (`govulncheck`) has no exceptions; do not weaken it. Deployment checks `/health/ready` after Docker liveness succeeds and restores the previous release on failure. CI does not migrate a deployed DB. Shared gateway configuration is managed outside this repository at `/opt/gateway`.
 

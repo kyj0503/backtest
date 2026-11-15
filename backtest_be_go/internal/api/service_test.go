@@ -394,3 +394,13 @@ func TestBodyTooLarge(t *testing.T) {
 	}
 	_ = bytes.MinRead
 }
+
+// 깨진 UTF-8 본문은 Python(Starlette)과 같이 400이다. U+FFFD로 바꿔 계산하지 않는다.
+func TestInvalidUTF8BodyIs400(t *testing.T) {
+	_, h := newTestService(t, nil, testConfig(t))
+	body := "{\"portfolio\":[{\"symbol\":\"\xbf\xb9\xb1\xdd\",\"amount\":1,\"asset_type\":\"cash\"}],\"start_date\":\"2023-01-03\",\"end_date\":\"2023-10-31\"}"
+	rec := post(h, body, nil)
+	if rec.Code != 400 || !strings.Contains(rec.Body.String(), "There was an error parsing the body") {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+}

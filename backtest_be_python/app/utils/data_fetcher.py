@@ -1,0 +1,418 @@
+"""주식 데이터 수집 유틸리티
+
+yfinance API를 사용하여 주가, 환율, 벤치마크 데이터를 수집합니다.
+재시도 로직 및 데이터 검증을 포함합니다.
+"""
+import yfinance as yf
+import pandas as pd
+import numpy as np
+from datetime import datetime, date
+import logging
+
+from app.core.exceptions import DataNotFoundError, InvalidSymbolError, YfinanceRateLimitError
+from app.core.cancellation import check_cancelled
+
+logger = logging.getLogger(__name__)
+
+
+class DataFetcher:
+    """주식 데이터 수집 클래스"""
+
+    def __init__(self):
+        pass
+
+    def fetch_stock_data(
+        self,
+        ticker: str,
+        start_date: date,
+        end_date: date,
+        use_cache: bool = True,
+        cache_hours: int = 24
+    ) -> pd.DataFrame:
+        """
+        주식 데이터를 가져옵니다.
+
+        Args:
+            ticker: 주식 티커 심볼
+            start_date: 시작 날짜
+            end_date: 종료 날짜
+            use_cache: 캐시 사용 여부 (현재 미사용)
+            cache_hours: 캐시 유효 시간 (현재 미사용)
+
+        Returns:
+            OHLCV 데이터프레임
+
+        Raises:
+            DataNotFoundError: 데이터를 찾을 수 없는 경우
+            InvalidSymbolError: 유효하지 않은 티커인 경우
+            YfinanceRateLimitError: API 연결 오류
+        """
+        try:
+            # 초기 설정
+            ticker = ticker.upper()
+            logger.info(f"Yahoo Finance에서 데이터 다운로드: {ticker}")
+
+            # 티커 형식 검증은 네트워크 다운로드 이전에 수행한다 (불필요한 다운로드 방지).
+            self._validate_ticker_symbol(ticker)
+
+            # 날짜를 문자열로 변환 (yfinance 호환성)
+            start_str = start_date.strftime('%Y-%m-%d')
+            end_str = (end_date + pd.Timedelta(days=1)).strftime('%Y-%m-%d')  # 종료일 포함
+
+            # yfinance 객체 생성
+            stock = yf.Ticker(ticker)
+
+            # 데이터 다운로드 (재시도 로직 포함)
+            data = self._fetch_with_retries(stock, ticker, start_str, end_str)
+
+            # 데이터 검증 및 정리
+            data = self._validate_and_clean_data(data, ticker, start_str, end_str)
+
+            return data
+
+        except (DataNotFoundError, InvalidSymbolError) as e:
+            # 사용자 친화적 오류는 그대로 전달
+            logger.warning(f"데이터 수집 실패: {ticker}, {str(e)}")
+            raise
+        except Exception as e:
+            # 기타 오류는 yfinance 관련 오류로 분류
+            error_msg = str(e).lower()
+            if any(keyword in error_msg for keyword in ['timeout', 'connection', 'network', 'rate limit']):
+                raise YfinanceRateLimitError(f"야후 파이낸스 연결 오류: {str(e)}")
+            else:
+                logger.error(f"데이터 수집 예상치 못한 오류: {ticker}, {str(e)}")
+                raise DataNotFoundError(f"'{ticker}' 종목 데이터 수집 실패: {str(e)}")
+
+    def _expand_date_range(self, start_str: str, end_str: str, days: int) -> tuple:
+        """
+        날짜 범위를 앞뒤로 확장합니다.
+
+        Args:
+            start_str: 시작 날짜 (YYYY-MM-DD)
+            end_str: 종료 날짜 (YYYY-MM-DD)
+            days: 확장할 일수
+
+        Returns:
+            (확장된_시작날짜, 확장된_종료날짜) 튜플
+        """
+        s_dt = datetime.strptime(start_str, '%Y-%m-%d') - pd.Timedelta(days=days)
+        e_dt = datetime.strptime(end_str, '%Y-%m-%d') + pd.Timedelta(days=days)
+        return s_dt.strftime('%Y-%m-%d'), e_dt.strftime('%Y-%m-%d')
+
+    def _fetch_with_retries(self, stock: yf.Ticker, ticker: str, start_str: str, end_str: str) -> pd.DataFrame:
+        """
+        재시도 로직을 포함한 데이터 다운로드.
+
+        Args:
+            stock: yfinance Ticker 객체
+            ticker: 티커 심볼
+            start_str: 시작 날짜 (YYYY-MM-DD)
+            end_str: 종료 날짜 (YYYY-MM-DD)
+
+        Returns:
+            다운로드된 DataFrame
+
+        Raises:
+            DataNotFoundError: 모든 재시도 후에도 데이터를 가져오지 못한 경우
+        """
+        data = None
+        error_messages = []
+
+        def _try_download(s_str, e_str, method='history'):
+            nonlocal data
+            # A-05: 다운로드 시도(최대 6회) 사이의 취소 지점. BacktestCancelled는
+            # BaseException이라 아래 except Exception에 잡히지 않는다.
+            check_cancelled()
+            try:
+                if method == 'history':
+                    d = stock.history(start=s_str, end=e_str, auto_adjust=True, prepost=False)
+                else:
+                    d = yf.download(ticker, start=s_str, end=e_str, auto_adjust=True, prepost=False, progress=False, threads=False)
+                if d is not None and not d.empty:
+                    data = d
+                    logger.info(f"{method}로 데이터 수집 성공: {ticker} ({s_str} -> {e_str})")
+                    return True
+            except Exception as e:
+                error_messages.append(f"{method} 실패: {e}")
+                logger.warning(f"{method} 실패: {e}")
+            return False
+
+        # 시도 1: 요청 범위
+        _try_download(start_str, end_str, method='history')
+        if data is None or data.empty:
+            _try_download(start_str, end_str, method='download')
+
+        # 시도 2: 범위 확장 재시도 (+/- 3일)
+        if data is None or data.empty:
+            try:
+                s2, e2 = self._expand_date_range(start_str, end_str, days=3)
+                logger.info(f"데이터가 없음: 범위를 확장해 재시도 (+/-3일): {s2} -> {e2}")
+                _try_download(s2, e2, method='history') or _try_download(s2, e2, method='download')
+            except Exception as e:
+                logger.warning(f"범위 확장 +/-3일 재시도 실패: {e}")
+
+        # 시도 3: 범위 확장 재시도 (+/- 7일)
+        if data is None or data.empty:
+            try:
+                s3, e3 = self._expand_date_range(start_str, end_str, days=7)
+                logger.info(f"데이터가 없음: 범위를 확장해 재시도 (+/-7일): {s3} -> {e3}")
+                _try_download(s3, e3, method='history') or _try_download(s3, e3, method='download')
+            except Exception as e:
+                logger.warning(f"범위 확장 +/-7일 재시도 실패: {e}")
+
+        if data is None or data.empty:
+            error_detail = f"'{ticker}' 종목에 대한 {start_str}부터 {end_str}까지의 데이터를 찾을 수 없습니다."
+            if error_messages:
+                error_detail += f" 오류: {'; '.join(error_messages)}"
+            raise DataNotFoundError(error_detail)
+
+        return data
+
+    def _validate_ticker_symbol(self, ticker: str) -> None:
+        """
+        티커 심볼 형식을 검증한다. 네트워크 다운로드 이전에 호출되어야 한다
+        (불필요한 다운로드를 막기 위해 — 이전에는 _validate_and_clean_data() 안에
+        있어 _fetch_with_retries() 이후, 즉 다운로드 시도 이후에야 검증되었다).
+
+        Args:
+            ticker: 검증할 티커 심볼 (대문자 정규화되어 있다고 가정)
+
+        Raises:
+            InvalidSymbolError: 무효한 티커 형식인 경우
+        """
+        # 알려진 무효/placeholder 티커 목록. 부분 문자열 포함이 아닌 정확한 일치로
+        # 비교한다 — 이전에는 `pattern in ticker.upper()`(부분 문자열 포함) 방식이라
+        # 블록 토큰 'ZZZ'를 부분 문자열로 포함하는 합법적인 실제 티커(예: 캐나다
+        # 토론토 증권거래소 접미사가 붙은 'ZZZ.TO')까지 오차단했다.
+        invalid_tickers = {
+            'INVALID', 'NONEXISTENT', 'NOTFOUND', 'TEST', 'FAKE',
+            'XXX', 'YYY', 'ZZZ'
+        }
+
+        # 숫자로만 구성되거나 무효 목록과 정확히 일치하는 경우 (특수 심볼 허용: ^, =)
+        if (ticker.isdigit() or
+            ticker.upper() in invalid_tickers or
+            len(ticker) > 15):  # 길이 제한 완화
+            raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 좁목 심볼입니다.")
+
+        # 허용된 문자 확인: 영문, 숫자, ^, =, -, .
+        allowed_chars = set('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789^=-.')
+        if not all(c in allowed_chars for c in ticker.upper()):
+            raise InvalidSymbolError(f"'{ticker}'는 유효하지 않은 종목 심볼입니다.")
+
+    def _validate_and_clean_data(self, data: pd.DataFrame, ticker: str, start_str: str, end_str: str) -> pd.DataFrame:
+        """
+        데이터 검증 및 정리.
+
+        Args:
+            data: 원본 DataFrame
+            ticker: 티커 심볼
+            start_str: 시작 날짜 (오류 메시지용)
+            end_str: 종료 날짜 (오류 메시지용)
+
+        Returns:
+            정리된 DataFrame
+
+        Raises:
+            DataNotFoundError: 데이터 검증 실패
+        """
+        # 데이터가 너무 적은 경우 체크
+        if len(data) < 2:
+            raise DataNotFoundError(f"'{ticker}' 종목의 데이터가 부족합니다. ({len(data)}개 레코드)")
+
+        # MultiIndex 컬럼 처리 (yfinance는 때때로 MultiIndex를 반환)
+        logger.info(f"원본 컬럼 구조: {data.columns}, 타입: {type(data.columns)}")
+
+        if isinstance(data.columns, pd.MultiIndex):
+            # MultiIndex인 경우 첫 번째 레벨만 사용
+            data.columns = data.columns.get_level_values(0)
+            logger.info(f"MultiIndex 처리 후 컬럼: {data.columns}")
+
+        # 컬럼 이름 정리 (공백 제거)
+        data.columns = [str(col).replace(' ', '') for col in data.columns]
+        logger.info(f"정리된 컬럼: {data.columns.tolist()}")
+
+        # 필요한 컬럼 확인 및 선택
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        available_columns = data.columns.tolist()
+        missing_columns = [col for col in required_columns if col not in available_columns]
+
+        logger.info(f"필요한 컬럼: {required_columns}")
+        logger.info(f"사용 가능한 컬럼: {available_columns}")
+        logger.info(f"누락된 컬럼: {missing_columns}")
+
+        if missing_columns:
+            logger.warning(f"누락된 컬럼: {missing_columns}")
+            # 누락된 컬럼이 있어도 최소한 Close가 있으면 진행
+            if 'Close' not in available_columns:
+                raise DataNotFoundError(f"'{ticker}' 종목의 필수 데이터 'Close'가 없습니다.")
+
+            # 누락된 컬럼을 Close 값으로 대체
+            for col in missing_columns:
+                if col in ['Open', 'High', 'Low']:
+                    data[col] = data['Close']
+                    logger.info(f"컬럼 '{col}'을 Close 값으로 대체")
+                elif col == 'Volume':
+                    data[col] = 0
+                    logger.info(f"컬럼 '{col}'을 0으로 설정")
+
+        # 컬럼 순서 맞추기
+        data = data[required_columns]
+
+        # NaN 값 및 무한대 값 처리 (최적화: 체이닝으로 단일 패스)
+        data = data.replace([np.inf, -np.inf], np.nan).dropna()
+
+        if data.empty:
+            raise DataNotFoundError(f"'{ticker}' 종목의 유효한 데이터가 없습니다.")
+
+        # 날짜 범위 확인
+        if len(data) < 5:
+            logger.warning(f"데이터가 적습니다: {ticker}, {len(data)} 레코드")
+
+        logger.info(f"데이터 수집 완료: {ticker}, {len(data)} 레코드")
+        return data
+
+    def validate_ticker(self, ticker: str) -> bool:
+        """
+        티커 유효성 검증
+        
+        Args:
+            ticker: 검증할 티커
+            
+        Returns:
+            유효성 여부
+        """
+        try:
+            ticker = ticker.upper()
+            stock = yf.Ticker(ticker)
+            
+            # 기본 정보 조회 시도
+            info = stock.info
+            
+            # 최소한의 유효성 확인
+            if info and (
+                'regularMarketPrice' in info or 
+                'previousClose' in info or
+                'currentPrice' in info or
+                len(info) > 5  # 기본적인 정보가 있는지 확인
+            ):
+                return True
+                
+            # 정보가 부족하면 실제 데이터 조회 시도
+            hist = stock.history(period="5d")
+            return not hist.empty
+            
+        except Exception as e:
+            logger.error(f"티커 검증 실패: {ticker}, {e}")
+            return False
+    
+    def get_last_split_date(self, ticker: str) -> date | None:
+        """
+        주식의 최근 분할/병합 날짜 조회
+
+        Args:
+            ticker: 티커 심볼
+
+        Returns:
+            최근 분할 날짜 (date 객체) 또는 None (분할 이력이 없는 경우)
+        """
+        try:
+            ticker = ticker.upper()
+            stock = yf.Ticker(ticker)
+
+            # 주식 분할 정보 조회 (Series 형태로 반환: date -> split_ratio)
+            splits = stock.splits
+
+            if splits is None or splits.empty:
+                logger.debug(f"{ticker}: 주식 분할 이력 없음")
+                return None
+
+            # 최근 분할 날짜 추출 (인덱스의 마지막 날짜)
+            last_split_timestamp = splits.index[-1]
+
+            # Timestamp를 date로 변환
+            if hasattr(last_split_timestamp, 'date'):
+                last_split_date = last_split_timestamp.date()
+            else:
+                # pandas Timestamp가 아닌 경우 처리
+                last_split_date = pd.to_datetime(last_split_timestamp).date()
+
+            logger.info(f"{ticker}: 최근 분할 날짜 = {last_split_date} (비율: {splits.iloc[-1]})")
+            return last_split_date
+
+        except Exception as e:
+            logger.error(f"{ticker} 분할 정보 조회 실패: {str(e)}")
+            return None
+
+    def fetch_ticker_info(self, ticker: str) -> dict:
+        """
+        티커 정보 조회 (분할 정보 포함)
+
+        Args:
+            ticker: 티커 심볼
+
+        Returns:
+            티커 정보 딕셔너리 (상장일 및 분할 정보 포함)
+        """
+        try:
+            ticker = ticker.upper()
+            stock = yf.Ticker(ticker)
+            info = stock.info
+
+            # 상장일 추출 (firstTradeDateMilliseconds - 밀리초 단위)
+            first_trade_date = None
+            first_trade_millis = info.get('firstTradeDateMilliseconds')
+            if first_trade_millis:
+                try:
+                    # 밀리초를 초로 변환
+                    first_trade_date = datetime.fromtimestamp(first_trade_millis / 1000).strftime('%Y-%m-%d')
+                except Exception as e:
+                    logger.warning(f"상장일 변환 실패: {ticker}, {e}")
+
+            # 분할 정보 추출
+            last_split_date = None
+            last_split_ratio = None
+            try:
+                splits = stock.splits
+                if splits is not None and not splits.empty:
+                    last_split_timestamp = splits.index[-1]
+                    last_split_date = pd.to_datetime(last_split_timestamp).date()
+                    last_split_ratio = float(splits.iloc[-1])
+                    logger.info(f"{ticker}: 분할 정보 조회 - 날짜: {last_split_date}, 비율: {last_split_ratio}")
+            except Exception as e:
+                logger.warning(f"{ticker}: 분할 정보 조회 실패 - {e}")
+
+            # 기본 정보 추출
+            result = {
+                'symbol': ticker,
+                'company_name': info.get('longName', info.get('shortName', ticker)),
+                'sector': info.get('sector', 'Unknown'),
+                'industry': info.get('industry', 'Unknown'),
+                'market_cap': info.get('marketCap', None),
+                'current_price': info.get('regularMarketPrice', info.get('previousClose', None)),
+                'currency': info.get('currency'),
+                'exchange': info.get('exchange', 'Unknown'),
+                'country': info.get('country', 'Unknown'),
+                'first_trade_date': first_trade_date,
+                'last_split_date': last_split_date.isoformat() if last_split_date else None,
+                'last_split_ratio': last_split_ratio
+            }
+
+            return result
+
+        except Exception as e:
+            logger.error(f"티커 정보 조회 실패: {ticker}, {str(e)}")
+            return {
+                'symbol': ticker,
+                'error': str(e),
+                'company_name': ticker,
+                'sector': 'Unknown',
+                'industry': 'Unknown',
+                'first_trade_date': None,
+                'last_split_date': None,
+                'last_split_ratio': None
+            }
+
+
+# 글로벌 인스턴스
+data_fetcher = DataFetcher() 

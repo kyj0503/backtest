@@ -1,0 +1,31 @@
+; coverage.py 설정 (P3-03)
+;
+; 이전에는 pytest.ini의 [coverage:run] / [coverage:report] 섹션에 있었다.
+; coverage.py는 그 위치를 읽지 않는다 -- .coveragerc / setup.cfg([coverage:*])
+; / pyproject.toml([tool.coverage.*])만 읽으며, 이 저장소에는 그중 setup.cfg와
+; pyproject.toml이 아예 없었다. 즉 두 섹션은 지금까지 한 번도 적용된 적이
+; 없는 죽은 설정이었다 (현재 CI/Dockerfile의 test 스테이지도 --cov 없이
+; `pytest tests/unit -q`만 실행하므로 이 설정이 없어도 지금까지는 조용히
+; 무해했다). 실제로 `--cov`를 사용하게 될 때를 대비해 읽히는 위치로 옮긴다.
+
+[run]
+source = app
+omit =
+    */tests/*
+    */test_*.py
+    */__pycache__/*
+    */site-packages/*
+    */__init__.py
+
+[report]
+precision = 2
+show_missing = True
+skip_covered = False
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod

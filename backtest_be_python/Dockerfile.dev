@@ -1,0 +1,48 @@
+# Development Dockerfile for Backend
+FROM python:3.15-slim-trixie
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    curl \
+    python3-venv \
+    python3-dev \
+    libssl-dev \
+    libffi-dev \
+    cargo \
+    rustc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Setup virtual environment
+ENV VENV_DIR=/opt/venv
+RUN python3 -m venv ${VENV_DIR}
+ENV PATH="${VENV_DIR}/bin:$PATH"
+
+# Install dependencies layer (cached)
+# P2-22: 이미지 빌드 시점에는 완전 고정된 락 파일을 설치해 재현성을 보장한다.
+# (compose.dev.yaml의 command는 컨테이너 기동 시 requirements.lock.txt를 다시
+# pip install해 바인드 마운트된 소스와 venv 볼륨을 동기화한다 — 사람이 편집하는
+# requirements.txt 자체는 여기서 설치에 쓰이지 않지만 bind mount로 계속
+# 컨테이너 안에 존재하며, 락 재생성 시 입력으로 쓰인다.)
+COPY requirements.lock.txt .
+COPY requirements-test.lock.txt .
+RUN pip install -r requirements.lock.txt
+RUN pip install -r requirements-test.lock.txt
+
+# NOTE: We do NOT COPY app code here because it is bind-mounted in docker-compose.dev.yaml.
+# This prevents cache invalidation when source code changes.
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+ENTRYPOINT ["/entrypoint.sh"]
+# Command is overridden in compose.dev.yaml, but default here for reference
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

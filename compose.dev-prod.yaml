@@ -1,50 +1,64 @@
 name: backtest-dev-prod
 
-# 실제 운영 이미지(backtest_be_go/Dockerfile의 runtime 스테이지)를 로컬에서 검증한다.
+# 언어별 운영(runtime) 이미지를 로컬에서 검증한다. 소스 바인드 마운트가 없으므로 코드를 바꿨다면
+# `--build`로 다시 빌드해야 반영된다. 언어는 프로필로 고른다:
 #
-# 소스 바인드 마운트가 없다. 운영과 같은 정적 바이너리·distroless 이미지를 그대로 실행하므로, 코드를
-# 바꿨다면 `docker compose -f compose.dev-prod.yaml build backtest-be`로 다시 빌드해야 반영된다.
+#   docker compose -f compose.dev-prod.yaml --profile go up -d --build        # 127.0.0.1:9000
+#   docker compose -f compose.dev-prod.yaml --profile python up -d --build    # 127.0.0.1:9001
+#   docker compose -f compose.dev-prod.yaml --profile rust up -d --build      # 127.0.0.1:9002
+#   docker compose -f compose.dev-prod.yaml --profile all up -d --build
 #
-# MySQL 서비스가 없다. compose.dev.yaml의 mysql이 먼저 떠 있어야 하고, 두 파일이 같은 외부 네트워크
-# "backtest-network"를 공유해 서비스 이름 mysql로 접속한다. 개발 API(compose.dev.yaml의 backtest-be)와
-# 포트가 겹치므로 그쪽을 먼저 멈춘다:
-#   docker compose -f compose.dev.yaml stop backtest-be
-#   docker compose -f compose.dev-prod.yaml up -d --build
+# MySQL 서비스가 없다. compose.dev.yaml의 mysql이 먼저 떠 있어야 하고(같은 외부 네트워크
+# backtest-network에서 서비스 이름 mysql로 접속), 개발 서버(8000~8002)와 포트가 겹치지 않는다.
 # 보관할 DB가 있는 볼륨에 `down -v`를 실행하지 않는다.
 #
-# 프론트엔드는 별도 저장소(backtest-console)에 있다. 콘솔의 Vite 프록시 기본 대상
-# http://backtest-be-fast:8000 을 그대로 쓰도록 같은 네트워크 별칭을 둔다.
+# 운영에 배포되는 것은 Go 이미지다(.github/workflows/cicd.yml). Python·Rust 이미지는 비교·검증용이다.
+
+x-runtime: &runtime
+  networks: [backtest-net]
+  env_file: [.env]
+  restart: unless-stopped
+  deploy:
+    resources:
+      limits: {cpus: "2", memory: 2G}
+      reservations: {cpus: "0.5", memory: 128M}
 
 services:
-  backtest-be:
-    build:
-      context: ./backtest_be_go
-      target: runtime
+  backtest-be-go-prod:
+    <<: *runtime
+    profiles: [go, all]
+    build: {context: ./backtest_be_go, target: runtime}
     image: backtest-be-go:dev-prod
-    container_name: backtest-be-dev-prod
-    networks:
-      backtest-net:
-        aliases:
-          - backtest-be-fast
-    ports:
-      - "127.0.0.1:8000:8000"
-    env_file:
-      - .env
+    container_name: backtest-be-go-dev-prod
+    ports: ["127.0.0.1:9000:8000"]
     environment:
       - DEBUG=false
-      - MAX_CONCURRENT_BACKTESTS=${MAX_CONCURRENT_BACKTESTS:-8}
-      - BACKTEST_TIMEOUT_SECONDS=${BACKTEST_TIMEOUT_SECONDS:-60}
-      - BACKTEST_QUEUE_TIMEOUT_SECONDS=${BACKTEST_QUEUE_TIMEOUT_SECONDS:-30}
-      - MAX_CONCURRENT_BACKTESTS_PER_CLIENT=${MAX_CONCURRENT_BACKTESTS_PER_CLIENT:-2}
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
-          memory: 128M
+      - TURNSTILE_ENABLED=${TURNSTILE_ENABLED:-false}
+
+  backtest-be-python-prod:
+    <<: *runtime
+    profiles: [python, all]
+    build: {context: ./backtest_be_python, target: runtime}
+    image: backtest-be-python:dev-prod
+    container_name: backtest-be-python-dev-prod
+    ports: ["127.0.0.1:9001:8000"]
+    environment:
+      - DEBUG=false
+      - TURNSTILE_ENABLED=${TURNSTILE_ENABLED:-false}
+      - DATABASE_URL=mysql+pymysql://${DATABASE_USER:-appuser}:${DATABASE_PASSWORD:-appuser123}@mysql:3306/stock_data_cache?charset=utf8mb4
+    # 운영 Python 이미지는 uvicorn 다중 워커로 돌았다(파일 슬롯이 워커 간 상한을 공유한다).
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+
+  backtest-be-rust-prod:
+    <<: *runtime
+    profiles: [rust, all]
+    build: {context: ./backtest_be_rust, target: runtime}
+    image: backtest-be-rust:dev-prod
+    container_name: backtest-be-rust-dev-prod
+    ports: ["127.0.0.1:9002:8000"]
+    environment:
+      - DEBUG=false
+      - TURNSTILE_ENABLED=${TURNSTILE_ENABLED:-false}
 
 networks:
   backtest-net:

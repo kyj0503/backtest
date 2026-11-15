@@ -25,3 +25,13 @@ node_modules/
 
 # 운영 DB 덤프(로컬 검증용 복사본). 커밋하지 않는다.
 /.local-db/
+
+# 운영 DB 덤프와 로컬 DB 파일은 커밋하지 않는다(로컬 검증용).
+*.sql.gz
+*.dump
+*.dump.gz
+
+# Python·Rust 로컬 산출물
+.pytest_cache/
+.venv/
+/backtest_be_rust/target/

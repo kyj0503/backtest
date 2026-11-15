@@ -1,0 +1,699 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "라고할때살걸",
+    "description": "FastAPI server for backtesting.py library",
+    "version": "1.7.10"
+  },
+  "paths": {
+    "/api/v1/backtest": {
+      "post": {
+        "tags": [
+          "백테스팅"
+        ],
+        "summary": "포트폴리오 백테스트 실행",
+        "description": "포트폴리오 백테스트 실행 및 관련 데이터 반환",
+        "operationId": "run_portfolio_backtest_api_v1_backtest_post",
+        "parameters": [
+          {
+            "name": "X-Turnstile-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Turnstile single-use token for the backtest action",
+              "title": "X-Turnstile-Token"
+            },
+            "description": "Turnstile single-use token for the backtest action"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortfolioBacktestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "403": {
+            "description": "사람 인증 누락·실패·만료 또는 토큰 재사용 — 계산을 시작하지 않음"
+          },
+          "429": {
+            "description": "같은 클라이언트(IP)의 동시 실행 상한 초과 — 대기 없이 즉시 거부"
+          },
+          "503": {
+            "description": "사람 인증 검증 불가 또는 동시 실행 슬롯 대기 시간 초과 — 작업을 시작하지 않음"
+          },
+          "504": {
+            "description": "실행 시간 초과 — 작업에 취소 신호를 보냄"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/prices": {
+      "get": {
+        "tags": [
+          "시장 데이터"
+        ],
+        "summary": "종목 정보·주가·급등락 이벤트 조회",
+        "operationId": "get_prices_api_v1_prices_get",
+        "parameters": [
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 20,
+              "title": "Symbols"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exchange-rates": {
+      "get": {
+        "tags": [
+          "시장 데이터"
+        ],
+        "summary": "기간별 원달러 환율·통계 조회",
+        "operationId": "get_exchange_rates_api_v1_exchange_rates_get",
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/benchmarks": {
+      "get": {
+        "tags": [
+          "시장 데이터"
+        ],
+        "summary": "기간별 S&P 500·NASDAQ 조회",
+        "operationId": "get_benchmarks_api_v1_benchmarks_get",
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/news": {
+      "get": {
+        "tags": [
+          "시장 데이터"
+        ],
+        "summary": "종목별 최신 뉴스 조회 — 백테스트 기간과 무관",
+        "operationId": "get_news_api_v1_news_get",
+        "parameters": [
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 20,
+              "title": "Symbols"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "default": 15,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "시스템"
+        ],
+        "summary": "Health Check",
+        "description": "liveness: 프로세스가 살아서 요청을 받는지만 확인한다.\n\nDB·외부 API를 보지 않는다(A-07). 재시작으로 고쳐지지 않는 의존성 장애를\n여기 넣으면 DB가 내려갔을 때 멀쩡한 앱까지 재시작 대상이 된다. 의존성까지\n포함한 \"요청을 처리할 수 있는가\"는 /health/ready가 담당한다.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "시스템"
+        ],
+        "summary": "Readiness Check",
+        "description": "readiness: MySQL에 제한 시간(readiness_db_timeout_seconds) 안에 `SELECT 1`.\n\n실패·시간 초과면 같은 형식의 본문으로 503을 반환한다. 외부 Yahoo/Naver API는\n조건에 넣지 않는다 — 외부 장애가 배포 실패로 번지지 않도록(A-07).",
+        "operationId": "readiness_check_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "의존성 준비 안 됨",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "서버 상태"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "체크 시간"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "API 버전"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "timestamp",
+          "version"
+        ],
+        "title": "HealthResponse",
+        "description": "헬스체크 응답 모델",
+        "example": {
+          "status": "healthy",
+          "timestamp": "2024-01-15T10:30:00",
+          "version": "1.0.0"
+        }
+      },
+      "PortfolioBacktestRequest": {
+        "properties": {
+          "portfolio": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioStock"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Portfolio",
+            "description": "포트폴리오 구성"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date",
+            "description": "시작 날짜 (YYYY-MM-DD)"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date",
+            "description": "종료 날짜 (YYYY-MM-DD). 종료일 - 시작일이 최소 30일이어야 하며 미달 시 422 (연환산 지표인 CAGR·샤프 지수 등은 그보다 짧은 기간에서 의미가 없다. 검증은 엔드포인트에서 한다)"
+          },
+          "commission": {
+            "type": "number",
+            "exclusiveMaximum": 0.1,
+            "minimum": 0.0,
+            "title": "Commission",
+            "description": "수수료율 (0 ~ 0.1)",
+            "default": 0.002
+          },
+          "rebalance_frequency": {
+            "type": "string",
+            "title": "Rebalance Frequency",
+            "description": "리밸런싱 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12, none)",
+            "default": "monthly_1"
+          },
+          "strategy": {
+            "type": "string",
+            "title": "Strategy",
+            "description": "전략명",
+            "default": "buy_hold_strategy"
+          },
+          "strategy_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy Params",
+            "description": "전략 파라미터"
+          },
+          "include_stock_data": {
+            "type": "boolean",
+            "title": "Include Stock Data",
+            "description": "종목별 원본 주가(stock_data) 포함",
+            "default": true
+          },
+          "include_volatility_events": {
+            "type": "boolean",
+            "title": "Include Volatility Events",
+            "description": "종목별 급등락 이벤트(volatility_events) 포함",
+            "default": true
+          },
+          "include_exchange_rates": {
+            "type": "boolean",
+            "title": "Include Exchange Rates",
+            "description": "원달러 환율(exchange_rates, exchange_stats) 포함",
+            "default": true
+          },
+          "include_benchmarks": {
+            "type": "boolean",
+            "title": "Include Benchmarks",
+            "description": "S&P 500/NASDAQ 지수(sp500_benchmark, nasdaq_benchmark)와 portfolio_statistics의 sp500_total_return_pct/alpha_vs_sp500_pct 포함",
+            "default": true
+          },
+          "include_news": {
+            "type": "boolean",
+            "title": "Include News",
+            "description": "종목별 최신 뉴스(latest_news) 포함",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "portfolio",
+          "start_date",
+          "end_date"
+        ],
+        "title": "PortfolioBacktestRequest",
+        "description": "포트폴리오 백테스트 요청 모델"
+      },
+      "PortfolioStock": {
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "maxLength": 10,
+            "minLength": 1,
+            "title": "Symbol",
+            "description": "주식 심볼"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "투자 금액 (> 0, weight와 동시 입력 불가)"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight",
+            "description": "비중(%) (0~100, amount와 동시 입력 불가, 소수점 허용)"
+          },
+          "investment_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investment Type",
+            "description": "투자 방식 (lump_sum, dca)",
+            "default": "lump_sum"
+          },
+          "dca_frequency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dca Frequency",
+            "description": "DCA 주기 (weekly_1, weekly_2, monthly_1, monthly_2, monthly_3, monthly_6, monthly_12)",
+            "default": "monthly_1"
+          },
+          "asset_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Type",
+            "description": "자산 타입 (stock, cash)",
+            "default": "stock"
+          },
+          "custom_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Name",
+            "description": "현금 자산의 커스텀 이름"
+          },
+          "total_amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1000000000000.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional exact total USD contribution budget with amount. DCA installments use cents; final installment settles remainder. Mutually exclusive with weight."
+          }
+        },
+        "type": "object",
+        "required": [
+          "symbol"
+        ],
+        "title": "PortfolioStock",
+        "description": "포트폴리오 종목 모델"
+      },
+      "ReadinessResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "ready / not_ready"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp",
+            "description": "체크 시간"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "API 버전"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Checks",
+            "description": "의존성별 결과 (database: ok / timeout / unavailable)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "timestamp",
+          "version",
+          "checks"
+        ],
+        "title": "ReadinessResponse",
+        "description": "readiness 응답 모델 (A-07). 준비 안 됨이면 같은 형식으로 503을 반환한다.",
+        "example": {
+          "checks": {
+            "database": "ok"
+          },
+          "status": "ready",
+          "timestamp": "2024-01-15T10:30:00",
+          "version": "1.0.0"
+        }
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
