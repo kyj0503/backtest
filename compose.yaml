@@ -19,7 +19,8 @@ services:
     volumes:
       - /opt/backtest/production/tls:/app/tls:ro
     healthcheck:
-      test: [CMD, curl, -fsS, 'http://localhost:8000/health']
+      # distroless 런타임에는 curl이 없다. 서버 바이너리가 직접 조회한다.
+      test: [CMD, /app/server, -healthcheck, /health]
       interval: 10s
       timeout: 5s
       start_period: 20s

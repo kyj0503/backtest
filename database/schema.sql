@@ -2,11 +2,13 @@
 -- yfinance 데이터 캐싱 및 뉴스 데이터 저장을 위한 데이터베이스 및 테이블 생성 DDL
 -- 대상 DBMS: MySQL 8.4 (8.0+ 문법)
 --
--- 스키마 변경은 이 파일과 Alembic 새 리비전(backtest_be_fast/alembic/versions/)을
--- 함께 고친다. 두 경로(빈 DB에 이 파일로 initdb / `alembic upgrade head`)의
+-- 스키마 변경은 이 파일과 goose 새 마이그레이션(backtest_be_go/migrations/)을
+-- 함께 고친다. 두 경로(빈 DB에 이 파일로 initdb / `backtestctl migrate up`)의
 -- 최종 스키마는 COMMENT까지 같아야 하며, scripts/check-schema-parity.sh로
--- 확인한다 (A-11). 컬럼 설명은 `--` 주석이 아니라 COMMENT 절로 적는다 —
--- Alembic 리비전이 같은 문구를 COMMENT로 만들기 때문이다.
+-- 확인한다 (A-11). 이 파일로 만든 DB에는 goose 기록이 없으므로 `backtestctl migrate
+-- baseline <head 버전>`으로 기록한다(`migrate detect`가 버전을 알려 준다).
+-- 컬럼 설명은 `--` 주석이 아니라 COMMENT 절로 적는다 —
+-- 마이그레이션이 같은 문구를 COMMENT로 만들기 때문이다.
 -- =================================================================
 
 -- 0. 클라이언트 문자셋 고정 (A-11)
@@ -79,16 +81,16 @@ CREATE TABLE stocks (
 -- - 삭제: stocks 행을 지우는 경로는 없다. 일봉은 명시적 DELETE로만 지운다
 --   (manage_stock_splits.py의 분할 재수집). stocks 삭제 기능을 추가한다면
 --   같은 트랜잭션에서 daily_prices를 먼저 지울 것
--- - 고아 점검: backtest_be_fast/scripts/check_orphan_prices.py
+-- - 고아 점검: `backtestctl check-orphans`
 -- stock_news와 같은 방침이다 (아래 stock_news 주석 참고).
 CREATE TABLE daily_prices (
     stock_id INT NOT NULL COMMENT 'stocks.id 논리 참조 (물리 FK 없음)',
     date DATE NOT NULL COMMENT '날짜',
-    open DECIMAL(19, 4) NOT NULL COMMENT '시가',
-    high DECIMAL(19, 4) NOT NULL COMMENT '고가',
-    low DECIMAL(19, 4) NOT NULL COMMENT '저가',
-    close DECIMAL(19, 4) NOT NULL COMMENT '종가',
-    adj_close DECIMAL(19, 4) COMMENT '수정 종가',
+    open DECIMAL(38, 18) NOT NULL COMMENT '시가',
+    high DECIMAL(38, 18) NOT NULL COMMENT '고가',
+    low DECIMAL(38, 18) NOT NULL COMMENT '저가',
+    close DECIMAL(38, 18) NOT NULL COMMENT '종가',
+    adj_close DECIMAL(38, 18) COMMENT '수정 종가',
     volume BIGINT UNSIGNED DEFAULT 0 COMMENT '거래량 (음수 없음)',
     data_quality ENUM('good', 'estimated', 'suspicious') DEFAULT 'good' COMMENT '데이터 품질',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

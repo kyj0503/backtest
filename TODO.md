@@ -19,48 +19,60 @@
 > 아래 항목은 배치9 작업 중 에이전트들이 **새로 발견한 것**과 저장소 밖 후속 작업이다.
 > 번호는 A-21부터 이어 붙인다.
 
+> **2026-11-15 Go 전환**: 백엔드가 Go(`backtest_be_go`)로 바뀌었다(docs/go-migration.md). Python 파일을
+> 가리키던 항목은 Go 위치로 고쳐 적었고, Go에서 해소된 A-21·A-25·A-27·A-37은 HISTORY.md로 옮겼다.
+> 전환 후속 작업은 G-01부터 번호를 붙인다.
+
 ## 작업 현황
 
 | 우선순위 | 남은 항목 | 내용 |
 |---|---:|---|
 | **P0** | 0 | — |
-| **P1** | 0 | — |
-| **P2** | 3 | A-21, A-24, A-25 — 계산 불가 지표, 응답 형태 통일, 부가 수집 성능 |
-| **P3** | 9 | A-26~A-32, A-35, A-37 — 응답 크기, 스레드 풀 계측, 거부 사유 지표, FE/BE 상수 동기화, 특성화 테스트가 고정한 동작 판단, 모드 판정 통일, 정리 3건 |
-| 저장소 밖 | 5 | 공통 게이트웨이 권고 묶음, 운영 MySQL 확인, 운영 DB 마이그레이션, 운영 상한 재조정, 운영 지표 확인 |
-| **합계** | **17** | |
+| **P1** | 3 | G-01~G-03 — 운영 DB 덤프 리허설·전환, 콘솔 계약 브랜치 배포, 운영 외부 연동 확인 |
+| **P2** | 2 | A-24, G-04 — 응답 형태 통일, Python 시절 테이블 정리 |
+| **P3** | 7 | A-26, A-28~A-32, A-35 — 응답 크기, 거부 사유 지표, FE/BE 상수 동기화, 특성화 테스트 판단, 정리, COMMENT, 모드 판정 |
+| 저장소 밖 | 4 | 공통 게이트웨이 권고 묶음, 운영 MySQL 확인, 운영 상한 재조정, 운영 지표 확인 |
+| **합계** | **16** | |
 
 ## 권장 처리 순서
 
-1. **저장소 밖 2** — 공통 게이트웨이 방어와 운영 지표. 배포 태그는 Actions digest 배포로 대체했다(HISTORY.md 2026-10-09).
-2. **A-21** — 사용자에게 나가는 지표의 정확성.
-3. **A-24** — 응답 형태 통일. FE 타입 불일치를 함께 정리한다.
-4. **A-25, A-26, A-27** — 부가 수집 성능·크기. 저장소 밖 6(운영 지표)으로 실측한 뒤 결정.
-5. 나머지 P3.
+1. **G-01 → G-02 → G-03** — 운영 전환. 리허설 결과로 00002 소요 시간을 보고 시간대를 정한다.
+2. **저장소 밖 2, 6** — 공통 게이트웨이 방어와 운영 지표(전환 후 Go 지표로 실측).
+3. **A-24** — 응답 형태 통일. 콘솔 타입과 함께.
+4. 나머지.
 
 ---
 
-## 검증 기준선 (2026-09-27 실측, 배치9 통합 후)
+## 검증 기준선 (2026-11-15, Go 전환 후)
 
 | 항목 | 결과 |
 |---|---|
-| BE 단위 테스트 | AGENTS.md Testing 절의 `Current baseline` 참고 |
-| BE e2e (골든 마스터) | 통과 — `pytest tests/e2e -m e2e` (네트워크·DB 불필요) |
-| FE 테스트 | AGENTS.md `Current baseline` 참고 |
-| FE 정적 검증 | ESLint(경고 0) · type-check · type-check:test 통과 |
-| 의존성 감사 | FE 예외 없이 통과, BE는 bokeh 1건 예외로 통과 |
-| 스키마 정합성 | `scripts/check-schema-parity.sh` 통과(initdb 경로 = Alembic head, COMMENT까지) |
+| BE 단위 테스트 | `docker build --target test ./backtest_be_go` 통과(11개 패키지, -race, staticcheck) |
+| BE 통합 테스트 | `bash scripts/test-go-integration.sh` 통과(migrate, 시세 캐시) |
+| E2E | `compose.go-test.yaml` 통과(콘솔 rust-migration 계약 스펙) |
+| 의존성 감사 | govulncheck 예외 없이 통과 |
+| 스키마 정합성 | `scripts/check-schema-parity.sh` 통과(initdb = goose head, COMMENT까지) |
 
 ---
 
+## P1
+
+- [ ] **G-01 [db/infra]** 운영 DB 덤프로 전환 리허설 후 운영 적용 — OCI 서버에서 `scripts/load-devdb.sh`
+  머리말의 `mysqldump`로 덤프를 떠 로컬 복사본에 적재하고 `detect → baseline 1 → up`, 실데이터 계산,
+  00002 소요 시간을 확인한다. 그다음 운영 백업 → `backtestctl migrate baseline 1` → `up`
+  (docs/go-migration.md "운영 전환 절차"). 합성 덤프와 로컬 dev DB로만 리허설했다.
+- [ ] **G-02 [fe/infra]** 콘솔 계약 브랜치 배포 — Go API는 rust 계약(`asset_id`, `Time_Weighted_Return`,
+  `calculation_assumptions`, `total_amount` 입력 등)을 따른다. backtest-console rust-migration 브랜치(F03 30일
+  근사, F12 주간 버킷, F13 매수·매도 마커, F16 CSV 따옴표 수정 포함)를 develop·main으로 올려 백엔드와 같은 때
+  배포한다. develop 콘솔은 새 필드를 모른다.
+- [ ] **G-03 [infra]** 운영 외부 연동 확인 — OCI 관리형 MySQL TLS(`DATABASE_SSL_CA`, 호스트명 검사 끔) 실접속,
+  Turnstile 실토큰, 유효한 네이버 키(개발 `.env` 키는 401), ARM64 이미지 실행. 배포 직후 `/health/ready`,
+  `backtest_supplemental_outcome_total`, G01 경고 로그를 본다.
+
 ## P2
 
-- [ ] **A-21 [be]** 단일 종목 결과의 나머지 NaN → 0.0 폴백 〔배치9 be-followups〕
-
-  `backtest_engine._convert_result_to_response`의 `win_rate_pct`·`sharpe`·`sortino`·`calmar`·
-  `avg/best/worst_trade`가 계산 불가일 때 `safe_float` 기본값 0.0이 된다. 응답의
-  `strategy_details`로 나간다. `profit_factor`는 배치9에서 `optional_finite_float`로 None 처리했으니
-  같은 방식으로 맞춘다. FE 타입(`StrategyStats`)도 null 허용으로.
+- [ ] **G-04 [db]** Python 시절 테이블 정리 — 운영 전환이 안정되면 `alembic_version` 테이블을 지운다
+  (`schema.sql`과 goose에는 없다). 새 goose 파일 없이 수동 DROP으로 한다(이력 테이블일 뿐이다).
 
 - [ ] **A-24 [be/fe]** 응답 형태가 경로마다 다름 〔배치9 fe-followups〕
 
@@ -72,22 +84,18 @@
   이중 캐스팅을 제거했다. 계산/참고 조회 분리는 HISTORY의 A-38. 위 항목 중 남은
   작업은 서버의 종목별 항목 키·필드 의미를 일관되게 정하는 것이다.
 
-- [ ] **A-25 [be]** 뉴스 수집이 종목별로 순차 실행 〔배치9 api〕
-
-  종목당 10초 타임아웃, 20종목이면 최악 200초. 응답은 부가 수집 예산(15초)으로 막히고 남은 스레드는
-  하위 취소 토큰으로 다음 확인 지점에서 멈추지만, 그 전까지 뉴스 외부 호출이 순차로 이어진다.
-  병렬화 + 상한. 네이버 키가 있는 환경에서 실측 선행(배치9에서는 키가 없어 실측 못 함).
+  2026-11-15(Go): 키는 두 경로 모두 `asset_id`로 통일됐다. 필드 구성은 아직 다르다 —
+  `internal/engine/response.go`의 `HoldingReturn`(buy&hold: 시작·끝 가격, 적립 회차)과
+  `StrategyReturn`(전략: 초기·최종 평가액, 승률).
 
 ## P3
 
-- [ ] **A-26 [be/fe]** 벤치마크 응답을 주말까지 날짜별로 채움 — `fill_missing_dates` 때문에 5년 기준 두 지수 합쳐 약 264KiB. 거래일만 보내거나 FE에서 맞춘다.
-- [ ] **A-27 [be]** `collect_all_unified_data`의 스레드 풀 겹침 — 바깥 풀(5)과 가격 조회용 안쪽 풀(최대 5)이 겹쳐 한 요청이 프로세스당 DB 풀(4+2=6)보다 많은 스레드로 조회할 수 있다. `backtest_stage_duration_seconds`로 실제 풀 대기가 있는지 먼저 확인.
-- [ ] **A-28 [be]** 백테스트 거부 사유별 카운터 — 429/503/504/499가 지금은 경고 로그뿐. 실행 중·대기 중 게이지(`backtest_jobs_running`/`waiting`)는 배치9에서 추가됨.
-- [ ] **A-29 [be/fe]** 최소 기간 30일이 BE 설정(`min_backtest_period_days`)과 FE 상수(`VALIDATION_RULES.MIN_BACKTEST_PERIOD_DAYS`) 두 곳에 있다. 설정 노출 API나 빌드 시 주입으로 한 곳에서 관리할지 검토.
+- [ ] **A-26 [be/fe]** 벤치마크 응답을 주말까지 날짜별로 채움 — `internal/api/reference.go`의 `benchmark`가 요청 기간의 모든 달력일을 채운다(5년 기준 두 지수 합쳐 약 264KiB). 포트폴리오도 달력일 평가라 지금은 맞물리지만, 크기가 문제면 거래일만 보내고 FE에서 맞춘다.
+- [ ] **A-28 [be]** 백테스트 거부 사유별 카운터 — 429/503/504/499가 지금은 로그뿐(`internal/api/backtest.go`의 `writeErr`). 실행 중·대기 중 게이지(`backtest_jobs_running`/`waiting`)는 있다.
+- [ ] **A-29 [be/fe]** 최소 기간 30일이 BE 설정(`MIN_BACKTEST_PERIOD_DAYS`)과 FE 상수(`VALIDATION_RULES.MIN_BACKTEST_PERIOD_DAYS`) 두 곳에 있다. 설정 노출 API나 빌드 시 주입으로 한 곳에서 관리할지 검토.
 - [ ] **A-30 [fe]** A-16 특성화 테스트가 "현재 동작"으로 고정한 두 가지가 의도인지 판단 — (1) 월간 가격 샘플링에서 목표일이 휴장일이라 다음 날로 밀리면 이후 달의 기준 요일이 바뀐다. (2) 월간 수익률 집계에서 60개월 넘는 공백을 만나면 그 경계를 넘는 항목이 빠진다. 고치면 해당 특성화 테스트 기대값도 바꾼다.
 - [ ] **A-31 [fe]** 정리 — 호출처가 없어진 `useBacktest.reset`, 쓰이지 않는 `PortfolioStats.win_rate`.
-- [ ] **A-35 [be]** 금액/비중 모드 판정이 경로마다 다름 — 전략 경로는 포트폴리오 전체가 한 모드여야 하고 buy&hold는 종목마다 판정하며 거부 메시지도 다르다. 스키마는 "비중 합계 95~105%이면서 일부 종목만 amount·weight를 둘 다 비운" 요청을 통과시킨다. 스키마에서 거부할지 결정.
-- [ ] **A-37 [infra]** `backtest_be_fast/.dockerignore`의 `__pycache__/`가 루트에만 적용돼 하위 폴더의 호스트 `.pyc`가 test 이미지에 복사된다(`**/__pycache__`로). 테스트 결과에는 영향 없음.
+- [ ] **A-35 [be]** 일부 종목만 amount·weight를 둘 다 비운 요청 — 경로 간 판정 차이는 Go에서 해소했다(HISTORY 2026-11-15). 남은 것: "비중 합계 95~105%이면서 일부 종목만 amount·weight를 둘 다 비운" 요청이 통과하고 그 종목은 0원으로 계산된다(`internal/api/validate.go` `portfolioRules`, `internal/engine/request.go` `Validate`). 거부할지 결정.
 - [ ] **A-32 [db]** 기존 DB(운영·dev)의 COMMENT 정리 — schema.sql 초기화 당시 initdb 클라이언트 문자셋(latin1) 때문에 테이블 COMMENT 3개·컬럼 5개가 이중 인코딩돼 있고 나머지 컬럼은 COMMENT가 없다(배치9 A-11에서 원인 수정). 기능 영향 없음. 운영 `SHOW CREATE TABLE`을 저장소 정의와 비교한 뒤 결정.
 
 ---
@@ -98,8 +106,8 @@
 > (Alembic `7b2e9c4f1a30`, `schema.sql` 갱신). 제거는 "모든 테이블 간 참조를 논리
 > 참조로 둔다"는 정책 결정이며, 아래 "현재 FK가 즉시 결함은 아닌 이유"와 "락·데드락"
 > 분석은 그 결정 이전의 판단 기록으로 남겨 둔다. 데드락 재시도(`_retry_on_deadlock`)는
-> FK와 무관한 동시 upsert 충돌 대비라 그대로 유지한다. 고아 점검은
-> `backtest_be_fast/scripts/check_orphan_prices.py`. 운영 DB 적용 후에는 아래
+> FK와 무관한 동시 upsert 충돌 대비라 그대로 유지한다(Go: `MySQLStore.Save`의 1213/1205 재시도). 고아 점검은
+> `backtestctl check-orphans`(당시 `check_orphan_prices.py`). 운영 DB 적용 후에는 아래
 > "운영 DB 확인 SQL"이 0행을 반환해야 한다. → **2026-09-27 운영 DB 적용 완료**
 > (`7b2e9c4f1a30`, FK 0개, 고아 0건 — [HISTORY.md](HISTORY.md) 운영 반영 섹션).
 
@@ -198,23 +206,23 @@ WHERE TABLE_SCHEMA = 'stock_data_cache'
 - [ ] **3. 운영 MySQL 서버 버전·인증 플러그인 확인** — `SELECT VERSION(); SELECT user,host,plugin FROM mysql.user;`.
       8.0이면 `database/README.md` 절차(덤프 → 정상 종료 → 8.4)로 올린다. 8.4는 `mysql_native_password`
       계정 로그인이 1524로 실패하므로 먼저 `caching_sha2_password`로 바꾼다(로컬 8.0.46→8.4.11 재현 완료).
-- [ ] **4. 운영 DB에 `alembic upgrade head`** — 배치9 리비전 `1f574a9ba22e`(stock_id COMMENT만 변경,
-      INSTANT) 적용. 기능 영향 없어 선택. 파이프라인·운영 이미지에 Alembic이 없어 수동.
-- [ ] **5. 운영 동시 실행 상한 재조정** — 운영 BE의 워커 수·CPU 한도를 확인하고 `MAX_CONCURRENT_BACKTESTS`를
-      "CPU 수 × 2" 기준으로 맞춘다(로컬 17 workers/4 CPU에서 8~12 포화, 16은 실행 p95 45초).
-      BE 컨테이너를 여러 개 띄우면 상한이 컨테이너마다 따로라는 점도 재검토.
+- [ ] **5. 운영 동시 실행 상한 재조정** — Go 서버는 프로세스 하나라 Python의 "17 workers" 측정 근거가 더는
+      맞지 않는다. 운영 CPU 한도를 확인하고 `MAX_CONCURRENT_BACKTESTS`·`DATABASE_MAX_OPEN_CONNS`를 실측으로
+      정한다(rust 비교에서 같은 계산의 순차 중앙값 Python ~100ms, 컴파일 언어 ~4ms).
 - [ ] **6. 운영 지표 확인** — 배포 후 `backtest_stage_duration_seconds`로 단계별 p50/p95(뉴스 포함),
-      `ticker_popularity_total`의 `other` 비율을 본다. A-25~A-27 결정의 근거.
+      `ticker_popularity_total`의 `other` 비율을 본다. A-26 결정의 근거.
 
 ---
 
 ## 변경 시 공통 완료 기준
 
 [HISTORY.md](HISTORY.md)의 "변경 시 공통 완료 기준"을 그대로 승계한다 — 수정 전 실패를 재현하는 테스트가
-존재할 것, 아래 6개 명령이 전부 통과할 것.
+존재할 것, 아래 명령이 전부 통과할 것(2026-11-15부터 백엔드는 Go).
 
 ```bash
-docker compose -f compose.dev.yaml exec -T backtest-be-fast pytest tests/unit -q
+docker build --target test ./backtest_be_go
+bash scripts/test-go-integration.sh
+sh scripts/check-schema-parity.sh
 docker compose -f ../backtest-console/compose.dev.yaml exec -T console npm run lint
 docker compose -f ../backtest-console/compose.dev.yaml exec -T console npm run type-check
 docker compose -f ../backtest-console/compose.dev.yaml exec -T console npm run type-check:test

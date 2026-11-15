@@ -1,0 +1,62 @@
+name: backtest-bench
+
+# Python / Rust / Go 고정 시세 성능 비교. 로컬 전용, 호스트 포트를 열지 않는다. 세 API 모두 CPU 2개·메모리 2GiB.
+# 같은 시세 파일과 같은 32개 요청을 쓰고, 외부 시세 다운로드·DB 지연은 측정에서 뺀다.
+#
+# 입력(실제 Yahoo 시세 스냅샷과 요청 32개)은 저장소에 넣지 않고 로컬에 둔다. 기본 경로는
+# .comparison/bench-3way/inputs (prices.json, normal.json, normal/<시나리오>/input.json).
+#
+#   docker compose -f compose.bench.yaml up -d --build
+#   bash scripts/benchmark/run.sh                 # 새 프로세스로 띄운 뒤 세 구현을 차례로 측정
+#
+# Python 원본은 시세 조회만 고정 파일로 바꾸는 어댑터(scripts/benchmark/frozen-api-python.py)로 띄운다.
+# 계산 경로는 원본 그대로다. Rust·Go는 자체 BACKTEST_FIXTURE_FILE(DEBUG 전용) 모드를 쓴다.
+
+x-api: &api
+  environment: &env
+    DEBUG: "true"
+    TURNSTILE_ENABLED: "false"
+    LOG_LEVEL: WARNING
+    BACKTEST_FIXTURE_FILE: /inputs/prices.json
+    MAX_CONCURRENT_BACKTESTS: "8"
+    MAX_CONCURRENT_BACKTESTS_PER_CLIENT: "2"
+  volumes:
+    - ${BENCH_INPUTS:-./.comparison/bench-3way/inputs}:/inputs:ro
+  deploy:
+    resources:
+      limits: {cpus: "2", memory: 2G}
+
+services:
+  bench-mysql:
+    image: mysql:8.4
+    environment: {MYSQL_ROOT_PASSWORD: bench-root, MYSQL_DATABASE: stock_data_cache, MYSQL_USER: bench, MYSQL_PASSWORD: bench-pw}
+    tmpfs: [/var/lib/mysql]
+    volumes: [./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro]
+    healthcheck: {test: [CMD, mysqladmin, ping, -h, localhost], interval: 2s, retries: 60}
+
+  bench-python-api:
+    <<: *api
+    build: {context: ./backtest_be_python, target: runtime}
+    image: backtest-bench-python:local
+    container_name: backtest-bench-python-api
+    entrypoint: [python, /scripts/frozen-api-python.py]
+    environment:
+      <<: *env
+      PYTHONPATH: /app
+      DATABASE_URL: mysql+pymysql://bench:bench-pw@bench-mysql:3306/stock_data_cache
+    volumes:
+      - ./scripts/benchmark:/scripts:ro
+      - ${BENCH_INPUTS:-./.comparison/bench-3way/inputs}:/inputs:ro
+    depends_on: {bench-mysql: {condition: service_healthy}}
+
+  bench-rust-api:
+    <<: *api
+    build: {context: ./backtest_be_rust, target: runtime}
+    image: backtest-bench-rust:local
+    container_name: backtest-bench-rust-api
+
+  bench-go-api:
+    <<: *api
+    build: {context: ./backtest_be_go, target: runtime}
+    image: backtest-bench-go:local
+    container_name: backtest-bench-go-api

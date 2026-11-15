@@ -1,50 +1,95 @@
 name: backtest-dev
 
+# 로컬 개발 환경. MySQL은 항상 뜨고, 백엔드는 언어별 프로필로 고른다.
+#
+#   docker compose -f compose.dev.yaml --profile go up -d --build        # Go     → 127.0.0.1:8000
+#   docker compose -f compose.dev.yaml --profile python up -d --build    # Python → 127.0.0.1:8001
+#   docker compose -f compose.dev.yaml --profile rust up -d --build      # Rust   → 127.0.0.1:8002
+#   docker compose -f compose.dev.yaml --profile all up -d --build       # 셋 다 (포트가 달라 함께 뜬다)
+#
+# 세 백엔드는 같은 개발 DB를 쓴다. 스키마는 database/schema.sql(= goose head)이고, 각 구현은 자기
+# 캐시 표식이 없는 시세를 다시 받으므로 섞여도 계산이 오염되지 않는다(늦게 쓴 쪽이 종목 스냅샷을 교체).
+#
+# 콘솔(backtest-console)의 Vite 프록시 기본 대상은 http://backtest-be-fast:8000 이다. 이 별칭은 Go에만
+# 붙는다. 다른 언어로 콘솔을 붙이려면 콘솔 쪽 BACKTEST_PROXY_TARGET을 http://backtest-be-python:8000
+# 또는 http://backtest-be-rust:8000 으로 준다(컨테이너 내부 포트는 셋 다 8000).
+#
+# 코드를 바꾸면: Go·Rust는 `restart <서비스>`로 다시 컴파일한다. Python은 uvicorn --reload가 반영한다.
+
+x-backend: &backend
+  networks: [backtest-net]
+  env_file: [.env]
+  depends_on:
+    mysql:
+      condition: service_healthy
+  restart: unless-stopped
+  deploy:
+    resources:
+      limits: {cpus: "2", memory: 2G}
+      reservations: {cpus: "0.5", memory: 512M}
+
 services:
-  backtest-be-fast:
-    build:
-      context: ./backtest_be_fast
-      dockerfile: Dockerfile.dev
-    image: backtest-be-fast:dev
-    container_name: backtest-be-fast-dev
+  backtest-be-go:
+    <<: *backend
+    profiles: [go, all]
+    build: {context: ./backtest_be_go, target: development}
+    image: backtest-be-go:dev
+    container_name: backtest-be-go-dev
     networks:
-      - backtest-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      backtest-net:
+        aliases:
+          - backtest-be-fast
     ports:
-      - "8000:8000"
-    env_file:
-      - .env
+      - "127.0.0.1:8000:8000"
+    environment:
+      - DEBUG=true
+      - TURNSTILE_ENABLED=${TURNSTILE_ENABLED:-false}
+    volumes:
+      - ./backtest_be_go:/src
+      - backtest_go_modcache:/go/pkg/mod
+      - backtest_go_buildcache:/root/.cache/go-build
+
+  backtest-be-python:
+    <<: *backend
+    profiles: [python, all]
+    build: {context: ./backtest_be_python, dockerfile: Dockerfile.dev}
+    image: backtest-be-python:dev
+    container_name: backtest-be-python-dev
+    ports:
+      - "127.0.0.1:8001:8000"
     environment:
       - DEBUG=true
       - TURNSTILE_ENABLED=${TURNSTILE_ENABLED:-false}
       - WATCHFILES_FORCE_POLLING=false
+      # SQLAlchemy는 드라이버를 명시해야 한다(.env의 DATABASE_URL이 mysql:// 형식이어도 동작하게).
+      - DATABASE_URL=mysql+pymysql://${DATABASE_USER:-appuser}:${DATABASE_PASSWORD:-appuser123}@mysql:3306/stock_data_cache?charset=utf8mb4
     volumes:
-      - ./backtest_be_fast:/app
-      - backtest_be_fast_venv:/opt/venv
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - ./backtest_be_python:/app
+      - backtest_python_venv:/opt/venv
     # 런타임에 venv 의존성 동기화 후 서버 시작 (이미지와 볼륨의 동기화 보장)
     command: >
       sh -c "pip install -r requirements.lock.txt &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --limit-concurrency 100 --backlog 200"
-    # P3-07: 크래시 시 자동 재기동 + 리소스 상한(공유 개발 호스트에서 폭주 방지).
-    # 수치는 관측된 실사용량 기반 튜닝이 아니라 안전판 성격의 보수적 초기값이다.
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 2G
-        reservations:
-          cpus: "0.5"
-          memory: 512M
+
+  backtest-be-rust:
+    <<: *backend
+    profiles: [rust, all]
+    build: {context: ./backtest_be_rust, target: development}
+    image: backtest-be-rust:dev
+    container_name: backtest-be-rust-dev
+    ports:
+      - "127.0.0.1:8002:8000"
+    environment:
+      - DEBUG=true
+      - TURNSTILE_ENABLED=${TURNSTILE_ENABLED:-false}
+    volumes:
+      - ./backtest_be_rust:/app
+      - backtest_rust_target:/app/target
+      - backtest_rust_registry:/usr/local/cargo/registry
+    command: [cargo, run, --locked]
+
   mysql:
-    # P2-24: mysql:8.0은 Oracle 확장 지원이 2026-04에 종료된 EOL 버전이었다.
-    # 8.4는 다음 LTS이며, schema.sql이 쓰는 8.0+ 문법(utf8mb4_0900_ai_ci,
-    # CHECK 제약)이 그대로 유지된다 — 스키마 초기화 스크립트가 8.4에서도
-    # 깨끗이 적용됨을 일회성 컨테이너로 검증했다 (b4-E-report.md 참고).
+    # mysql:8.4 계열(innovation 고정 digest). schema.sql이 쓰는 8.0+ 문법이 그대로 적용된다.
     image: mysql:innovation@sha256:f51c9c01c16b0eb5d81bb70ab7e7fcb3b96abc6a54114be3a94e8e569cae7815
     container_name: backtest-mysql-dev
     networks:
@@ -56,11 +101,9 @@ services:
       - .env
     environment:
       - MYSQL_DATABASE=stock_data_cache
-      # mysql 이미지는 root 비밀번호가 없으면 기동 자체가 실패한다.
       # .env에 MYSQL_* 키가 없어도 뜨도록 로컬 개발용 기본값을 둔다.
-      # (.env 파일 자체는 env_file 지시자 때문에 반드시 존재해야 한다)
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-localroot123}
-      # DATABASE_USER/DATABASE_PASSWORD와 반드시 일치해야 BE가 접속할 수 있다.
+      # DATABASE_USER/DATABASE_PASSWORD와 반드시 일치해야 백엔드가 접속할 수 있다.
       - MYSQL_USER=${MYSQL_USER:-appuser}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-appuser123}
     volumes:
@@ -72,22 +115,19 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    # P3-07: 크래시 시 자동 재기동 + 리소스 상한. P2-27(워커 x 풀 크기)과는
-    # 별개로, 캐시 DB 컨테이너가 호스트 메모리를 무제한으로 먹지 않도록 한다.
     restart: unless-stopped
     deploy:
       resources:
-        limits:
-          cpus: "2"
-          memory: 2G
-        reservations:
-          cpus: "0.5"
-          memory: 512M
+        limits: {cpus: "2", memory: 2G}
+        reservations: {cpus: "0.5", memory: 512M}
 
 volumes:
   backtest_mysql_data:
-  backtest_be_fast_venv:
-
+  backtest_go_modcache:
+  backtest_go_buildcache:
+  backtest_python_venv:
+  backtest_rust_target:
+  backtest_rust_registry:
 
 networks:
   backtest-net:

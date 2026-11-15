@@ -1,0 +1,6 @@
+Generic single-database configuration.
+
+이력 전용 (2026-11-15부터). 스키마는 Go 백엔드의 goose 마이그레이션(backtest_be_go/migrations)이 소유한다.
+goose로 관리하는 DB(goose_db_version 테이블이 있는 DB, 현재 개발·운영 DB)에 이 Alembic을 실행하지 않는다.
+Alembic head(1f574a9ba22e)는 가격 정밀도 DECIMAL(19,4) 시절이고 goose head는 DECIMAL(38,18)이다.
+database/README.md "기존 DB를 goose로 넘기기" 참고.
