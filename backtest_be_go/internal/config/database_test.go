@@ -40,6 +40,9 @@ func TestDatabaseURLInSQLAlchemyForm(t *testing.T) {
 	if _, ok := cfg.Params["charset"]; ok {
 		t.Fatal("charset must not be sent as a system variable")
 	}
+	if cfg.Params["time_zone"] != "'+00:00'" {
+		t.Fatalf("session time zone must be UTC, got %q", cfg.Params["time_zone"])
+	}
 	if dsn := cfg.FormatDSN(); !strings.Contains(dsn, "charset=utf8mb4") {
 		t.Fatalf("connection charset lost: %s", dsn)
 	}

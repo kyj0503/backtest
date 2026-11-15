@@ -144,6 +144,9 @@ func (db Database) DriverConfig(timeout time.Duration) (*mysql.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("database charset %q: %w", db.Charset, err)
 	}
+	// 세션 시간대를 UTC로 고정한다. TIMESTAMP 컬럼은 세션 시간대로 변환되어 읽히므로, 캐시 나이 계산
+	// (data_last_update와 UTC_TIMESTAMP() 비교)이 서버 기본 시간대에 따라 몇 시간씩 틀어지면 안 된다.
+	cfg.Params = map[string]string{"time_zone": "'+00:00'"}
 	cfg.Loc = time.UTC
 	cfg.ParseTime = false // DATE 컬럼은 문자열(YYYY-MM-DD)로 읽어 시간대 해석을 피한다
 	cfg.Timeout = 10 * time.Second
