@@ -9,6 +9,29 @@
 
 ---
 
+## 2026-11-16 세 백엔드 API 입출력·기능 통일과 부하 테스트
+
+- **적합성 검사**: `compose.conformance.yaml` + `scripts/conformance/run.sh`가 같은 고정 시세로 세 서버(서버마다 빈 MySQL)를
+  띄워 133개 요청(계산 64+6, HTTP 경계 23, 추가 사례, GET 조회 인자 오류 23 등)을 보내고 Python·Rust를 Go와 비교한다.
+  상태 코드·키 집합·JSON 형·값(상대 1e-9)·키 순서를 본다. 최종: Python 133/133, Rust 133/133, 키 순서 차이 0.
+- **Python**: Go 계산 엔진을 `app/engine/`로 옮겼다(buy&hold·기술 전략·통계·응답 키 순서, `total_amount`, asset_id,
+  TWR, G01 등). `BACKTEST_FIXTURE_FILE`(DEBUG 전용) 고정 시세 모드를 더했다. 옛 계산을 고정하던 단위 테스트는 지우고
+  엔진 단위 테스트와 Go 응답 골든 마스터(17개)를 더했다(단위 347, e2e 17 통과).
+- **Go·Rust → Python HTTP 형식**: GET 조회 인자 오류를 pydantic 422 목록으로(심볼 형식·길이·개수, 날짜 파싱, 기간 검사
+  `loc:["query"]`, limit), 빈 본문은 `missing body`, 422 `input`은 본문 키 순서 그대로. `/prices`·`/news`는 종목별 실패를
+  빈 목록(시세 없는 종목은 `exchange:"Unknown"` 기본 정보)으로 두고 다른 종목은 돌려준다. GET 종목 순서는 입력 순서.
+  `exchange_stats` 지점은 rate가 먼저, `/benchmarks`의 `sp500_total_return_pct`는 상태 다음.
+- **Rust**: serde_json `preserve_order`로 응답 키 순서를 Go와 맞췄다. POST `ticker_info`를 계산에 쓴 시세의 실제 정보로,
+  깨진 UTF-8은 400, 배열 본문은 `model_attributes_type`, JSON 오류 문구는 Python json 모듈 문구로 바꿨다.
+- **콘솔 확인**: backtest-console `develop`에 `rust-migration`(정정 계약 대응 화면)을 병합하고 Docker 개발 서버를
+  세 백엔드에 차례로 붙여 인앱 브라우저로 확인했다. 3자산(AAPL·삼성전자·현금) 분기 리밸런싱과 SMA 전략에서 세 백엔드의
+  지표가 같았다(예: 총 수익률 55.13% / 16.39%). 콘솔 빌드·397 테스트·lint 통과. 뉴스는 `.env`의 네이버 키가 401을 받아
+  비어 있다(설정 문제).
+- **부하 테스트**(`compose.loadtest.yaml` + `scripts/loadtest/run.sh`, k6 1.0.0, 구현별 CPU 2·2GiB, 운영 기본 동시 상한,
+  가상 사용자별 X-Forwarded-For, 단계당 30초): POST 32개 혼합 최대 처리량 Go 541 / Rust 358 / Python 82 rps,
+  64명에서 p95 Go 161 / Rust 269 / Python 1883ms, 최대 메모리 Go 34 / Rust 96 / Python 858MiB(워커 4개). 실패 0건.
+  GET /prices는 Go 644 / Rust 472 / Python 13 rps, Python만 16명에서 503(참고 조회 대기 2초 초과) 2.6%.
+
 ## 2026-11-15 세 백엔드 공존과 Go 응답 직렬화 최적화
 
 - **세 구현 공존**: develop 원본을 `backtest_be_python/`(옛 `backtest_be_fast`, 주석·문서의 경로·컨테이너 이름만

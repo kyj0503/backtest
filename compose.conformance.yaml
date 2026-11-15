@@ -1,0 +1,59 @@
+name: backtest-conformance
+
+# 세 백엔드의 API 입출력 적합성 검사. 같은 고정 시세(backtest_be_go/testdata/rust/histories.json)로 띄우고
+# scripts/conformance/conformance.py가 같은 요청을 보내 Go 응답과 비교한다. 호스트 포트를 열지 않는다.
+#
+#   bash scripts/conformance/run.sh
+#
+# 세 서버 모두 BACKTEST_FIXTURE_FILE(DEBUG 전용) 모드로 외부 시세·뉴스 대신 고정 파일을 쓴다.
+# 서버마다 빈 MySQL(tmpfs)을 따로 둔다. 캐시 형식이 구현마다 달라 한 DB를 나눠 쓰면 서로의 캐시 행을 읽게 된다.
+
+x-db: &db
+  image: mysql:8.4
+  environment: {MYSQL_ROOT_PASSWORD: conf-root, MYSQL_DATABASE: stock_data_cache, MYSQL_USER: conf, MYSQL_PASSWORD: conf-pw}
+  tmpfs: [/var/lib/mysql]
+  volumes: [./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro]
+  healthcheck: {test: [CMD, mysqladmin, ping, -h, localhost], interval: 2s, retries: 60}
+
+x-env: &env
+  DEBUG: "true"
+  TURNSTILE_ENABLED: "false"
+  LOG_LEVEL: WARNING
+  BACKTEST_FIXTURE_FILE: /fixtures/histories.json
+  DATABASE_PORT: "3306"
+  DATABASE_NAME: stock_data_cache
+  DATABASE_USER: conf
+  DATABASE_PASSWORD: conf-pw
+
+x-api: &api
+  volumes:
+    - ./backtest_be_go/testdata/rust:/fixtures:ro
+
+services:
+  conf-mysql-go: *db
+  conf-mysql-rust: *db
+  conf-mysql-python: *db
+
+  conf-go-api:
+    <<: *api
+    build: {context: ./backtest_be_go, target: runtime}
+    image: backtest-conf-go:local
+    environment: {<<: *env, DATABASE_HOST: conf-mysql-go}
+    depends_on: {conf-mysql-go: {condition: service_healthy}}
+
+  conf-rust-api:
+    <<: *api
+    build: {context: ./backtest_be_rust, target: runtime}
+    image: backtest-conf-rust:local
+    environment: {<<: *env, DATABASE_HOST: conf-mysql-rust}
+    depends_on: {conf-mysql-rust: {condition: service_healthy}}
+
+  conf-python-api:
+    <<: *api
+    build: {context: ./backtest_be_python, target: runtime}
+    image: backtest-conf-python:local
+    environment:
+      <<: *env
+      DATABASE_HOST: conf-mysql-python
+      DATABASE_URL: mysql+pymysql://conf:conf-pw@conf-mysql-python:3306/stock_data_cache?charset=utf8mb4
+    depends_on: {conf-mysql-python: {condition: service_healthy}}

@@ -26,9 +26,9 @@ The repository keeps **three implementations of the same API**:
 |---|---|---|
 | `backtest_be_go/` | Go, chi on net/http | **Deployed backend.** Owns the schema (goose). |
 | `backtest_be_rust/` | Rust, Axum | rust-migration implementation; source of the corrected calculation contract and Go's differential reference. |
-| `backtest_be_python/` | Python, FastAPI, backtesting.py 0.6.6 | Original backend from develop `b7a284f` (formerly `backtest_be_fast`); regression record and comparison. |
+| `backtest_be_python/` | Python, FastAPI | Original FastAPI app (develop `b7a284f`, formerly `backtest_be_fast`) with the calculation engine ported from Go (`app/engine/`). |
 
-Go and Rust follow the corrected contract; Python keeps the pre-fix calculations and response shape. History and the contract: `docs/go-migration.md`. Production deploys only Go (`.github/workflows/cicd.yml`).
+All three follow the same corrected contract and HTTP I/O (request/response schema, key order, pydantic-style 422 bodies); `scripts/conformance/run.sh` checks Python and Rust against Go (133 cases). Product changes go to Go first, then to the others with a conformance run. History and the contract: `docs/go-migration.md`. Production deploys only Go (`.github/workflows/cicd.yml`).
 
 ## Commands
 
@@ -47,6 +47,8 @@ sh scripts/audit-deps.sh all                               # govulncheck, pip-au
 sh scripts/check-schema-parity.sh                          # schema.sql == goose head
 docker compose -f compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e   # E2E_BACKEND=go|rust
 bash scripts/benchmark/run.sh                              # 3-language benchmark (inputs stay local)
+bash scripts/conformance/run.sh                            # API I/O conformance: Python, Rust vs Go
+bash scripts/loadtest/run.sh                               # k6 load test, one backend at a time
 ```
 
 ## Architecture

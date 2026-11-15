@@ -35,3 +35,6 @@ node_modules/
 .pytest_cache/
 .venv/
 /backtest_be_rust/target/
+
+# 비교·벤치마크 산출물(로컬 전용, 운영 DB 기반 입력 포함)
+/.comparison/

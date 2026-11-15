@@ -1,0 +1,69 @@
+name: backtest-load
+
+# Python / Rust / Go 부하 테스트(k6). 로컬 전용, 호스트 포트를 열지 않는다.
+#
+#   bash scripts/loadtest/run.sh            # 세 구현을 한 번에 하나씩 같은 단계로 측정
+#
+# 조건을 같게 맞춘다.
+#   - API마다 CPU 2개·메모리 2GiB, 빈 MySQL(tmpfs) 하나씩. 측정은 한 구현씩 차례로 한다(서로 CPU를 뺏지 않음).
+#   - 같은 고정 시세(BACKTEST_FIXTURE_FILE)와 같은 32개 요청(.comparison/bench-3way/inputs, 로컬 전용).
+#   - 동시 실행 상한은 세 구현의 운영 기본값(전체 8, 클라이언트당 2, 대기 30초). k6 가상 사용자마다
+#     X-Forwarded-For를 달리해 서로 다른 클라이언트로 센다(도커 사설망은 신뢰 프록시 대역).
+#   - Python은 compose.dev-prod.yaml과 같이 uvicorn 워커 4개. Go·Rust는 단일 프로세스다.
+
+x-db: &db
+  image: mysql:8.4
+  environment: {MYSQL_ROOT_PASSWORD: load-root, MYSQL_DATABASE: stock_data_cache, MYSQL_USER: load, MYSQL_PASSWORD: load-pw}
+  tmpfs: [/var/lib/mysql]
+  volumes: [./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro]
+  healthcheck: {test: [CMD, mysqladmin, ping, -h, localhost], interval: 2s, retries: 60}
+
+x-env: &env
+  DEBUG: "true"
+  TURNSTILE_ENABLED: "false"
+  LOG_LEVEL: WARNING
+  BACKTEST_FIXTURE_FILE: /inputs/prices.json
+  DATABASE_PORT: "3306"
+  DATABASE_NAME: stock_data_cache
+  DATABASE_USER: load
+  DATABASE_PASSWORD: load-pw
+
+x-api: &api
+  volumes:
+    - ${BENCH_INPUTS:-./.comparison/bench-3way/inputs}:/inputs:ro
+  deploy:
+    resources:
+      limits: {cpus: "2", memory: 2G}
+
+services:
+  load-mysql-go: *db
+  load-mysql-rust: *db
+  load-mysql-python: *db
+
+  load-go-api:
+    <<: *api
+    build: {context: ./backtest_be_go, target: runtime}
+    image: backtest-load-go:local
+    container_name: backtest-load-go-api
+    environment: {<<: *env, DATABASE_HOST: load-mysql-go}
+    depends_on: {load-mysql-go: {condition: service_healthy}}
+
+  load-rust-api:
+    <<: *api
+    build: {context: ./backtest_be_rust, target: runtime}
+    image: backtest-load-rust:local
+    container_name: backtest-load-rust-api
+    environment: {<<: *env, DATABASE_HOST: load-mysql-rust}
+    depends_on: {load-mysql-rust: {condition: service_healthy}}
+
+  load-python-api:
+    <<: *api
+    build: {context: ./backtest_be_python, target: runtime}
+    image: backtest-load-python:local
+    container_name: backtest-load-python-api
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+    environment:
+      <<: *env
+      DATABASE_HOST: load-mysql-python
+      DATABASE_URL: mysql+pymysql://load:load-pw@load-mysql-python:3306/stock_data_cache?charset=utf8mb4
+    depends_on: {load-mysql-python: {condition: service_healthy}}

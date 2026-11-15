@@ -11,10 +11,11 @@ Python(FastAPI) 원본에서 옮긴 과정과 계산 계약은 [docs/go-migratio
 |---|---|---|
 | `backtest_be_go/` | Go 1.27, chi | **운영 배포 대상.** `cmd/server`, `cmd/backtestctl`(마이그레이션·점검), `migrations/`(goose, 스키마 소유), `testdata/`(고정 기준 자료) |
 | `backtest_be_rust/` | Rust, Axum | rust-migration 구현. 정합성 수정 계약(F01–T05)의 원조이자 Go의 차등 비교 대상 |
-| `backtest_be_python/` | Python 3.15, FastAPI, pandas, backtesting.py 0.6.6 | develop `b7a284f`의 원본(옛 `backtest_be_fast`). 회귀 기록·비교용 |
+| `backtest_be_python/` | Python 3.15, FastAPI | develop `b7a284f`의 원본 앱(옛 `backtest_be_fast`)에 Go 계산 엔진을 옮긴 구현(`app/engine/`) |
 
-Go와 Rust는 같은 계산 계약(asset_id, Time_Weighted_Return 등)을 따르고, Python 원본은 정합성 수정 이전의
-계산과 응답 형태를 그대로 둡니다(차이: docs/go-migration.md "Python(develop) 대비 바뀐 값").
+세 구현은 같은 계산 계약(asset_id, Time_Weighted_Return 등)과 같은 HTTP 입출력(스키마·키 순서·422 본문)을 따릅니다.
+`scripts/conformance/run.sh`가 Python·Rust를 Go와 133개 사례로 비교합니다. 옛 Python 계산과의 차이는
+docs/go-migration.md "Python(develop) 대비 바뀐 값"에 있습니다.
 
 - `database/`: MySQL 스키마(`schema.sql` = goose head)와 마이그레이션 운영 안내. 스키마는 Go(goose)가 소유한다.
   Python의 `alembic/`은 이력이며 goose로 관리하는 DB에 실행하지 않는다.
@@ -22,6 +23,8 @@ Go와 Rust는 같은 계산 계약(asset_id, Time_Weighted_Return 등)을 따르
 - `compose.dev-prod.yaml`: 언어별 운영(runtime) 이미지 로컬 검증(같은 프로필).
 - `compose.e2e.yaml`: 고정 시세 + 콘솔 + Playwright 브라우저 E2E(`E2E_BACKEND=go|rust`).
 - `compose.bench.yaml`, `scripts/benchmark/`: 세 언어 고정 시세 성능 비교.
+- `compose.conformance.yaml`, `scripts/conformance/`: 세 구현의 API 입출력 적합성 검사(Go 기준).
+- `compose.loadtest.yaml`, `scripts/loadtest/`: k6 부하 테스트(구현별 CPU 2·2GiB, 한 번에 하나씩).
 - `compose.devdb.yaml`, `scripts/load-devdb.sh`: 운영 DB 덤프의 로컬 검증용 복사본(덤프 파일은 커밋하지 않는다).
 - `compose.yaml`, `scripts/deploy.*`, `.github/workflows/cicd.yml`: OCI 배포(Go).
 - `TODO.md`: 미완료 작업, `HISTORY.md`: 구현·검증 이력.
@@ -58,6 +61,8 @@ sh scripts/audit-deps.sh all                         # govulncheck, pip-audit, c
 sh scripts/check-schema-parity.sh                    # schema.sql = goose head (COMMENT까지)
 docker compose -f compose.e2e.yaml up --build --abort-on-container-exit --exit-code-from e2e
 bash scripts/benchmark/run.sh                        # 세 언어 성능 비교(입력은 로컬 .comparison)
+bash scripts/conformance/run.sh                     # API 입출력 적합성(Python·Rust vs Go)
+bash scripts/loadtest/run.sh                        # k6 부하 테스트(입력은 로컬 .comparison)
 ```
 
 모두 임시 컨테이너만 쓰고 운영 DB를 바꾸지 않습니다. 계산 정확성의 기준은 불변식 테스트(현금 보존,
