@@ -9,6 +9,49 @@
 
 ---
 
+## 2026-11-15 Python(FastAPI) → Go 백엔드 전환
+
+`go-migration` 브랜치(부모 `develop` `b7a284f`). 상세: [docs/go-migration.md](docs/go-migration.md).
+
+- **계산 계약**: rust-migration에서 찾은 회계 결함 수정(F01–F16, R01–R11, S01–S06, T01–T05)을 채택했다.
+  develop의 Python 출력은 회귀 기록으로만 남기고, 합격 기준을 불변식과 독립 원장 사례로 바꿨다.
+  rust 검증 사례를 Go로 옮겼고, 64개 parity 입력에서 rust 구현과 상대 오차 ~1e-13로 일치한다.
+- **G01 추가**: 실제 Yahoo 삼성전자 2024-10-14 봉(종가가 저가보다 0.17% 낮음) 때문에 T02 원칙대로면 그 기간의
+  삼성전자 계산이 전부 503이었다. 1% 이내 범위 오류만 고가·저가를 넓혀 받는다.
+- **기준 자료 추출**: Python을 지우기 전에 골든 마스터, API 계약, 응답 스냅샷 입력(테스트 코드 안 합성
+  시세)을 `backtest_be_go/testdata/python/`으로 내보냈다. 내보낸 입력만으로 Python 응답이 재현되는지
+  Docker에서 확인한 뒤 커밋했다(develop 단위 579 + e2e 1 통과 상태). 내보내기 스크립트
+  (`scripts/export-python-reference.sh`, `scripts/python-reference/`)는 Python과 함께 지웠다. 커밋
+  `84e1e3b`에 남아 있다.
+- **Alembic → goose**: 00001 = Alembic head `1f574a9ba22e`, 00002 = 가격 `DECIMAL(38,18)`. goose 기록 없는 DB에
+  `up`을 거부하고 `detect`로 실제 컬럼 정밀도를 판별한 버전만 `baseline`한다. 로컬 dev DB와 합성 Python
+  덤프로 리허설했다.
+- **실제 MySQL에서만 드러난 버그**: go-sql-driver에 `charset`을 `Params`로 넣으면 `SET charset=...` 시스템
+  변수로 보내 MySQL이 Error 1193으로 거부한다(단위 테스트로는 안 보였다). DSN 파서를 거쳐 설정한다. 세션
+  시간대를 UTC로 고정해 캐시 나이 계산이 서버 시간대에 흔들리지 않게 했다.
+- **운영 차이**: 런타임 이미지에 curl이 없어 헬스체크·배포 readiness를 `/app/server -healthcheck <path>`로
+  바꿨다. 지표 이름·라벨·버킷은 Python과 같다. 미래 종료일 판단은 한국 날짜다. `DATABASE_SSL_CA`로 개별
+  `DATABASE_*` 설정에서도 관리형 MySQL TLS를 쓴다.
+- **옮기지 않은 것**: `daily_price_update.py`, `manage_stock_splits.py`, `update_ticker_listing_dates.py`
+  (1시간 스냅샷 교체와 시세 메타의 상장일로 필요 없어졌다). `check_orphan_prices.py`는 `backtestctl
+  check-orphans`로 옮겼다.
+- **TODO 정리**: A-21(NaN→0.0 폴백), A-25(뉴스 순차 수집), A-27(스레드 풀 겹침), A-37(Python .dockerignore)은
+  Go 구현에서 해소되거나 대상이 없어졌다. A-35는 경로 간 차이만 해소되어 나머지를 TODO에 남겼다.
+- Docker 검증: test 스테이지(11개 패키지, -race), MySQL 통합, govulncheck, 스키마 정합성, 브라우저 E2E
+  (compose.go-test.yaml) 통과. 실제 Yahoo로 AAPL·삼성전자 적립·현금·분기 리밸런싱 2년 계산 확인.
+
+### TODO에서 옮김 (2026-11-15, Go 전환)
+
+- [x] **A-21** 단일 종목 결과의 NaN → 0.0 폴백 — Go 전략 상세 지표는 계산 불가 값을 `null`(profit_factor)로
+  내거나 정의된 0(거래 없음의 승률)을 쓴다. Python `_convert_result_to_response` 경로가 없어졌다.
+- [x] **A-25** 뉴스가 종목별로 순차 수집 — 종목별로 동시에(최대 4) 수집한다.
+- [x] **A-27** 부가 수집 스레드 풀 겹침 — 고루틴 수가 errgroup 한도로 묶이고 DB 풀은 프로세스 하나(16)다.
+- [x] **A-35(일부)** 금액/비중 모드 판정이 경로마다 다름 — 두 경로 모두 포트폴리오 전체에서 혼합을 거부한다.
+  "일부 종목만 금액·비중이 모두 빈 요청"은 TODO A-35에 남았다.
+- [x] **A-37** `backtest_be_fast/.dockerignore`의 `__pycache__` — 대상 디렉터리가 없어졌다.
+- [x] **저장소 밖 4** 운영 DB에 `alembic upgrade head` — goose 전환 절차(`baseline 1` → `up`)로 대체했다.
+  실제 운영 적용은 TODO G-01에 남겼다.
+
 ## 2026-10-25 계산 원금·체결·통화·성능 수정
 
 - DCA 예정일을 실제 체결일과 분리했다. 휴장으로 매수가 밀려도 다음 납입·리밸런싱

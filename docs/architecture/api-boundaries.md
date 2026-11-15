@@ -2,7 +2,8 @@
 
 2026-10-25. 계산 결과를 먼저 표시하고, 주가·환율·벤치마크·뉴스를 각각 조회·재시도한다.
 한 조회의 지연·실패가 다른 조회의 표시나 이미 완료한 계산을 막지 않는다.
-FastAPI 서버·DB는 그대로 사용하며 새 서비스나 영속 큐를 추가하지 않는다.
+2026-11-15부터 서버는 Go(`backtest_be_go`)다. 경로·요청·응답과 아래 한도는 FastAPI 시절과 같고,
+계산 결과 필드는 [Go 전환 문서](../go-migration.md)의 정합성 수정 계약을 따른다. 새 서비스나 영속 큐는 없다.
 
 | API | 요청 | 반환하는 data 필드 |
 |---|---|---|
@@ -43,7 +44,7 @@ prices/news의 symbols는 필수이며 반복 파라미터를 쓴다. 입력 최
 ## 계산 전 사람 인증
 
 운영 계산 POST에는 `X-Turnstile-Token` 헤더가 필요하다. JSON 요청·응답 필드는
-유지한다. FastAPI 의존성이 계산 슬롯 확보·데이터 조회 전에 Cloudflare Siteverify로
+유지한다. 계산 핸들러가 계산 슬롯 확보·데이터 조회 전에 Cloudflare Siteverify로
 검증하며, `success=true`, 설정한 정확한 hostname, `action=backtest`를 모두 확인한다.
 클라이언트의 Host 헤더나 인증 완료 표시만으로 허용하지 않는다.
 
@@ -75,9 +76,9 @@ GitHub Actions Variable `VITE_TURNSTILE_SITE_KEY`로 빌드에 전달한다.
   `MARKET_DATA_QUEUE_TIMEOUT_SECONDS`, `MARKET_DATA_TIMEOUT_SECONDS`로 조정한다.
   이전 환경 파일에 상한 2를 명시했다면 새 네 요청 흐름에 맞게 검토한다.
 - IP 한도 초과 429, 전체 슬롯 대기 초과 503, 실행 초과 504는 detail과 Retry-After를 반환한다.
-- 기존 파일 슬롯·협력적 취소 실행기를 재사용한다. 뉴스 루프는 취소 후 다음 종목을
-  시작하거나 뒤늦게 캐시에 쓰지 않는다. 이미 진행 중인 동기 외부 호출은 라이브러리
-  타임아웃까지 기다릴 수 있다.
+- Go 서버는 컨테이너당 프로세스 하나라 슬롯은 메모리 세마포어다(`internal/admission`). 슬롯은 작업이
+  실제로 끝날 때 반환한다. 취소는 요청 context로 전파되고 계산 루프가 날짜마다 확인한다. 같은 종목
+  시세 조회는 한 번만 진행되며(single-flight) 기다리던 요청이 끊겨도 다른 요청을 위해 끝까지 받는다.
 
 콘솔은 요청별 AbortController를 사용한다. 특정 조회 재시도는 그 조회만 다시 실행하고,
 새 계산·화면 이탈·초기화는 이전 계산과 모든 조회를 취소한다. 늦은 응답은 새 결과를
@@ -93,17 +94,17 @@ GitHub Actions Variable `VITE_TURNSTILE_SITE_KEY`로 빌드에 전달한다.
 
 ## 검증
 
-Docker 단위 검증은 기존 POST 스냅샷을 유지하면서 네 조회의 입력·응답 범위,
-같은 IP의 네 동시 요청, 네 API의 공유 실행 상한, 뉴스 취소를 확인한다.
+Go 테스트(`internal/api`)는 Python이 실제로 돌려준 422 본문 23개, 네 조회의 변환 결과(Python
+`unified_data_service` 기준값), 같은 IP 429·대기 503·실행 504, Turnstile 분기를 확인한다.
 콘솔은 병렬 응답 병합·느린 뉴스 중 다른 자료 표시·각 API의 개별 재시도·잘못된
 응답 형식·오래된 응답 차단·화면 이탈 취소·현금 포트폴리오의 불필요한 조회 생략을 검증한다.
 
-실행 이미지 HTTP 검증 스크립트는 격리 MySQL에 미리 넣은 합성 AAPL 시세(2023년
-200거래일 이상)와 현재 시각의 합성 뉴스 캐시를 사용한다. 운영 자격증명이나 실제 데이터는
-필요하지 않다. DB에 시드하는 스크립트가 아니라 준비된 로컬 테스트 서버에 요청하는 검사다.
+실행 이미지 HTTP 검증은 `compose.go-test.yaml`이 한다. 고정 시세(`testdata/rust/histories.json`)와
+임시 MySQL을 쓰고, 브라우저가 콘솔을 거쳐 계산 POST와 네 GET을 실제로 호출한다. 운영 자격증명이나
+실제 데이터는 필요하지 않다.
 
 ```bash
-python backtest_be_fast/tests/integration/verify_reference_reads_http.py --base-url http://127.0.0.1:18080
+docker compose -f compose.go-test.yaml up --build --abort-on-container-exit --exit-code-from e2e
 ```
 
 브라우저에서는 네 조회만 503으로 실패시킨 뒤 하나씩 복구·재시도한다. 각 GET만 1회
