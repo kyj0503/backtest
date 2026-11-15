@@ -30,6 +30,8 @@ type History struct {
 	Exchange       string      `json:"exchange"`
 	FirstTradeDate *civil.Date `json:"first_trade_date"`
 	Bars           []Bar       `json:"bars"`
+	// Repaired는 제공업체 응답의 고가·저가를 조금 넓혀 고친 날짜다(G01, 로그용). 저장·응답에는 싣지 않는다.
+	Repaired []civil.Date `json:"-"`
 }
 
 // Histories는 심볼 → 시세다. 환율 티커(KRW=X 등)도 같은 맵에 들어간다.

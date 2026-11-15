@@ -179,14 +179,31 @@ type IndividualResult struct {
 	WinRate        *float64 `json:"win_rate"`
 }
 
+// Composition은 portfolio_composition 항목이다. buy&hold 경로는 investment_type과 dca_periods(일시
+// 투자는 null)를 싣고, 기술 전략 경로는 싣지 않는다(Python·rust와 같다).
 type Composition struct {
-	AssetID        string  `json:"asset_id"`
-	Symbol         string  `json:"symbol"`
-	Weight         float64 `json:"weight"`
-	Amount         float64 `json:"amount"`
-	InvestmentType string  `json:"investment_type,omitempty"`
-	DCAPeriods     *int    `json:"dca_periods,omitempty"`
-	AssetType      string  `json:"asset_type"`
+	AssetID        string `json:"asset_id"`
+	Symbol         string `json:"symbol"`
+	Weight         float64
+	Amount         float64
+	InvestmentType string
+	DCAPeriods     *int
+	AssetType      string
+	buyHold        bool
+}
+
+func (c Composition) MarshalJSON() ([]byte, error) {
+	var o Ordered[any]
+	o.Set("asset_id", c.AssetID)
+	o.Set("symbol", c.Symbol)
+	o.Set("weight", c.Weight)
+	o.Set("amount", c.Amount)
+	if c.buyHold {
+		o.Set("investment_type", c.InvestmentType)
+		o.Set("dca_periods", c.DCAPeriods)
+	}
+	o.Set("asset_type", c.AssetType)
+	return o.MarshalJSON()
 }
 
 // Trade는 거래 원장 한 줄이다. 가격은 USD이고 *Native는 체결일 환율로 환산한 종목 통화 가격이다.
@@ -211,9 +228,11 @@ type Trade struct {
 	ExitPriceNative  *float64 `json:"ExitPriceNative,omitempty"`
 }
 
-// BuyHoldDetail은 buy&hold 경로의 strategy_details 항목이다.
+// BuyHoldDetail은 buy&hold 경로의 strategy_details 항목이다. open_positions는 이 경로에 없는 개념이라
+// 항상 null이다(rust 계약의 키를 유지).
 type BuyHoldDetail struct {
-	TradeLog []Trade `json:"trade_log"`
+	TradeLog      []Trade `json:"trade_log"`
+	OpenPositions []Trade `json:"open_positions"`
 }
 
 type Rebalance struct {

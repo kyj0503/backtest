@@ -87,6 +87,9 @@ func (y *Yahoo) Fetch(ctx context.Context, symbol string, start, end civil.Date)
 		}
 		h, retry, err := y.fetchOnce(ctx, symbol, u)
 		if err == nil {
+			if len(h.Repaired) > 0 {
+				y.Log.Warn("provider OHLC range repaired (G01)", "symbol", symbol, "dates", h.Repaired)
+			}
 			return h.Between(start, end), nil
 		}
 		lastErr = err

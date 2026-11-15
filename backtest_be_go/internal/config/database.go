@@ -37,6 +37,9 @@ type Database struct {
 	MaxOpenConns    int
 	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
+
+	// Configured는 DATABASE_URL 또는 DATABASE_HOST가 주어졌는지다. 고정 시세(E2E) 실행은 DB 없이 돈다.
+	Configured bool
 }
 
 func loadDatabase(getenv Getenv) (Database, error) {
@@ -48,6 +51,9 @@ func loadDatabase(getenv Getenv) (Database, error) {
 		MaxIdleConns:     r.integer("DATABASE_MAX_IDLE_CONNS", 4),
 		ConnMaxLifetime:  r.seconds("DATABASE_CONN_MAX_LIFETIME_SECONDS", 3600),
 	}
+	_, hostSet := r.raw("DATABASE_HOST")
+	_, urlSet := r.raw("DATABASE_URL")
+	db.Configured = hostSet || urlSet
 	if raw, ok := r.raw("DATABASE_URL"); ok {
 		if err := db.parseURL(raw); err != nil {
 			r.errs = append(r.errs, err)

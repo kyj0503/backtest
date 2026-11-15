@@ -27,6 +27,8 @@ type Deps struct {
 	Metrics *monitoring.Registry
 	Ready   health.Probe
 	Now     func() time.Time
+	// Service가 있으면 계산·참고 조회 엔드포인트를 등록한다(골격 테스트는 비워 둔다).
+	Service *Service
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -61,6 +63,12 @@ func NewRouter(d Deps) http.Handler {
 		})
 		api.Get("/docs", docsPage(swaggerHTML))
 		api.Get("/redoc", docsPage(redocHTML))
+		if s := d.Service; s != nil {
+			api.Post("/backtest", s.backtest)
+			for _, section := range []string{"prices", "exchange-rates", "benchmarks", "news"} {
+				api.Get("/"+section, s.read(section))
+			}
+		}
 	})
 	return r
 }

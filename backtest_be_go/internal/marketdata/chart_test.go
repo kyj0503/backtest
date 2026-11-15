@@ -213,6 +213,27 @@ func TestExchangeDatesFollowHistoricalTimeZoneRules(t *testing.T) {
 	}
 }
 
+// G01: 고가·저가가 시가·종가를 1% 이내로 벗어난 봉은 범위만 넓혀 고친다. 시가·종가는 그대로다.
+func TestSmallRangeErrorsAreRepaired(t *testing.T) {
+	c := newChart("Asia/Seoul", days("2024-10-10", 5))
+	// 005930.KS 2024-10-14 실제 응답: 종가가 저가보다 0.17% 낮다.
+	c.quote("open")[2], c.quote("high")[2], c.quote("low")[2], c.quote("close")[2] = 59500.0, 61200.0, 59400.0, 59300.0
+	c.adj()[2] = 59300.0
+	h, err := ParseChart("005930.KS", c.bytes(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := h.Bars[2]
+	if b.Open != 59500 || b.Close != 59300 || b.Low != 59300 || b.High != 61200 || len(h.Repaired) != 1 {
+		t.Fatalf("%+v repaired %v", b, h.Repaired)
+	}
+	// 1%를 넘는 이탈은 고치지 않는다.
+	c.quote("close")[2], c.adj()[2] = 58000.0, 58000.0
+	if _, err := ParseChart("005930.KS", c.bytes(t)); status(err) != 503 {
+		t.Fatalf("large deviation: %v", err)
+	}
+}
+
 func TestMalformedResponses(t *testing.T) {
 	c := newChart("UTC", days("2023-01-02", 5))
 	q := c.result()["indicators"].(map[string]any)["quote"].([]any)[0].(map[string]any)

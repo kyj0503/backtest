@@ -21,10 +21,13 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 
+	"github.com/kyj0503/backtest/backtest_be_go/internal/admission"
 	"github.com/kyj0503/backtest/backtest_be_go/internal/api"
 	"github.com/kyj0503/backtest/backtest_be_go/internal/config"
 	"github.com/kyj0503/backtest/backtest_be_go/internal/health"
+	"github.com/kyj0503/backtest/backtest_be_go/internal/marketdata"
 	"github.com/kyj0503/backtest/backtest_be_go/internal/monitoring"
+	"github.com/kyj0503/backtest/backtest_be_go/internal/news"
 )
 
 func main() {
@@ -67,11 +70,30 @@ func run() error {
 		return sql.OpenDB(connector), nil
 	}, cfg.ReadinessDBTimeout, log)
 
+	service, closeService, err := newService(cfg, log)
+	if err != nil {
+		return err
+	}
+	defer closeService()
+	metrics := monitoring.NewRegistry()
+	allow := make([]string, 0, len(news.TickerNames)+len(popularETFs))
+	for k := range news.TickerNames {
+		allow = append(allow, k)
+	}
+	allow = append(allow, popularETFs...)
+	service.App = metrics.NewApp(allow, monitoring.Gauges{
+		BacktestRunning: func() float64 { return float64(service.Calc.Running()) },
+		BacktestWaiting: func() float64 { return float64(service.Calc.Waiting()) },
+		MarketRunning:   func() float64 { return float64(service.Reads.Running()) },
+		MarketWaiting:   func() float64 { return float64(service.Reads.Waiting()) },
+	})
+
 	handler := api.NewRouter(api.Deps{
 		Config:  cfg,
 		Log:     log,
-		Metrics: monitoring.NewRegistry(),
+		Metrics: metrics,
 		Ready:   probe,
+		Service: service,
 	})
 
 	srv := &http.Server{
@@ -110,6 +132,63 @@ func run() error {
 	}
 	log.Info("server stopped cleanly")
 	return nil
+}
+
+// popularETFs는 ticker_popularity_total 라벨 허용 목록에 더하는 주요 ETF다(Python과 같다).
+var popularETFs = []string{"SPY", "QQQ", "VOO", "VTI", "IVV", "DIA", "IWM", "SCHD", "JEPI", "TQQQ", "SQQQ",
+	"SOXL", "SOXX", "SMH", "ARKK", "GLD", "SLV", "TLT", "IEF", "SHY", "BND", "AGG",
+	"VNQ", "VEA", "VWO", "EFA", "EEM", "XLK", "XLF", "XLE", "XLV", "BRK-B"}
+
+// newService는 시세 원천(Yahoo 또는 고정 픽스처), MySQL 캐시, 뉴스, 실행 슬롯을 만든다.
+func newService(cfg config.Config, log *slog.Logger) (*api.Service, func(), error) {
+	var db *sql.DB
+	if cfg.Database.Configured {
+		dc, err := cfg.Database.DriverConfig(0)
+		if err != nil {
+			return nil, nil, err
+		}
+		connector, err := mysql.NewConnector(dc)
+		if err != nil {
+			return nil, nil, err
+		}
+		db = sql.OpenDB(connector)
+		db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+		db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
+		db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
+	}
+	var fetcher marketdata.Fetcher = marketdata.NewYahoo(cfg.YahooTimeout, log)
+	if cfg.FixtureFile != "" {
+		f, err := marketdata.LoadFixtures(cfg.FixtureFile)
+		if err != nil {
+			return nil, nil, err
+		}
+		log.Warn("using fixture market data instead of Yahoo (DEBUG only)", "file", cfg.FixtureFile)
+		fetcher = f
+	}
+	var store marketdata.Store
+	if db != nil {
+		store = marketdata.NewMySQLStore(db)
+	}
+	s := &api.Service{
+		Cfg:       cfg,
+		Log:       log,
+		Source:    marketdata.NewSource(fetcher, store, log),
+		News:      news.NewService(cfg.NaverClientID, cfg.NaverClientSecret, db, log),
+		Turnstile: api.NewTurnstile(cfg.Turnstile),
+		Calc:      admission.New(cfg.MaxConcurrentBacktests, cfg.MaxConcurrentBacktestsPerClient, "백테스트"),
+		Reads:     admission.New(cfg.MaxConcurrentMarketData, 4, "참고 데이터 조회"),
+		Today:     api.SeoulToday,
+	}
+	if cfg.FixtureFile != "" {
+		// 고정 시세에는 뉴스가 없다. 외부 API를 부르지 않는다.
+		s.News.ClientID, s.News.ClientSecret = "", ""
+	}
+	closeFn := func() {
+		if db != nil {
+			_ = db.Close()
+		}
+	}
+	return s, closeFn, nil
 }
 
 func newLogger(level string) *slog.Logger {

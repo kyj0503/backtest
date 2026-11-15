@@ -106,6 +106,7 @@ func ParseChart(symbol string, body []byte) (History, error) {
 
 	fx := IsFX(symbol)
 	bars := make([]Bar, 0, n)
+	var repairs []civil.Date
 	for i, ts := range r.Timestamp {
 		fields := [4]*float64{q.Open[i], q.High[i], q.Low[i], q.Close[i]}
 		if fields[0] == nil && fields[1] == nil && fields[2] == nil && fields[3] == nil {
@@ -121,7 +122,13 @@ func ParseChart(symbol string, body []byte) (History, error) {
 		date := civil.Of(time.Unix(ts, 0).In(loc))
 		raw := Bar{Date: date, Open: v[0], High: v[1], Low: v[2], Close: v[3]}
 		if !raw.ValidFor(symbol) {
-			return History{}, apperr.Unavailable("%s: 시세의 OHLC 범위가 일치하지 않습니다.", symbol)
+			repaired, ok := repairRange(raw)
+			if !ok {
+				return History{}, apperr.Unavailable("%s: 시세의 OHLC 범위가 일치하지 않습니다.", symbol)
+			}
+			raw = repaired
+			v[1], v[2] = raw.High, raw.Low
+			repairs = append(repairs, date)
 		}
 
 		adjusted := v[3]
@@ -156,12 +163,36 @@ func ParseChart(symbol string, body []byte) (History, error) {
 		CompanyName: firstNonEmpty(r.Meta.LongName, r.Meta.ShortName, symbol),
 		Exchange:    r.Meta.ExchangeName,
 		Bars:        bars,
+		Repaired:    repairs,
 	}
 	if r.Meta.FirstTradeDate != nil {
 		d := civil.Of(time.Unix(*r.Meta.FirstTradeDate, 0).UTC())
 		h.FirstTradeDate = &d
 	}
 	return h, nil
+}
+
+// maxRangeRepair는 고가·저가 범위를 넓혀 고칠 수 있는 최대 상대 이탈이다.
+const maxRangeRepair = 0.01
+
+// repairRange는 고가·저가가 시가·종가를 조금(1% 이내) 벗어난 봉을 고친다(G01).
+//
+// 실제 Yahoo 일봉에는 종가가 저가보다 0.17% 낮은 봉 같은 제공업체 오류가 있다(005930.KS
+// 2024-10-14: 시가 59,500 고가 61,200 저가 59,400 종가 59,300). T02 원칙대로 모두 거부하면 그 종목이
+// 들어간 기간 전체를 계산할 수 없다. 체결·평가에 쓰는 시가·종가는 제공업체 값을 그대로 두고, 범위만
+// 시가·종가를 포함하도록 넓힌다. 이탈이 크면(시가 1 대 범위 80~120처럼 단위가 틀린 값) 고치지 않고
+// 거부한다. 0·음수·부분 누락은 이 함수에 오기 전에 거부된다.
+func repairRange(b Bar) (Bar, bool) {
+	lo := min(b.Open, b.High, b.Low, b.Close)
+	hi := max(b.Open, b.High, b.Low, b.Close)
+	if b.High < b.Low {
+		return b, false
+	}
+	if (b.Low-lo)/b.Low > maxRangeRepair || (hi-b.High)/b.High > maxRangeRepair {
+		return b, false
+	}
+	b.Low, b.High = lo, hi
+	return b, b.ValidPrices()
 }
 
 func firstNonEmpty(values ...string) string {

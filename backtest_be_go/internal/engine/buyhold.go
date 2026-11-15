@@ -308,7 +308,7 @@ func buyHold(ctx context.Context, req Request, data marketdata.Histories) (*Data
 		})
 		d.PortfolioComposition = append(d.PortfolioComposition, Composition{
 			AssetID: h.key, Symbol: h.asset.Symbol, Weight: item.Weight, Amount: item.Amount,
-			InvestmentType: h.asset.InvestmentType, DCAPeriods: periods, AssetType: h.asset.AssetType,
+			InvestmentType: h.asset.InvestmentType, DCAPeriods: periods, AssetType: h.asset.AssetType, buyHold: true,
 		})
 	}
 	d.PortfolioResult = PortfolioResult{TotalEquity: d.PortfolioStatistics.FinalValue, TotalReturnPct: d.PortfolioStatistics.TotalReturn}
