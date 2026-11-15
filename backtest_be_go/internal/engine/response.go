@@ -8,51 +8,71 @@ import (
 )
 
 // Ordered는 키 삽입 순서를 지키는 JSON 객체다(Go map은 키를 정렬해 출력한다).
+//
+// 값은 슬라이스에 둔다. 일별 평가액처럼 키가 수천 개이고 새 키만 붙는 곡선은 Append로 중복 검사 없이
+// 쌓는다. Set은 같은 키를 덮어쓰며, 키가 적으면 선형 탐색하고 많아지면 색인을 만든다.
 type Ordered[V any] struct {
-	keys []string
-	vals map[string]V
+	keys  []string
+	vals  []V
+	index map[string]int
+}
+
+const orderedIndexThreshold = 16
+
+func (o *Ordered[V]) find(key string) int {
+	if o.index != nil {
+		if i, ok := o.index[key]; ok {
+			return i
+		}
+		return -1
+	}
+	for i, k := range o.keys {
+		if k == key {
+			return i
+		}
+	}
+	return -1
 }
 
 func (o *Ordered[V]) Set(key string, v V) {
-	if o.vals == nil {
-		o.vals = map[string]V{}
+	if i := o.find(key); i >= 0 {
+		o.vals[i] = v
+		return
 	}
-	if _, ok := o.vals[key]; !ok {
-		o.keys = append(o.keys, key)
+	o.Append(key, v)
+}
+
+// Append는 새 키를 끝에 붙인다. 호출자가 키가 겹치지 않음을 보장한다(날짜 곡선).
+func (o *Ordered[V]) Append(key string, v V) {
+	o.keys = append(o.keys, key)
+	o.vals = append(o.vals, v)
+	switch {
+	case o.index != nil:
+		o.index[key] = len(o.keys) - 1
+	case len(o.keys) > orderedIndexThreshold:
+		o.index = make(map[string]int, len(o.keys)*2)
+		for i, k := range o.keys {
+			o.index[k] = i
+		}
 	}
-	o.vals[key] = v
+}
+
+// Grow는 n개를 더 넣을 자리를 미리 잡는다.
+func (o *Ordered[V]) Grow(n int) {
+	o.keys = append(make([]string, 0, len(o.keys)+n), o.keys...)
+	o.vals = append(make([]V, 0, len(o.vals)+n), o.vals...)
 }
 
 func (o *Ordered[V]) Get(key string) (V, bool) {
-	v, ok := o.vals[key]
-	return v, ok
+	if i := o.find(key); i >= 0 {
+		return o.vals[i], true
+	}
+	var zero V
+	return zero, false
 }
 
 func (o *Ordered[V]) Keys() []string { return o.keys }
 func (o *Ordered[V]) Len() int       { return len(o.keys) }
-
-func (o Ordered[V]) MarshalJSON() ([]byte, error) {
-	var buf bytes.Buffer
-	buf.WriteByte('{')
-	for i, k := range o.keys {
-		if i > 0 {
-			buf.WriteByte(',')
-		}
-		kb, err := json.Marshal(k)
-		if err != nil {
-			return nil, err
-		}
-		buf.Write(kb)
-		buf.WriteByte(':')
-		vb, err := marshalNoEscape(o.vals[k])
-		if err != nil {
-			return nil, err
-		}
-		buf.Write(vb)
-	}
-	buf.WriteByte('}')
-	return buf.Bytes(), nil
-}
 
 func marshalNoEscape(v any) ([]byte, error) {
 	var buf bytes.Buffer
@@ -88,29 +108,7 @@ type Data struct {
 	Supplemental           map[string]json.RawMessage `json:"-"`
 }
 
-// MarshalJSON은 계산 결과 뒤에 부가 데이터 키를 Python과 같은 순서로 붙인다.
-func (d Data) MarshalJSON() ([]byte, error) {
-	type plain Data
-	base, err := marshalNoEscape(plain(d))
-	if err != nil || len(d.Supplemental) == 0 {
-		return base, err
-	}
-	var buf bytes.Buffer
-	buf.Write(base[:len(base)-1])
-	for _, k := range SupplementalKeys {
-		v, ok := d.Supplemental[k]
-		if !ok {
-			continue
-		}
-		buf.WriteByte(',')
-		kb, _ := json.Marshal(k)
-		buf.Write(kb)
-		buf.WriteByte(':')
-		buf.Write(v)
-	}
-	buf.WriteByte('}')
-	return buf.Bytes(), nil
-}
+// Data의 JSON은 jsonenc.go가 쓴다(계산 결과 뒤에 부가 데이터 키를 Python과 같은 순서로 붙인다).
 
 // SupplementalKeys는 POST include_*가 붙이는 키의 순서다(Python unified_data_service).
 var SupplementalKeys = []string{"ticker_info", "stock_data", "exchange_rates", "exchange_stats",
@@ -192,19 +190,7 @@ type Composition struct {
 	buyHold        bool
 }
 
-func (c Composition) MarshalJSON() ([]byte, error) {
-	var o Ordered[any]
-	o.Set("asset_id", c.AssetID)
-	o.Set("symbol", c.Symbol)
-	o.Set("weight", c.Weight)
-	o.Set("amount", c.Amount)
-	if c.buyHold {
-		o.Set("investment_type", c.InvestmentType)
-		o.Set("dca_periods", c.DCAPeriods)
-	}
-	o.Set("asset_type", c.AssetType)
-	return o.MarshalJSON()
-}
+func (c Composition) MarshalJSON() ([]byte, error) { return encode(c) }
 
 // Trade는 거래 원장 한 줄이다. 가격은 USD이고 *Native는 체결일 환율로 환산한 종목 통화 가격이다.
 // 수량은 수정 주가 기준 소수 단위다(S01).
@@ -251,4 +237,33 @@ type RebalanceTrade struct {
 	Amount     *float64 `json:"amount,omitempty"`
 	Price      float64  `json:"price"`
 	Commission float64  `json:"commission"`
+}
+
+// dateKeys는 날짜 곡선의 키(YYYY-MM-DD)다. 한 번의 할당으로 모든 키를 만든다.
+func dateKeys(dates []civil.Date) []string {
+	buf := make([]byte, 0, len(dates)*10)
+	for _, d := range dates {
+		buf = d.AppendFormat(buf)
+	}
+	s := string(buf)
+	keys := make([]string, len(dates))
+	for i := range keys {
+		keys[i] = s[i*10 : i*10+10]
+	}
+	return keys
+}
+
+// curves는 equity_curve(USD)와 daily_returns(%)다. 두 곡선은 같은 날짜 키를 공유한다(읽기 전용).
+func curves(dates []civil.Date, equity, returns []float64) (Ordered[float64], Ordered[float64]) {
+	keys := dateKeys(dates)
+	pct := make([]float64, len(returns))
+	for i, r := range returns {
+		pct[i] = r * 100
+	}
+	return Ordered[float64]{keys: keys, vals: equity}, Ordered[float64]{keys: keys, vals: pct}
+}
+
+// newOrdered는 n개 자리를 미리 잡은 Ordered다(일별 비중 행처럼 크기를 아는 경우).
+func newOrdered[V any](n int) Ordered[V] {
+	return Ordered[V]{keys: make([]string, 0, n), vals: make([]V, 0, n)}
 }

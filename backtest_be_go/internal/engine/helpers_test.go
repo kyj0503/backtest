@@ -136,3 +136,8 @@ func readJSON(t *testing.T, path string, v any) {
 		t.Fatal(err)
 	}
 }
+
+func detail(d *Data, key string) BuyHoldDetail {
+	v, _ := d.StrategyDetails.Get(key)
+	return v.(BuyHoldDetail)
+}

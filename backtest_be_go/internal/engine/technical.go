@@ -144,7 +144,7 @@ func technical(ctx context.Context, req Request, data marketdata.Histories) (*Da
 			sum += values[k]
 		}
 		equity[i] = sum
-		var row Ordered[any]
+		row := newOrdered[any](len(assets) + 1)
 		row.Set("date", day)
 		for k, a := range assets {
 			w := 0.0
@@ -174,8 +174,10 @@ func technical(ctx context.Context, req Request, data marketdata.Histories) (*Da
 		item.Weight = a.amount / total
 		d.IndividualReturns.Set(a.key, item)
 		sharpeRatio := 0.0
-		if st, ok := d.StrategyDetails.vals[a.key].(StrategyStats); ok {
-			sharpeRatio = st.SharpeRatio
+		if v, _ := d.StrategyDetails.Get(a.key); v != nil {
+			if st, ok := v.(StrategyStats); ok {
+				sharpeRatio = st.SharpeRatio
+			}
 		}
 		d.IndividualResults = append(d.IndividualResults, IndividualResult{
 			AssetID: a.key, AssetType: a.asset.AssetType, Ticker: a.asset.Symbol, FinalEquity: item.FinalValue,
@@ -186,10 +188,7 @@ func technical(ctx context.Context, req Request, data marketdata.Histories) (*Da
 			AssetID: a.key, Symbol: a.asset.Symbol, Weight: item.Weight, Amount: item.Amount, AssetType: a.asset.AssetType,
 		})
 	}
-	for i, day := range dates {
-		d.EquityCurve.Set(day.String(), equity[i])
-		d.DailyReturns.Set(day.String(), returns[i]*100)
-	}
+	d.EquityCurve, d.DailyReturns = curves(dates, equity, returns)
 	return d, nil
 }
 
@@ -285,9 +284,7 @@ func runStrategy(ctx context.Context, req Request, h marketdata.History, data ma
 	if sd := stddev(pnl); sd > 0 {
 		st.SQN = math.Sqrt(float64(n)) * mean(pnl) / sd
 	}
-	for i, day := range dates {
-		st.EquityCurve.Set(day.String(), eq[i])
-	}
+	st.EquityCurve = Ordered[float64]{keys: dateKeys(dates), vals: eq}
 
 	native := func(usd float64, day civil.Date) (float64, error) {
 		rate, err := marketdata.RateOn(h.Currency, day, data)

@@ -45,7 +45,42 @@ func MustParse(s string) Date {
 
 func (d Date) Time() time.Time { return time.Unix(int64(d)*86400, 0).UTC() }
 
-func (d Date) String() string { return d.Time().Format(layout) }
+func (d Date) String() string { return string(d.AppendFormat(make([]byte, 0, 10))) }
+
+// civil은 일 수를 (연, 월, 일)로 바꾼다(Howard Hinnant의 civil_from_days). time 패키지를 거치지 않아
+// 일별 곡선 수천 개를 직렬화할 때 할당이 없다.
+func (d Date) civil() (y, m, day int) {
+	z := int(d) + 719468
+	era := z / 146097
+	if z < 0 && z%146097 != 0 {
+		era--
+	}
+	doe := z - era*146097
+	yoe := (doe - doe/1460 + doe/36524 - doe/146096) / 365
+	y = yoe + era*400
+	doy := doe - (365*yoe + yoe/4 - yoe/100)
+	mp := (5*doy + 2) / 153
+	day = doy - (153*mp+2)/5 + 1
+	if mp < 10 {
+		m = mp + 3
+	} else {
+		m = mp - 9
+	}
+	if m <= 2 {
+		y++
+	}
+	return y, m, day
+}
+
+// AppendFormat은 YYYY-MM-DD를 b 뒤에 붙인다. 0000~9999년만 쓴다(그 밖은 time 형식으로 대신한다).
+func (d Date) AppendFormat(b []byte) []byte {
+	y, m, day := d.civil()
+	if y < 0 || y > 9999 {
+		return d.Time().AppendFormat(b, layout)
+	}
+	return append(b, byte('0'+y/1000), byte('0'+y/100%10), byte('0'+y/10%10), byte('0'+y%10), '-',
+		byte('0'+m/10), byte('0'+m%10), '-', byte('0'+day/10), byte('0'+day%10))
+}
 
 func (d Date) AddDays(n int) Date { return d + Date(n) }
 

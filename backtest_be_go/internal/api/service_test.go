@@ -26,7 +26,7 @@ import (
 
 var quietLog = slog.New(slog.NewTextHandler(io.Discard, nil))
 
-func testConfig(t *testing.T) config.Config {
+func testConfig(t testing.TB) config.Config {
 	t.Helper()
 	cfg, err := config.Load(func(k string) string {
 		return map[string]string{"TURNSTILE_ENABLED": "false"}[k]
@@ -37,7 +37,7 @@ func testConfig(t *testing.T) config.Config {
 	return cfg
 }
 
-func fixtureHistories(t *testing.T) marketdata.Histories {
+func fixtureHistories(t testing.TB) marketdata.Histories {
 	t.Helper()
 	raw, err := os.ReadFile("../../testdata/rust/histories.json")
 	if err != nil {
@@ -64,7 +64,7 @@ func (b *blockingFetcher) Fetch(ctx context.Context, s string, start, end civil.
 	return b.inner.Fetch(ctx, s, start, end)
 }
 
-func newTestService(t *testing.T, fetcher marketdata.Fetcher, cfg config.Config) (*Service, http.Handler) {
+func newTestService(t testing.TB, fetcher marketdata.Fetcher, cfg config.Config) (*Service, http.Handler) {
 	t.Helper()
 	if fetcher == nil {
 		fetcher = marketdata.NewFixtureFetcher(fixtureHistories(t))

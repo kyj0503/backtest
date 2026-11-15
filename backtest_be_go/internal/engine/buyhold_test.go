@@ -16,7 +16,7 @@ import (
 func TestBuyFeeIsOnTopOfNotional(t *testing.T) {
 	d := run(t, request(t, `{"commission":0.01}`, 40), series("TEST", flat(40, 100), nil))
 	near(t, "final", d.PortfolioStatistics.FinalValue, 10000/1.01)
-	tr := d.StrategyDetails.vals["TEST"].(BuyHoldDetail).TradeLog[0]
+	tr := detail(d, "TEST").TradeLog[0]
 	near(t, "commission", tr.Commission, tr.Size*100*0.01)
 	near(t, "notional+fee", tr.Size*100+tr.Commission, 10000)
 }
@@ -35,7 +35,7 @@ func TestTotalAmountRemainderOnLastInstallment(t *testing.T) {
 		series("TEST", flat(70, 100), nil))
 	near(t, "initial", d.PortfolioStatistics.InitialValue, 1000)
 	near(t, "final", d.PortfolioStatistics.FinalValue, 1000)
-	log := d.StrategyDetails.vals["TEST"].(BuyHoldDetail).TradeLog
+	log := detail(d, "TEST").TradeLog
 	near(t, "last installment", log[len(log)-1].Size*100, 333.34)
 }
 
@@ -58,7 +58,7 @@ func TestRebalanceUsesActualTurnoverAndOneLedger(t *testing.T) {
 		}
 	}
 	var sell Trade
-	for _, tr := range d.StrategyDetails.vals["TEST"].(BuyHoldDetail).TradeLog {
+	for _, tr := range detail(d, "TEST").TradeLog {
 		if tr.Type == "SELL" {
 			sell = tr
 		}
@@ -181,7 +181,7 @@ func TestDailyFXRevaluation(t *testing.T) {
 	}
 	d := run(t, request(t, `{"portfolio":[{"symbol":"TEST","amount":1000}]}`, 40), stock, series("KRW=X", rates, nil))
 	near(t, "final", d.PortfolioStatistics.FinalValue, 500)
-	tr := d.StrategyDetails.vals["TEST"].(BuyHoldDetail).TradeLog[0]
+	tr := detail(d, "TEST").TradeLog[0]
 	near(t, "native", tr.EntryPriceNative, 130000)
 	near(t, "usd", tr.EntryPrice, 100)
 	if tr.NativeCurrency != "KRW" || tr.PriceCurrency != "USD" || tr.QuantityUnit != "fractional_adjusted_unit" {

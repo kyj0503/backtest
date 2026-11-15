@@ -215,7 +215,7 @@ func buyHold(ctx context.Context, req Request, data marketdata.Histories) (*Data
 		case inflow > 0:
 			daily = value/inflow - 1
 		}
-		var row Ordered[any]
+		row := newOrdered[any](nh + 1)
 		row.Set("date", day)
 		for i, h := range holdings {
 			after := h.value()
@@ -312,10 +312,7 @@ func buyHold(ctx context.Context, req Request, data marketdata.Histories) (*Data
 		})
 	}
 	d.PortfolioResult = PortfolioResult{TotalEquity: d.PortfolioStatistics.FinalValue, TotalReturnPct: d.PortfolioStatistics.TotalReturn}
-	for i, day := range dates {
-		d.EquityCurve.Set(day.String(), equity[i])
-		d.DailyReturns.Set(day.String(), returns[i]*100)
-	}
+	d.EquityCurve, d.DailyReturns = curves(dates, equity, returns)
 	return d, nil
 }
 
