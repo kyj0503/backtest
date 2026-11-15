@@ -1,36 +1,34 @@
 name: backtest-dev
 
 services:
-  backtest-be-fast:
+  backtest-be:
+    # Go 백엔드 개발 서버. 소스를 바인드 마운트하고 go run으로 실행한다.
+    # 핫 리로드는 없다: 코드를 바꾸면 `docker compose -f compose.dev.yaml restart backtest-be`.
     build:
-      context: ./backtest_be_fast
-      dockerfile: Dockerfile.dev
-    image: backtest-be-fast:dev
-    container_name: backtest-be-fast-dev
+      context: ./backtest_be_go
+      target: development
+    image: backtest-be-go:dev
+    container_name: backtest-be-dev
     networks:
-      - backtest-net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      backtest-net:
+        # backtest-console의 Vite 프록시 기본 대상(http://backtest-be-fast:8000)을 그대로 쓰기 위한 별칭
+        aliases:
+          - backtest-be-fast
     ports:
-      - "8000:8000"
+      # 개발용 기본 비밀번호와 함께 노출되지 않도록 루프백으로 제한
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     environment:
       - DEBUG=true
       - TURNSTILE_ENABLED=${TURNSTILE_ENABLED:-false}
-      - WATCHFILES_FORCE_POLLING=false
     volumes:
-      - ./backtest_be_fast:/app
-      - backtest_be_fast_venv:/opt/venv
+      - ./backtest_be_go:/src
+      - backtest_go_modcache:/go/pkg/mod
+      - backtest_go_buildcache:/root/.cache/go-build
     depends_on:
       mysql:
         condition: service_healthy
-    # 런타임에 venv 의존성 동기화 후 서버 시작 (이미지와 볼륨의 동기화 보장)
-    command: >
-      sh -c "pip install -r requirements.lock.txt &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --limit-concurrency 100 --backlog 200"
-    # P3-07: 크래시 시 자동 재기동 + 리소스 상한(공유 개발 호스트에서 폭주 방지).
-    # 수치는 관측된 실사용량 기반 튜닝이 아니라 안전판 성격의 보수적 초기값이다.
     restart: unless-stopped
     deploy:
       resources:
@@ -86,7 +84,8 @@ services:
 
 volumes:
   backtest_mysql_data:
-  backtest_be_fast_venv:
+  backtest_go_modcache:
+  backtest_go_buildcache:
 
 
 networks:
