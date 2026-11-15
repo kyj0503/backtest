@@ -1,0 +1,23 @@
+{
+ "_meta": {
+  "source": "backtest_be_fast/tests/e2e/test_golden_master.py",
+  "source_commit": "a00a8587388c0f9afe770af230b5eaf371cca988",
+  "prices": "AAPL.csv (same directory), currency USD",
+  "fx": "mock: KRW 1300.0 (unused, USD only)",
+  "supplemental": "mocked empty (benchmarks/news/exchange_rates)",
+  "expected": "expected_dca_output.json (same directory), rel/abs tol 1e-6"
+ },
+ "request": {
+  "portfolio": [
+   {
+    "symbol": "AAPL",
+    "amount": 1000.0,
+    "investment_type": "dca",
+    "dca_frequency": "weekly_1"
+   }
+  ],
+  "start_date": "2023-01-01",
+  "end_date": "2023-02-28",
+  "strategy": "buy_hold_strategy"
+ }
+}
