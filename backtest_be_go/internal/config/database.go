@@ -65,6 +65,11 @@ func loadDatabase(getenv Getenv) (Database, error) {
 		db.Password = r.str("DATABASE_PASSWORD", "")
 		db.Name = r.str("DATABASE_NAME", "stock_data_cache")
 	}
+	// 개별 DATABASE_* 경로에서도 TLS를 쓸 수 있게 한다. URL의 ssl_ca가 있으면 그쪽이 우선한다.
+	if ca, ok := r.raw("DATABASE_SSL_CA"); ok && db.TLSCAFile == "" {
+		db.TLSCAFile = ca
+		db.TLSCheckHostname = r.boolean("DATABASE_SSL_CHECK_HOSTNAME", true)
+	}
 	if db.MaxOpenConns <= 0 || db.MaxIdleConns < 0 || db.MaxIdleConns > db.MaxOpenConns {
 		r.errs = append(r.errs, errors.New("DATABASE_MAX_OPEN_CONNS must be positive and >= DATABASE_MAX_IDLE_CONNS"))
 	}

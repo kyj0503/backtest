@@ -1,8 +1,9 @@
 // Command server는 백테스트 HTTP 서버다.
 //
-//	server              서버 실행 (SIGTERM/SIGINT에 graceful shutdown)
-//	server -healthcheck 같은 컨테이너의 /health를 조회해 종료 코드로 알린다
-//	                    (distroless 런타임에는 curl이 없어 Docker HEALTHCHECK가 이걸 쓴다)
+//	server                           서버 실행 (SIGTERM/SIGINT에 graceful shutdown)
+//	server -healthcheck /health       같은 컨테이너의 경로를 조회해 200이면 0, 아니면 1로 끝난다
+//	server -healthcheck /health/ready distroless 런타임에는 curl이 없어 Docker HEALTHCHECK(liveness)와
+//	                                 배포 스크립트(readiness)가 이걸 쓴다
 package main
 
 import (
@@ -31,11 +32,11 @@ import (
 )
 
 func main() {
-	healthcheck := flag.Bool("healthcheck", false, "query /health on the local server and exit")
+	healthcheck := flag.String("healthcheck", "", "query this path (e.g. /health) on the local server and exit")
 	flag.Parse()
 
-	if *healthcheck {
-		os.Exit(runHealthcheck())
+	if *healthcheck != "" {
+		os.Exit(runHealthcheck(*healthcheck))
 	}
 	if err := run(); err != nil {
 		slog.Error("server stopped", "error", err)
@@ -206,13 +207,17 @@ func newLogger(level string) *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: l}))
 }
 
-func runHealthcheck() int {
+func runHealthcheck(path string) int {
+	if len(path) == 0 || path[0] != '/' {
+		fmt.Fprintln(os.Stderr, "healthcheck: path must start with /")
+		return 2
+	}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8000"
 	}
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get("http://127.0.0.1:" + port + "/health")
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get("http://127.0.0.1:" + port + path)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "healthcheck:", err)
 		return 1

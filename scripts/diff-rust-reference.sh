@@ -10,9 +10,10 @@
 set -euo pipefail
 export MSYS_NO_PATHCONV=1
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Git Bash(Windows)에서는 pwd -W가 C:/... 경로를 준다. MSYS_NO_PATHCONV와 함께 써도 docker가 해석할 수 있다.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && (pwd -W 2>/dev/null || pwd))"
 REF="${RUST_REF:-rust-migration}"
-WORK="$(mktemp -d)"
+WORK="$(cd "$(mktemp -d)" && (pwd -W 2>/dev/null || pwd))"
 NET="rust-diff-$$"
 IMAGE="backtest-rust-ref:$(git -C "$ROOT" rev-parse --short "$REF")"
 cleanup() {

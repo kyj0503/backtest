@@ -79,7 +79,8 @@ compose "$release" up -d --no-deps --pull never --wait --wait-timeout 180 app
 test "$(docker inspect "$container" --format '{{.Config.Image}}')" = "$image"
 if [[ "$app" == backtest ]]; then
     # A running process alone is insufficient: DB connectivity must pass too.
-    docker exec "$container" curl -fsS --max-time 10 http://localhost:8000/health/ready >/dev/null
+    # distroless 런타임에는 curl이 없다. 서버 바이너리가 readiness를 조회한다.
+    docker exec "$container" /app/server -healthcheck /health/ready >/dev/null
 else
     docker exec "$container" curl -fsS --max-time 10 http://localhost/ >/dev/null
 fi

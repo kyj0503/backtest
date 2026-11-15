@@ -54,6 +54,6 @@ COPY --from=builder /out/server /out/backtestctl /app/
 WORKDIR /app
 EXPOSE 8000
 # liveness(/health)에 건다. readiness(/health/ready)는 배포 후 확인 단계가 직접 본다.
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD ["/app/server", "-healthcheck"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD ["/app/server", "-healthcheck", "/health"]
 USER nonroot:nonroot
 ENTRYPOINT ["/app/server"]

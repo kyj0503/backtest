@@ -1,0 +1,79 @@
+name: backtest-go-check
+
+# 일회용 E2E 환경: 호스트 포트를 열지 않고 기존 DB 볼륨을 쓰지 않는다(MySQL은 tmpfs).
+# Go API는 DEBUG 고정 시세(testdata/rust/histories.json)를 쓰고 Turnstile을 끈다.
+# 브라우저(Playwright)가 콘솔(Vite)을 거쳐 API에 실제 HTTP 요청을 보낸다.
+#
+# 콘솔은 같은 상위 디렉터리의 backtest-console 저장소다. Go API는 rust-migration 계약(asset_id,
+# Time_Weighted_Return, calculation_assumptions 등)을 따르므로 콘솔의 rust-migration 브랜치(또는 그
+# 변경을 병합한 브랜치)에서 실행한다. 콘솔의 계약 스펙(e2e/rust-migration.spec.ts)을 켠다.
+#
+#   docker compose -f compose.go-test.yaml up --build --abort-on-container-exit --exit-code-from e2e
+#   docker compose -f compose.go-test.yaml down
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: go-test-only
+      MYSQL_DATABASE: stock_data_cache
+      MYSQL_USER: gotest
+      MYSQL_PASSWORD: go-test-only
+    tmpfs:
+      - /var/lib/mysql
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: [CMD, mysqladmin, ping, -h, localhost]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+  api:
+    build:
+      context: ./backtest_be_go
+      target: runtime
+    environment:
+      DEBUG: "true"
+      TURNSTILE_ENABLED: "false"
+      BACKTEST_FIXTURE_FILE: /fixtures/histories.json
+      DATABASE_HOST: mysql
+      DATABASE_NAME: stock_data_cache
+      DATABASE_USER: gotest
+      DATABASE_PASSWORD: go-test-only
+    volumes:
+      - ./backtest_be_go/testdata/rust:/fixtures:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, /app/server, -healthcheck, /health/ready]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  console:
+    build:
+      context: ../backtest-console
+      target: test
+    environment:
+      BACKTEST_PROXY_TARGET: http://api:8000
+      DISABLE_HMR: "1"
+    command: [npm, run, dev, --, --host, 0.0.0.0]
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:5173/backtest').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  e2e:
+    build:
+      context: ../backtest-console
+      dockerfile: Dockerfile.e2e
+    # 브라우저와 Vite가 localhost를 공유한다. Vite의 허용 호스트 정책을 그대로 둔다.
+    network_mode: service:console
+    environment:
+      RUST_MIGRATION_E2E: "1"
+      PLAYWRIGHT_BASE_URL: http://localhost:5173
+    depends_on:
+      console:
+        condition: service_healthy

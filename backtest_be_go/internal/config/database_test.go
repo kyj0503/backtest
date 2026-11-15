@@ -64,6 +64,22 @@ func TestDatabaseComponentsWhenURLMissing(t *testing.T) {
 	}
 }
 
+func TestDatabaseTLSFromIndividualVariables(t *testing.T) {
+	db, err := loadDatabase(env(map[string]string{
+		"DATABASE_HOST": "10.0.0.5", "DATABASE_USER": "u", "DATABASE_SSL_CA": "/app/tls/ca.pem",
+		"DATABASE_SSL_CHECK_HOSTNAME": "false",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if db.TLSCAFile != "/app/tls/ca.pem" || db.TLSCheckHostname || !db.Configured {
+		t.Fatalf("%+v", db)
+	}
+	if !strings.Contains(db.Redacted(), "tls=verify-ca") {
+		t.Fatal(db.Redacted())
+	}
+}
+
 func TestDatabaseURLRejectsUnknownOrBrokenParameters(t *testing.T) {
 	for _, raw := range []string{
 		"postgres://u:p@h/db",
