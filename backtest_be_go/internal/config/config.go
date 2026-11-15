@@ -77,6 +77,10 @@ type Getenv func(string) string
 // FromEnvironment는 프로세스 환경 변수로 Load를 호출한다.
 func FromEnvironment() (Config, error) { return Load(os.Getenv) }
 
+// DatabaseFromEnvironment는 DB 설정만 읽는다. backtestctl처럼 HTTP 설정(Turnstile 등)이 필요 없는
+// 도구가 쓴다.
+func DatabaseFromEnvironment() (Database, error) { return loadDatabase(os.Getenv) }
+
 // Load는 환경 변수를 읽어 검증한다. 잘못된 값은 기본값으로 대체하지 않고 오류로 돌려준다.
 func Load(getenv Getenv) (Config, error) {
 	r := reader{getenv: getenv}

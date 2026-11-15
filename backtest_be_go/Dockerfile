@@ -45,12 +45,12 @@ CMD ["go", "run", "./cmd/server"]
 FROM toolchain AS builder
 ARG IMAGE_TAG=dev
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/server ./cmd/server
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ ./cmd/server ./cmd/backtestctl
 
 FROM ${RUNTIME_IMAGE} AS runtime
 ARG IMAGE_TAG=latest
 ENV IMAGE_TAG=${IMAGE_TAG} IMAGE_NAME=backtest-backend PORT=8000
-COPY --from=builder /out/server /app/server
+COPY --from=builder /out/server /out/backtestctl /app/
 WORKDIR /app
 EXPOSE 8000
 # liveness(/health)에 건다. readiness(/health/ready)는 배포 후 확인 단계가 직접 본다.
