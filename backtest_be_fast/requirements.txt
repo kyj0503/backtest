@@ -2,7 +2,7 @@
 # 아니라 requirements.lock.txt(전 의존성 고정본)를 설치한다. 여기를 바꾼 뒤에는
 # `docker compose -f compose.dev.yaml exec -T backtest-be-fast pip freeze`로
 # requirements.lock.txt를 재생성할 것 (락 파일 상단 주석에 방법 설명).
-fastapi==0.162.0
+fastapi==0.163.1
 uvicorn==0.54.0
 pydantic==2.14.3
 pydantic-settings==2.16.3
