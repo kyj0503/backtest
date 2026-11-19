@@ -4,8 +4,32 @@ updates:
     target-branch: main
     directory: "/backtest_be_fast"
     schedule:
-      interval: daily
+      interval: quarterly
     groups:
+      web-api:
+        patterns: ["fastapi", "starlette", "anyio", "uvicorn", "h11", "websockets", "python-multipart", "pydantic*", "annotated-*", "typing-*", "typing_*"]
+        update-types: ["minor", "major"]
+      market-data:
+        patterns: ["yfinance", "backtesting", "pandas", "numpy", "bokeh", "narwhals", "multitasking", "cachetools", "peewee"]
+        update-types: ["minor", "major"]
+      timezones:
+        patterns: ["pytz", "tzdata", "python-dateutil"]
+        update-types: ["minor", "major"]
+      http-clients:
+        patterns: ["requests", "urllib3", "curl-cffi", "curl_cffi", "httpx", "httpcore", "certifi", "idna", "charset-normalizer"]
+        update-types: ["minor", "major"]
+      html-parsing:
+        patterns: ["beautifulsoup4", "soupsieve", "lxml"]
+        update-types: ["minor", "major"]
+      database:
+        patterns: ["alembic", "sqlalchemy", "pymysql", "mako"]
+        update-types: ["minor", "major"]
+      telemetry:
+        patterns: ["opentelemetry-*", "prometheus*"]
+        update-types: ["minor", "major"]
+      testing:
+        patterns: ["pytest*", "coverage", "pluggy", "freezegun", "faker", "factory-boy", "factory_boy"]
+        update-types: ["minor", "major"]
       package-patches:
         patterns: ["*"]
         update-types: ["patch"]
@@ -13,14 +37,26 @@ updates:
     target-branch: main
     directory: "/backtest_be_fast"
     schedule:
-      interval: daily
+      interval: quarterly
+    groups:
+      runtime-images:
+        patterns: ["*"]
+        update-types: ["minor", "major"]
   - package-ecosystem: "docker-compose"
     target-branch: main
     directory: "/gateway"
     schedule:
-      interval: daily
+      interval: quarterly
+    groups:
+      gateway-images:
+        patterns: ["nginx"]
+        update-types: ["minor", "major"]
   - package-ecosystem: "github-actions"
     target-branch: main
     directory: "/"
     schedule:
-      interval: daily
+      interval: quarterly
+    groups:
+      ci-actions:
+        patterns: ["*"]
+        update-types: ["minor", "major"]
