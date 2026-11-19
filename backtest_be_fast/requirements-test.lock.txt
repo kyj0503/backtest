@@ -59,7 +59,7 @@ six==1.17.0
 soupsieve==3.0.4
 SQLAlchemy==2.1.6
 starlette==1.9.0
-tornado==6.6
+tornado==6.6.1
 typing-inspection==0.4.4
 typing_extensions==4.16.0
 tzdata==2026.5

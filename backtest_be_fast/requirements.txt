@@ -14,7 +14,7 @@ yfinance==1.7.0
 requests==2.34.2
 # Security floors for requests/bokeh transitive dependencies (2026-10-09 audit).
 urllib3>=2.8.0
-tornado>=6.5.9
+tornado>=6.6.1
 pandas==3.1.0
 numpy==2.5.4
 python-dotenv==1.2.4
