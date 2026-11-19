@@ -48,6 +48,7 @@ CI 취약점 검사는 알려진 취약점을 예외 없이 차단합니다.
 - 서버 `.env`는 수동 관리하고 배포가 덮어쓰지 않습니다. `.env.production.example`에 필요한 항목을 기록했습니다.
 - GitHub의 production Environment에는 `OCI_SSH_KEY` Secret 및 `OCI_HOST`, `OCI_USER`, `OCI_KNOWN_HOSTS`, `TS_CLIENT_ID`, `TS_AUDIENCE` Variables를 등록합니다.
 - GHCR 인증은 자동 `GITHUB_TOKEN`, Tailscale 연결은 저장소·환경·브랜치·workflow로 제한한 OIDC를 사용합니다.
+- Nginx 배포는 `production` 환경의 `TS_NGINX_CLIENT_ID`, `TS_NGINX_AUDIENCE`를 사용합니다. 이 OIDC 자격 증명은 이 저장소의 `main`에 있는 `nginx-rollout.yml`만 허용합니다.
 - Docker liveness `/health`와 DB readiness `/health/ready`를 모두 확인합니다. 실패하면 이전 릴리스를 복원하고 실행은 실패로 유지합니다.
 - 공통 Nginx는 별도 `/opt/gateway`에서 관리합니다. 배포 후 `nginx-gateway` 설정 검사와 reload가 필요합니다.
 - main 대상 PR은 사용자가 직접 병합합니다. 최초 환경 설정과 실제 배포 성공 전에는 전환 완료로 간주하지 않습니다.
