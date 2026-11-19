@@ -39,7 +39,7 @@ PyMySQL==1.2.4
 python-dateutil==3.0.0
 python-dotenv==1.2.4
 python-multipart==0.0.34
-pytz==2026.5
+pytz==2026.6
 PyYAML==6.0.3
 requests==2.34.2
 six==1.17.0
