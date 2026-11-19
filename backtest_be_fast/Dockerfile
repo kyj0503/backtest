@@ -8,7 +8,7 @@
 #              배포 전 테스트 단계 전용 (아래 설명 참고).
 #   runtime  - 클린 python:3.15-slim-trixie 위에 /opt/venv만 복사. 컴파일러도, 테스트
 #              의존성도 없다. non-root 사용자로 실행된다.
-FROM python:3.15-slim-trixie AS builder
+FROM python:3.15-slim-trixie@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS builder
 
 WORKDIR /app
 
@@ -69,7 +69,7 @@ RUN pytest tests/unit -q && pytest tests/e2e -m e2e -q
 # 바인드 마운트(-v)가 아니라 빌드 컨텍스트로 파일을 받는 이유: Jenkins가
 # 컨테이너 안에서 호스트 Docker 데몬에 붙어 sibling 컨테이너를 띄우는 구조라
 # -v의 소스 경로가 호스트 기준으로 해석되어 파일을 찾지 못한다.
-FROM python:3.15-slim-trixie AS audit
+FROM python:3.15-slim-trixie@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS audit
 
 WORKDIR /app
 COPY requirements.lock.txt .
@@ -87,13 +87,13 @@ RUN pip install -q pip-audit && \
 #
 # builder의 컴파일러/헤더, test의 pytest 등 테스트 의존성은 여기 포함되지 않는다.
 # 클린한 python:3.15-slim-trixie 위에 venv(/opt/venv)만 복사하고 non-root 사용자로 실행한다.
-FROM python:3.15-slim-trixie AS runtime
+FROM python:3.15-slim-trixie@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS runtime
 
 WORKDIR /app
 
 # HEALTHCHECK가 curl로 /health를 조회하므로 런타임에도 필요하다 (빌드 툴체인은 불필요).
 # non-root 실행을 위한 시스템 계정도 함께 생성한다.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --create-home app
@@ -102,6 +102,10 @@ ENV VENV_DIR=/opt/venv
 ENV PATH="${VENV_DIR}/bin:$PATH"
 # builder에서 만든 venv만 가져온다 (컴파일러/헤더/캐시는 제외). app 사용자 소유로 복사.
 COPY --from=builder --chown=app:app /opt/venv /opt/venv
+# The production service only executes its installed dependencies.
+RUN /opt/venv/bin/python -m pip uninstall -y pip && \
+    /usr/local/bin/python -m pip uninstall -y pip && \
+    rm -f /usr/local/lib/python*/ensurepip/_bundled/pip-*.whl
 
 # 애플리케이션 코드 복사 (app 사용자 소유)
 COPY --chown=app:app app ./app
