@@ -5,7 +5,7 @@ anyio==4.15.1
 backtesting==0.6.6
 beautifulsoup4==4.15.0
 bokeh==3.10.1
-cachetools==7.2.4
+cachetools==8.0.0
 certifi==2026.10.23
 cffi==2.1.1
 charset-normalizer==3.5.2
