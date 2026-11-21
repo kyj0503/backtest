@@ -27,7 +27,7 @@ packaging==26.3
 pandas==3.1.1
 peewee==4.5.3
 pillow==13.0.0
-platformdirs==4.13.5
+platformdirs==4.14.7
 prometheus-fastapi-instrumentator==8.1.0
 prometheus_client==0.26.0
 protobuf==7.36.2
